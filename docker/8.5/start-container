@@ -9,11 +9,22 @@ if [ ! -z "$WWWUSER" ]; then
     usermod -u $WWWUSER sail
 fi
 
+# Bind-mounted storage often has host UID/GID; ensure PHP (sail) can write logs, etc.
+if [ -d /var/www/html/storage ]; then
+    mkdir -p /var/www/html/bootstrap/cache
+    chown -R sail:sail /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
+    chmod -R ug+rwx /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
+fi
+
 if [ ! -d /.composer ]; then
     mkdir /.composer
 fi
 
 chmod -R ugo+rw /.composer
+
+# Clear any config/route/event cache baked into the image so that environment
+# variables injected by docker-compose at runtime are always read fresh.
+/usr/local/bin/php /var/www/html/artisan optimize:clear --quiet 2>/dev/null || true
 
 if [ $# -gt 0 ]; then
     if [ "$SUPERVISOR_PHP_USER" = "root" ]; then
@@ -22,5 +33,5 @@ if [ $# -gt 0 ]; then
         exec gosu $WWWUSER "$@"
     fi
 else
-    exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+    exec /usr/bin/supervisord -c /etc/supervisor/supervisord-workers.conf
 fi
