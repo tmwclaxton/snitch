@@ -13,7 +13,7 @@ RUN apt-get update \
         unzip \
     && rm -rf /var/lib/apt/lists/*
 
-RUN docker-php-ext-install -j"$(nproc)" \
+RUN docker-php-ext-install \
     bcmath \
     intl \
     opcache \
@@ -88,7 +88,7 @@ RUN apt-get update && apt-get upgrade -y \
         libicu-dev \
         libsqlite3-dev \
         libzip-dev \
-    && docker-php-ext-install -j"$(nproc)" \
+    && docker-php-ext-install \
         bcmath \
         intl \
         opcache \
