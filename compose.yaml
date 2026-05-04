@@ -1,10 +1,10 @@
 services:
     laravel.test:
         build:
-            context: './vendor/laravel/sail/runtimes/8.5'
+            context: './docker/sail-ubuntu-8.5'
             dockerfile: Dockerfile
             args:
-                WWWGROUP: '${WWWGROUP}'
+                WWWGROUP: '${WWWGROUP:-1000}'
         image: 'sail-8.5/app'
         extra_hosts:
             - 'host.docker.internal:host-gateway'
@@ -12,7 +12,7 @@ services:
             - '${APP_PORT:-80}:80'
             - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
         environment:
-            WWWUSER: '${WWWUSER}'
+            WWWUSER: '${WWWUSER:-1337}'
             LARAVEL_SAIL: 1
             XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
             XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
@@ -25,15 +25,10 @@ services:
             - pgsql
             - redis
     queue-worker:
-        build:
-            context: './vendor/laravel/sail/runtimes/8.5'
-            dockerfile: Dockerfile
-            args:
-                WWWGROUP: '${WWWGROUP}'
         image: 'sail-8.5/app'
         command: 'php artisan queue:work --sleep=3 --tries=1 --timeout=9000 --max-time=3600'
         environment:
-            WWWUSER: '${WWWUSER}'
+            WWWUSER: '${WWWUSER:-1337}'
             LARAVEL_SAIL: 1
         volumes:
             - '.:/var/www/html'
@@ -45,15 +40,10 @@ services:
             - pgsql
             - redis
     scheduler:
-        build:
-            context: './vendor/laravel/sail/runtimes/8.5'
-            dockerfile: Dockerfile
-            args:
-                WWWGROUP: '${WWWGROUP}'
         image: 'sail-8.5/app'
         command: 'php artisan schedule:work'
         environment:
-            WWWUSER: '${WWWUSER}'
+            WWWUSER: '${WWWUSER:-1337}'
             LARAVEL_SAIL: 1
         volumes:
             - '.:/var/www/html'
