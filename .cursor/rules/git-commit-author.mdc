@@ -1,0 +1,44 @@
+---
+description: Always commit as GitHub user tmwclaxton when that identity is available
+alwaysApply: true
+---
+
+# Git Commit Author
+
+When creating git commits in this project, author them as **tmwclaxton** whenever that identity is available.
+
+## How to detect availability
+
+Prefer this identity when any of the following is true:
+
+1. `gh api user --jq .login` returns `tmwclaxton`
+2. The remote is under `github.com/tmwclaxton/` (e.g. `origin` fetch/push URL)
+3. The user asks to commit/push as tmwclaxton
+
+If none of those apply, fall back to the repository's existing git author / user rules and do not invent an identity.
+
+## Author to use
+
+```text
+tmwclaxton <57643714+tmwclaxton@users.noreply.github.com>
+```
+
+## How to apply
+
+- On `git commit`, pass the author explicitly:
+
+```bash
+git commit --author="tmwclaxton <57643714+tmwclaxton@users.noreply.github.com>" -m "$(cat <<'EOF'
+Commit message here.
+
+EOF
+)"
+```
+
+- Do **not** run `git config` to change global or local `user.name` / `user.email`.
+- If a commit was just created in this conversation with the wrong author and has not been pushed, amend with `--author=...` (only when amend rules allow).
+- If it was already pushed and the user wants the author fixed, ask before force-pushing; on `main`/`master` only force-push when the user explicitly approves.
+
+## Pushing
+
+Push to the `tmwclaxton` remote/repo when that is the project remote. Do not change remotes unless the user asks.
