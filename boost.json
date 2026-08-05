@@ -9,6 +9,7 @@
     "nightwatch": false,
     "sail": false,
     "skills": [
+        "infer-conventions",
         "laravel-best-practices",
         "wayfinder-development",
         "inertia-vue-development",

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { useToastStore, MAX_TOASTS, type Toast } from '@/stores/toastStore';
-import { CheckCircle, Info, TriangleAlert, XCircle, X } from 'lucide-vue-next';
+import { CheckCircle, Info, TriangleAlert, XCircle, X } from '@lucide/vue';
 import { computed, onUnmounted, watch } from 'vue';
+import { useToastStore, MAX_TOASTS  } from '@/stores/toastStore';
+import type {Toast} from '@/stores/toastStore';
 
 const toastStore = useToastStore();
 const timers = new Map<string, ReturnType<typeof setTimeout>>();

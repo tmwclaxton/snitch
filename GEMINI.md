@@ -43,8 +43,8 @@ The following frontend libraries are installed and configured in this project:
 - Do NOT import FontAwesomeIcon per-component; it is already globally registered
 
 ### Lucide (Icons)
-- Available via `lucide-vue-next` — import individual icons per-component (tree-shakeable)
-- Usage: `import { House, Settings } from 'lucide-vue-next'` then `<House />` in template
+- Available via `@lucide/vue` — import individual icons per-component (tree-shakeable)
+- Usage: `import { House, Settings } from '@lucide/vue'` then `<House />` in template
 - Browse all icons at https://lucide.dev/icons
 
 ## Skills Activation
