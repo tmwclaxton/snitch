@@ -1,0 +1,33 @@
+---
+description: Project MCP servers (Firecrawl, n8n, Google Ads, Google Analytics) and credential setup
+alwaysApply: true
+---
+
+# MCP Servers
+
+This project configures MCP servers in `.cursor/mcp.json`:
+
+| Server | Purpose |
+|---|---|
+| `laravel-boost` | Laravel app tooling |
+| `firecrawl` | Web scrape / crawl / search |
+| `n8n` | n8n workflows (HTTP MCP) |
+| `google-ads` | Official Google Ads MCP (read) |
+| `google-analytics` | Official Analytics MCP (`analytics-mcp`, read) |
+
+## Credentials
+
+- Never commit API keys, bearer tokens, or Google credential JSON.
+- Copy `.cursor/mcp.env.example` → `.cursor/mcp.env` for local notes, then **export** the vars (or set them in the Cursor / shell environment) so `${env:...}` in `mcp.json` resolves.
+- `.cursor/mcp.env` is gitignored.
+
+## Prerequisites
+
+- **Firecrawl**: Node/`npx` + `FIRECRAWL_API_KEY`
+- **n8n**: `N8N_MCP_URL` + `N8N_MCP_TOKEN`
+- **Google Ads / Analytics**: `pipx`, `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_PROJECT_ID`; Ads also needs `GOOGLE_ADS_DEVELOPER_TOKEN`
+- After changing MCP config or env, reload Cursor MCP servers (Settings → Tools & MCP)
+
+## Agent usage
+
+Prefer these MCP tools when the task involves scraping, n8n automation, Google Ads reporting, or GA4 data — discover tools with GetMcpTools before calling them.

@@ -1,0 +1,27 @@
+---
+description: Always use normal hyphens instead of em dashes or en dashes
+alwaysApply: true
+---
+
+# No Em Dashes
+
+Never use em dashes (`—`) or en dashes (`–`) in commits, comments, docs, UI copy, chat replies, or any other text you write for this project.
+
+## Replace with
+
+| Avoid | Use instead |
+|---|---|
+| `—` (em dash) | `-` (hyphen-minus, U+002D) |
+| `–` (en dash) | `-` (hyphen-minus, U+002D) |
+
+## Examples
+
+```text
+# Bad
+Upgrade packages — including Laravel and Pinia
+
+# Good
+Upgrade packages - including Laravel and Pinia
+```
+
+When editing existing files, replace any em/en dashes you touch with normal hyphens.

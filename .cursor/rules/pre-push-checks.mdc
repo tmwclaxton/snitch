@@ -1,0 +1,26 @@
+---
+description: Always run tests and lint before pushing to remote
+alwaysApply: true
+---
+
+# Pre-Push Checks
+
+Before any `git push`, run verification and only push if checks pass.
+
+## Required checks
+
+Run these (or the narrower equivalent for the change) and confirm they succeed:
+
+1. **PHP lint**: `vendor/bin/pint --dirty --format agent`
+2. **PHP tests**: `php artisan test --compact` (or a focused filter/file when the change is narrow - still run something that covers the touched code)
+3. **JS lint** (when JS/TS/Vue changed): `npm run lint:check`
+4. **JS types** (when JS/TS/Vue changed): `npm run types:check`
+
+If PHP and frontend both changed, run all of the above.
+
+## Rules
+
+- Do not push with failing tests or lint.
+- Fix failures first, then re-run the failed checks, then push.
+- Prefer the smallest relevant test filter for speed, but do not skip tests entirely when pushing code changes.
+- Pure docs/rules-only changes still need a quick sanity check if unsure; skip heavy suites only when no app code changed.
