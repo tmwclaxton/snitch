@@ -1,0 +1,32 @@
+---
+description: SSH into admin.grantgunner.org when debugging production issues
+alwaysApply: true
+---
+
+# Production SSH Debugging
+
+When debugging **production** issues (deploy failures, live errors, queue/cron problems, server config, logs on the host), SSH into the production server instead of guessing.
+
+## Connection
+
+```bash
+ssh admin.grantgunner.org
+```
+
+- The agent's / local machine's SSH public key is already authorized on the server.
+- Prefer the default SSH config/user for that host (do not invent alternate usernames unless `~/.ssh/config` or the user specifies one).
+- If a non-interactive command is needed: `ssh admin.grantgunner.org 'command here'`
+
+## When to use
+
+- Production-only failures that cannot be reproduced locally
+- Checking live logs, container/`docker compose` status, env on the server
+- Verifying cron, queue workers, nginx/Caddy, disk, or process state
+- Following up after a deploy from CI
+
+## Safety
+
+- Prefer **read-only** inspection first (`logs`, `ps`, `docker compose ps`, `df`, config reads).
+- Do not restart services, run migrations, or change production data/config unless the user asks.
+- Never print or commit production secrets from `.env` or credential files.
+- Summarize findings back to the user; do not leave long-running SSH sessions hanging.

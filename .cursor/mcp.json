@@ -49,6 +49,45 @@
                 "GOOGLE_PROJECT_ID": "${env:GOOGLE_PROJECT_ID}",
                 "GOOGLE_CLOUD_PROJECT": "${env:GOOGLE_PROJECT_ID}"
             }
+        },
+        "google-search-console": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "gluska-seo-gsc-mcp"
+            ],
+            "env": {
+                "GSC_SERVICE_ACCOUNT_PATH": "${env:GSC_SERVICE_ACCOUNT_PATH}"
+            }
+        },
+        "nanogpt": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@nanogpt/mcp"
+            ],
+            "env": {
+                "NANOGPT_API_KEY": "${env:NANOGPT_API_KEY}"
+            }
+        },
+        "github": {
+            "url": "https://api.githubcopilot.com/mcp/",
+            "headers": {
+                "Authorization": "Bearer ${env:GITHUB_PAT}"
+            }
+        },
+        "stripe": {
+            "url": "https://mcp.stripe.com"
+        },
+        "slack": {
+            "url": "https://mcp.slack.com/mcp",
+            "auth": {
+                "CLIENT_ID": "3660753192626.8903469228982"
+            }
+        },
+        "cloudflare": {
+            "type": "http",
+            "url": "https://mcp.cloudflare.com/mcp"
         }
     }
 }

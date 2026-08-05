@@ -1,0 +1,27 @@
+---
+description: Generate images via NanoGPT MCP; prefer cheaper models when possible
+alwaysApply: true
+---
+
+# NanoGPT Image Generation
+
+When the user asks to generate, create, or iterate on images, use the **NanoGPT MCP** (`nanogpt` server), not Cursor's built-in image generator.
+
+## Workflow
+
+1. Discover tools with `GetMcpTools` on the `nanogpt` server (or pattern `nanogpt`).
+2. Prefer `nanogpt_list_image_models` with pricing/details enabled when model choice is unclear.
+3. Generate with `nanogpt_image_generate`.
+4. Prefer the cheapest model that can meet the request. Escalate only when the user asks for higher quality, or a cheap model clearly fails the brief.
+
+## Cost preference
+
+- Default to lower-cost / fast image models (e.g. Flux Schnell / similarly priced options from the list).
+- Avoid premium models (e.g. Flux Pro, Midjourney, DALL-E 3) unless the user asks for them or the task needs that quality.
+- Keep `n` (image count) small - usually `1` unless the user asks for more.
+- Use a modest size (e.g. `1024x1024`) unless another size is requested.
+- Optionally call `nanogpt_get_balance` before expensive batches.
+
+## Fallback
+
+If NanoGPT MCP is unavailable (missing `NANOGPT_API_KEY`, server error, auth failure), tell the user and only then fall back to another image tool if they still want an image.

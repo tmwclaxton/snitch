@@ -1,5 +1,5 @@
 ---
-description: Project MCP servers (Firecrawl, n8n, Google Ads, Google Analytics) and credential setup
+description: Project MCP servers and credential setup
 alwaysApply: true
 ---
 
@@ -7,27 +7,37 @@ alwaysApply: true
 
 This project configures MCP servers in `.cursor/mcp.json`:
 
-| Server | Purpose |
-|---|---|
-| `laravel-boost` | Laravel app tooling |
-| `firecrawl` | Web scrape / crawl / search |
-| `n8n` | n8n workflows (HTTP MCP) |
-| `google-ads` | Official Google Ads MCP (read) |
-| `google-analytics` | Official Analytics MCP (`analytics-mcp`, read) |
+| Server | Purpose | Auth |
+|---|---|---|
+| `laravel-boost` | Laravel app tooling | local |
+| `firecrawl` | Web scrape / crawl / search | `FIRECRAWL_API_KEY` |
+| `n8n` | n8n workflows (HTTP MCP) | `N8N_MCP_TOKEN` |
+| `google-ads` | Official Google Ads MCP (read) | Google ADC + developer token |
+| `google-analytics` | Official Analytics MCP (read) | Google ADC |
+| `google-search-console` | Search Console SEO data | `GSC_SERVICE_ACCOUNT_PATH` |
+| `nanogpt` | NanoGPT (required for image generation) | `NANOGPT_API_KEY` |
+| `github` | Issues, PRs, CI, repos | `GITHUB_PAT` |
+| `stripe` | Stripe billing / payments | OAuth in Cursor |
+| `slack` | Slack search / messaging | OAuth in Cursor |
+| `cloudflare` | Cloudflare API (Code Mode) | OAuth in Cursor |
 
 ## Credentials
 
 - Never commit API keys, bearer tokens, or Google credential JSON.
 - Copy `.cursor/mcp.env.example` → `.cursor/mcp.env` for local notes, then **export** the vars (or set them in the Cursor / shell environment) so `${env:...}` in `mcp.json` resolves.
 - `.cursor/mcp.env` is gitignored.
+- For **Stripe**, **Slack**, and **Cloudflare**: open Settings → Tools & MCP and click **Connect** to complete OAuth.
 
 ## Prerequisites
 
-- **Firecrawl**: Node/`npx` + `FIRECRAWL_API_KEY`
-- **n8n**: `N8N_MCP_URL` + `N8N_MCP_TOKEN`
+- **Firecrawl / NanoGPT / GSC**: Node/`npx` + the env vars above
+- **n8n**: `N8N_MCP_TOKEN` (URL is set in `mcp.json`)
+- **GitHub**: PAT from https://github.com/settings/tokens
 - **Google Ads / Analytics**: `pipx`, `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_PROJECT_ID`; Ads also needs `GOOGLE_ADS_DEVELOPER_TOKEN`
 - After changing MCP config or env, reload Cursor MCP servers (Settings → Tools & MCP)
 
 ## Agent usage
 
-Prefer these MCP tools when the task involves scraping, n8n automation, Google Ads reporting, or GA4 data — discover tools with GetMcpTools before calling them.
+Prefer these MCP tools for the matching domain - discover tools with GetMcpTools before calling them.
+
+For **image generation**, follow `.cursor/rules/nanogpt-images.mdc`: use `nanogpt_image_generate` and prefer cheaper image models unless higher quality is requested.
