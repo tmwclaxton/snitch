@@ -20,13 +20,15 @@ This project configures MCP servers in `.cursor/mcp.json`:
 | `stripe` | Stripe billing / payments | OAuth in Cursor |
 | `slack` | Slack search / messaging | OAuth in Cursor |
 | `cloudflare` | Cloudflare API (Code Mode) | OAuth in Cursor |
+| `canva` | Canva design create / edit / export | OAuth in Cursor |
+| `claude` | Claude Code / Anthropic docs | remote HTTP |
 
 ## Credentials
 
 - Never commit API keys, bearer tokens, or Google credential JSON.
 - Copy `.cursor/mcp.env.example` → `.cursor/mcp.env` for local notes, then **export** the vars (or set them in the Cursor / shell environment) so `${env:...}` in `mcp.json` resolves.
 - `.cursor/mcp.env` is gitignored.
-- For **Stripe**, **Slack**, and **Cloudflare**: open Settings → Tools & MCP and click **Connect** to complete OAuth.
+- For **Stripe**, **Slack**, **Cloudflare**, and **Canva**: open Settings → Tools & MCP and click **Connect** to complete OAuth.
 
 ## Prerequisites
 
@@ -40,4 +42,6 @@ This project configures MCP servers in `.cursor/mcp.json`:
 
 Prefer these MCP tools for the matching domain - discover tools with GetMcpTools before calling them.
 
-For **image generation**, follow `.cursor/rules/nanogpt-images.mdc`: use `nanogpt_image_generate` and prefer cheaper image models unless higher quality is requested.
+For **design work** (brand assets, social graphics, presentations, marketing creatives), follow `.cursor/rules/design-mcp.mdc`: use **Canva** and **Claude** MCP.
+
+For **image generation** (raster AI images, not Canva designs), follow `.cursor/rules/nanogpt-images.mdc`: use `nanogpt_image_generate` and prefer cheaper image models unless higher quality is requested.

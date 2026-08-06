@@ -1,0 +1,20 @@
+---
+description: Use Canva and Claude MCP for design work
+alwaysApply: true
+---
+
+# Design Work (Canva + Claude MCP)
+
+When the user asks for **design work** - brand assets, social graphics, presentations, decks, marketing creatives, Canva layouts, or visual design production - use the **Canva** and **Claude** MCP servers. Do not invent standalone mockups or skip these tools when Canva can produce the asset.
+
+## Workflow
+
+1. Discover tools with `GetMcpTools` on `canva` and `claude` (or pattern `canva|claude`).
+2. Prefer **Canva** (`https://mcp.canva.com/mcp`) to create, search, edit, autofill, comment on, and export designs.
+3. Use **Claude** (`https://code.claude.com/docs/mcp`) for Claude Code / Anthropic documentation and guidance when design automation or tooling needs it.
+4. If Canva tools fail with auth errors, tell the user to open Settings → Tools & MCP and **Connect** Canva, then retry.
+
+## Scope vs NanoGPT images
+
+- **Canva**: editable designs, brand kit, templates, exports (PDF, PNG, etc.).
+- **NanoGPT** (see `nanogpt-images.mdc`): one-off AI raster image generation when the user wants generated pixels, not a Canva design.

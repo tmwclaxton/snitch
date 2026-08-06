@@ -88,6 +88,13 @@
         "cloudflare": {
             "type": "http",
             "url": "https://mcp.cloudflare.com/mcp"
+        },
+        "canva": {
+            "url": "https://mcp.canva.com/mcp"
+        },
+        "claude": {
+            "type": "http",
+            "url": "https://code.claude.com/docs/mcp"
         }
     }
 }
