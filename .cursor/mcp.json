@@ -95,6 +95,9 @@
         "claude": {
             "type": "http",
             "url": "https://code.claude.com/docs/mcp"
+        },
+        "apify": {
+            "url": "https://mcp.apify.com"
         }
     }
 }
