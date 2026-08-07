@@ -23,6 +23,7 @@ This project configures MCP servers in `.cursor/mcp.json`:
 | `canva` | Canva design create / edit / export | OAuth in Cursor |
 | `claude` | Claude Code / Anthropic docs | remote HTTP |
 | `apify` | Apify Actors / scrapers / datasets | OAuth in Cursor |
+| `twilio` | Twilio API docs / OpenAPI search | none (public) |
 
 ## Credentials
 

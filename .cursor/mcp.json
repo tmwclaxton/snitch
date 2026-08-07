@@ -98,6 +98,9 @@
         },
         "apify": {
             "url": "https://mcp.apify.com"
+        },
+        "twilio": {
+            "url": "https://mcp.twilio.com/docs"
         }
     }
 }
