@@ -75,7 +75,7 @@ const steps = [
 
                 <div class="snitch-hero-marquee-stage">
                     <div
-                        class="snitch-hero-marquee snitch-hero-marquee-slow absolute inset-x-0 top-[2%] bottom-[8%]"
+                        class="snitch-hero-marquee snitch-hero-marquee-slow absolute inset-x-0 top-[2%] bottom-0"
                     >
                         <div class="snitch-hero-marquee-track">
                             <img
@@ -92,7 +92,7 @@ const steps = [
                     </div>
 
                     <div
-                        class="snitch-hero-marquee snitch-hero-marquee-mid absolute inset-x-0 top-[0%] bottom-[5%]"
+                        class="snitch-hero-marquee snitch-hero-marquee-mid absolute inset-0"
                     >
                         <div class="snitch-hero-marquee-track">
                             <img
@@ -109,7 +109,7 @@ const steps = [
                     </div>
 
                     <div
-                        class="snitch-hero-marquee snitch-hero-marquee-fast absolute inset-x-0 top-[-2%] bottom-[2%]"
+                        class="snitch-hero-marquee snitch-hero-marquee-fast absolute inset-x-0 top-[-2%] bottom-0"
                     >
                         <div class="snitch-hero-marquee-track">
                             <img
@@ -134,38 +134,67 @@ const steps = [
             <div
                 class="relative z-10 mx-auto flex h-full w-full max-w-6xl items-end px-5 pb-8 pt-28 sm:px-8 sm:pb-10"
             >
-                <div
-                    class="snitch-hero-copy-shell relative z-[5] min-w-0 max-w-md sm:max-w-lg"
-                >
+                <div class="relative min-w-0 max-w-md sm:max-w-lg">
+                    <!-- Peek mascot sits outside the yellow drop-shadow filter. -->
                     <div
-                        class="snitch-hero-copy relative px-5 pb-5 pt-5 text-left sm:px-7 sm:pb-6 sm:pt-6"
+                        class="snitch-hero-mascot pointer-events-none absolute right-4 hidden md:block lg:right-7"
+                        aria-hidden="true"
                     >
-                        <p
-                            class="snitch-display snitch-hero-wordmark relative text-[clamp(4.75rem,14.5vw,8.5rem)] leading-[0.78] tracking-[-0.035em] text-snitch-ink"
-                        >
-                            <span
-                                class="snitch-hero-wordmark-misreg pointer-events-none absolute inset-0 select-none"
-                                aria-hidden="true"
-                            >Snitch</span>
-                            <span class="relative">Snitch</span>
-                        </p>
-                        <h1
-                            class="snitch-display snitch-hero-lede mt-3.5 text-[1.3rem] leading-[1.22] tracking-[-0.012em] text-pretty sm:mt-4 sm:text-[1.55rem] sm:leading-[1.2]"
-                        >
-                            See what competitors post. Remake what wins.
-                        </h1>
+                        <div class="snitch-hero-mascot-peek origin-bottom">
+                            <div class="snitch-hero-mascot-frame relative select-none overflow-hidden">
+                                <img
+                                    src="/images/marketing/hero/mascot-character.png"
+                                    alt=""
+                                    draggable="false"
+                                    class="snitch-hero-mascot-character absolute inset-0 h-full w-full object-contain"
+                                    width="140"
+                                    height="140"
+                                    decoding="async"
+                                />
+                                <img
+                                    src="/images/marketing/hero/mascot-binos.png"
+                                    alt=""
+                                    draggable="false"
+                                    class="snitch-hero-mascot-binos absolute left-1/2"
+                                    width="98"
+                                    height="65"
+                                    decoding="async"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="snitch-hero-copy-shell relative z-[5]">
                         <div
-                            class="snitch-hero-cta mt-6 flex flex-wrap items-stretch justify-start gap-2.5 sm:mt-7 sm:gap-3"
+                            class="snitch-hero-copy relative px-5 pb-5 pt-5 text-left sm:px-7 sm:pb-6 sm:pt-6"
                         >
-                            <Link :href="primaryCta.href" class="snitch-btn">
-                                <span class="relative z-10">{{ primaryCta.label }}</span>
-                            </Link>
-                            <Link
-                                :href="howItWorks()"
-                                class="snitch-btn snitch-btn-ghost"
+                            <p
+                                class="snitch-display snitch-hero-wordmark relative text-[clamp(4.75rem,14.5vw,8.5rem)] leading-[0.78] tracking-[-0.035em] text-snitch-ink"
                             >
-                                <span class="relative z-10">How it works</span>
-                            </Link>
+                                <span
+                                    class="snitch-hero-wordmark-misreg pointer-events-none absolute inset-0 select-none"
+                                    aria-hidden="true"
+                                >Snitch</span>
+                                <span class="relative">Snitch</span>
+                            </p>
+                            <h1
+                                class="snitch-display snitch-hero-lede mt-3.5 text-[1.3rem] leading-[1.22] tracking-[-0.012em] text-pretty sm:mt-4 sm:text-[1.55rem] sm:leading-[1.2]"
+                            >
+                                See what competitors post. Remake what wins.
+                            </h1>
+                            <div
+                                class="snitch-hero-cta mt-6 flex flex-wrap items-stretch justify-start gap-2.5 sm:mt-7 sm:gap-3"
+                            >
+                                <Link :href="primaryCta.href" class="snitch-btn">
+                                    <span class="relative z-10">{{ primaryCta.label }}</span>
+                                </Link>
+                                <Link
+                                    :href="howItWorks()"
+                                    class="snitch-btn snitch-btn-ghost"
+                                >
+                                    <span class="relative z-10">How it works</span>
+                                </Link>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -281,8 +310,7 @@ const steps = [
                     Start tracking the competition.
                 </h2>
                 <p class="mx-auto mt-3 max-w-2xl text-snitch-ink/80">
-                    Personal accounts only. Sign in with WorkOS and build your
-                    first competitor list.
+                    Sign in and build your first competitor list.
                 </p>
                 <div class="mt-8 flex justify-center">
                     <Link :href="primaryCta.href" class="snitch-btn snitch-btn-spot">

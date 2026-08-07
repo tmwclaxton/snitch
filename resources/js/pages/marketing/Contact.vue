@@ -21,17 +21,19 @@ defineOptions({
         <div class="px-5 py-14 sm:px-8 sm:py-20">
             <div class="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1fr_1.1fr]">
                 <div>
-                    <span class="snitch-stamp">Contact</span>
+                    <span class="snitch-stamp snitch-stamp-active">Contact</span>
                     <h1
                         class="snitch-display mt-4 text-4xl text-snitch-ink"
                     >
                         Say hello.
                     </h1>
-                    <p class="mt-4 max-w-md text-snitch-ink/75">
+                    <p class="mt-4 max-w-md text-snitch-ink/80">
                         Questions about Snitch, partnerships, or privacy? Send a
                         note. We read every message.
                     </p>
-                    <p class="snitch-annotation mt-6 text-xl">
+                    <p
+                        class="snitch-annotation contact-annotation mt-6 text-xl text-snitch-ink"
+                    >
                         Prefer email?
                         <a
                             href="mailto:hello@snitch.app"
@@ -111,7 +113,7 @@ defineOptions({
 
                         <p
                             v-if="recentlySuccessful"
-                            class="text-sm text-snitch-ink/70"
+                            class="text-sm text-snitch-ink/80"
                         >
                             Message sent.
                         </p>
@@ -121,3 +123,9 @@ defineOptions({
         </div>
     </div>
 </template>
+
+<style scoped>
+.contact-annotation {
+    color: var(--snitch-ink);
+}
+</style>

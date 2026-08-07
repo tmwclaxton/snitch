@@ -25,6 +25,12 @@ class PublicPagesTest extends TestCase
         }
     }
 
+    public function test_hero_mascot_assets_exist(): void
+    {
+        $this->assertFileExists(public_path('images/marketing/hero/mascot-character.png'));
+        $this->assertFileExists(public_path('images/marketing/hero/mascot-binos.png'));
+    }
+
     public function test_marketing_pages_are_successful_for_guests(): void
     {
         $pages = [
@@ -113,6 +119,21 @@ class PublicPagesTest extends TestCase
         ])->assertRedirect();
 
         Mail::assertSent(ContactMessage::class);
+    }
+
+    public function test_contact_page_uses_readable_ink_contrast(): void
+    {
+        $contents = file_get_contents(resource_path('js/pages/marketing/Contact.vue'));
+
+        $this->assertNotFalse($contents, 'Missing Contact.vue source');
+        $this->assertStringContainsString('snitch-stamp-active', $contents);
+        $this->assertStringContainsString('contact-annotation', $contents);
+        $this->assertStringContainsString('text-snitch-ink', $contents);
+        $this->assertDoesNotMatchRegularExpression(
+            '/class="snitch-annotation(?![^"]*text-snitch-ink)/',
+            $contents,
+            'Contact annotations must use charcoal ink, not yellow-on-paper alone',
+        );
     }
 
     public function test_unknown_public_path_renders_branded_not_found(): void

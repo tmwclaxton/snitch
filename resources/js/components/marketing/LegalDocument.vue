@@ -11,7 +11,7 @@ defineProps<{
             <h1 class="snitch-display text-4xl text-snitch-ink">
                 {{ title }}
             </h1>
-            <p v-if="updated" class="mt-2 text-sm text-snitch-ink/50">
+            <p v-if="updated" class="mt-2 text-sm text-snitch-ink/65">
                 Last updated {{ updated }}
             </p>
             <div

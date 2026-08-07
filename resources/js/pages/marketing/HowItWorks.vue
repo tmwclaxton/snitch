@@ -34,13 +34,13 @@ const steps = [
 
         <div class="px-5 py-14 sm:px-8 sm:py-20">
             <div class="mx-auto max-w-6xl">
-                <span class="snitch-stamp">Process</span>
+                <span class="snitch-stamp snitch-stamp-active">Process</span>
                 <h1
                     class="snitch-display mt-4 max-w-2xl text-4xl text-snitch-ink sm:text-5xl"
                 >
                     Track. Analyze. Remake the winners.
                 </h1>
-                <p class="mt-4 max-w-2xl text-snitch-ink/75">
+                <p class="mt-4 max-w-2xl text-snitch-ink/80">
                     Three steps from empty account to a scrapbook of posts worth
                     stealing (ethically).
                 </p>
@@ -56,7 +56,9 @@ const steps = [
                             :class="index === 1 ? 'left-5 -top-2' : 'right-5 -top-2'"
                             aria-hidden="true"
                         />
-                        <p class="snitch-annotation text-2xl">
+                        <p
+                            class="snitch-annotation text-3xl font-medium text-snitch-ink"
+                        >
                             0{{ index + 1 }}
                         </p>
                         <h2
@@ -66,7 +68,9 @@ const steps = [
                                 step.title
                             }}</span>
                         </h2>
-                        <p class="mt-3 text-sm leading-relaxed text-snitch-ink/75">
+                        <p
+                            class="relative z-10 mt-3 text-sm leading-relaxed text-snitch-ink/80"
+                        >
                             {{ step.body }}
                         </p>
                     </li>

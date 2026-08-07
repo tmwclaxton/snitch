@@ -35,10 +35,6 @@ defineOptions({
                         want a clear tear sheet of what is working out there -
                         not another multi-seat team suite.
                     </p>
-                    <p>
-                        Personal accounts only. Auth stays with WorkOS. No
-                        billing in v1.
-                    </p>
                 </div>
             </article>
         </div>

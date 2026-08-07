@@ -302,9 +302,10 @@
         font-optical-sizing: auto;
     }
 
+    /* Caveat hand label - charcoal for contrast on paper; spot yellow is accents only */
     .snitch-annotation {
         font-family: var(--font-annotation);
-        color: var(--snitch-spot);
+        color: var(--snitch-ink);
         line-height: 1.15;
     }
 
@@ -617,7 +618,8 @@
 
     /*
      * bg.jpg still has a baked yellow band at the bottom. Draw tall + object-top
-     * so that band is clipped by overflow; the cream wall fills the full hero.
+     * so that band is clipped by overflow. Marquee layers cover inset 0 so the
+     * cream wall never shows as a hard strip under the icon field.
      */
     .snitch-hero-bg-img {
         position: absolute;
@@ -728,6 +730,56 @@
         box-shadow: inset 0 0 0 2px var(--snitch-ink);
         color: var(--snitch-ink);
         background: color-mix(in oklab, var(--snitch-paper) 88%, white);
+    }
+
+    /*
+     * Detective peek (Lovable login reference): slides up from behind the
+     * title card with a slight tilt, then ducks back. Binoculars raise on a
+     * shorter loop. Hidden below md so the title card keeps the mobile stage.
+     */
+    .snitch-hero-mascot {
+        top: -10rem;
+        z-index: 0;
+        width: 8.75rem;
+        height: 10rem;
+    }
+
+    .snitch-hero-mascot-frame {
+        width: 8.75rem;
+        height: 8.75rem;
+    }
+
+    .snitch-hero-mascot-peek {
+        transform-origin: bottom center;
+        animation: snitch-mascot-peek-slide 14s ease-in-out infinite;
+        will-change: transform;
+    }
+
+    .snitch-hero-mascot-character {
+        z-index: 10;
+    }
+
+    .snitch-hero-mascot-binos {
+        top: 32%;
+        z-index: 20;
+        width: 70%;
+        max-width: none;
+        height: auto;
+        animation: snitch-mascot-binos-raise 5s ease-in-out infinite;
+        will-change: transform;
+    }
+
+    @media (min-width: 1024px) {
+        .snitch-hero-mascot {
+            top: -11.5rem;
+            width: 10rem;
+            height: 11.5rem;
+        }
+
+        .snitch-hero-mascot-frame {
+            width: 10rem;
+            height: 10rem;
+        }
     }
 
     /* Landing title card only: shell = crisp yellow misreg; plate = cut paper */
@@ -856,14 +908,14 @@
     }
 
     .snitch-hero-copy .snitch-btn-ghost {
-        background: color-mix(in oklab, white 48%, var(--snitch-paper));
+        background: color-mix(in oklab, white 55%, var(--snitch-paper));
         color: var(--snitch-ink);
         box-shadow: inset 0 0 0 2px var(--snitch-ink);
-        filter: drop-shadow(2px 2px 0 color-mix(in oklab, var(--snitch-spot) 75%, transparent));
+        filter: drop-shadow(2px 2px 0 var(--snitch-spot));
     }
 
     .snitch-hero-copy .snitch-btn-ghost:hover {
-        background: color-mix(in oklab, white 62%, var(--snitch-paper));
+        background: color-mix(in oklab, white 68%, var(--snitch-paper));
         filter: drop-shadow(3px 3px 0 var(--snitch-spot)) brightness(1.02);
     }
 
@@ -908,7 +960,11 @@
         animation-delay: 350ms;
     }
 
-    /* Ink block / torn ticket button - not SaaS rounded rect */
+    /*
+     * Ink block / torn ticket button - not SaaS rounded rect.
+     * Misreg via drop-shadow so the yellow stays crisp (#F0C400).
+     * Do not use multiply on spot yellow - it muddies to orange/brown on paper.
+     */
     .snitch-btn {
         position: relative;
         display: inline-flex;
@@ -925,21 +981,15 @@
         font-weight: 550;
         letter-spacing: 0.02em;
         clip-path: var(--snitch-ticket-clip);
+        box-shadow: none;
+        filter: drop-shadow(2px 2px 0 var(--snitch-spot));
         transition:
             transform 180ms ease,
             filter 180ms ease;
     }
 
     .snitch-btn::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        z-index: -1;
-        background: var(--snitch-spot);
-        clip-path: inherit;
-        transform: translate(2px, 2px);
-        opacity: 0.85;
-        mix-blend-mode: multiply;
+        content: none;
     }
 
     .snitch-btn::after {
@@ -948,36 +998,32 @@
         inset: 0;
         background-image: var(--snitch-halftone);
         background-size: 5px 5px;
-        opacity: 0.28;
+        opacity: 0.16;
         mix-blend-mode: soft-light;
         pointer-events: none;
     }
 
     .snitch-btn:hover {
         transform: translate(-1px, -1px);
-        filter: brightness(1.05);
+        filter: drop-shadow(3px 3px 0 var(--snitch-spot)) brightness(1.05);
     }
 
     .snitch-btn:disabled {
         opacity: 0.5;
         transform: none;
         cursor: not-allowed;
-        filter: none;
+        filter: drop-shadow(2px 2px 0 var(--snitch-spot));
     }
 
     .snitch-btn-ghost {
-        background: transparent;
+        background: color-mix(in oklab, var(--snitch-paper) 92%, white);
         color: var(--snitch-ink);
         box-shadow: inset 0 0 0 2px var(--snitch-ink);
     }
 
-    .snitch-btn-ghost::before {
-        background: color-mix(in oklab, var(--snitch-spot) 35%, transparent);
-        opacity: 0.55;
-    }
-
     .snitch-btn-ghost:hover {
-        background: color-mix(in oklab, var(--snitch-ink) 6%, transparent);
+        background: color-mix(in oklab, white 55%, var(--snitch-paper));
+        filter: drop-shadow(3px 3px 0 var(--snitch-spot)) brightness(1.02);
     }
 
     .snitch-btn-light {
@@ -985,42 +1031,30 @@
         color: var(--snitch-ink);
     }
 
-    .snitch-btn-light::before {
-        background: var(--snitch-spot);
-    }
-
     .snitch-btn-light:hover {
-        filter: brightness(1.03);
+        filter: drop-shadow(3px 3px 0 var(--snitch-spot)) brightness(1.03);
     }
 
     .snitch-btn-ghost-light {
-        background: transparent;
+        background: color-mix(in oklab, var(--snitch-paper) 92%, white);
         color: var(--snitch-ink);
         box-shadow: inset 0 0 0 2px var(--snitch-ink);
     }
 
-    .snitch-btn-ghost-light::before {
-        background: color-mix(in oklab, var(--snitch-spot) 40%, transparent);
-        opacity: 0.55;
-    }
-
     .snitch-btn-ghost-light:hover {
-        background: color-mix(in oklab, var(--snitch-ink) 6%, transparent);
+        background: color-mix(in oklab, white 55%, var(--snitch-paper));
+        filter: drop-shadow(3px 3px 0 var(--snitch-spot)) brightness(1.02);
     }
 
     .snitch-btn-spot {
         background: var(--snitch-spot);
         color: var(--snitch-ink);
-    }
-
-    .snitch-btn-spot::before {
-        background: color-mix(in oklab, var(--snitch-ink) 55%, transparent);
-        opacity: 0.9;
-        mix-blend-mode: normal;
+        /* Charcoal offset under yellow face (yellow misreg would not read) */
+        filter: drop-shadow(2px 2px 0 var(--snitch-ink));
     }
 
     .snitch-btn-spot:hover {
-        filter: brightness(1.03);
+        filter: drop-shadow(3px 3px 0 var(--snitch-ink)) brightness(1.03);
     }
 
     .snitch-field {
@@ -1095,13 +1129,44 @@
     }
 }
 
+/* Hold below the clip, spring up to peek, linger, duck away. */
+@keyframes snitch-mascot-peek-slide {
+    0%,
+    14% {
+        transform: rotate(8deg) translateY(92%);
+    }
+    25%,
+    89% {
+        transform: rotate(8deg) translateY(38%);
+    }
+    100% {
+        transform: rotate(8deg) translateY(92%);
+    }
+}
+
+/* Binoculars lift into place while the detective is visible. */
+@keyframes snitch-mascot-binos-raise {
+    0%,
+    10%,
+    85%,
+    100% {
+        transform: translate(-50%, 55%);
+    }
+    25%,
+    70% {
+        transform: translate(-50%, 0%);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .snitch-grain,
     .snitch-tape,
     .snitch-contact-reveal > *,
     .snitch-polaroid,
     .snitch-btn,
-    .snitch-hero-marquee-track {
+    .snitch-hero-marquee-track,
+    .snitch-hero-mascot-peek,
+    .snitch-hero-mascot-binos {
         animation: none !important;
         transition: none !important;
     }
@@ -1109,5 +1174,15 @@
     .snitch-hero-marquee-track {
         will-change: auto;
         transform: none;
+    }
+
+    .snitch-hero-mascot-peek {
+        will-change: auto;
+        transform: rotate(8deg) translateY(38%);
+    }
+
+    .snitch-hero-mascot-binos {
+        will-change: auto;
+        transform: translate(-50%, 0%);
     }
 }
