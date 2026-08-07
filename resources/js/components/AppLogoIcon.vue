@@ -14,7 +14,7 @@ defineProps<Props>();
 
 <template>
     <img
-        src="/images/brand/snitch-mark.png"
+        src="/images/brand/mascot-mark.png"
         alt=""
         width="128"
         height="128"

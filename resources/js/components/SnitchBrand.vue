@@ -28,7 +28,7 @@ const textClass = {
 <template>
     <span class="inline-flex min-w-0 items-center gap-2">
         <img
-            src="/images/brand/snitch-mark.png"
+            src="/images/brand/mascot-mark.png"
             alt=""
             width="128"
             height="128"

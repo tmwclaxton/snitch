@@ -31,6 +31,28 @@ class PublicPagesTest extends TestCase
         $this->assertFileExists(public_path('images/marketing/hero/mascot-binos.png'));
     }
 
+    public function test_brand_logo_uses_lovable_mascot_mark(): void
+    {
+        $this->assertFileExists(public_path('images/brand/mascot-mark.png'));
+        $this->assertFileExists(public_path('favicon.png'));
+        $this->assertFileExists(public_path('favicon.ico'));
+        $this->assertFileExists(public_path('favicon.svg'));
+        $this->assertFileExists(public_path('apple-touch-icon.png'));
+
+        $chrome = [
+            resource_path('js/components/SnitchBrand.vue'),
+            resource_path('js/components/AppLogoIcon.vue'),
+        ];
+
+        foreach ($chrome as $path) {
+            $contents = file_get_contents($path);
+            $this->assertNotFalse($contents, "Missing source file: {$path}");
+            $this->assertStringContainsString('/images/brand/mascot-mark.png', $contents);
+            $this->assertStringNotContainsString('/images/brand/snitch-mark.png', $contents);
+            $this->assertStringNotContainsString('/images/brand/detective-mark.png', $contents);
+        }
+    }
+
     public function test_marketing_pages_are_successful_for_guests(): void
     {
         $pages = [
@@ -134,6 +156,33 @@ class PublicPagesTest extends TestCase
             $contents,
             'Contact annotations must use charcoal ink, not yellow-on-paper alone',
         );
+    }
+
+    public function test_hero_title_card_ctas_use_spot_and_ink_buttons(): void
+    {
+        $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
+        $css = file_get_contents(resource_path('css/app.css'));
+
+        $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
+        $this->assertNotFalse($css, 'Missing app.css source');
+
+        $this->assertMatchesRegularExpression(
+            '/class="snitch-hero-cta[^"]*"[\s\S]*?class="snitch-btn">[\s\S]*?Log in[\s\S]*?class="snitch-btn snitch-btn-spot"[\s\S]*?Sign up/',
+            $welcome,
+            'Hero title card must use charcoal snitch-btn for Log in then spot yellow for Sign up',
+        );
+        $this->assertMatchesRegularExpression(
+            '/class="snitch-hero-cta[^"]*"[\s\S]*?:href="login\(\)"[\s\S]*?:href="login\(\)"/',
+            $welcome,
+            'Hero title card Log in and Sign up must both use login() like PublicNav',
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/class="snitch-hero-cta[^"]*"[\s\S]*?snitch-btn-ghost/',
+            $welcome,
+            'Hero title card CTAs must not use ghost / paper fill',
+        );
+        $this->assertStringContainsString('.snitch-hero-copy .snitch-btn-spot', $css);
+        $this->assertStringNotContainsString('.snitch-hero-copy .snitch-btn-ghost', $css);
     }
 
     public function test_unknown_public_path_renders_branded_not_found(): void

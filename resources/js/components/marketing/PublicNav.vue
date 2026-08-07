@@ -59,7 +59,7 @@ const links = [
                 <template v-else>
                     <Link
                         :href="login()"
-                        class="snitch-btn snitch-btn-ghost hidden px-3 py-2 text-sm sm:inline-flex"
+                        class="snitch-btn hidden px-3 py-2 text-sm sm:inline-flex"
                     >
                         Log in
                     </Link>
@@ -67,7 +67,7 @@ const links = [
                         :href="login()"
                         class="snitch-btn snitch-btn-spot px-3 py-2 text-sm"
                     >
-                        Get started
+                        Sign up
                     </Link>
                 </template>
             </div>

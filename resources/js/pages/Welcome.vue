@@ -3,7 +3,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
-import { dashboard, howItWorks, login } from '@/routes';
+import { dashboard, login } from '@/routes';
 
 defineOptions({
     layout: PublicLayout,
@@ -185,15 +185,24 @@ const steps = [
                             <div
                                 class="snitch-hero-cta mt-6 flex flex-wrap items-stretch justify-start gap-2.5 sm:mt-7 sm:gap-3"
                             >
-                                <Link :href="primaryCta.href" class="snitch-btn">
-                                    <span class="relative z-10">{{ primaryCta.label }}</span>
-                                </Link>
                                 <Link
-                                    :href="howItWorks()"
-                                    class="snitch-btn snitch-btn-ghost"
+                                    v-if="isAuthenticated"
+                                    :href="dashboard()"
+                                    class="snitch-btn snitch-btn-spot"
                                 >
-                                    <span class="relative z-10">How it works</span>
+                                    <span class="relative z-10">Dashboard</span>
                                 </Link>
+                                <template v-else>
+                                    <Link :href="login()" class="snitch-btn">
+                                        <span class="relative z-10">Log in</span>
+                                    </Link>
+                                    <Link
+                                        :href="login()"
+                                        class="snitch-btn snitch-btn-spot"
+                                    >
+                                        <span class="relative z-10">Sign up</span>
+                                    </Link>
+                                </template>
                             </div>
                         </div>
                     </div>
@@ -224,13 +233,12 @@ const steps = [
                     class="snitch-contact-reveal mt-10 grid gap-6 md:grid-cols-3"
                 >
                     <article
-                        v-for="(step, index) in steps"
+                        v-for="step in steps"
                         :key="step.stamp"
                         class="snitch-scrap relative p-6 pt-8"
                     >
                         <span
-                            class="snitch-tape"
-                            :class="index === 1 ? 'left-5 -top-2' : 'right-5 -top-2'"
+                            class="snitch-tape left-5 -top-2"
                             aria-hidden="true"
                         />
                         <p
@@ -298,8 +306,8 @@ const steps = [
                     The posts that earn a remake.
                 </h2>
                 <p class="relative z-10 mt-3 max-w-3xl text-snitch-ink/80">
-                    You set the bar. Snitch scores what cleared it, why it won,
-                    and how to steal the craft.
+                    You set the bar. We score what cleared it, why it won, and
+                    how to steal the craft.
                 </p>
             </div>
         </section>

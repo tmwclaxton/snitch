@@ -21,10 +21,7 @@ defineOptions({
         <div class="px-5 py-14 sm:px-8 sm:py-20">
             <div class="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1fr_1.1fr]">
                 <div>
-                    <span class="snitch-stamp snitch-stamp-active">Contact</span>
-                    <h1
-                        class="snitch-display mt-4 text-4xl text-snitch-ink"
-                    >
+                    <h1 class="snitch-display text-4xl text-snitch-ink">
                         Say hello.
                     </h1>
                     <p class="mt-4 max-w-md text-snitch-ink/80">

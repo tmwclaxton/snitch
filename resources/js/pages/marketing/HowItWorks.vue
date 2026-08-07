@@ -34,9 +34,8 @@ const steps = [
 
         <div class="px-5 py-14 sm:px-8 sm:py-20">
             <div class="mx-auto max-w-6xl">
-                <span class="snitch-stamp snitch-stamp-active">Process</span>
                 <h1
-                    class="snitch-display mt-4 max-w-2xl text-4xl text-snitch-ink sm:text-5xl"
+                    class="snitch-display text-4xl text-snitch-ink sm:text-5xl"
                 >
                     Track. Analyze. Remake the winners.
                 </h1>
@@ -52,8 +51,7 @@ const steps = [
                         class="snitch-scrap relative list-none p-6 pt-8"
                     >
                         <span
-                            class="snitch-tape"
-                            :class="index === 1 ? 'left-5 -top-2' : 'right-5 -top-2'"
+                            class="snitch-tape left-5 -top-2"
                             aria-hidden="true"
                         />
                         <p
