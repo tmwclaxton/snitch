@@ -28,3 +28,4 @@ yarn-error.log
 /.vscode
 /.zed
 /.cursor/mcp.env
+/.cursor/mcp.json

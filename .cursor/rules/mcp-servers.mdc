@@ -12,6 +12,8 @@ This project configures MCP servers in `.cursor/mcp.json`:
 | `laravel-boost` | Laravel app tooling | local |
 | `firecrawl` | Web scrape / crawl / search | `FIRECRAWL_API_KEY` |
 | `n8n` | n8n workflows (HTTP MCP) | `N8N_MCP_TOKEN` |
+| `meta-ads` | Meta / Facebook Ads (Pipeboard) | Pipeboard account |
+| `outline` | Outline knowledge base | `OUTLINE_API_TOKEN` |
 | `google-ads` | Official Google Ads MCP (read) | Google ADC + developer token |
 | `google-analytics` | Official Analytics MCP (read) | Google ADC |
 | `google-search-console` | Search Console SEO data | `GSC_SERVICE_ACCOUNT_PATH` |
@@ -36,6 +38,8 @@ This project configures MCP servers in `.cursor/mcp.json`:
 
 - **Firecrawl / NanoGPT / GSC**: Node/`npx` + the env vars above
 - **n8n**: `N8N_MCP_TOKEN` (URL is set in `mcp.json`)
+- **Outline**: `OUTLINE_API_TOKEN` (URL is set in `mcp.json`)
+- **Meta Ads**: Pipeboard MCP at `https://meta-ads.mcp.pipeboard.co/` (no project env var)
 - **GitHub**: PAT from https://github.com/settings/tokens
 - **Google Ads / Analytics**: `pipx`, `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_PROJECT_ID`; Ads also needs `GOOGLE_ADS_DEVELOPER_TOKEN`
 - After changing MCP config or env, reload Cursor MCP servers (Settings → Tools & MCP)
