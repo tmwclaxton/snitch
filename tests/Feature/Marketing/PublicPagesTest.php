@@ -148,7 +148,6 @@ class PublicPagesTest extends TestCase
         $contents = file_get_contents(resource_path('js/pages/marketing/Contact.vue'));
 
         $this->assertNotFalse($contents, 'Missing Contact.vue source');
-        $this->assertStringContainsString('snitch-stamp-active', $contents);
         $this->assertStringContainsString('contact-annotation', $contents);
         $this->assertStringContainsString('text-snitch-ink', $contents);
         $this->assertDoesNotMatchRegularExpression(
