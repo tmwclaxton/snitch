@@ -20,16 +20,17 @@ createInertiaApp({
     layout: (name) => {
         switch (true) {
             case name === 'Welcome':
+            case name.startsWith('marketing/'):
+            case name.startsWith('errors/'):
                 return null;
             case name.startsWith('settings/'):
-            case name.startsWith('teams/'):
                 return [AppLayout, SettingsLayout];
             default:
                 return AppLayout;
         }
     },
     progress: {
-        color: '#4B5563',
+        color: '#C23B3B',
     },
     setup({ el, App, props, plugin }) {
         if (!el) {

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "li_1",
+    "url": "https://linkedin.com/posts/rivalbakery-1",
+    "text": "Behind the counter process",
+    "postedAt": "2026-08-03T09:00:00Z",
+    "type": "image",
+    "images": ["https://cdn.example.com/li1.jpg"],
+    "likes": 150,
+    "comments": 12,
+    "shares": 4,
+    "author": { "id": "co_1", "name": "Rival Bakery", "image": null }
+  }
+]

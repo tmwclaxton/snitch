@@ -1,0 +1,16 @@
+[
+  {
+    "id": "pin_1",
+    "link": "https://www.pinterest.com/pin/1/",
+    "description": "Croissant styling board",
+    "created_at": "2026-08-04T08:00:00Z",
+    "image": { "url": "https://cdn.example.com/pin1.jpg" },
+    "repin_count": 40,
+    "comment_count": 2,
+    "pinner": {
+      "id": "u1",
+      "username": "rivalbakery",
+      "full_name": "Rival Bakery"
+    }
+  }
+]

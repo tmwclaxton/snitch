@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { edit as editWinners } from '@/actions/App/Http/Controllers/Settings/WinnerRuleController';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -7,7 +8,6 @@ import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editProfile } from '@/routes/profile';
-import { index as teams } from '@/routes/teams';
 import type { NavItem } from '@/types';
 
 const sidebarNavItems: NavItem[] = [
@@ -16,12 +16,12 @@ const sidebarNavItems: NavItem[] = [
         href: editProfile(),
     },
     {
-        title: 'Teams',
-        href: teams(),
-    },
-    {
         title: 'Appearance',
         href: editAppearance(),
+    },
+    {
+        title: 'Winners',
+        href: editWinners(),
     },
 ];
 

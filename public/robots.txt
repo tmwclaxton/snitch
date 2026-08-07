@@ -1,2 +1,20 @@
 User-agent: *
-Disallow:
+Allow: /
+Allow: /about
+Allow: /how-it-works
+Allow: /contact
+Allow: /privacy
+Allow: /terms
+Allow: /cookies
+Allow: /sitemap.xml
+
+Disallow: /settings
+Disallow: /invitations
+Disallow: /authenticate
+Disallow: /dashboard
+Disallow: /onboarding
+Disallow: /competitors
+Disallow: /feed
+Disallow: /winners
+
+Sitemap: /sitemap.xml

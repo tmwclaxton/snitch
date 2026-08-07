@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid } from '@lucide/vue';
-import { computed } from 'vue';
+import { Link } from '@inertiajs/vue3';
+import { Clapperboard, LayoutGrid, Settings, Trophy, Users } from '@lucide/vue';
+import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
+import { index as feed } from '@/actions/App/Http/Controllers/FeedController';
+import { index as winners } from '@/actions/App/Http/Controllers/WinnerController';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
-import TeamSwitcher from '@/components/TeamSwitcher.vue';
 import {
     Sidebar,
     SidebarContent,
@@ -17,51 +18,51 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { edit as appearance } from '@/routes/appearance';
 import type { NavItem } from '@/types';
 
-const page = usePage();
-
-const dashboardUrl = computed(() =>
-    page.props.currentTeam ? dashboard(page.props.currentTeam.slug).url : '/',
-);
-
-const mainNavItems = computed<NavItem[]>(() => [
+const mainNavItems: NavItem[] = [
+    {
+        title: 'Feed',
+        href: feed(),
+        icon: Clapperboard,
+    },
+    {
+        title: 'Competitors',
+        href: competitors(),
+        icon: Users,
+    },
+    {
+        title: 'Winners',
+        href: winners(),
+        icon: Trophy,
+    },
     {
         title: 'Dashboard',
-        href: dashboardUrl.value,
+        href: dashboard(),
         icon: LayoutGrid,
     },
-]);
+];
 
 const footerNavItems: NavItem[] = [
     {
-        title: 'Repository',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
+        title: 'Settings',
+        href: appearance(),
+        icon: Settings,
     },
 ];
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="inset">
+    <Sidebar collapsible="icon" variant="sidebar" class="border-r border-snitch-ink/10 bg-snitch-paper/80">
         <SidebarHeader>
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboardUrl">
+                        <Link :href="feed()">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarMenu>
-            <SidebarMenu>
-                <SidebarMenuItem>
-                    <TeamSwitcher />
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarHeader>

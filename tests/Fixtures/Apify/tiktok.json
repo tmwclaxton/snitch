@@ -1,0 +1,20 @@
+[
+  {
+    "id": "tt_1",
+    "webVideoUrl": "https://www.tiktok.com/@rivalbakery/video/1",
+    "text": "Hook in three seconds",
+    "createTime": 1722500000,
+    "videoUrl": "https://cdn.example.com/tt1.mp4",
+    "playCount": 50000,
+    "diggCount": 4000,
+    "commentCount": 220,
+    "shareCount": 90,
+    "authorMeta": {
+      "id": "55",
+      "name": "rivalbakery",
+      "nickName": "Rival Bakery",
+      "avatar": "https://cdn.example.com/avatar.jpg"
+    },
+    "musicMeta": { "musicName": "Beat Rise", "musicAuthor": "DJ Crumb" }
+  }
+]

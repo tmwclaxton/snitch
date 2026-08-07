@@ -1,0 +1,102 @@
+---
+description: Snitch soft risograph mixed-media design system and asset brief for Canva and NanoGPT
+alwaysApply: true
+---
+
+# Snitch soft risograph design system
+
+Locked aesthetic for marketing, legal, and product UI. Do not invent a second look.
+
+## Direction
+
+Soft, inky, slightly imperfect **risograph** print feel - zine / editorial poster energy.
+
+- Limited spot inks on warm print paper (not stiff SaaS, not neon cyber)
+- Visible **halftone / grain**, slight **misregistration**, flat ink fills, paper show-through
+- Photography treated as printed (duotone / halftone overlay), not glossy photo chrome
+- **Yellow-forward** accent system (mustard / fluorescent riso yellow, not gold luxury chrome)
+- **Logo mark**: original winged snitch orb (mustard ball + charcoal wings) - favicon and wordmark companion; not HP merchandise art
+- **Detective mascot**: locked brand character - charcoal silhouette trench coat + fedora, featured on landing and empty states (not the logo)
+
+## Tokens (CSS)
+
+Defined in `resources/css/app.css`:
+
+- `--snitch-paper` `#EFE6D8` (warm uncoated stock)
+- `--snitch-ink` `#1C1B1A` (charcoal)
+- `--snitch-spot` / `--snitch-accent` / `--snitch-marker` `#F0C400` (strong riso yellow / mustard)
+- `--snitch-teal` `#3A5F6B` (optional third mist for teal stamps only)
+- `--snitch-halftone`, `--snitch-grain`, ticket clip for buttons
+- Display: **Young Serif** (print/zine); body: **Figtree**; annotation: **Caveat**
+
+## Craft utilities
+
+- `.snitch-surface` / `.snitch-app-shell` - paper + halftone ground
+- `.snitch-btn` - torn-ticket / overprinted ink block with yellow misreg shadow (not rounded SaaS rect)
+- `.snitch-stamp` - real ink stamp with offset shadow; active stamps fill yellow with charcoal type
+- `.snitch-scrap`, `.snitch-polaroid`, `.snitch-contact-sheet`, `.snitch-sticker`, `.snitch-tear-board`, `.snitch-cutout`, `.snitch-doc`
+- Brand misregistration: duplicate yellow layer offset under Young Serif wordmark
+
+## Look
+
+- Brand-first full-bleed riso poster hero with detective mascots; one headline, one line, one CTA group
+- Nav over hero: absolute, paper-on-print contrast
+- Feed cells like printed contact sheets; stamps as ink stamps
+- Analysis as annotation stickers; winners as tear-sheet board
+- Motion: grain drift, tape settle, contact-sheet reveal - soft presence
+
+## Avoid
+
+- Purple SaaS gradients / neon cyber glow / glossy 3D AI desk
+- Cream + terracotta corporate cliche (paper may be warm; spot is yellow ink, not terracotta UI chrome)
+- Coral / pink as primary accent (retired; do not reintroduce as brand spot)
+- Gold luxury chrome or metallic yellow
+- Stiff Fraunces + Instrument Sans pairing, Inter / Roboto / Arial / system
+- Generic rounded-rectangle buttons and pill badges
+- Card stacks in the hero; "Laravel Starter Kit" placeholders
+- Baked-in wordmarks or gibberish UI text in generated assets when HTML owns brand type
+
+## Canva brief
+
+- Soft risograph: charcoal + mustard yellow on cream paper, halftone, misregistration
+- Logo slots: original winged snitch orb mark (not detective head)
+- Feature detective mascot silhouette (trench + fedora) on hero / empty / OG illustration only
+- Brand wordmark SNITCH dominant on share graphics (editable type, not baked neon)
+- Reject SaaS card templates with Inter-style type and pill badges
+- Editable design to iterate: `DAHRnszV8hM` (rebuild if it drifts to SaaS or coral)
+
+## NanoGPT brief
+
+Prefer cheap models (Flux Schnell) unless quality fails.
+
+Prompts must say:
+
+- soft risograph print, warm cream paper, charcoal + strong mustard / fluorescent yellow spot inks
+- logo mark: original small winged messenger orb (mustard ball + charcoal print wings); not official Golden Snitch / WB art
+- detective mascot: cute/editorial charcoal silhouette in trench coat and fedora (illustration only)
+- halftone dots, ink grain, misregistration, flat ink fills, paper show-through
+- zine / editorial poster; no neon, no purple, no coral primary, no glossy 3D, no baked wordmark / gibberish UI
+- hero: landscape 16:9+ with room for HTML typography; detectives framing a contact-sheet wall; yellow ink floor band
+
+Store logo under `public/images/brand/snitch-mark.png` (favicon crops from this). Marketing under `public/images/marketing/` (`hero.jpg`, `og.jpg`, `empty-404.jpg`).
+
+## Logo vs mascot
+
+- **Logo / favicon**: `snitch-mark.png` - original winged snitch orb left of the Snitch wordmark (`SnitchBrand`, `AppLogo`, `AppLogoIcon`, chrome icons)
+- **Mascot**: detective silhouette - landing hero, OG share art, 404 / empty polaroid states; keep `detective.png` / `detective-mark.png` for illustration only
+- Treatment: soft printed riso, not neon cyber, not photoreal noir, not cloned HP merchandise
+
+## Surface mapping
+
+| Surface | Treatment |
+|---|---|
+| Landing | Riso poster hero with detective mascots; scrap sections below fold |
+| Legal / About | Quiet `.snitch-doc` with light halftone |
+| Onboarding | Scrap form; polaroid picks with print grade |
+| Feed | Printed contact sheet + stamp filters |
+| Post detail | Polaroid + ink stickers |
+| Winners | Tear-sheet board |
+| Competitors | Cutout chips with yellow offset shadow |
+| Dashboard | Scrap nav panels |
+| Settings | Quieter `.snitch-doc` |
+| 404 / empty | Detective in empty polaroid with yellow tape/scrap |

@@ -1,0 +1,16 @@
+[
+  {
+    "postId": "fb_1",
+    "url": "https://facebook.com/rivalbakery/posts/1",
+    "text": "Weekend special reel",
+    "time": "2026-08-02T12:00:00+00:00",
+    "type": "video",
+    "videoUrl": "https://cdn.example.com/fb1.mp4",
+    "likes": 800,
+    "comments": 33,
+    "shares": 12,
+    "viewsCount": 9000,
+    "pageName": "Rival Bakery",
+    "pageId": "page_1"
+  }
+]

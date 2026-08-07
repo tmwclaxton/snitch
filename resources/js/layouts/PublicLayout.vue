@@ -1,0 +1,17 @@
+<script setup lang="ts">
+import PublicFooter from '@/components/marketing/PublicFooter.vue';
+import PublicNav from '@/components/marketing/PublicNav.vue';
+</script>
+
+<template>
+    <div class="snitch-surface relative min-h-screen w-full overflow-x-hidden">
+        <div class="snitch-grain" aria-hidden="true" />
+        <div class="relative z-10 flex min-h-screen w-full flex-col">
+            <PublicNav />
+            <main class="w-full flex-1">
+                <slot />
+            </main>
+            <PublicFooter />
+        </div>
+    </div>
+</template>

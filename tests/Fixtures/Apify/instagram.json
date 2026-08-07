@@ -1,0 +1,20 @@
+[
+  {
+    "id": "ig_1",
+    "shortCode": "ABC123",
+    "url": "https://www.instagram.com/p/ABC123/",
+    "type": "Video",
+    "productType": "clips",
+    "caption": "Morning pastry drop",
+    "timestamp": "2026-08-01T10:00:00.000Z",
+    "videoUrl": "https://cdn.example.com/ig1.mp4",
+    "displayUrl": "https://cdn.example.com/ig1.jpg",
+    "likesCount": 1200,
+    "commentsCount": 40,
+    "videoViewCount": 18000,
+    "ownerUsername": "rivalbakery",
+    "ownerId": "99",
+    "ownerFullName": "Rival Bakery",
+    "musicInfo": { "title": "Oven Kick", "artist": "Studio Loaf" }
+  }
+]
