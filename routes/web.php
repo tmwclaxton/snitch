@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BrandProfileController;
 use App\Http\Controllers\CompetitorController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\Marketing\ContactController;
@@ -52,14 +53,23 @@ XML,
 Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function () {
     Route::get('/onboarding', [OnboardingController::class, 'show'])->name('onboarding.show');
     Route::post('/onboarding', [OnboardingController::class, 'store'])->name('onboarding.store');
-    Route::post('/onboarding/suggest', [OnboardingController::class, 'suggest'])->name('onboarding.suggest');
-    Route::post('/onboarding/confirm', [OnboardingController::class, 'confirm'])->name('onboarding.confirm');
+    Route::post('/onboarding/autofill', [OnboardingController::class, 'startAutofill'])
+        ->middleware('throttle:10,1')
+        ->name('onboarding.autofill');
+    Route::get('/onboarding/autofill/{autofillId}', [OnboardingController::class, 'autofillStatus'])
+        ->name('onboarding.autofill.status');
 
     Route::middleware([EnsureBrandProfile::class])->group(function () {
         Route::inertia('dashboard', 'Dashboard')->name('dashboard');
 
         Route::get('/competitors', [CompetitorController::class, 'index'])->name('competitors.index');
         Route::post('/competitors', [CompetitorController::class, 'store'])->name('competitors.store');
+        Route::post('/competitors/suggest', [CompetitorController::class, 'suggest'])
+            ->middleware('throttle:10,1')
+            ->name('competitors.suggest');
+        Route::get('/competitors/suggest/{suggestId}', [CompetitorController::class, 'suggestStatus'])
+            ->name('competitors.suggest.status');
+        Route::post('/competitors/confirm-suggestions', [CompetitorController::class, 'confirmSuggestions'])->name('competitors.confirm-suggestions');
         Route::delete('/competitors/{trackedAccount}', [CompetitorController::class, 'destroy'])->name('competitors.destroy');
         Route::post('/competitors/{trackedAccount}/sync', [CompetitorController::class, 'sync'])->name('competitors.sync');
 
@@ -69,8 +79,10 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::get('/winners', [WinnerController::class, 'index'])->name('winners.index');
         Route::post('/winners/rescore', [WinnerController::class, 'rescore'])->name('winners.rescore');
 
-        Route::get('/settings/winners', [WinnerRuleController::class, 'edit'])->name('winners.settings.edit');
-        Route::put('/settings/winners', [WinnerRuleController::class, 'update'])->name('winners.settings.update');
+        Route::get('/brand', [BrandProfileController::class, 'edit'])->name('brand.edit');
+        Route::put('/brand', [BrandProfileController::class, 'update'])->name('brand.update');
+
+        Route::put('/winners/rules', [WinnerRuleController::class, 'update'])->name('winners.rules.update');
     });
 });
 

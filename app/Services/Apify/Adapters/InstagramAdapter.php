@@ -33,15 +33,21 @@ class InstagramAdapter extends AbstractPlatformAdapter
             return null;
         }
 
-        $resolvedHandle = (string) ($owner['username'] ?? $item['ownerUsername'] ?? $handle);
+        // Error payloads from the actor (e.g. not_found) must not look like profiles.
+        if (isset($item['error']) || isset($item['errorDescription'])) {
+            return null;
+        }
+
+        $resolvedHandle = (string) ($item['ownerUsername'] ?? $owner['username'] ?? $handle);
+        $externalId = $item['ownerId'] ?? $owner['id'] ?? null;
 
         return [
             'platform' => $this->platform(),
             'handle' => ltrim($resolvedHandle, '@'),
             'url' => $this->profileUrl(ltrim($resolvedHandle, '@')),
-            'external_id' => isset($owner['id']) ? (string) $owner['id'] : (isset($item['ownerId']) ? (string) $item['ownerId'] : null),
+            'external_id' => $externalId !== null ? (string) $externalId : null,
             'avatar' => $owner['profilePicUrl'] ?? $item['ownerProfilePicUrl'] ?? null,
-            'display_name' => $owner['fullName'] ?? $item['ownerFullName'] ?? $resolvedHandle,
+            'display_name' => $item['ownerFullName'] ?? $owner['fullName'] ?? $resolvedHandle,
         ];
     }
 

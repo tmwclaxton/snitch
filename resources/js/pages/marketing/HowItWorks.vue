@@ -11,7 +11,7 @@ defineOptions({
 const steps = [
     {
         title: 'Track',
-        body: 'Connect your brand context, then add competitor handles on TikTok, Instagram, Facebook, LinkedIn, and Pinterest. Snitch syncs public posts into one feed.',
+        body: 'Connect your brand context, then add competitor handles on TikTok, Instagram, Facebook, and LinkedIn. Snitch syncs public posts into one feed.',
     },
     {
         title: 'Analyze',

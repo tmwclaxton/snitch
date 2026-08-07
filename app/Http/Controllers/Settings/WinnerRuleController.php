@@ -7,22 +7,9 @@ use App\Http\Requests\Settings\UpdateWinnerRuleRequest;
 use App\Jobs\ScoreWinnersJob;
 use App\Services\Winners\WinnerScorer;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class WinnerRuleController extends Controller
 {
-    public function edit(Request $request, WinnerScorer $scorer): Response
-    {
-        $rule = $scorer->ruleFor($request->user());
-
-        return Inertia::render('settings/Winners', [
-            'rule' => $rule,
-            'presets' => config('snitch.winners.presets'),
-        ]);
-    }
-
     public function update(UpdateWinnerRuleRequest $request, WinnerScorer $scorer): RedirectResponse
     {
         $data = $request->validated();

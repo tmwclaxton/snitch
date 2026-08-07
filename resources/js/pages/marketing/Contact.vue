@@ -43,7 +43,8 @@ defineOptions({
 
                 <div class="snitch-doc relative p-6 sm:p-8">
                     <Form
-                        v-bind="store.form()"
+                        :action="store.url()"
+                        method="post"
                         class="relative z-10 space-y-4"
                         #default="{ errors, processing, recentlySuccessful }"
                     >

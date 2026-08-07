@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Clapperboard, LayoutGrid, Settings, Trophy, Users } from '@lucide/vue';
+import { Clapperboard, LayoutGrid, Settings, Store, Trophy, Users } from '@lucide/vue';
+import { edit as brand } from '@/actions/App/Http/Controllers/BrandProfileController';
 import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feed } from '@/actions/App/Http/Controllers/FeedController';
 import { index as winners } from '@/actions/App/Http/Controllers/WinnerController';
@@ -17,20 +18,25 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
+import { dashboard, home } from '@/routes';
 import { edit as appearance } from '@/routes/appearance';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
     {
-        title: 'Feed',
-        href: feed(),
-        icon: Clapperboard,
+        title: 'Brand',
+        href: brand(),
+        icon: Store,
     },
     {
         title: 'Competitors',
         href: competitors(),
         icon: Users,
+    },
+    {
+        title: 'Feed',
+        href: feed(),
+        icon: Clapperboard,
     },
     {
         title: 'Winners',
@@ -59,7 +65,7 @@ const footerNavItems: NavItem[] = [
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="feed()">
+                        <Link :href="home()">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>

@@ -20,7 +20,7 @@ defineOptions({
                 <h1
                     class="snitch-display relative z-10 text-4xl text-snitch-ink sm:text-5xl"
                 >
-                    Built for people who ship content, not dashboards.
+                    Built for people who ship content, or want to learn how.
                 </h1>
                 <div
                     class="relative z-10 mt-8 space-y-5 text-base leading-relaxed text-snitch-ink/80"

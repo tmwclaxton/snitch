@@ -25,7 +25,12 @@ class CompetitorsTest extends TestCase
         $this->actingAs($user)
             ->get(route('competitors.index'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('competitors/Index'));
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('competitors/Index')
+                ->has('suggestions', 0)
+                ->where('suggestRun', null)
+                ->where('platforms', ['tiktok', 'instagram', 'facebook', 'linkedin'])
+            );
 
         $this->actingAs($user)
             ->post(route('competitors.store'), [
@@ -38,8 +43,38 @@ class CompetitorsTest extends TestCase
             'user_id' => $user->id,
             'handle' => 'rivalbakery',
             'platform' => 'instagram',
+            'url' => 'https://instagram.com/rivalbakery',
         ]);
 
+        Queue::assertPushed(SyncTrackedAccountJob::class);
+    }
+
+    public function test_confirm_suggestions_creates_tracked_accounts(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->post(route('competitors.confirm-suggestions'), [
+                'suggestions' => [
+                    [
+                        'platform' => 'instagram',
+                        'handle' => 'rivalbakery',
+                        'display_name' => 'Rival Bakery',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('competitors.index'));
+
+        $this->assertDatabaseHas('tracked_accounts', [
+            'user_id' => $user->id,
+            'handle' => 'rivalbakery',
+            'platform' => 'instagram',
+            'url' => 'https://instagram.com/rivalbakery',
+            'display_name' => 'Rival Bakery',
+        ]);
         Queue::assertPushed(SyncTrackedAccountJob::class);
     }
 

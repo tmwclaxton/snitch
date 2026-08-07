@@ -28,8 +28,8 @@ defineOptions({
                     />
                 </div>
             </div>
-            <span class="snitch-stamp">404</span>
-            <h1 class="snitch-display relative z-10 mt-4 text-3xl text-snitch-ink">
+            <p class="snitch-ink-label">404</p>
+            <h1 class="snitch-display relative z-10 mt-2 text-3xl text-snitch-ink">
                 This frame fell off the board.
             </h1>
             <p class="mt-3 text-snitch-ink/80">

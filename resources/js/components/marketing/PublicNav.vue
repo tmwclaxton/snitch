@@ -2,7 +2,16 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import SnitchBrand from '@/components/SnitchBrand.vue';
-import { about, contact, dashboard, home, howItWorks, login } from '@/routes';
+import { about, contact, dashboard, home, howItWorks, login, logout } from '@/routes';
+
+withDefaults(
+    defineProps<{
+        minimal?: boolean;
+    }>(),
+    {
+        minimal: false,
+    },
+);
 
 const page = usePage();
 const isAuthenticated = computed(() => Boolean(page.props.auth?.user));
@@ -34,6 +43,7 @@ const links = [
             </Link>
 
             <nav
+                v-if="!minimal"
                 class="hidden items-center gap-6 text-sm font-semibold text-snitch-ink md:flex"
                 aria-label="Primary"
             >
@@ -49,26 +59,40 @@ const links = [
             </nav>
 
             <div class="flex items-center gap-2">
-                <Link
-                    v-if="isAuthenticated"
-                    :href="dashboard()"
-                    class="snitch-btn snitch-btn-ghost px-3 py-2 text-sm"
-                >
-                    Dashboard
-                </Link>
+                <template v-if="minimal">
+                    <Link
+                        v-if="isAuthenticated"
+                        :href="logout()"
+                        method="post"
+                        as="button"
+                        class="snitch-btn snitch-btn-ghost px-3 py-2 text-sm"
+                        data-test="logout-button"
+                    >
+                        Log out
+                    </Link>
+                </template>
                 <template v-else>
                     <Link
-                        :href="login()"
-                        class="snitch-btn hidden px-3 py-2 text-sm sm:inline-flex"
+                        v-if="isAuthenticated"
+                        :href="dashboard()"
+                        class="snitch-btn snitch-btn-ghost px-3 py-2 text-sm"
                     >
-                        Log in
+                        Dashboard
                     </Link>
-                    <Link
-                        :href="login()"
-                        class="snitch-btn snitch-btn-spot px-3 py-2 text-sm"
-                    >
-                        Sign up
-                    </Link>
+                    <template v-else>
+                        <Link
+                            :href="login()"
+                            class="snitch-btn hidden px-3 py-2 text-sm sm:inline-flex"
+                        >
+                            Log in
+                        </Link>
+                        <Link
+                            :href="login()"
+                            class="snitch-btn snitch-btn-spot px-3 py-2 text-sm"
+                        >
+                            Sign up
+                        </Link>
+                    </template>
                 </template>
             </div>
         </div>

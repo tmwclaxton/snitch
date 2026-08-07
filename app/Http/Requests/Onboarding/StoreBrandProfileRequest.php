@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Onboarding;
 
+use App\Support\WebsiteUrl;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class StoreBrandProfileRequest extends FormRequest
 {
@@ -26,7 +28,42 @@ class StoreBrandProfileRequest extends FormRequest
             'own_handles.tiktok' => ['nullable', 'string', 'max:80'],
             'own_handles.facebook' => ['nullable', 'string', 'max:80'],
             'own_handles.linkedin' => ['nullable', 'string', 'max:80'],
-            'own_handles.pinterest' => ['nullable', 'string', 'max:80'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            $website = $this->input('website');
+
+            if ($website === null || $website === '' || ! is_string($website)) {
+                return;
+            }
+
+            if (WebsiteUrl::hasValidHost($website)) {
+                return;
+            }
+
+            $validator->errors()->add('website', 'Enter a valid website domain.');
+        });
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (! $this->filled('website')) {
+            $this->merge(['website' => null]);
+
+            return;
+        }
+
+        $raw = $this->input('website');
+
+        if (! is_string($raw)) {
+            return;
+        }
+
+        $this->merge([
+            'website' => WebsiteUrl::normalize($raw),
+        ]);
     }
 }

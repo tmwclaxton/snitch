@@ -26,7 +26,7 @@ class TrackedAccountFactory extends Factory
             'user_id' => User::factory(),
             'platform' => $platform,
             'handle' => $handle,
-            'url' => "https://{$platform->value}.com/{$handle}",
+            'url' => $this->profileUrl($platform, $handle),
             'external_id' => (string) fake()->unique()->numerify('##########'),
             'avatar' => fake()->imageUrl(),
             'display_name' => fake()->name(),
@@ -38,7 +38,17 @@ class TrackedAccountFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'platform' => $platform,
-            'url' => "https://{$platform->value}.com/{$attributes['handle']}",
+            'url' => $this->profileUrl($platform, (string) $attributes['handle']),
         ]);
+    }
+
+    private function profileUrl(Platform $platform, string $handle): string
+    {
+        return match ($platform) {
+            Platform::Instagram => "https://instagram.com/{$handle}",
+            Platform::TikTok => "https://tiktok.com/@{$handle}",
+            Platform::Facebook => "https://facebook.com/{$handle}",
+            Platform::LinkedIn => "https://linkedin.com/company/{$handle}",
+        };
     }
 }

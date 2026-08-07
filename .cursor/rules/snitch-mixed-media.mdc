@@ -26,7 +26,7 @@ Defined in `resources/css/app.css`:
 - `--snitch-paper` `#EFE6D8` (warm uncoated stock)
 - `--snitch-ink` `#1C1B1A` (charcoal)
 - `--snitch-spot` / `--snitch-accent` / `--snitch-marker` `#F0C400` (strong riso yellow / mustard)
-- `--snitch-teal` `#3A5F6B` (optional third mist for teal stamps only)
+- `--snitch-teal` `#3A5F6B` (optional third mist for accents only)
 - `--snitch-halftone`, `--snitch-grain`, ticket clip for buttons
 - Display: **Young Serif** (print/zine); body: **Figtree**; annotation: **Caveat**
 
@@ -34,15 +34,19 @@ Defined in `resources/css/app.css`:
 
 - `.snitch-surface` / `.snitch-app-shell` - paper + halftone ground
 - `.snitch-btn` - torn-ticket / overprinted ink block with yellow misreg shadow (not rounded SaaS rect)
-- `.snitch-stamp` - real ink stamp with offset shadow; active stamps fill yellow with charcoal type
+- `.snitch-filter-bar` + `PaperSelect` - scrap paper filter toolbar with labeled selects (feed). Not stamp chips.
+- `.snitch-seg` - segmented paper control for appearance / presets (mustard fill when active)
+- `.snitch-paper-nav` - quiet settings side links with mustard rule when active
+- `.snitch-ink-label` - understated uppercase meta (platform, rank) - not a filter control
 - `.snitch-scrap`, `.snitch-polaroid`, `.snitch-contact-sheet`, `.snitch-sticker`, `.snitch-tear-board`, `.snitch-cutout`, `.snitch-doc`
+- `.snitch-stamp` - retired for auth filters; do not use as primary filter UI
 - Brand misregistration: duplicate yellow layer offset under Young Serif wordmark
 
 ## Look
 
 - Brand-first full-bleed riso poster hero with detective mascots; one headline, one line, one CTA group
 - Nav over hero: absolute, paper-on-print contrast
-- Feed cells like printed contact sheets; stamps as ink stamps
+- Feed: scrap filter toolbar + printed contact board (proof frames), not rubber-stamp filter rows
 - Analysis as annotation stickers; winners as tear-sheet board
 - Motion: grain drift, tape settle, contact-sheet reveal - soft presence
 
@@ -54,6 +58,7 @@ Defined in `resources/css/app.css`:
 - Gold luxury chrome or metallic yellow
 - Stiff Fraunces + Instrument Sans pairing, Inter / Roboto / Arial / system
 - Generic rounded-rectangle buttons and pill badges
+- Cheap tilted yellow-outline stamp stickers / stamp-chip filter rows (use filter bar, segs, or paper nav)
 - Card stacks in the hero; "Laravel Starter Kit" placeholders
 - Baked-in wordmarks or gibberish UI text in generated assets when HTML owns brand type
 - Winged snitch orb as logo / favicon / nav mark (retired)
@@ -96,7 +101,7 @@ Store logo under `public/images/brand/mascot-mark.png` (tight crop from `public/
 | Landing | Riso poster hero with cartoon mascot peeks; scrap sections below fold |
 | Legal / About | Quiet `.snitch-doc` with light halftone |
 | Onboarding | Scrap form; polaroid picks with print grade |
-| Feed | Printed contact sheet + stamp filters |
+| Feed | Scrap filter toolbar + printed contact board with lazy platform embeds |
 | Post detail | Polaroid + ink stickers |
 | Winners | Tear-sheet board |
 | Competitors | Cutout chips with yellow offset shadow |

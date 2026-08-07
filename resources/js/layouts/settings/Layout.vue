@@ -1,9 +1,5 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { edit as editWinners } from '@/actions/App/Http/Controllers/Settings/WinnerRuleController';
-import Heading from '@/components/Heading.vue';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
@@ -19,52 +15,51 @@ const sidebarNavItems: NavItem[] = [
         title: 'Appearance',
         href: editAppearance(),
     },
-    {
-        title: 'Winners',
-        href: editWinners(),
-    },
 ];
 
 const { isCurrentOrParentUrl } = useCurrentUrl();
 </script>
 
 <template>
-    <div class="px-4 py-6">
-        <Heading
-            title="Settings"
-            description="Manage your profile and account settings"
-        />
+    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
+        <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="flex flex-col lg:flex-row lg:space-x-12">
-            <aside class="w-full max-w-xl lg:w-48">
-                <nav
-                    class="flex flex-col space-y-1 space-x-0"
-                    aria-label="Settings"
-                >
-                    <Button
-                        v-for="item in sidebarNavItems"
-                        :key="toUrl(item.href)"
-                        variant="ghost"
-                        :class="[
-                            'w-full justify-start',
-                            { 'bg-muted': isCurrentOrParentUrl(item.href) },
-                        ]"
-                        as-child
+        <div class="relative z-10 mx-auto max-w-5xl">
+            <header class="mb-6 border-b border-snitch-ink/10 pb-5">
+                <p class="snitch-ink-label">Snitch / Account</p>
+                <h1 class="snitch-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
+                    Settings
+                </h1>
+                <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
+                    Profile and appearance on quieter paper.
+                </p>
+            </header>
+
+            <div class="flex flex-col gap-8 lg:flex-row lg:gap-10">
+                <aside class="w-full lg:w-44 lg:shrink-0">
+                    <nav
+                        class="snitch-paper-nav"
+                        aria-label="Settings"
                     >
-                        <Link :href="item.href">
-                            <component :is="item.icon" class="h-4 w-4" />
+                        <Link
+                            v-for="item in sidebarNavItems"
+                            :key="toUrl(item.href)"
+                            :href="item.href"
+                            class="snitch-paper-nav-link"
+                            :class="
+                                isCurrentOrParentUrl(item.href)
+                                    ? 'snitch-paper-nav-link-active'
+                                    : ''
+                            "
+                        >
                             {{ item.title }}
                         </Link>
-                    </Button>
-                </nav>
-            </aside>
+                    </nav>
+                </aside>
 
-            <Separator class="my-6 lg:hidden" />
-
-            <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-xl space-y-12">
+                <div class="min-w-0 flex-1 md:max-w-2xl">
                     <slot />
-                </section>
+                </div>
             </div>
         </div>
     </div>

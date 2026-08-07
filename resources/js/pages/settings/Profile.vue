@@ -1,20 +1,14 @@
 <script setup lang="ts">
-import { Form, Head, usePage } from '@inertiajs/vue3';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/DeleteUser.vue';
-import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/profile';
 
-type Props = {
+defineProps<{
     status?: string;
-};
-
-defineProps<Props>();
+}>();
 
 defineOptions({
     layout: {
@@ -29,62 +23,79 @@ defineOptions({
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
+
+const form = useForm({
+    name: user.value.name,
+    email: user.value.email,
+});
+
+function submit(): void {
+    form.patch(ProfileController.update.url(), {
+        preserveScroll: true,
+    });
+}
 </script>
 
 <template>
-    <Head title="Profile settings" />
+    <div>
+        <Head title="Profile settings" />
 
-    <h1 class="sr-only">Profile settings</h1>
+        <div class="snitch-doc relative space-y-8 p-5 sm:p-6">
+            <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
 
-    <div class="flex flex-col space-y-6">
-        <Heading
-            variant="small"
-            title="Profile information"
-            description="Update your name and email address"
-        />
+            <div class="relative z-10">
+                <h2 class="snitch-display text-2xl text-snitch-ink">
+                    Profile information
+                </h2>
+                <p class="mt-1.5 text-sm text-snitch-ink/65">
+                    Update your name and email address.
+                </p>
 
-        <Form
-            v-bind="ProfileController.update.form()"
-            class="space-y-6"
-            v-slot="{ errors, processing }"
-        >
-            <div class="grid gap-2">
-                <Label for="name">Name</Label>
-                <Input
-                    id="name"
-                    class="mt-1 block w-full"
-                    name="name"
-                    :default-value="user.name"
-                    required
-                    autocomplete="name"
-                    placeholder="Full name"
-                />
-                <InputError class="mt-2" :message="errors.name" />
+                <form class="mt-5 space-y-4" @submit.prevent="submit">
+                    <label class="block text-sm font-medium text-snitch-ink">
+                        Name
+                        <input
+                            id="name"
+                            v-model="form.name"
+                            class="snitch-field mt-1"
+                            required
+                            autocomplete="name"
+                            placeholder="Full name"
+                        />
+                        <InputError class="mt-2" :message="form.errors.name" />
+                    </label>
+
+                    <label class="block text-sm font-medium text-snitch-ink">
+                        Email address
+                        <input
+                            id="email"
+                            v-model="form.email"
+                            type="email"
+                            class="snitch-field mt-1"
+                            required
+                            autocomplete="username"
+                            placeholder="Email address"
+                            disabled
+                        />
+                        <InputError class="mt-2" :message="form.errors.email" />
+                    </label>
+
+                    <button
+                        type="submit"
+                        class="snitch-btn snitch-btn-spot"
+                        :disabled="form.processing"
+                        data-test="update-profile-button"
+                    >
+                        <span class="relative z-10">
+                            {{ form.processing ? 'Saving…' : 'Save' }}
+                        </span>
+                    </button>
+                </form>
             </div>
 
-            <div class="grid gap-2">
-                <Label for="email">Email address</Label>
-                <Input
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    name="email"
-                    :default-value="user.email"
-                    required
-                    autocomplete="username"
-                    placeholder="Email address"
-                    disabled
-                />
-                <InputError class="mt-2" :message="errors.email" />
+            <div class="relative z-10 border-t border-dashed border-snitch-ink/15 pt-8">
+                <DeleteUser />
             </div>
-
-            <div class="flex items-center gap-4">
-                <Button :disabled="processing" data-test="update-profile-button"
-                    >Save</Button
-                >
-            </div>
-        </Form>
+        </div>
     </div>
-
-    <DeleteUser />
 </template>

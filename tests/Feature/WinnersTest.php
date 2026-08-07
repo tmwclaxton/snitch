@@ -77,6 +77,46 @@ class WinnersTest extends TestCase
                 ->component('winners/Index')
                 ->has('winners', 1)
                 ->where('winners.0.post.id', $winnerPost->id)
+                ->has('presets')
+                ->has('presets.balanced')
+                ->has('rule.preset')
+                ->has('rule.min_views')
+                ->has('rule.min_likes')
+                ->has('rule.min_engagement_rate')
+                ->has('rule.advanced')
             );
+    }
+
+    public function test_winner_rules_can_be_updated(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+
+        WinnerRule::factory()->for($user)->create([
+            'preset' => 'balanced',
+            ...(array) config('snitch.winners.presets.balanced'),
+        ]);
+
+        $this->actingAs($user)
+            ->put(route('winners.rules.update'), [
+                'preset' => 'aggressive',
+                'min_views' => 200,
+                'min_likes' => 20,
+                'min_engagement_rate' => 1,
+                'recency_days' => 60,
+                'advanced' => [
+                    'require_hook' => true,
+                    'require_sfx' => false,
+                    'min_score' => 40,
+                ],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('winner_rules', [
+            'user_id' => $user->id,
+            'preset' => 'aggressive',
+            'min_views' => 200,
+            'min_likes' => 20,
+        ]);
     }
 }

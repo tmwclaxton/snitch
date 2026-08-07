@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\Platform;
 use App\Enums\PostType;
 use App\Models\Post;
+use App\Support\PlatformEmbed;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -34,8 +35,18 @@ class FeedController extends Controller
             $query->where('tracked_account_id', $request->integer('account'));
         }
 
+        $posts = $query->paginate(24)->withQueryString();
+        $posts->getCollection()->transform(function (Post $post): Post {
+            $post->setAttribute(
+                'embed',
+                PlatformEmbed::resolve($post->platform, $post->url, compact: true),
+            );
+
+            return $post;
+        });
+
         return Inertia::render('feed/Index', [
-            'posts' => $query->paginate(24)->withQueryString(),
+            'posts' => $posts,
             'filters' => [
                 'platform' => $request->string('platform')->toString() ?: null,
                 'type' => $request->string('type')->toString() ?: null,
@@ -52,6 +63,10 @@ class FeedController extends Controller
         $this->authorize('view', $post);
 
         $post->load(['trackedAccount', 'analysis', 'winnerInsight']);
+        $post->setAttribute(
+            'embed',
+            PlatformEmbed::resolve($post->platform, $post->url),
+        );
 
         return Inertia::render('feed/Show', [
             'post' => $post,

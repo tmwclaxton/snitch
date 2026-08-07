@@ -30,7 +30,6 @@ const platforms = [
     { name: 'Instagram', slug: 'instagram' },
     { name: 'Facebook', slug: 'facebook' },
     { name: 'LinkedIn', slug: 'linkedin' },
-    { name: 'Pinterest', slug: 'pinterest' },
 ] as const;
 
 const steps = [
@@ -321,8 +320,11 @@ const steps = [
                     Sign in and build your first competitor list.
                 </p>
                 <div class="mt-8 flex justify-center">
-                    <Link :href="primaryCta.href" class="snitch-btn snitch-btn-spot">
-                        {{ primaryCta.label }}
+                    <Link
+                        :href="primaryCta.href"
+                        class="snitch-btn snitch-btn-spot"
+                    >
+                        <span class="relative z-10">{{ primaryCta.label }}</span>
                     </Link>
                 </div>
             </div>

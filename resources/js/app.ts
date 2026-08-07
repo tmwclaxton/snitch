@@ -22,6 +22,7 @@ createInertiaApp({
             case name === 'Welcome':
             case name.startsWith('marketing/'):
             case name.startsWith('errors/'):
+            case name.startsWith('onboarding/'):
                 return null;
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];
@@ -30,7 +31,7 @@ createInertiaApp({
         }
     },
     progress: {
-        color: '#C23B3B',
+        color: '#F0C400',
     },
     setup({ el, App, props, plugin }) {
         if (!el) {

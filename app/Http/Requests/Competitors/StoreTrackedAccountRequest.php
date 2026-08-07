@@ -23,7 +23,6 @@ class StoreTrackedAccountRequest extends FormRequest
         return [
             'platform' => ['required', Rule::enum(Platform::class)],
             'handle' => ['required', 'string', 'max:80'],
-            'url' => ['nullable', 'url', 'max:255'],
             'display_name' => ['nullable', 'string', 'max:120'],
         ];
     }

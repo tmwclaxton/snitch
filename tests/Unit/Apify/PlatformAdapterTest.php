@@ -5,7 +5,6 @@ namespace Tests\Unit\Apify;
 use App\Services\Apify\Adapters\FacebookAdapter;
 use App\Services\Apify\Adapters\InstagramAdapter;
 use App\Services\Apify\Adapters\LinkedInAdapter;
-use App\Services\Apify\Adapters\PinterestAdapter;
 use App\Services\Apify\Adapters\TikTokAdapter;
 use App\Services\Apify\ApifyClient;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -23,7 +22,6 @@ class PlatformAdapterTest extends TestCase
             'tiktok' => [TikTokAdapter::class, 'tiktok.json'],
             'facebook' => [FacebookAdapter::class, 'facebook.json'],
             'linkedin' => [LinkedInAdapter::class, 'linkedin.json'],
-            'pinterest' => [PinterestAdapter::class, 'pinterest.json'],
         ];
     }
 
@@ -31,7 +29,7 @@ class PlatformAdapterTest extends TestCase
     public function test_adapter_maps_fixture_to_normalized_post_shape(string $adapterClass, string $fixture): void
     {
         $client = $this->createMock(ApifyClient::class);
-        /** @var InstagramAdapter|TikTokAdapter|FacebookAdapter|LinkedInAdapter|PinterestAdapter $adapter */
+        /** @var InstagramAdapter|TikTokAdapter|FacebookAdapter|LinkedInAdapter $adapter */
         $adapter = new $adapterClass($client);
 
         $items = json_decode(

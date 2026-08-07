@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { index as feedIndex } from '@/actions/App/Http/Controllers/FeedController';
+import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
+import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { platformLabel } from '@/lib/platforms';
 
 type Analysis = {
     status: string;
@@ -23,6 +26,7 @@ defineProps<{
         caption: string | null;
         media_url: string | null;
         metrics: Record<string, number> | null;
+        embed?: EmbedConfig | null;
         tracked_account?: { handle: string; display_name: string | null };
         analysis?: Analysis | null;
         winner_insight?: { score: number; why: string; how_to_copy: string } | null;
@@ -35,7 +39,7 @@ defineOptions({
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full p-6">
+    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
         <Head title="Post detail" />
         <div class="snitch-grain" aria-hidden="true" />
 
@@ -43,25 +47,38 @@ defineOptions({
             <div>
                 <Link
                     :href="feedIndex.url()"
-                    class="text-sm text-snitch-ink/55 hover:text-snitch-ink"
+                    class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
                 >
-                    ← Back to feed
+                    Back to feed
                 </Link>
                 <div class="snitch-polaroid relative mt-4" style="--snitch-tilt: -0.6deg">
                     <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
-                    <div class="snitch-polaroid-frame !aspect-[9/14]">
-                        <img
-                            v-if="post.media_url"
-                            :src="post.media_url"
-                            alt=""
+                    <div class="snitch-polaroid-frame !aspect-auto overflow-hidden">
+                        <PlatformEmbed
+                            :embed="post.embed"
+                            :media-url="post.media_url"
+                            :post-url="post.url"
+                            :platform="post.platform"
+                            :lazy="false"
                         />
                     </div>
                 </div>
+                <a
+                    v-if="post.url"
+                    :href="post.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="snitch-btn snitch-btn-ghost mt-4 inline-flex px-3 py-1.5 text-sm"
+                >
+                    View on {{ platformLabel(post.platform) }}
+                </a>
             </div>
 
             <div class="space-y-4">
-                <span class="snitch-stamp">{{ post.platform }} / {{ post.type }}</span>
-                <h1 class="snitch-display text-3xl text-snitch-ink">
+                <p class="snitch-ink-label">
+                    {{ platformLabel(post.platform) }} / {{ post.type }}
+                </p>
+                <h1 class="snitch-display mt-2 text-3xl text-snitch-ink">
                     @{{ post.tracked_account?.handle }}
                 </h1>
                 <p

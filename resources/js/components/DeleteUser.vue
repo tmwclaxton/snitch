@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
-import Heading from '@/components/Heading.vue';
-import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogClose,
@@ -16,54 +14,67 @@ import {
 </script>
 
 <template>
-    <div class="space-y-6">
-        <Heading
-            variant="small"
-            title="Delete account"
-            description="Delete your account and all of its resources"
-        />
-        <div
-            class="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10"
-        >
-            <div class="relative space-y-0.5 text-red-600 dark:text-red-100">
-                <p class="font-medium">Warning</p>
-                <p class="text-sm">
-                    Please proceed with caution, this cannot be undone.
-                </p>
-            </div>
+    <div class="space-y-4">
+        <div>
+            <h2 class="snitch-display text-xl text-snitch-ink">
+                Delete account
+            </h2>
+            <p class="mt-1.5 text-sm text-snitch-ink/65">
+                Delete your account and all of its resources.
+            </p>
+        </div>
+
+        <div class="snitch-scrap relative space-y-3 p-4 pt-5">
+            <span class="snitch-tape right-5 -top-2" aria-hidden="true" />
+            <p class="relative z-10 text-sm font-medium text-snitch-ink">
+                Warning
+            </p>
+            <p class="relative z-10 text-sm text-snitch-ink/70">
+                Please proceed with caution - this cannot be undone.
+            </p>
+
             <Dialog>
                 <DialogTrigger as-child>
-                    <Button variant="destructive" data-test="delete-user-button"
-                        >Delete account</Button
+                    <button
+                        type="button"
+                        class="snitch-btn relative z-10"
+                        data-test="delete-user-button"
                     >
+                        Delete account
+                    </button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent
+                    :show-close-button="false"
+                    class="snitch-modal-panel gap-0 overflow-hidden border-0 p-0 shadow-none sm:max-w-md"
+                >
                     <Form
-                        v-bind="ProfileController.destroy.form()"
+                        :action="ProfileController.destroy.url()"
+                        method="delete"
                         reset-on-success
                         :options="{
                             preserveScroll: true,
                         }"
-                        class="space-y-6"
+                        class="snitch-doc relative space-y-6 p-6"
                         v-slot="{ processing, reset, clearErrors }"
                     >
-                        <DialogHeader class="space-y-3">
-                            <DialogTitle
-                                >Are you sure you want to delete your
-                                account?</DialogTitle
-                            >
-                            <DialogDescription>
-                                Once your account is deleted, all of its
-                                resources and data will also be permanently
-                                deleted. Please confirm you would like to
-                                permanently delete your account.
+                        <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
+                        <DialogHeader class="relative z-10 space-y-3 text-left">
+                            <DialogTitle class="snitch-display text-xl text-snitch-ink">
+                                Delete your account?
+                            </DialogTitle>
+                            <DialogDescription class="text-sm text-snitch-ink/65">
+                                Once your account is deleted, all of its resources
+                                and data will also be permanently deleted. Please
+                                confirm you would like to permanently delete your
+                                account.
                             </DialogDescription>
                         </DialogHeader>
 
-                        <DialogFooter class="gap-2">
+                        <DialogFooter class="relative z-10 gap-2 sm:justify-start">
                             <DialogClose as-child>
-                                <Button
-                                    variant="secondary"
+                                <button
+                                    type="button"
+                                    class="snitch-btn snitch-btn-ghost"
                                     @click="
                                         () => {
                                             clearErrors();
@@ -72,17 +83,17 @@ import {
                                     "
                                 >
                                     Cancel
-                                </Button>
+                                </button>
                             </DialogClose>
 
-                            <Button
+                            <button
                                 type="submit"
-                                variant="destructive"
+                                class="snitch-btn"
                                 :disabled="processing"
                                 data-test="confirm-delete-user-button"
                             >
                                 Delete account
-                            </Button>
+                            </button>
                         </DialogFooter>
                     </Form>
                 </DialogContent>

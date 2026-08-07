@@ -26,6 +26,7 @@ class WinnerController extends Controller
         return Inertia::render('winners/Index', [
             'winners' => $winners,
             'rule' => $rule,
+            'presets' => config('snitch.winners.presets'),
         ]);
     }
 

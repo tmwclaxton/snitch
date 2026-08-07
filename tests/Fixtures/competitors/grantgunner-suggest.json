@@ -1,0 +1,95 @@
+{
+  "brand": "GrantGunner",
+  "source": "live-eval-run3-sanitized",
+  "elapsed_s": 75.5,
+  "nanogpt_competitors": {
+    "competitors": [
+      {
+        "name": "Instrumentl",
+        "handles": {
+          "facebook": "instrumentl",
+          "instagram": null
+        }
+      },
+      {
+        "name": "GrantWatch",
+        "handles": {
+          "facebook": "GrantWatch",
+          "instagram": null
+        }
+      },
+      {
+        "name": "Foundation Directory Online (Candid)",
+        "handles": {
+          "facebook": "CandidDotOrg",
+          "instagram": null
+        }
+      },
+      {
+        "name": "GrantStation",
+        "handles": {
+          "facebook": "GrantStation",
+          "instagram": null
+        }
+      },
+      {
+        "name": "Submittable",
+        "handles": {
+          "facebook": "Submittable",
+          "instagram": null
+        }
+      },
+      {
+        "name": "Optimy",
+        "handles": {
+          "facebook": "Optimy",
+          "instagram": null
+        }
+      }
+    ]
+  },
+  "suggestions": [
+    {
+      "platform": "facebook",
+      "handle": "instrumentl",
+      "url": "https://facebook.com/instrumentl",
+      "display_name": "Instrumentl",
+      "avatar": "https://cdn.example.com/avatars/instrumentl.jpg"
+    },
+    {
+      "platform": "facebook",
+      "handle": "GrantWatch",
+      "url": "https://facebook.com/GrantWatch",
+      "display_name": "GrantWatch",
+      "avatar": "https://cdn.example.com/avatars/grantwatch.jpg"
+    },
+    {
+      "platform": "facebook",
+      "handle": "CandidDotOrg",
+      "url": "https://facebook.com/CandidDotOrg",
+      "display_name": "Foundation Directory Online (Candid)",
+      "avatar": "https://cdn.example.com/avatars/candiddotorg.jpg"
+    },
+    {
+      "platform": "facebook",
+      "handle": "GrantStation",
+      "url": "https://facebook.com/GrantStation",
+      "display_name": "GrantStation",
+      "avatar": "https://cdn.example.com/avatars/grantstation.jpg"
+    },
+    {
+      "platform": "facebook",
+      "handle": "Submittable",
+      "url": "https://facebook.com/Submittable",
+      "display_name": "Submittable",
+      "avatar": "https://cdn.example.com/avatars/submittable.jpg"
+    },
+    {
+      "platform": "facebook",
+      "handle": "Optimy",
+      "url": "https://facebook.com/Optimy",
+      "display_name": "Optimy",
+      "avatar": "https://cdn.example.com/avatars/optimy.jpg"
+    }
+  ]
+}

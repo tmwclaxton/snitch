@@ -20,7 +20,7 @@ class PublicPagesTest extends TestCase
 
     public function test_platform_logo_assets_exist(): void
     {
-        foreach (['tiktok', 'instagram', 'facebook', 'linkedin', 'pinterest'] as $slug) {
+        foreach (['tiktok', 'instagram', 'facebook', 'linkedin'] as $slug) {
             $this->assertFileExists(public_path("images/platforms/{$slug}.svg"));
         }
     }
@@ -166,9 +166,14 @@ class PublicPagesTest extends TestCase
         $this->assertNotFalse($css, 'Missing app.css source');
 
         $this->assertMatchesRegularExpression(
-            '/class="snitch-hero-cta[^"]*"[\s\S]*?class="snitch-btn">[\s\S]*?Log in[\s\S]*?class="snitch-btn snitch-btn-spot"[\s\S]*?Sign up/',
+            '/class="snitch-hero-cta[^"]*"[\s\S]*?class="snitch-btn">[\s\S]*?relative z-10">Log in[\s\S]*?class="snitch-btn snitch-btn-spot"[\s\S]*?relative z-10">Sign up/',
             $welcome,
-            'Hero title card must use charcoal snitch-btn for Log in then spot yellow for Sign up',
+            'Hero title card must use charcoal snitch-btn for Log in then spot yellow for Sign up, with visible z-10 labels',
+        );
+        $this->assertMatchesRegularExpression(
+            '/class="snitch-hero-cta[^"]*"[\s\S]*?v-if="isAuthenticated"[\s\S]*?class="snitch-btn snitch-btn-spot"[\s\S]*?relative z-10">Dashboard/',
+            $welcome,
+            'Authenticated hero CTA must be yellow spot ticket Dashboard with visible label',
         );
         $this->assertMatchesRegularExpression(
             '/class="snitch-hero-cta[^"]*"[\s\S]*?:href="login\(\)"[\s\S]*?:href="login\(\)"/',
@@ -180,8 +185,81 @@ class PublicPagesTest extends TestCase
             $welcome,
             'Hero title card CTAs must not use ghost / paper fill',
         );
-        $this->assertStringContainsString('.snitch-hero-copy .snitch-btn-spot', $css);
+        $this->assertStringContainsString('.snitch-hero-copy .snitch-btn.snitch-btn-spot', $css);
+        $this->assertStringContainsString('.snitch-hero-copy .snitch-btn.snitch-btn-spot::before', $css);
         $this->assertStringNotContainsString('.snitch-hero-copy .snitch-btn-ghost', $css);
+        $this->assertDoesNotMatchRegularExpression(
+            '/\.snitch-hero-copy\s+\.snitch-btn\s*\{[^}]*container-type\s*:/s',
+            $css,
+            'Hero buttons must not use container-type (inline-size containment collapses label width)',
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-hero-copy\s+\.snitch-btn\.snitch-btn-spot::before\s*\{[^}]*inset:\s*var\(--snitch-ticket-stroke\)/s',
+            $css,
+            'Hero spot face must use the same inset charcoal rim as closing Open dashboard',
+        );
+    }
+
+    public function test_ghost_ticket_buttons_stroke_follows_clip_not_inset_shadow(): void
+    {
+        $css = file_get_contents(resource_path('css/app.css'));
+        $nav = file_get_contents(resource_path('js/components/marketing/PublicNav.vue'));
+
+        $this->assertNotFalse($css, 'Missing app.css source');
+        $this->assertNotFalse($nav, 'Missing PublicNav.vue source');
+
+        $this->assertStringContainsString(
+            'snitch-btn snitch-btn-ghost',
+            $nav,
+            'PublicNav Dashboard / Log out must use ghost ticket buttons',
+        );
+        $this->assertStringContainsString('--snitch-ticket-stroke', $css);
+        $this->assertStringContainsString('.snitch-btn-ghost::before', $css);
+        $this->assertStringNotContainsString(
+            'box-shadow: inset 0 0 0 2px var(--snitch-ink)',
+            $css,
+            'Ghost ticket outline must not use rectangular inset box-shadow under clip-path',
+        );
+    }
+
+    public function test_spot_ticket_buttons_use_charcoal_outline_via_inset_face(): void
+    {
+        $css = file_get_contents(resource_path('css/app.css'));
+        $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
+
+        $this->assertNotFalse($css, 'Missing app.css source');
+        $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
+
+        $this->assertStringContainsString(
+            'Start tracking the competition.',
+            $welcome,
+        );
+        $this->assertMatchesRegularExpression(
+            '/Start tracking the competition\.[\s\S]*?class="snitch-btn snitch-btn-spot"/',
+            $welcome,
+            'Closing CTA must use spot yellow with global charcoal ticket outline',
+        );
+        $this->assertStringContainsString('.snitch-btn.snitch-btn-spot::before', $css);
+        $this->assertStringContainsString(
+            'inset: var(--snitch-ticket-stroke)',
+            $css,
+            'Spot yellow face must inset by ticket stroke so charcoal rim follows clip',
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-btn\.snitch-btn-spot\s*\{[^}]*background:\s*var\(--snitch-ink\)/s',
+            $css,
+            'Spot outer fill must be charcoal so the wavy rim reads as outline',
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-btn\.snitch-btn-spot::before\s*\{[^}]*background:\s*var\(--snitch-spot\)/s',
+            $css,
+            'Spot inset face must stay yellow',
+        );
+        $this->assertStringNotContainsString(
+            'box-shadow: inset 0 0 0 2px var(--snitch-ink)',
+            $css,
+            'Spot ticket outline must not use rectangular inset box-shadow under clip-path',
+        );
     }
 
     public function test_unknown_public_path_renders_branded_not_found(): void
