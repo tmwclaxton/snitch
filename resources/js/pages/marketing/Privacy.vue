@@ -68,7 +68,7 @@ defineOptions({
             </h2>
             <p>
                 Privacy questions: use the Contact form or email
-                hello@snitch.app.
+                hello@snitchsocial.net.
             </p>
         </LegalDocument>
     </div>

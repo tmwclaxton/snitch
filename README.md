@@ -232,7 +232,7 @@ UI metaphors: scrap filters, polaroid frames, contact sheets, tear-board winners
 | **Analytics** | [snitchsocial.net/analytics](https://snitchsocial.net/analytics) ([JSON](https://snitchsocial.net/analytics.json)) |
 | **About** | [snitchsocial.net/about](https://snitchsocial.net/about) |
 | **Privacy** | [snitchsocial.net/privacy](https://snitchsocial.net/privacy) |
-| **Contact** | [snitchsocial.net/contact](https://snitchsocial.net/contact) · [hello@snitch.app](mailto:hello@snitch.app) |
+| **Contact** | [snitchsocial.net/contact](https://www.snitchsocial.net/contact) · [hello@snitchsocial.net](mailto:hello@snitchsocial.net) |
 | **GitHub** | [github.com/tmwclaxton/snitch](https://github.com/tmwclaxton/snitch) |
 
 ---

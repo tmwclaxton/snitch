@@ -2,6 +2,13 @@
 
 return [
 
+    /*
+    | Public support address shown on marketing pages. Contact form deliveries
+    | go to contact_to (defaults to the same address when unset).
+    */
+    'support_email' => env('SNITCH_SUPPORT_EMAIL', 'hello@snitchsocial.net'),
+    'contact_to' => env('SNITCH_CONTACT_TO', env('SNITCH_SUPPORT_EMAIL', 'hello@snitchsocial.net')),
+
     'nanogpt' => [
         'api_key' => env('NANOGPT_API_KEY'),
         'base_url' => rtrim((string) env('NANOGPT_BASE_URL', 'https://nano-gpt.com/api/v1'), '/'),
