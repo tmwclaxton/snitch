@@ -176,6 +176,8 @@ class PublicPagesTest extends TestCase
 
         $this->assertStringContainsString("|| 'Snitch'", $appTs);
         $this->assertStringNotContainsString("|| 'Laravel'", $appTs);
+        $this->assertStringContainsString('createSSRApp', $appTs);
+        $this->assertStringContainsString('return vueApp', $appTs);
         $this->assertMatchesRegularExpression('/^APP_NAME=Snitch$/m', $envExample);
         $this->assertStringContainsString("config('app.name', 'Snitch')", $blade);
         $this->assertSame('Snitch', config('app.name'));

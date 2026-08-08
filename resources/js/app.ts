@@ -5,7 +5,7 @@ import { fas } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { createPinia } from 'pinia';
-import { createApp, h } from 'vue';
+import { createApp, createSSRApp, h } from 'vue';
 import { initializeTheme } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
@@ -34,20 +34,28 @@ createInertiaApp({
         color: '#F0C400',
     },
     setup({ el, App, props, plugin }) {
-        if (!el) {
-            throw new Error('Inertia root element is missing.');
-        }
+        // Vite SSR calls setup with el=null and expects the Vue app returned.
+        const vueApp = (el ? createApp : createSSRApp)({
+            render: () => h(App, props),
+        });
 
-        createApp({ render: () => h(App, props) })
+        vueApp
             .use(plugin)
             .use(createPinia())
-            .component('font-awesome-icon', FontAwesomeIcon)
-            .mount(el);
+            .component('font-awesome-icon', FontAwesomeIcon);
+
+        if (el) {
+            vueApp.mount(el);
+        }
+
+        return vueApp;
     },
 });
 
-// This will set light / dark mode on page load...
-initializeTheme();
+if (typeof window !== 'undefined') {
+    // This will set light / dark mode on page load...
+    initializeTheme();
 
-// This will listen for flash toast data from the server...
-initializeFlashToast();
+    // This will listen for flash toast data from the server...
+    initializeFlashToast();
+}

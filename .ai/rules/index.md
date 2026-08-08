@@ -19,5 +19,6 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Services/Winners/**, app/Jobs/ScoreWinnersJob.php, app/Http/Controllers/WinnerController.php | .ai/rules/winners.md |
 | app/Models/Post.php | .ai/rules/models.md |
 | resources/css/app.css, resources/js/**/*.{vue,ts,css}, resources/views/app.blade.php | .ai/rules/frontend-dark-mode.md |
+| resources/js/app.ts, vite.config.ts | .ai/rules/inertia-ssr.md |
 | config/seo.php, app/Support/Seo.php, resources/views/app.blade.php, resources/js/components/marketing/SeoHead.vue, resources/js/components/AppHead.vue, resources/js/layouts/PublicLayout.vue, public/robots.txt, routes/web.php, bootstrap/app.php | .ai/rules/seo.md |
 | tests/** | .ai/rules/tests.md |
