@@ -50,6 +50,7 @@ Never dump or paraphrase long stretches of spoken script or caption.
 Never invent music or SFX that are not audible in the media.
 Reject vague filler ("engaging", "relatable vibe", "great energy") - name the mechanic.
 Always fill hook_type_slugs, topic_slugs, and visual_craft_slugs from the controlled catalogue when they fit (e.g. myth_bust for myth-busting opens). Use custom_tags only when nothing fits.
+For how_to_copy, always use a Markdown numbered list with a real newline before each step (1. / 2. / 3.). Never write steps inline on one line. Keep cta as the post's ask only - not inside how_to_copy.
 SYSTEM,
                 ],
                 [
@@ -191,7 +192,8 @@ Rules:
 - Topics = short craft/theme labels in English (formats, niche memes, cultural hooks), not keyword stuffing.
 - Taxonomy = ALWAYS pick catalogue slugs when they fit (required for filters). Prefer 1 hook_type_slug, 1-3 topic_slugs, 1-3 visual_craft_slugs. If topics mention myth-busting / pattern interrupt / etc., emit the matching slug.
 - custom_tags = short freeform labels ONLY when the catalogue misses something important.
-- how_to_copy = 2-4 actionable remake steps for another brand applying the SAME concept (required, never empty).
+- how_to_copy = 2-4 actionable remake steps for another brand applying the SAME concept (required, never empty). Put each step on its own line as a Markdown numbered list (e.g. "1. ...\\n2. ...\\n3. ..."). Never pack steps onto one line. Do not bury the post CTA inside how_to_copy - CTA has its own field.
+- cta = the post's ask / next action only (separate from remake steps). Empty string if none.
 - Do NOT dump the transcript or rewrite the caption.
 - Keep hook/concept/idea short and specific; name the mechanic.
 
@@ -209,8 +211,8 @@ Return JSON with keys:
   "topic_slugs": ["grant_writing"],
   "visual_craft_slugs": ["talking_head"],
   "custom_tags": [],
-  "cta": "string",
-  "how_to_copy": "string (actionable remake steps)",
+  "cta": "string (post ask only)",
+  "how_to_copy": "1. First remake step\\n2. Second step\\n3. Third step",
   "sfx": [{"at_sec": 0.5, "label": "whoosh", "role": "transition"}],
   "music_title": "string|null",
   "music_artist": "string|null",

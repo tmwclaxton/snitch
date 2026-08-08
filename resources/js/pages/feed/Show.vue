@@ -5,6 +5,7 @@ import {
     ArrowLeft,
     Ban,
     ExternalLink,
+    Megaphone,
     Music,
     Sparkles,
     Trophy,
@@ -428,7 +429,7 @@ const termChips = computed(() => {
                             </div>
 
                             <div
-                                v-if="post.analysis.how_to_copy || post.analysis.cta"
+                                v-if="post.analysis.how_to_copy || post.analysis.how_to_copy_html"
                                 class="snitch-sticker"
                             >
                                 <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
@@ -439,16 +440,25 @@ const termChips = computed(() => {
                                     How to remake
                                 </p>
                                 <MarkdownText
-                                    v-if="post.analysis.how_to_copy || post.analysis.how_to_copy_html"
                                     class="mt-1"
                                     :html="post.analysis.how_to_copy_html"
                                     :source="post.analysis.how_to_copy"
                                 />
-                                <p
-                                    v-if="post.analysis.cta"
-                                    class="mt-3 border-t border-dashed border-snitch-ink/15 pt-3 text-sm text-snitch-ink/70"
-                                >
-                                    CTA: {{ post.analysis.cta }}
+                            </div>
+
+                            <div
+                                v-if="post.analysis.cta"
+                                class="snitch-sticker"
+                            >
+                                <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
+                                    <Megaphone
+                                        class="size-5 shrink-0 opacity-80"
+                                        aria-hidden="true"
+                                    />
+                                    CTA
+                                </p>
+                                <p class="mt-1 text-sm text-snitch-ink/85">
+                                    {{ post.analysis.cta }}
                                 </p>
                             </div>
                         </template>

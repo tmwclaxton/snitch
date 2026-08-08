@@ -7,7 +7,7 @@ export function renderMarkdown(source: string | null | undefined): string {
         return '';
     }
 
-    const trimmed = source.replace(/\r\n?/g, '\n').trim();
+    const trimmed = normalizeListBreaks(source.replace(/\r\n?/g, '\n')).trim();
 
     if (trimmed === '') {
         return '';
@@ -21,6 +21,25 @@ export function renderMarkdown(source: string | null | undefined): string {
         .join('');
 }
 
+/**
+ * Models often return "1. Step. 2. Step." on one line.
+ * Split those inline markers onto their own lines before list detection.
+ */
+export function normalizeListBreaks(text: string): string {
+    let next = text.replace(/\r\n?/g, '\n');
+
+    // Numbered markers: "2. Next" / "2) Next" after non-newline content.
+    next = next.replace(/(?<=\S)[ \t]+(?=\d{1,2}[.)]\s+\S)/gu, '\n');
+
+    // Bullet markers (dot / middle-dot) mid-line.
+    next = next.replace(/(?<=\S)[ \t]+(?=[•·]\s+\S)/gu, '\n');
+
+    // Hyphen / asterisk bullets only after sentence punctuation.
+    next = next.replace(/(?<=[.;:!?\]])[ \t]+(?=[-*+]\s+\S)/gu, '\n');
+
+    return next;
+}
+
 function renderBlock(block: string): string {
     if (block === '') {
         return '';
@@ -31,7 +50,7 @@ function renderBlock(block: string): string {
 
     if (listKind === 'ul') {
         const items = lines.map((line) =>
-            renderInline(line.replace(/^[-*+]\s+/, '')),
+            renderInline(line.replace(/^[-*+•·]\s+/, '')),
         );
 
         return `<ul>${items.map((item) => `<li>${item}</li>`).join('')}</ul>`;
@@ -39,7 +58,7 @@ function renderBlock(block: string): string {
 
     if (listKind === 'ol') {
         const items = lines.map((line) =>
-            renderInline(line.replace(/^\d+\.\s+/, '')),
+            renderInline(line.replace(/^\d+[.)]\s+/, '')),
         );
 
         return `<ol>${items.map((item) => `<li>${item}</li>`).join('')}</ol>`;
@@ -53,11 +72,11 @@ function detectListKind(lines: string[]): 'ul' | 'ol' | null {
         return null;
     }
 
-    if (lines.every((line) => /^[-*+]\s+\S/.test(line))) {
+    if (lines.every((line) => /^[-*+•·]\s+\S/.test(line))) {
         return 'ul';
     }
 
-    if (lines.every((line) => /^\d+\.\s+\S/.test(line))) {
+    if (lines.every((line) => /^\d+[.)]\s+\S/.test(line))) {
         return 'ol';
     }
 

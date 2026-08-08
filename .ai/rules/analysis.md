@@ -9,7 +9,7 @@ paths:
 # Analysis
 
 ## Analysis is concept-first not transcript dump
-Persist concept, topics, how_to_copy, hook, idea, visual, music/SFX. Evaluator rejects caption echo and vague filler. Prompts forbid long script regurgitation and invented SFX.
+Persist concept, topics, how_to_copy, hook, idea, visual, music/SFX, and CTA as its own field. Evaluator rejects caption echo and vague filler. Prompts forbid long script regurgitation and invented SFX. `how_to_copy` must be a Markdown numbered list with a newline per step (never inline "1. … 2. …"); `SafeMarkdown` / client markdown also normalize inline numbered/bullet runs so existing rows still render as real list items. Feed show renders CTA as its own sticker, not under How to remake.
 
 ## Hook window floors to the success minimum
 Models often return `hook_window.end_sec` under 3s. `VideoAnalysisResult::fromModelPayload` floors to `snitch.video_analysis.success.min_hook_window_end_seconds` (default 3) before evaluate/persist so short opens do not burn AnalyzePostJob retries.
