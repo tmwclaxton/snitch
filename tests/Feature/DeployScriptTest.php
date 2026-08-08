@@ -24,4 +24,24 @@ class DeployScriptTest extends TestCase
         $this->assertNotFalse($seedPos);
         $this->assertGreaterThan($migratePos, $seedPos);
     }
+
+    public function test_production_deploy_retries_ghcr_login_and_pull_with_backoff(): void
+    {
+        $script = file_get_contents(base_path('scripts/deploy-production.sh'));
+
+        $this->assertNotFalse($script);
+        $this->assertStringContainsString('retry_with_backoff', $script);
+        $this->assertStringContainsString('ghcr_login', $script);
+        $this->assertStringContainsString('pull_app_image', $script);
+        $this->assertStringContainsString('PULL_TIMEOUT_SECONDS', $script);
+        $this->assertStringContainsString('timeout "${PULL_TIMEOUT_SECONDS}"', $script);
+        $this->assertStringContainsString('retry_with_backoff "$GHCR_MAX_ATTEMPTS" ghcr_login', $script);
+        $this->assertStringContainsString('retry_with_backoff "$GHCR_MAX_ATTEMPTS" pull_app_image', $script);
+
+        $workflow = file_get_contents(base_path('.github/workflows/prod_deploy.yml'));
+
+        $this->assertNotFalse($workflow);
+        $this->assertStringContainsString('retry_with_backoff 5 scp', $workflow);
+        $this->assertStringContainsString('retry_with_backoff 4 ssh', $workflow);
+    }
 }
