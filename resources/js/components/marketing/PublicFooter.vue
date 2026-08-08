@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3';
 import SnitchBrand from '@/components/SnitchBrand.vue';
 import {
     about,
+    analytics,
     contact,
     cookies,
     home,
@@ -14,6 +15,7 @@ import {
 const footerLinks = [
     { label: 'About', href: about() },
     { label: 'How it works', href: howItWorks() },
+    { label: 'Analytics', href: analytics() },
     { label: 'Contact', href: contact() },
     { label: 'Privacy', href: privacy() },
     { label: 'Terms', href: terms() },

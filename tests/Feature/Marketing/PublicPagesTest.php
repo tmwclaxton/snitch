@@ -3,12 +3,15 @@
 namespace Tests\Feature\Marketing;
 
 use App\Mail\Marketing\ContactMessage;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class PublicPagesTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_home_page_is_successful(): void
     {
         $this->get(route('home'))
@@ -58,6 +61,7 @@ class PublicPagesTest extends TestCase
         $pages = [
             'about' => 'marketing/About',
             'how-it-works' => 'marketing/HowItWorks',
+            'analytics' => 'marketing/Analytics',
             'contact' => 'marketing/Contact',
             'privacy' => 'marketing/Privacy',
             'terms' => 'marketing/Terms',
@@ -111,7 +115,7 @@ class PublicPagesTest extends TestCase
 
     public function test_footer_routes_resolve_for_guests(): void
     {
-        foreach (['about', 'how-it-works', 'contact', 'privacy', 'terms', 'cookies'] as $route) {
+        foreach (['about', 'how-it-works', 'analytics', 'contact', 'privacy', 'terms', 'cookies'] as $route) {
             $this->get(route($route))->assertOk();
         }
     }
@@ -128,6 +132,7 @@ class PublicPagesTest extends TestCase
         $response->assertSee(route('cookies', absolute: true), false);
         $response->assertSee(route('contact', absolute: true), false);
         $response->assertSee(route('about', absolute: true), false);
+        $response->assertSee(route('analytics', absolute: true), false);
     }
 
     public function test_contact_form_sends_mail(): void

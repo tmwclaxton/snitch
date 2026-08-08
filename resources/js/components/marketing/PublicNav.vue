@@ -2,7 +2,16 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import SnitchBrand from '@/components/SnitchBrand.vue';
-import { about, contact, dashboard, home, howItWorks, login, logout } from '@/routes';
+import {
+    about,
+    analytics,
+    contact,
+    dashboard,
+    home,
+    howItWorks,
+    login,
+    logout,
+} from '@/routes';
 
 withDefaults(
     defineProps<{
@@ -21,6 +30,7 @@ const overHero = computed(
 
 const links = [
     { label: 'How it works', href: howItWorks() },
+    { label: 'Analytics', href: analytics() },
     { label: 'About', href: about() },
     { label: 'Contact', href: contact() },
 ];

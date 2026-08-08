@@ -8,11 +8,15 @@ use App\Models\User;
 use App\Models\WinnerInsight;
 use App\Models\WinnerRule;
 use App\Services\Analysis\NanoGptClient;
+use App\Services\SnitchAnalyticsService;
 use Illuminate\Support\Collection;
 
 class WinnerScorer
 {
-    public function __construct(private NanoGptClient $client) {}
+    public function __construct(
+        private NanoGptClient $client,
+        private SnitchAnalyticsService $analytics,
+    ) {}
 
     public function ruleFor(User $user): WinnerRule
     {
@@ -108,7 +112,7 @@ class WinnerScorer
             ->where('post_id', $post->id)
             ->first();
 
-        return WinnerInsight::query()->updateOrCreate(
+        $insight = WinnerInsight::query()->updateOrCreate(
             [
                 'user_id' => $post->user_id,
                 'post_id' => $post->id,
@@ -119,6 +123,12 @@ class WinnerScorer
                 'how_to_copy' => $this->resolveHowToCopy($post, $existing),
             ],
         );
+
+        if ($insight->wasRecentlyCreated) {
+            $this->analytics->recordWinnerScored();
+        }
+
+        return $insight;
     }
 
     /**

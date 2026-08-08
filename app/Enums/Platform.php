@@ -9,4 +9,15 @@ enum Platform: string
     case Facebook = 'facebook';
     case LinkedIn = 'linkedin';
     case Youtube = 'youtube';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::TikTok => 'TikTok',
+            self::Instagram => 'Instagram',
+            self::Facebook => 'Facebook',
+            self::LinkedIn => 'LinkedIn',
+            self::Youtube => 'YouTube',
+        };
+    }
 }

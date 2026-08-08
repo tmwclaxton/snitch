@@ -8,6 +8,7 @@ use App\Enums\AnalysisTermDimension;
 use App\Enums\PostType;
 use App\Models\Post;
 use App\Models\PostAnalysis;
+use App\Services\SnitchAnalyticsService;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
@@ -19,6 +20,7 @@ class VideoAnalysisService
         private VideoAnalysisSuccessEvaluator $evaluator,
         private AnalysisTermCatalogue $catalogue,
         private AnalysisTermInferrer $inferrer,
+        private SnitchAnalyticsService $analytics,
     ) {}
 
     public function analyzeUrl(string $mediaUrl, string $mediaKind = 'video', ?string $caption = null): VideoAnalysisResult
@@ -147,6 +149,7 @@ SYSTEM,
             ]);
             $analysis->save();
             $analysis->terms()->sync($termIds);
+            $this->analytics->recordAnalysisCompleted();
 
             return $analysis->refresh()->load('terms');
         } catch (Throwable $e) {

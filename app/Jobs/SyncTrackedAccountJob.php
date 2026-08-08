@@ -8,6 +8,7 @@ use App\Enums\PostType;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Services\Apify\PlatformAdapterManager;
+use App\Services\SnitchAnalyticsService;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -25,7 +26,7 @@ class SyncTrackedAccountJob implements ShouldQueue
         public bool $force = false,
     ) {}
 
-    public function handle(PlatformAdapterManager $adapters): void
+    public function handle(PlatformAdapterManager $adapters, SnitchAnalyticsService $analytics): void
     {
         $account = TrackedAccount::query()->find($this->trackedAccountId);
 
@@ -133,6 +134,8 @@ class SyncTrackedAccountJob implements ShouldQueue
                     'metrics' => $payload['metrics'] ?? [],
                     'raw_payload' => $payload['raw_payload'] ?? [],
                 ]);
+
+                $analytics->recordPostSynced($account->platform);
 
                 $this->dispatchAnalysisIfNeeded($post->fresh('analysis'));
             }

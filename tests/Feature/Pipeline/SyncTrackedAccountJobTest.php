@@ -14,6 +14,7 @@ use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Apify\ApifyClient;
 use App\Services\Apify\PlatformAdapterManager;
+use App\Services\SnitchAnalyticsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Mockery;
@@ -83,7 +84,7 @@ class SyncTrackedAccountJobTest extends TestCase
             'snitch.sync.posts_limit' => 12,
         ]);
 
-        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class));
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class));
 
         $account->refresh();
         $this->assertSame('success', $account->last_sync_status);
@@ -137,7 +138,7 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
         $this->app->instance(ApifyClient::class, $client);
 
-        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class));
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class));
 
         Queue::assertPushed(AnalyzePostJob::class, fn (AnalyzePostJob $job) => $job->postId === $existing->id);
 
@@ -147,7 +148,7 @@ class SyncTrackedAccountJobTest extends TestCase
 
         try {
             // Force bypasses the weekly min-interval skip after a successful sync.
-            (new SyncTrackedAccountJob($account->id, force: true))->handle(app(PlatformAdapterManager::class));
+            (new SyncTrackedAccountJob($account->id, force: true))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class));
             $this->fail('Expected sync to throw');
         } catch (\RuntimeException $e) {
             $this->assertSame('Apify down', $e->getMessage());
@@ -176,7 +177,7 @@ class SyncTrackedAccountJobTest extends TestCase
         $client->shouldNotReceive('runActor');
         $this->app->instance(ApifyClient::class, $client);
 
-        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class));
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class));
 
         Queue::assertNothingPushed();
         $this->assertSame(0, Post::query()->count());
@@ -217,7 +218,7 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
         $this->app->instance(ApifyClient::class, $client);
 
-        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class));
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class));
 
         $account->refresh();
         $this->assertSame('success', $account->last_sync_status);
@@ -258,7 +259,7 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
         $this->app->instance(ApifyClient::class, $client);
 
-        (new SyncTrackedAccountJob($account->id, force: true))->handle(app(PlatformAdapterManager::class));
+        (new SyncTrackedAccountJob($account->id, force: true))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class));
 
         $this->assertSame(1, Post::query()->count());
         $account->refresh();
@@ -301,7 +302,7 @@ class SyncTrackedAccountJobTest extends TestCase
             'snitch.sync.posts_limit' => 12,
         ]);
 
-        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class));
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class));
 
         $this->assertSame(1, Post::query()->count());
         $this->assertSame('page_1', $account->fresh()?->external_id);
@@ -348,7 +349,7 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
         $this->app->instance(ApifyClient::class, $client);
 
-        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class));
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class));
 
         $existing->refresh();
         $this->assertSame(1, $existing->metrics['likes'] ?? null);
@@ -434,7 +435,7 @@ class SyncTrackedAccountJobTest extends TestCase
             'snitch.sync.posts_limit' => 12,
         ]);
 
-        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class));
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class));
 
         $this->assertSame(2, Post::query()->count());
         $new = Post::query()->where('external_id', 'new_tt')->first();
