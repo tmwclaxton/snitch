@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\Billing\PlanEntitlementService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,6 +21,8 @@ class EnsureBrandProfile
         if ($user === null) {
             return $next($request);
         }
+
+        app(PlanEntitlementService::class)->ensureTrialStarted($user);
 
         if ($user->brandProfile()->exists()) {
             return $next($request);

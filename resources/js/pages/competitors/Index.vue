@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import {
     Check,
     LoaderCircle,
@@ -25,6 +25,7 @@ import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import { lastSyncedLabel, nextSyncLabel } from '@/lib/syncSchedule';
+import { edit as billingEdit } from '@/routes/billing';
 import { useToastStore } from '@/stores/toastStore';
 
 type Account = {
@@ -62,12 +63,23 @@ type SuggestRun = {
     status: 'pending' | 'processing';
 };
 
+type CompetitorCap = {
+    plan: string;
+    plan_name: string;
+    competitor_limit: number;
+    competitors_used: number;
+    competitors_remaining: number;
+    on_trial: boolean;
+    can_upgrade: boolean;
+};
+
 const props = defineProps<{
     accounts: Account[];
     platforms: string[];
     suggestions: Suggestion[];
     suggestRun?: SuggestRun | null;
     suggestError?: string | null;
+    competitorCap?: CompetitorCap | null;
 }>();
 
 defineOptions({
@@ -75,6 +87,31 @@ defineOptions({
 });
 
 const toast = useToastStore();
+const page = usePage();
+
+const cap = computed(() => {
+    return (
+        props.competitorCap ??
+        (page.props.subscription as CompetitorCap | null | undefined) ??
+        null
+    );
+});
+
+const atCompetitorCap = computed(() => {
+    if (!cap.value) {
+        return false;
+    }
+
+    return cap.value.competitors_remaining <= 0;
+});
+
+const nearCompetitorCap = computed(() => {
+    if (!cap.value || atCompetitorCap.value) {
+        return false;
+    }
+
+    return cap.value.competitors_remaining <= 2;
+});
 
 const selected = ref<Record<string, boolean>>({});
 const localSuggestions = ref<Suggestion[]>([]);
@@ -499,6 +536,37 @@ function syncAccount(account: Account): void {
         <div class="snitch-grain" aria-hidden="true" />
 
         <div class="relative z-10 mx-auto w-full min-w-0 max-w-6xl">
+            <div
+                v-if="atCompetitorCap || nearCompetitorCap"
+                class="mb-5 border border-snitch-ink/15 bg-snitch-spot/20 px-4 py-3 text-sm text-snitch-ink"
+            >
+                <template v-if="atCompetitorCap">
+                    You are at your competitor limit
+                    <span v-if="cap">
+                        ({{ cap.competitors_used }} / {{ cap.competitor_limit }}).
+                    </span>
+                    <Link
+                        :href="billingEdit()"
+                        class="ml-1 font-medium underline decoration-snitch-ink/40 underline-offset-2"
+                    >
+                        Upgrade in Billing
+                    </Link>
+                    to track more.
+                </template>
+                <template v-else>
+                    Almost at your competitor limit
+                    <span v-if="cap">
+                        ({{ cap.competitors_used }} / {{ cap.competitor_limit }}).
+                    </span>
+                    <Link
+                        :href="billingEdit()"
+                        class="ml-1 font-medium underline decoration-snitch-ink/40 underline-offset-2"
+                    >
+                        See plans
+                    </Link>
+                </template>
+            </div>
+
             <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div class="min-w-0">
                     <h1 class="snitch-display text-3xl text-snitch-ink sm:text-4xl">
@@ -507,12 +575,20 @@ function syncAccount(account: Account): void {
                     <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
                         Accounts you watch across Instagram, TikTok, YouTube Shorts, Facebook, and LinkedIn.
                     </p>
+                    <p
+                        v-if="cap"
+                        class="mt-2 text-xs uppercase tracking-[0.14em] text-snitch-ink/55"
+                    >
+                        {{ cap.competitors_used }} / {{ cap.competitor_limit }}
+                        on {{ cap.plan_name }}
+                        <span v-if="cap.on_trial">(trial)</span>
+                    </p>
                 </div>
                 <div class="flex min-w-0 flex-col gap-1 sm:items-end">
                     <button
                         type="button"
                         class="snitch-btn snitch-btn-ghost w-full sm:w-auto"
-                        :disabled="suggesting"
+                        :disabled="suggesting || atCompetitorCap"
                         @click="requestSuggestions"
                     >
                         <LoaderCircle
@@ -601,7 +677,7 @@ function syncAccount(account: Account): void {
                         <button
                             type="submit"
                             class="snitch-btn snitch-btn-spot snitch-add-account-submit w-full sm:w-auto"
-                            :disabled="form.processing || suggesting"
+                            :disabled="form.processing || suggesting || atCompetitorCap"
                         >
                             <span class="relative z-10 inline-flex items-center gap-2">
                                 <LoaderCircle

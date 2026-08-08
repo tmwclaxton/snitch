@@ -37,4 +37,24 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    /**
+     * Active app trial (Basic entitlements, no Stripe subscription).
+     */
+    public function onTrial(?int $days = 7): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'trial_ends_at' => now()->addDays($days),
+        ]);
+    }
+
+    /**
+     * Expired trial / Free plan (no active subscription).
+     */
+    public function freePlan(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'trial_ends_at' => now()->subDay(),
+        ]);
+    }
 }

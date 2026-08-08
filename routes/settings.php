@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\BillingController;
 use App\Http\Controllers\Settings\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
@@ -15,4 +16,8 @@ Route::middleware([
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::inertia('settings/appearance', 'settings/Appearance')->name('appearance.edit');
+
+    Route::get('settings/billing', [BillingController::class, 'index'])->name('billing.edit');
+    Route::post('settings/billing/checkout', [BillingController::class, 'checkout'])->name('billing.checkout');
+    Route::post('settings/billing/portal', [BillingController::class, 'portal'])->name('billing.portal');
 });

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\Billing\PlanEntitlementService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -43,6 +44,9 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user,
             ],
+            'subscription' => $user !== null
+                ? app(PlanEntitlementService::class)->summary($user)
+                : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

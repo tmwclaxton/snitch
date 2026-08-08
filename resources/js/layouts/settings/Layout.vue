@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Palette, User } from '@lucide/vue';
+import { CreditCard, Palette, User } from '@lucide/vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
+import { edit as editBilling } from '@/routes/billing';
 import { edit as editProfile } from '@/routes/profile';
 import type { NavItem } from '@/types';
 
@@ -12,6 +13,11 @@ const sidebarNavItems: NavItem[] = [
         title: 'Profile',
         href: editProfile(),
         icon: User,
+    },
+    {
+        title: 'Billing',
+        href: editBilling(),
+        icon: CreditCard,
     },
     {
         title: 'Appearance',
@@ -34,7 +40,7 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                     Settings
                 </h1>
                 <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
-                    Profile and appearance on quieter paper.
+                    Profile, billing, and appearance on quieter paper.
                 </p>
             </header>
 

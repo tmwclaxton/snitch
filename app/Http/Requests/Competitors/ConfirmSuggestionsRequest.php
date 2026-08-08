@@ -12,7 +12,7 @@ class ConfirmSuggestionsRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('create', TrackedAccount::class) ?? false;
+        return $this->user()?->can('viewAny', TrackedAccount::class) ?? false;
     }
 
     /**
