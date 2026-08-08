@@ -33,6 +33,7 @@ import {
     Zap,
 } from '@lucide/vue';
 import type { Component } from 'vue';
+import { index as exploreIndex } from '@/actions/App/Http/Controllers/ExploreController';
 
 export type AnalysisTermDimension =
     | 'hook_type'
@@ -110,4 +111,37 @@ export function analysisTermIcon(input: AnalysisTermIconInput): Component {
 
 export function analysisDimensionIcon(dimension: AnalysisTermDimension | null | undefined): Component {
     return analysisTermIcon({ dimension });
+}
+
+/**
+ * Explore URL with the matching catalogue filter (or free-text `q`) preselected.
+ * Explore already accepts `hook_types` / `topics` / `visual_crafts` / `q` query params.
+ */
+export function exploreHrefForTerm(input: {
+    dimension?: AnalysisTermDimension | null;
+    slug?: string | null;
+    label?: string | null;
+}): string | null {
+    const dimension = input.dimension?.trim().toLowerCase() ?? '';
+    const slug = input.slug?.trim().toLowerCase() ?? '';
+
+    if (dimension === 'hook_type' && slug !== '') {
+        return exploreIndex.url({ query: { hook_types: slug } });
+    }
+
+    if (dimension === 'topic' && slug !== '') {
+        return exploreIndex.url({ query: { topics: slug } });
+    }
+
+    if (dimension === 'visual_craft' && slug !== '') {
+        return exploreIndex.url({ query: { visual_crafts: slug } });
+    }
+
+    const q = (input.label ?? input.slug ?? '').trim();
+
+    if (q === '') {
+        return null;
+    }
+
+    return exploreIndex.url({ query: { q } });
 }

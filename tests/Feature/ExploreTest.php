@@ -140,6 +140,44 @@ class ExploreTest extends TestCase
             );
     }
 
+    public function test_explore_accepts_singular_topic_query_param(): void
+    {
+        $this->seed(AnalysisTermSeeder::class);
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+        ]);
+        $analysis = PostAnalysis::factory()->for($post)->create([
+            'status' => AnalysisStatus::Completed,
+        ]);
+        $term = AnalysisTerm::query()
+            ->where('dimension', AnalysisTermDimension::Topic)
+            ->where('slug', 'fundraising')
+            ->firstOrFail();
+        $analysis->terms()->attach($term->id);
+
+        $other = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+        ]);
+        PostAnalysis::factory()->for($other)->create([
+            'status' => AnalysisStatus::Completed,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('explore.index', ['topics' => 'fundraising']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('explore/Index')
+                ->where('filters.topics', ['fundraising'])
+                ->has('posts.data', 1)
+                ->where('posts.data.0.id', $post->id)
+            );
+    }
+
     public function test_explore_filters_by_multiple_hook_type_slugs(): void
     {
         $this->seed(AnalysisTermSeeder::class);

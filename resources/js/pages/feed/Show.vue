@@ -19,7 +19,7 @@ import MarkdownText from '@/components/MarkdownText.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { analysisDimensionIcon } from '@/lib/analysisTerms';
+import { analysisDimensionIcon, exploreHrefForTerm } from '@/lib/analysisTerms';
 import { metricIcon } from '@/lib/metricIcons';
 import { metricPairs } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
@@ -242,6 +242,7 @@ const termChips = computed(() => {
                         :dimension="chip.dimension"
                         :section="chip.section"
                         :slug="chip.slug"
+                        :href="exploreHrefForTerm(chip)"
                     />
                 </div>
             </header>

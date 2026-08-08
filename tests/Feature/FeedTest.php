@@ -265,6 +265,25 @@ class FeedTest extends TestCase
             );
     }
 
+    public function test_feed_term_chips_link_to_explore_with_preselected_filters(): void
+    {
+        $showVue = file_get_contents(resource_path('js/pages/feed/Show.vue'));
+        $cellVue = file_get_contents(resource_path('js/components/FeedContactCell.vue'));
+        $chipVue = file_get_contents(resource_path('js/components/AnalysisTermChip.vue'));
+        $helper = file_get_contents(resource_path('js/lib/analysisTerms.ts'));
+
+        $this->assertIsString($showVue);
+        $this->assertIsString($cellVue);
+        $this->assertIsString($chipVue);
+        $this->assertIsString($helper);
+        $this->assertStringContainsString('exploreHrefForTerm', $showVue);
+        $this->assertStringContainsString('exploreHrefForTerm', $cellVue);
+        $this->assertStringContainsString(':href="exploreHrefForTerm', $showVue);
+        $this->assertStringContainsString('hook_types', $helper);
+        $this->assertStringContainsString('visual_crafts', $helper);
+        $this->assertStringContainsString('v-if="isLink"', $chipVue);
+    }
+
     public function test_feed_includes_analysis_term_labels_with_sections(): void
     {
         $this->seed(AnalysisTermSeeder::class);
