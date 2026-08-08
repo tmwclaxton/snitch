@@ -8,7 +8,6 @@ RUN apt-get update \
         curl \
         default-libmysqlclient-dev \
         libicu-dev \
-        libpq-dev \
         libsqlite3-dev \
         libzip-dev \
         unzip \
@@ -20,8 +19,7 @@ RUN docker-php-ext-install \
     opcache \
     pdo_mysql \
     pdo_sqlite \
-    zip \
-    && docker-php-ext-install pdo_pgsql
+    zip
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -91,6 +89,8 @@ RUN apt-get update && apt-get upgrade -y \
         libpq-dev \
         libsqlite3-dev \
         libzip-dev \
+    && docker-php-ext-configure pgsql --with-pgsql \
+    && docker-php-ext-install pdo_pgsql \
     && docker-php-ext-install \
         bcmath \
         intl \
@@ -98,7 +98,6 @@ RUN apt-get update && apt-get upgrade -y \
         pdo_mysql \
         pdo_sqlite \
         zip \
-    && docker-php-ext-install pdo_pgsql \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && rm -rf /tmp/pear \
