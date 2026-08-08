@@ -3,8 +3,8 @@ import { Form, Head, Link, usePage } from '@inertiajs/vue3';
 import { CreditCard, LoaderCircle } from '@lucide/vue';
 import { computed } from 'vue';
 import BillingController from '@/actions/App/Http/Controllers/Settings/BillingController';
-import { edit } from '@/routes/billing';
 import { pricing } from '@/routes';
+import { edit } from '@/routes/billing';
 
 type PlanCard = {
     key: string;
@@ -82,6 +82,34 @@ function trialLabel(): string | null {
 
     return days === 1 ? '1 day left on trial' : `${days} days left on trial`;
 }
+
+function isPaidCurrentPlan(plan: PlanCard): boolean {
+    return props.subscription.subscribed && props.subscription.plan === plan.key;
+}
+
+function canCheckout(plan: PlanCard): boolean {
+    return plan.has_checkout && !isPaidCurrentPlan(plan);
+}
+
+function checkoutLabel(plan: PlanCard): string {
+    if (plan.key === 'basic') {
+        return props.subscription.subscribed ? `Switch to ${plan.name}` : `Start ${plan.name}`;
+    }
+
+    if (props.subscription.subscribed || props.subscription.on_trial) {
+        return `Upgrade to ${plan.name}`;
+    }
+
+    return `Start ${plan.name}`;
+}
+
+function cardHighlight(plan: PlanCard): boolean {
+    if (props.subscription.subscribed) {
+        return props.subscription.plan === plan.key;
+    }
+
+    return plan.key === 'basic' && props.subscription.on_trial;
+}
 </script>
 
 <template>
@@ -147,6 +175,12 @@ function trialLabel(): string | null {
                         >
                             {{ trialLabel() }}
                         </p>
+                        <p
+                            v-if="subscription.on_trial && !subscription.subscribed"
+                            class="mt-2 text-sm text-snitch-ink/65"
+                        >
+                            Trial uses Basic limits. Start Basic or Pro anytime to keep access after day 7.
+                        </p>
 
                         <Form
                             v-if="subscription.subscribed"
@@ -177,7 +211,7 @@ function trialLabel(): string | null {
                         :key="plan.key"
                         class="border border-snitch-ink/12 bg-snitch-paper/80 p-4"
                         :class="
-                            subscription.plan === plan.key
+                            cardHighlight(plan)
                                 ? 'shadow-[3px_3px_0_0_var(--snitch-spot)]'
                                 : ''
                         "
@@ -197,13 +231,25 @@ function trialLabel(): string | null {
                         </p>
 
                         <p
-                            v-if="subscription.plan === plan.key"
+                            v-if="isPaidCurrentPlan(plan)"
+                            class="mt-4 text-sm font-medium text-snitch-ink"
+                        >
+                            Your plan
+                        </p>
+                        <p
+                            v-else-if="plan.key === 'free' && subscription.on_trial"
+                            class="mt-4 text-sm text-snitch-ink/60"
+                        >
+                            After trial if you do not subscribe
+                        </p>
+                        <p
+                            v-else-if="plan.key === 'free' && subscription.plan === 'free'"
                             class="mt-4 text-sm font-medium text-snitch-ink"
                         >
                             Your plan
                         </p>
                         <Form
-                            v-else-if="plan.has_checkout"
+                            v-else-if="canCheckout(plan)"
                             :action="BillingController.checkout.url()"
                             method="post"
                             class="mt-4"
@@ -219,7 +265,7 @@ function trialLabel(): string | null {
                                     v-if="processing"
                                     class="size-4 animate-spin"
                                 />
-                                Upgrade to {{ plan.name }}
+                                {{ checkoutLabel(plan) }}
                             </button>
                         </Form>
                         <p

@@ -21,5 +21,8 @@ Resolve limits with `PlanEntitlementService`. Gate new tracked accounts in `Trac
 ## Surfaces
 Public marketing page: `/pricing`. Authenticated billing UI: `/billing` (sidebar account links, above Settings - not nested under Settings nav). Old `/settings/billing` redirects to `/billing`.
 
+## Checkout / UI
+Checkout and Customer Portal must use `Inertia::location($url)` so Inertia Form posts leave the app for Stripe (plain 302 is ignored). During trial, entitlements look like Basic but the user is not subscribed - show Start Basic and Upgrade to Pro, keyed off `subscribed`, not trial plan name.
+
 ## Stripe ops
 Price IDs live in env (`STRIPE_PRICE_BASIC`, `STRIPE_PRICE_PRO`). Create them with `php artisan snitch:stripe-sync-plans`. Webhook path is `/stripe/webhook` (CSRF exempt). Never commit Stripe secrets.

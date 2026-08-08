@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Services\Billing\PlanEntitlementService;
-use Illuminate\Contracts\Support\Responsable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Laravel\Cashier\Checkout;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
+use Throwable;
 
 class BillingController extends Controller
 {
@@ -39,7 +41,7 @@ class BillingController extends Controller
         ]);
     }
 
-    public function checkout(Request $request): Responsable|RedirectResponse
+    public function checkout(Request $request): SymfonyResponse|RedirectResponse
     {
         $data = $request->validate([
             'plan' => ['required', 'string', Rule::in(['basic', 'pro'])],
@@ -59,14 +61,50 @@ class BillingController extends Controller
 
         $type = (string) config('subscriptions.subscription_type', 'default');
 
-        return $user->newSubscription($type, $priceId)
-            ->checkout([
-                'success_url' => route('billing.edit').'?checkout=success',
-                'cancel_url' => route('billing.edit').'?checkout=cancelled',
+        try {
+            if ($user->subscribed($type)) {
+                $user->subscription($type)?->swapAndInvoice($priceId);
+
+                Inertia::flash('toast', [
+                    'type' => 'success',
+                    'message' => __('Plan updated.'),
+                ]);
+
+                return redirect()->route('billing.edit');
+            }
+
+            $checkout = $user->newSubscription($type, $priceId)
+                ->checkout([
+                    'success_url' => route('billing.edit').'?checkout=success',
+                    'cancel_url' => route('billing.edit').'?checkout=cancelled',
+                ]);
+
+            $url = $this->checkoutUrl($checkout);
+
+            if ($url === null) {
+                Inertia::flash('toast', [
+                    'type' => 'error',
+                    'message' => __('Could not start Stripe Checkout. Try again in a moment.'),
+                ]);
+
+                return redirect()->route('billing.edit');
+            }
+
+            // Inertia forms need an external Location response, not a plain 302.
+            return Inertia::location($url);
+        } catch (Throwable $e) {
+            report($e);
+
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => __('Checkout failed. Check Stripe is configured and try again.'),
             ]);
+
+            return redirect()->route('billing.edit');
+        }
     }
 
-    public function portal(Request $request): RedirectResponse
+    public function portal(Request $request): RedirectResponse|SymfonyResponse
     {
         $user = $request->user();
 
@@ -79,6 +117,21 @@ class BillingController extends Controller
             return redirect()->route('billing.edit');
         }
 
-        return $user->redirectToBillingPortal(route('billing.edit'));
+        return Inertia::location($user->billingPortalUrl(route('billing.edit')));
+    }
+
+    private function checkoutUrl(mixed $checkout): ?string
+    {
+        if ($checkout instanceof Checkout) {
+            $url = $checkout->asStripeCheckoutSession()->url;
+
+            return is_string($url) && $url !== '' ? $url : null;
+        }
+
+        if ($checkout instanceof RedirectResponse) {
+            return $checkout->getTargetUrl();
+        }
+
+        return null;
     }
 }
