@@ -19,9 +19,14 @@ class TikTokAdapter extends AbstractPlatformAdapter
 
     protected function actorInput(string $handle, int $limit): array
     {
+        $recencyDays = max(1, (int) config('snitch.sync.recency_days', 30));
+
         return [
             'profiles' => [$handle],
             'resultsPerPage' => $limit,
+            'oldestPostDateUnified' => "{$recencyDays} days",
+            // Required for analyzable media_url; without this the actor omits video files.
+            'shouldDownloadVideos' => true,
         ];
     }
 
@@ -53,15 +58,29 @@ class TikTokAdapter extends AbstractPlatformAdapter
             return null;
         }
 
+        if (! empty($item['isSlideshow'])) {
+            return null;
+        }
+
+        $mediaUrl = $this->firstVideoUrl(
+            $item['videoUrl'] ?? null,
+            $item['mediaUrls'] ?? null,
+            $item['videoMeta']['downloadAddr'] ?? null,
+        );
+
+        if ($mediaUrl === null) {
+            return null;
+        }
+
         $music = is_array($item['musicMeta'] ?? null) ? $item['musicMeta'] : (is_array($item['music'] ?? null) ? $item['music'] : null);
 
         return [
             'external_id' => isset($item['id']) ? (string) $item['id'] : null,
             'url' => $url,
             'posted_at' => $this->normalizeDate($item['createTime'] ?? $item['createTimeISO'] ?? null),
-            'type' => PostType::Video->value,
+            'type' => PostType::Reel->value,
             'caption' => isset($item['text']) ? (string) $item['text'] : (isset($item['desc']) ? (string) $item['desc'] : null),
-            'media_url' => $item['videoUrl'] ?? $item['mediaUrls'][0] ?? $item['covers'][0] ?? null,
+            'media_url' => $mediaUrl,
             'metrics' => $this->metrics(
                 $item['playCount'] ?? $item['videoMeta']['playCount'] ?? 0,
                 $item['diggCount'] ?? $item['likes'] ?? 0,

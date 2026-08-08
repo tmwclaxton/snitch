@@ -6,6 +6,7 @@ use App\Enums\Platform;
 use App\Enums\PostType;
 use App\Models\Post;
 use App\Support\PlatformEmbed;
+use App\Support\SafeMarkdown;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,7 +21,8 @@ class FeedController extends Controller
 
         $query = Post::query()
             ->where('user_id', $user->id)
-            ->with(['trackedAccount', 'analysis'])
+            ->reelLike()
+            ->with(['trackedAccount', 'analysis', 'winnerInsight'])
             ->latest('posted_at');
 
         if ($request->filled('platform')) {
@@ -28,7 +30,10 @@ class FeedController extends Controller
         }
 
         if ($request->filled('type')) {
-            $query->where('type', $request->string('type')->toString());
+            $type = $request->string('type')->toString();
+            if (in_array($type, PostType::analyzableValues(), true)) {
+                $query->where('type', $type);
+            }
         }
 
         if ($request->filled('account')) {
@@ -53,7 +58,7 @@ class FeedController extends Controller
                 'account' => $request->integer('account') ?: null,
             ],
             'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
-            'types' => collect(PostType::cases())->map(fn (PostType $t) => $t->value)->values(),
+            'types' => collect(PostType::analyzable())->map(fn (PostType $t) => $t->value)->values(),
             'accounts' => $user->trackedAccounts()->orderBy('handle')->get(['id', 'handle', 'platform', 'display_name', 'avatar']),
         ]);
     }
@@ -67,6 +72,20 @@ class FeedController extends Controller
             'embed',
             PlatformEmbed::resolve($post->platform, $post->url),
         );
+
+        if ($post->analysis !== null) {
+            $post->analysis->setAttribute(
+                'how_to_copy_html',
+                SafeMarkdown::toHtml($post->analysis->how_to_copy),
+            );
+        }
+
+        if ($post->winnerInsight !== null) {
+            $post->winnerInsight->setAttribute(
+                'how_to_copy_html',
+                SafeMarkdown::toHtml($post->winnerInsight->how_to_copy),
+            );
+        }
 
         return Inertia::render('feed/Show', [
             'post' => $post,

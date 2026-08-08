@@ -26,6 +26,7 @@ class ConfirmSuggestionsRequest extends FormRequest
             'suggestions.*.handle' => ['required', 'string', 'max:80'],
             'suggestions.*.display_name' => ['nullable', 'string', 'max:120'],
             'suggestions.*.avatar' => ['nullable', 'string', 'max:500'],
+            'suggestions.*.source' => ['nullable', 'string', 'max:200'],
         ];
     }
 

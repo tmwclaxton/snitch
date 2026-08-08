@@ -1,0 +1,44 @@
+[
+  {
+    "id": "ytShort1",
+    "url": "https://www.youtube.com/shorts/ytShort1",
+    "title": "60-second oven tip",
+    "date": "2026-08-04T11:00:00Z",
+    "duration": "00:00:42",
+    "type": "shorts",
+    "viewCount": 120000,
+    "likes": 8800,
+    "commentsCount": 410,
+    "videoUrl": "https://cdn.example.com/yt-short1.mp4",
+    "channelName": "Rival Bakery",
+    "channelUsername": "rivalbakery",
+    "channelId": "UCrival1",
+    "channelAvatarUrl": "https://cdn.example.com/yt-avatar.jpg"
+  },
+  {
+    "id": "ytLong1",
+    "url": "https://www.youtube.com/watch?v=ytLong1",
+    "title": "Full bakery tour vlog",
+    "date": "2026-08-04T12:00:00Z",
+    "duration": "00:12:05",
+    "type": "video",
+    "viewCount": 9000,
+    "likes": 300,
+    "commentsCount": 40,
+    "channelName": "Rival Bakery",
+    "channelUsername": "rivalbakery",
+    "channelId": "UCrival1"
+  },
+  {
+    "url": "https://www.youtube.com/@rivalbakery/about",
+    "error": "CHANNEL_HAS_NO_SHORTS",
+    "input": "https://www.youtube.com/@rivalbakery/shorts",
+    "note": "The channel has no shorts.",
+    "aboutChannelInfo": {
+      "channelUsername": "rivalbakery",
+      "channelName": "Rival Bakery",
+      "channelId": "UCrival1",
+      "channelAvatarUrl": "https://cdn.example.com/yt-avatar.jpg"
+    }
+  }
+]

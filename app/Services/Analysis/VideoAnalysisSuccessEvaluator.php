@@ -9,7 +9,7 @@ class VideoAnalysisSuccessEvaluator
     /**
      * @return array{passed: bool, failures: list<string>}
      */
-    public function evaluate(VideoAnalysisResult $result): array
+    public function evaluate(VideoAnalysisResult $result, ?string $caption = null): array
     {
         $config = config('snitch.video_analysis.success');
         $failures = [];
@@ -28,6 +28,10 @@ class VideoAnalysisSuccessEvaluator
 
         if (strlen($result->idea) < (int) $config['min_idea_chars']) {
             $failures[] = 'idea too short';
+        }
+
+        if (strlen($result->concept) < (int) ($config['min_concept_chars'] ?? 12)) {
+            $failures[] = 'concept too short';
         }
 
         if ($config['require_sfx_array'] && ! is_array($result->sfx)) {
@@ -54,9 +58,113 @@ class VideoAnalysisSuccessEvaluator
             $failures[] = 'model missing';
         }
 
+        if ($this->looksLikeGenericSlop($result)) {
+            $failures[] = 'generic AI filler without named mechanic';
+        }
+
+        if ($caption !== null && $this->looksLikeCaptionEcho($result, $caption, (float) ($config['max_caption_overlap_ratio'] ?? 0.65))) {
+            $failures[] = 'analysis echoes caption/script too closely';
+        }
+
+        if ($this->containsNonEnglishProse($result)) {
+            $failures[] = 'analysis must be English';
+        }
+
         return [
             'passed' => $failures === [],
             'failures' => $failures,
         ];
+    }
+
+    private function containsNonEnglishProse(VideoAnalysisResult $result): bool
+    {
+        $blob = implode(' ', [
+            $result->concept,
+            $result->idea,
+            $result->visualSummary,
+            $result->howToCopy,
+            $result->cta,
+            ...$result->topics,
+        ]);
+
+        foreach ($result->sfx as $item) {
+            if (is_array($item)) {
+                $blob .= ' '.((string) ($item['label'] ?? '')).' '.((string) ($item['role'] ?? ''));
+            }
+        }
+
+        // Han / CJK Unified Ideographs (common failure mode for Qwen and similar models).
+        return preg_match('/\p{Han}/u', $blob) === 1;
+    }
+
+    private function looksLikeGenericSlop(VideoAnalysisResult $result): bool
+    {
+        $blob = strtolower(implode(' ', [
+            $result->hook,
+            $result->idea,
+            $result->concept,
+            $result->howToCopy,
+        ]));
+
+        $slopPhrases = [
+            'engaging content',
+            'relatable vibe',
+            'great energy',
+            'post more consistently',
+            'high quality content',
+            'captures attention',
+            'keeps viewers hooked',
+        ];
+
+        $hits = 0;
+        foreach ($slopPhrases as $phrase) {
+            if (str_contains($blob, $phrase)) {
+                $hits++;
+            }
+        }
+
+        return $hits >= 2;
+    }
+
+    private function looksLikeCaptionEcho(VideoAnalysisResult $result, string $caption, float $maxRatio): bool
+    {
+        $captionTokens = $this->tokens($caption);
+
+        if (count($captionTokens) < 8) {
+            return false;
+        }
+
+        $analysisTokens = $this->tokens(implode(' ', [
+            $result->hook,
+            $result->idea,
+            $result->concept,
+            $result->visualSummary,
+            $result->howToCopy,
+        ]));
+
+        if ($analysisTokens === []) {
+            return false;
+        }
+
+        $overlap = count(array_intersect($captionTokens, $analysisTokens));
+        $ratio = $overlap / max(1, count($captionTokens));
+
+        return $ratio >= $maxRatio;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function tokens(string $text): array
+    {
+        $normalized = strtolower(preg_replace('/[^a-z0-9\s]/i', ' ', $text) ?? '');
+        $parts = preg_split('/\s+/', trim($normalized)) ?: [];
+
+        $stop = ['the', 'and', 'for', 'with', 'that', 'this', 'from', 'your', 'you', 'are', 'was', 'were', 'have', 'has'];
+
+        return array_values(array_filter(
+            $parts,
+            static fn (string $token): bool => strlen($token) > 2 && ! in_array($token, $stop, true),
+        ));
     }
 }

@@ -42,7 +42,7 @@ const textClass = {
             :class="textClass[size]"
         >
             <span
-                class="pointer-events-none absolute inset-0 translate-x-[1.5px] translate-y-[1px] text-snitch-spot opacity-60 mix-blend-multiply select-none"
+                class="pointer-events-none absolute inset-0 translate-x-[1.5px] translate-y-[1px] text-snitch-spot opacity-60 mix-blend-multiply select-none dark:mix-blend-plus-lighter dark:opacity-70"
                 aria-hidden="true"
             >Snitch</span>
             <span class="relative">Snitch</span>

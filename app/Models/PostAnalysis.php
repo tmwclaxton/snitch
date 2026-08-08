@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 #[Fillable([
     'post_id',
@@ -20,6 +21,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'sfx',
     'music',
     'cta',
+    'how_to_copy',
+    'concept',
+    'topics',
+    'custom_tags',
     'model',
     'error_message',
     'analyzed_at',
@@ -39,6 +44,8 @@ class PostAnalysis extends Model
             'hook_window_end_sec' => 'integer',
             'sfx' => 'array',
             'music' => 'array',
+            'topics' => 'array',
+            'custom_tags' => 'array',
             'analyzed_at' => 'datetime',
         ];
     }
@@ -49,5 +56,14 @@ class PostAnalysis extends Model
     public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);
+    }
+
+    /**
+     * @return BelongsToMany<AnalysisTerm, $this>
+     */
+    public function terms(): BelongsToMany
+    {
+        return $this->belongsToMany(AnalysisTerm::class)
+            ->withTimestamps();
     }
 }

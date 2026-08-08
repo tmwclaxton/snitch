@@ -3,13 +3,15 @@
 namespace App\Console\Commands;
 
 use App\Enums\Platform;
+use App\Enums\PostType;
 use App\Services\Apify\PlatformAdapterManager;
+use Carbon\CarbonImmutable;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('snitch:probe-apify {platform} {handle}')]
-#[Description('Live Apify adapter probe for a platform handle')]
+#[Description('Live Apify adapter probe for a platform handle (reel-only, recency-aware)')]
 class ProbeApifyCommand extends Command
 {
     public function handle(PlatformAdapterManager $adapters): int
@@ -20,24 +22,30 @@ class ProbeApifyCommand extends Command
             return self::SUCCESS;
         }
 
-        $platform = Platform::from((string) $this->argument('platform'));
-        $handle = (string) $this->argument('handle');
+        $platform = Platform::tryFrom((string) $this->argument('platform'));
+
+        if ($platform === null) {
+            $this->error('Invalid platform. Use tiktok, instagram, facebook, linkedin, or youtube.');
+
+            return self::FAILURE;
+        }
+
+        $handle = ltrim((string) $this->argument('handle'), '@');
+        $recencyDays = max(1, (int) config('snitch.sync.recency_days', 30));
+        $limit = min(3, max(1, (int) config('snitch.sync.posts_limit', 12)));
+        $cutoff = CarbonImmutable::now()->subDays($recencyDays);
+
+        $this->info("Apify probe assumptions: reel/short-video only; last {$recencyDays} days; limit={$limit}");
+        if ($platform === Platform::Youtube) {
+            $this->warn('YouTube: expect Shorts only. media_url may be a page URL (analysis needs MP4).');
+        }
+
         $adapter = $adapters->for($platform);
 
         $profile = $adapter->resolveProfile($handle);
-        $posts = $adapter->listRecentPosts($handle, 3);
+        $posts = $adapter->listRecentPosts($handle, $limit);
 
         $this->line(json_encode(['profile' => $profile, 'posts' => $posts], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-
-        foreach ($posts as $post) {
-            foreach (['external_id', 'url', 'posted_at', 'type'] as $field) {
-                if (blank($post[$field] ?? null)) {
-                    $this->error("Missing required field: {$field}");
-
-                    return self::FAILURE;
-                }
-            }
-        }
 
         if ($posts === []) {
             $this->error('No posts returned.');
@@ -45,7 +53,33 @@ class ProbeApifyCommand extends Command
             return self::FAILURE;
         }
 
-        $this->info('Apify probe passed.');
+        $analyzable = PostType::analyzableValues();
+
+        foreach ($posts as $index => $post) {
+            foreach (['external_id', 'url', 'posted_at', 'type', 'media_url'] as $field) {
+                if (blank($post[$field] ?? null)) {
+                    $this->error("Post[{$index}] missing required field: {$field}");
+
+                    return self::FAILURE;
+                }
+            }
+
+            if (! in_array((string) $post['type'], $analyzable, true)) {
+                $this->error("Post[{$index}] type must be reel/video, got {$post['type']}");
+
+                return self::FAILURE;
+            }
+
+            $postedAt = CarbonImmutable::parse((string) $post['posted_at']);
+
+            if ($postedAt->lt($cutoff)) {
+                $this->error("Post[{$index}] older than {$recencyDays}-day recency window ({$postedAt->toIso8601String()}).");
+
+                return self::FAILURE;
+            }
+        }
+
+        $this->info('Apify probe passed (reel-like + recency).');
 
         return self::SUCCESS;
     }

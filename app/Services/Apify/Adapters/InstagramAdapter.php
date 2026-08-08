@@ -3,6 +3,7 @@
 namespace App\Services\Apify\Adapters;
 
 use App\Enums\Platform;
+use App\Enums\PostType;
 
 class InstagramAdapter extends AbstractPlatformAdapter
 {
@@ -18,10 +19,14 @@ class InstagramAdapter extends AbstractPlatformAdapter
 
     protected function actorInput(string $handle, int $limit): array
     {
+        $recencyDays = max(1, (int) config('snitch.sync.recency_days', 30));
+
         return [
             'directUrls' => [$this->profileUrl($handle)],
             'resultsType' => 'posts',
-            'resultsLimit' => $limit,
+            // Profiles often lead with carousels; ask Apify for enough raw posts to fill reel quota after filtering.
+            'resultsLimit' => max($limit, 12),
+            'onlyPostsNewerThan' => "{$recencyDays} days",
         ];
     }
 
@@ -60,11 +65,35 @@ class InstagramAdapter extends AbstractPlatformAdapter
         }
 
         if (! str_starts_with($url, 'http')) {
-            $url = 'https://www.instagram.com/p/'.$url.'/';
+            $url = 'https://www.instagram.com/reel/'.$url.'/';
         }
 
-        $mediaUrl = $item['videoUrl'] ?? $item['displayUrl'] ?? $item['imageUrl'] ?? null;
-        $type = $this->inferPostType((string) ($item['type'] ?? $item['productType'] ?? ''), is_string($mediaUrl) ? $mediaUrl : null);
+        $mediaUrl = $this->firstVideoUrl(
+            $item['videoUrl'] ?? null,
+            $item['video']['url'] ?? null,
+        );
+
+        if ($mediaUrl === null) {
+            return null;
+        }
+
+        $hint = (string) ($item['type'] ?? $item['productType'] ?? '');
+        if (str_contains(strtolower($url), '/reel')) {
+            $hint = 'reel';
+        }
+
+        $type = $this->inferPostType($hint, $mediaUrl);
+
+        if ($type === PostType::Video->value && (
+            str_contains(strtolower($hint), 'clips')
+            || str_contains(strtolower($url), '/reel')
+        )) {
+            $type = PostType::Reel->value;
+        }
+
+        if (! $this->isImportableReelType($type, $mediaUrl)) {
+            return null;
+        }
 
         $music = $item['musicInfo'] ?? $item['audio'] ?? null;
 
@@ -74,7 +103,7 @@ class InstagramAdapter extends AbstractPlatformAdapter
             'posted_at' => $this->normalizeDate($item['timestamp'] ?? $item['takenAt'] ?? $item['takenAtTimestamp'] ?? null),
             'type' => $type,
             'caption' => isset($item['caption']) ? (string) $item['caption'] : null,
-            'media_url' => is_string($mediaUrl) ? $mediaUrl : null,
+            'media_url' => $mediaUrl,
             'metrics' => $this->metrics(
                 $item['videoViewCount'] ?? $item['videoPlayCount'] ?? $item['playsCount'] ?? 0,
                 $item['likesCount'] ?? $item['likeCount'] ?? 0,

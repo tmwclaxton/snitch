@@ -9,6 +9,152 @@ use Tests\TestCase;
 
 class FirecrawlClientTest extends TestCase
 {
+    public function test_search_returns_normalized_hits_from_v1_list(): void
+    {
+        config([
+            'snitch.firecrawl.api_key' => 'test-key',
+            'snitch.firecrawl.base_url' => 'https://api.firecrawl.test/v1',
+        ]);
+
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.firecrawl.test/v1/search' => Http::response([
+                'success' => true,
+                'data' => [
+                    [
+                        'url' => 'https://instrumentl.com',
+                        'title' => 'Instrumentl',
+                        'description' => 'Grant discovery platform',
+                    ],
+                    [
+                        'url' => 'https://example.com',
+                        'title' => null,
+                        'description' => null,
+                    ],
+                ],
+            ]),
+        ]);
+
+        $result = app(FirecrawlClient::class)->search('grant tools competitors', ['limit' => 5]);
+
+        $this->assertSame([
+            [
+                'url' => 'https://instrumentl.com',
+                'title' => 'Instrumentl',
+                'description' => 'Grant discovery platform',
+            ],
+            [
+                'url' => 'https://example.com',
+                'title' => '',
+                'description' => '',
+            ],
+        ], $result);
+
+        Http::assertSent(function ($request): bool {
+            return str_ends_with($request->url(), '/search')
+                && ($request['query'] ?? null) === 'grant tools competitors'
+                && ($request['limit'] ?? null) === 5;
+        });
+    }
+
+    public function test_search_returns_hits_from_v2_web_group(): void
+    {
+        config([
+            'snitch.firecrawl.api_key' => 'test-key',
+            'snitch.firecrawl.base_url' => 'https://api.firecrawl.test/v2',
+        ]);
+
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.firecrawl.test/v2/search' => Http::response([
+                'success' => true,
+                'data' => [
+                    'web' => [
+                        [
+                            'url' => 'https://grantwatch.com',
+                            'title' => 'GrantWatch',
+                            'description' => 'Grant listings',
+                        ],
+                    ],
+                ],
+            ]),
+        ]);
+
+        $result = app(FirecrawlClient::class)->search('grantwatch');
+
+        $this->assertCount(1, $result);
+        $this->assertSame('https://grantwatch.com', $result[0]['url']);
+    }
+
+    public function test_search_requires_api_key(): void
+    {
+        config([
+            'snitch.firecrawl.api_key' => '',
+            'snitch.firecrawl.base_url' => 'https://api.firecrawl.test/v1',
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('FIRECRAWL_API_KEY is not configured.');
+
+        app(FirecrawlClient::class)->search('anything');
+    }
+
+    public function test_search_many_merges_and_dedupes_urls_in_query_order(): void
+    {
+        config([
+            'snitch.firecrawl.api_key' => 'test-key',
+            'snitch.firecrawl.base_url' => 'https://api.firecrawl.test/v1',
+        ]);
+
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.firecrawl.test/v1/search' => Http::sequence()
+                ->push([
+                    'success' => true,
+                    'data' => [
+                        [
+                            'url' => 'https://shared.example',
+                            'title' => 'Shared A',
+                            'description' => 'First query',
+                        ],
+                        [
+                            'url' => 'https://only-a.example',
+                            'title' => 'Only A',
+                            'description' => 'A',
+                        ],
+                    ],
+                ])
+                ->push([
+                    'success' => true,
+                    'data' => [
+                        [
+                            'url' => 'https://shared.example',
+                            'title' => 'Shared B',
+                            'description' => 'Second query duplicate',
+                        ],
+                        [
+                            'url' => 'https://only-b.example',
+                            'title' => 'Only B',
+                            'description' => 'B',
+                        ],
+                    ],
+                ]),
+        ]);
+
+        $result = app(FirecrawlClient::class)->searchMany(
+            ['grant tools', 'grant competitors', 'grant tools'],
+            ['limit' => 5],
+        );
+
+        $this->assertSame([
+            'https://shared.example',
+            'https://only-a.example',
+            'https://only-b.example',
+        ], array_column($result, 'url'));
+        $this->assertSame('Shared A', $result[0]['title']);
+        Http::assertSentCount(2);
+    }
+
     public function test_scrape_returns_markdown_links_and_metadata(): void
     {
         config([

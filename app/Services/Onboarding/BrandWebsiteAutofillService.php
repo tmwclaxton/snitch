@@ -24,7 +24,8 @@ class BrandWebsiteAutofillService
      *         instagram: ?string,
      *         tiktok: ?string,
      *         facebook: ?string,
-     *         linkedin: ?string
+     *         linkedin: ?string,
+     *         youtube: ?string
      *     }
      * }
      */
@@ -384,7 +385,7 @@ class BrandWebsiteAutofillService
 
     /**
      * @param  list<string>  $links
-     * @return array{instagram: ?string, tiktok: ?string, facebook: ?string, linkedin: ?string}
+     * @return array{instagram: ?string, tiktok: ?string, facebook: ?string, linkedin: ?string, youtube: ?string}
      */
     private function handlesFromLinks(array $links): array
     {
@@ -393,6 +394,7 @@ class BrandWebsiteAutofillService
             'tiktok' => null,
             'facebook' => null,
             'linkedin' => null,
+            'youtube' => null,
         ];
 
         foreach ($links as $link) {
@@ -422,6 +424,7 @@ class BrandWebsiteAutofillService
             str_contains($host, 'tiktok.com') => Platform::TikTok,
             str_contains($host, 'facebook.com') || str_contains($host, 'fb.com') => Platform::Facebook,
             str_contains($host, 'linkedin.com') => Platform::LinkedIn,
+            str_contains($host, 'youtube.com') || str_contains($host, 'youtu.be') => Platform::Youtube,
             default => null,
         };
     }
@@ -455,6 +458,12 @@ class BrandWebsiteAutofillService
             Platform::Facebook => in_array($segments[0], ['pages', 'groups', 'watch', 'share', 'people', 'profile.php'], true)
                 ? ($segments[1] ?? null)
                 : $segments[0],
+            Platform::Youtube => match (true) {
+                str_starts_with($segments[0], '@') => ltrim($segments[0], '@'),
+                $segments[0] === 'c' || $segments[0] === 'channel' || $segments[0] === 'user' => $segments[1] ?? null,
+                $segments[0] === 'shorts' || $segments[0] === 'watch' || $segments[0] === 'embed' => null,
+                default => ltrim($segments[0], '@'),
+            },
             Platform::TikTok, Platform::Instagram => ltrim($segments[0], '@'),
         };
 

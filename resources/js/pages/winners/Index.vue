@@ -1,38 +1,200 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
-import { rescore } from '@/actions/App/Http/Controllers/WinnerController';
+import {
+    rescore,
+    rescoreStatus,
+} from '@/actions/App/Http/Controllers/WinnerController';
+import MarkdownText from '@/components/MarkdownText.vue';
+import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
+import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import type {
     WinnerRuleFormData,
     WinnerRulePreset,
 } from '@/components/WinnerRulesForm.vue';
 import WinnerRulesModal from '@/components/WinnerRulesModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { glanceTags } from '@/lib/posts';
+import { useToastStore } from '@/stores/toastStore';
 
-defineProps<{
+type RescoreRun = {
+    id: string;
+    status: 'pending' | 'processing' | string;
+};
+
+type RescoreStatusResponse = {
+    status: string;
+    error?: string | null;
+    winner_count?: number | null;
+};
+
+const props = defineProps<{
     winners: Array<{
         id: number;
         score: number;
         why: string;
         how_to_copy: string;
+        how_to_copy_html?: string | null;
         post: {
             id: number;
+            url: string | null;
             media_url: string | null;
             platform: string;
+            embed?: EmbedConfig | null;
             tracked_account?: { handle: string };
-            analysis?: { hook: string | null } | null;
+            analysis?: {
+                hook: string | null;
+                concept?: string | null;
+                topics?: string[] | null;
+            } | null;
         };
     }>;
     rule: WinnerRuleFormData;
     presets: Record<string, WinnerRulePreset>;
+    rescoreRun?: RescoreRun | null;
 }>();
 
 defineOptions({
     layout: AppLayout,
 });
 
+const toast = useToastStore();
 const rulesOpen = ref(false);
+const rescoring = ref(false);
+const rescoreMessage = ref('Rescoring…');
+let pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+const isRescoring = computed(() => rescoring.value);
+
+function winnerTags(winner: {
+    post: {
+        analysis?: {
+            concept?: string | null;
+            topics?: string[] | null;
+        } | null;
+    };
+}): string[] {
+    return glanceTags({
+        concept: winner.post.analysis?.concept,
+        topics: winner.post.analysis?.topics,
+        limit: 2,
+    });
+}
+
+function clearPoll(): void {
+    if (pollTimer !== null) {
+        clearTimeout(pollTimer);
+        pollTimer = null;
+    }
+}
+
+function startRescoring(run: RescoreRun): void {
+    rescoring.value = true;
+    rescoreMessage.value =
+        run.status === 'processing' ? 'Rescoring…' : 'Queued…';
+    void pollRescore(run.id);
+}
+
+async function pollRescore(id: string, attempt = 0): Promise<void> {
+    // Job timeout is 300s; 200 × 1.5s ≈ 300s of client polling.
+    if (attempt > 200) {
+        rescoring.value = false;
+        rescoreMessage.value = 'Timed out waiting for rescore.';
+        toast.error('Rescore timed out. Try again in a moment.');
+
+        return;
+    }
+
+    const response = await fetch(rescoreStatus.url(id), {
+        headers: {
+            Accept: 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'same-origin',
+    });
+
+    if (!response.ok && response.status !== 404) {
+        throw new Error('Unable to check rescore status.');
+    }
+
+    const payload = (await response.json()) as RescoreStatusResponse;
+
+    if (payload.status === 'completed') {
+        rescoring.value = false;
+        rescoreMessage.value = 'Rescoring…';
+        toast.success(
+            typeof payload.winner_count === 'number'
+                ? `Tear sheet updated · ${payload.winner_count} winner${payload.winner_count === 1 ? '' : 's'}.`
+                : 'Tear sheet updated.',
+        );
+        router.reload({ only: ['winners', 'rescoreRun'] });
+
+        return;
+    }
+
+    if (payload.status === 'failed' || payload.status === 'missing') {
+        rescoring.value = false;
+        rescoreMessage.value = payload.error || 'Rescore failed.';
+        toast.error(payload.error || 'Could not rescore winners.');
+
+        return;
+    }
+
+    rescoreMessage.value =
+        payload.status === 'processing' ? 'Rescoring…' : 'Queued…';
+
+    pollTimer = setTimeout(() => {
+        void pollRescore(id, attempt + 1);
+    }, 1500);
+}
+
+function requestRescore(): void {
+    if (rescoring.value) {
+        return;
+    }
+
+    clearPoll();
+    rescoring.value = true;
+    rescoreMessage.value = 'Queued…';
+
+    router.post(rescore.url(), {}, {
+        preserveScroll: true,
+        onSuccess: (page) => {
+            const run = (page.props as { rescoreRun?: RescoreRun | null }).rescoreRun;
+
+            if (run?.id) {
+                startRescoring(run);
+
+                return;
+            }
+
+            rescoring.value = false;
+        },
+        onError: () => {
+            rescoring.value = false;
+            toast.error('Could not start rescore.');
+        },
+    });
+}
+
+onMounted(() => {
+    const run = props.rescoreRun;
+
+    if (!run?.id) {
+        return;
+    }
+
+    if (run.status !== 'pending' && run.status !== 'processing') {
+        return;
+    }
+
+    startRescoring(run);
+});
+
+onUnmounted(() => {
+    clearPoll();
+});
 </script>
 
 <template>
@@ -55,6 +217,7 @@ const rulesOpen = ref(false);
                     <button
                         type="button"
                         class="snitch-btn snitch-btn-ghost"
+                        :disabled="isRescoring"
                         @click="rulesOpen = true"
                     >
                         Rules
@@ -62,54 +225,107 @@ const rulesOpen = ref(false);
                     <button
                         type="button"
                         class="snitch-btn snitch-btn-spot"
-                        @click="router.post(rescore.url())"
+                        :disabled="isRescoring"
+                        @click="requestRescore"
                     >
-                        <span class="relative z-10">Rescore</span>
+                        <span class="relative z-10">
+                            {{ isRescoring ? rescoreMessage : 'Rescore' }}
+                        </span>
                     </button>
                 </div>
             </div>
 
-            <div class="snitch-tear-board mt-8 p-4 sm:p-6">
-                <div class="snitch-contact-reveal columns-1 gap-4 md:columns-2 lg:columns-3">
+            <div
+                v-if="isRescoring"
+                class="snitch-scrap relative mt-5 px-4 py-3 text-sm text-snitch-ink/80"
+                role="status"
+                aria-live="polite"
+            >
+                <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
+                <p class="font-medium text-snitch-ink">
+                    {{ rescoreMessage }} Keeping your current tear sheet until new scores land.
+                </p>
+            </div>
+
+            <div
+                class="snitch-tear-board mt-8 p-4 sm:p-6"
+                :class="isRescoring ? 'opacity-70' : ''"
+            >
+                <div class="snitch-contact-reveal space-y-4 sm:space-y-5">
                     <article
                         v-for="(winner, index) in winners"
                         :key="winner.id"
-                        class="snitch-polaroid relative mb-4 break-inside-avoid"
-                        :style="{
-                            '--snitch-tilt': index % 2 === 0 ? '-1.4deg' : '1.2deg',
-                        }"
+                        class="snitch-tear-row relative border-b border-dashed border-snitch-ink/15 pb-5 last:border-b-0 last:pb-0 sm:pb-6"
                     >
-                        <span
-                            class="snitch-tape -top-2"
-                            :class="index % 2 === 0 ? 'left-4' : 'right-4'"
-                            aria-hidden="true"
-                        />
-                        <Link :href="feedShow.url(winner.post.id)" class="block">
-                            <div class="snitch-polaroid-frame">
-                                <img
-                                    v-if="winner.post.media_url"
-                                    :src="winner.post.media_url"
-                                    alt=""
+                        <div class="snitch-tear-row-media">
+                            <div
+                                class="snitch-polaroid relative w-full"
+                                :style="{
+                                    '--snitch-tilt': index % 2 === 0 ? '-0.8deg' : '0.7deg',
+                                }"
+                            >
+                                <span
+                                    class="snitch-tape -top-2"
+                                    :class="index % 2 === 0 ? 'left-4' : 'right-4'"
+                                    aria-hidden="true"
                                 />
+                                <div class="snitch-polaroid-frame !aspect-auto overflow-hidden">
+                                    <PlatformEmbed
+                                        :embed="winner.post.embed"
+                                        :media-url="winner.post.media_url"
+                                        :post-url="winner.post.url"
+                                        :platform="winner.post.platform"
+                                        compact
+                                        lazy
+                                    />
+                                </div>
                             </div>
-                            <div class="mt-3 space-y-2 px-0.5">
-                                <div class="flex items-center justify-between gap-2">
-                                    <span class="snitch-ink-label">#{{ index + 1 }}</span>
-                                    <span class="snitch-annotation text-xl">
-                                        {{ winner.score.toFixed(1) }}
-                                    </span>
-                                </div>
-                                <p class="text-xs uppercase tracking-wide text-snitch-ink/50">
-                                    @{{ winner.post.tracked_account?.handle }} ·
-                                    {{ winner.post.platform }}
-                                </p>
-                                <p class="text-sm text-snitch-ink/85">{{ winner.why }}</p>
-                                <div class="border-t border-dashed border-snitch-ink/15 pt-3">
-                                    <p class="snitch-annotation text-lg">How to copy</p>
-                                    <p class="mt-1 whitespace-pre-line text-sm text-snitch-ink/75">
-                                        {{ winner.how_to_copy }}
-                                    </p>
-                                </div>
+                        </div>
+
+                        <Link
+                            :href="feedShow.url(winner.post.id)"
+                            class="snitch-tear-row-body relative z-10 block space-y-2"
+                        >
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="snitch-ink-label">#{{ index + 1 }}</span>
+                                <span class="snitch-annotation text-xl">
+                                    {{ winner.score.toFixed(1) }}
+                                </span>
+                            </div>
+                            <p class="text-xs uppercase tracking-wide text-snitch-ink/50">
+                                @{{ winner.post.tracked_account?.handle }} ·
+                                {{ winner.post.platform }}
+                            </p>
+                            <p
+                                v-if="winner.post.analysis?.concept"
+                                class="text-sm font-medium text-snitch-ink"
+                            >
+                                {{ winner.post.analysis.concept }}
+                            </p>
+                            <p
+                                v-if="winner.post.analysis?.hook"
+                                class="text-sm text-snitch-ink/75"
+                            >
+                                Hook: {{ winner.post.analysis.hook }}
+                            </p>
+                            <div
+                                v-if="winnerTags(winner).length"
+                                class="snitch-topic-row"
+                            >
+                                <span
+                                    v-for="tag in winnerTags(winner)"
+                                    :key="tag"
+                                    class="snitch-topic-chip"
+                                >{{ tag }}</span>
+                            </div>
+                            <p class="text-sm text-snitch-ink/85">{{ winner.why }}</p>
+                            <div class="border-t border-dashed border-snitch-ink/15 pt-3">
+                                <p class="snitch-annotation text-lg">How to copy</p>
+                                <MarkdownText
+                                    class="mt-1"
+                                    :html="winner.how_to_copy_html"
+                                    :source="winner.how_to_copy"
+                                />
                             </div>
                         </Link>
                     </article>
@@ -120,11 +336,18 @@ const rulesOpen = ref(false);
                     class="snitch-scrap relative mx-auto max-w-md p-8 text-center"
                 >
                     <span class="snitch-tape left-8 -top-2" aria-hidden="true" />
-                    <p class="snitch-display text-2xl">No winners yet</p>
+                    <p class="snitch-display text-2xl">
+                        {{ isRescoring ? 'Rescoring…' : 'No winners yet' }}
+                    </p>
                     <p class="mt-2 text-sm text-snitch-ink/65">
-                        Sync posts, wait for analysis, or loosen your rules.
+                        {{
+                            isRescoring
+                                ? 'New scores will show here when the queue finishes.'
+                                : 'Sync posts, wait for analysis, or loosen your rules.'
+                        }}
                     </p>
                     <button
+                        v-if="!isRescoring"
                         type="button"
                         class="snitch-btn snitch-btn-ghost mt-5"
                         @click="rulesOpen = true"

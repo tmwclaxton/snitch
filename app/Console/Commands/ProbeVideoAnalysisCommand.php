@@ -25,6 +25,16 @@ class ProbeVideoAnalysisCommand extends Command
         $url = (string) $this->argument('url');
         $this->info("Analyzing {$url}");
 
+        $lower = strtolower($url);
+        if (
+            (str_contains($lower, 'youtube.com/') || str_contains($lower, 'youtu.be/'))
+            && preg_match('/\.(mp4|webm|m3u8)(\?|$)/i', $url) !== 1
+        ) {
+            $this->error('KNOWN GAP: YouTube page/Shorts URLs are not downloadable media. Pass an MP4/webm URL.');
+
+            return self::FAILURE;
+        }
+
         $result = $service->analyzeUrl($url, 'video');
         $evaluation = $evaluator->evaluate($result);
 

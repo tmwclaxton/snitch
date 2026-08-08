@@ -89,7 +89,7 @@ class WinnerScorer
         ];
     }
 
-    public function scoreAndPersist(Post $post, ?WinnerRule $rule = null): ?WinnerInsight
+    public function scoreAndPersist(Post $post, ?WinnerRule $rule = null, ?WinnerInsight $existing = null): ?WinnerInsight
     {
         $rule ??= $this->ruleFor($post->user);
         $verdict = $this->evaluate($post, $rule);
@@ -103,10 +103,10 @@ class WinnerScorer
             return null;
         }
 
-        $why = $this->buildWhy($post, $verdict['score']);
-        $howToCopy = $post->analysis?->status === AnalysisStatus::Completed
-            ? $this->buildHowToCopy($post)
-            : 'Study the hook, pacing, and CTA, then remake with your brand voice.';
+        $existing ??= WinnerInsight::query()
+            ->where('user_id', $post->user_id)
+            ->where('post_id', $post->id)
+            ->first();
 
         return WinnerInsight::query()->updateOrCreate(
             [
@@ -115,8 +115,8 @@ class WinnerScorer
             ],
             [
                 'score' => $verdict['score'],
-                'why' => $why,
-                'how_to_copy' => $howToCopy,
+                'why' => $this->buildWhy($post, $verdict['score']),
+                'how_to_copy' => $this->resolveHowToCopy($post, $existing),
             ],
         );
     }
@@ -129,7 +129,10 @@ class WinnerScorer
         $rule = $this->ruleFor($user);
         $insights = collect();
 
-        $user->loadMissing(['trackedAccounts']);
+        $existingByPostId = WinnerInsight::query()
+            ->where('user_id', $user->id)
+            ->get()
+            ->keyBy('post_id');
 
         Post::query()
             ->where('user_id', $user->id)
@@ -137,8 +140,13 @@ class WinnerScorer
             ->orderByDesc('posted_at')
             ->limit(100)
             ->get()
-            ->each(function (Post $post) use ($rule, $insights): void {
-                $insight = $this->scoreAndPersist($post, $rule);
+            ->each(function (Post $post) use ($rule, $insights, $existingByPostId): void {
+                $existing = $existingByPostId->get($post->id);
+                $insight = $this->scoreAndPersist(
+                    $post,
+                    $rule,
+                    $existing instanceof WinnerInsight ? $existing : null,
+                );
 
                 if ($insight !== null) {
                     $insights->push($insight);
@@ -188,6 +196,28 @@ class WinnerScorer
         return implode(' ', $parts);
     }
 
+    private function resolveHowToCopy(Post $post, ?WinnerInsight $existing): string
+    {
+        if ($this->usableCopy($existing?->how_to_copy)) {
+            return trim((string) $existing->how_to_copy);
+        }
+
+        if ($this->usableCopy($post->analysis?->how_to_copy)) {
+            return trim((string) $post->analysis->how_to_copy);
+        }
+
+        if ($post->analysis?->status === AnalysisStatus::Completed) {
+            return $this->buildHowToCopy($post);
+        }
+
+        return 'Study the hook, pacing, and CTA, then remake with your brand voice.';
+    }
+
+    private function usableCopy(?string $copy): bool
+    {
+        return filled($copy) && strlen(trim($copy)) >= 20;
+    }
+
     private function buildHowToCopy(Post $post): string
     {
         $analysis = $post->analysis;
@@ -214,8 +244,8 @@ class WinnerScorer
 
             $text = $this->client->extractAssistantText($response);
 
-            if (strlen($text) >= 20) {
-                return $text;
+            if ($this->usableCopy($text)) {
+                return trim($text);
             }
         } catch (\Throwable) {
             // Fall through to deterministic copy.

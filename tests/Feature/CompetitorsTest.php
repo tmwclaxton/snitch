@@ -29,7 +29,7 @@ class CompetitorsTest extends TestCase
                 ->component('competitors/Index')
                 ->has('suggestions', 0)
                 ->where('suggestRun', null)
-                ->where('platforms', ['tiktok', 'instagram', 'facebook', 'linkedin'])
+                ->where('platforms', ['tiktok', 'instagram', 'facebook', 'linkedin', 'youtube'])
             );
 
         $this->actingAs($user)
@@ -97,6 +97,101 @@ class CompetitorsTest extends TestCase
             ->assertRedirect(route('competitors.index'));
 
         $this->assertDatabaseMissing('tracked_accounts', ['id' => $account->id]);
+    }
+
+    public function test_manual_sync_force_queues_when_synced_within_min_interval(): void
+    {
+        Queue::fake();
+
+        config(['snitch.sync.min_interval_days' => 7]);
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $account = TrackedAccount::factory()->for($user)->create([
+            'last_synced_at' => now()->subDays(2),
+            'last_sync_status' => 'success',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('competitors.sync', $account))
+            ->assertRedirect();
+
+        Queue::assertPushed(SyncTrackedAccountJob::class, function (SyncTrackedAccountJob $job) use ($account): bool {
+            return $job->trackedAccountId === $account->id && $job->force === true;
+        });
+
+        $this->assertSame('running', $account->fresh()?->last_sync_status);
+    }
+
+    public function test_index_exposes_sync_schedule_and_controls(): void
+    {
+        config(['snitch.sync.min_interval_days' => 7]);
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $syncedAt = now()->subDays(3)->startOfSecond();
+        TrackedAccount::factory()->for($user)->create([
+            'handle' => 'rivalbakery',
+            'last_synced_at' => $syncedAt,
+            'last_sync_status' => 'success',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('competitors.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('competitors/Index')
+                ->has('accounts', 1)
+                ->where('accounts.0.handle', 'rivalbakery')
+                ->where('accounts.0.last_sync_status', 'success')
+                ->where('accounts.0.sync_due', false)
+                ->where(
+                    'accounts.0.next_sync_at',
+                    $syncedAt->copy()->addDays(7)->toIso8601String(),
+                )
+            );
+
+        $indexVue = file_get_contents(resource_path('js/pages/competitors/Index.vue'));
+        $this->assertIsString($indexVue);
+        $this->assertStringContainsString('Auto sync', $indexVue);
+        $this->assertStringContainsString('syncAccount', $indexVue);
+        $this->assertStringContainsString('isAccountSyncing', $indexVue);
+        $this->assertStringContainsString('Sync in progress', $indexVue);
+        $this->assertStringContainsString('emptyImportHint', $indexVue);
+        $this->assertStringContainsString('No recent reels found', $indexVue);
+        $this->assertStringContainsString('RemoveCompetitorModal', $indexVue);
+        $this->assertStringContainsString('askRemove', $indexVue);
+        $this->assertStringNotContainsString('Sync ok', $indexVue);
+        $this->assertStringNotContainsString('not synced', $indexVue);
+    }
+
+    public function test_index_exposes_running_sync_status(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        TrackedAccount::factory()->for($user)->create([
+            'handle' => 'rivalbakery',
+            'last_sync_status' => 'running',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('competitors.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('competitors/Index')
+                ->where('accounts.0.last_sync_status', 'running')
+                ->where('accounts.0.sync_due', false)
+            );
+    }
+
+    public function test_remove_competitor_modal_confirms_before_destroy(): void
+    {
+        $modalVue = file_get_contents(resource_path('js/components/RemoveCompetitorModal.vue'));
+        $this->assertIsString($modalVue);
+        $this->assertStringContainsString('Remove this competitor?', $modalVue);
+        $this->assertStringContainsString('confirm-remove-competitor-button', $modalVue);
+        $this->assertStringContainsString('Cancel', $modalVue);
+        $this->assertStringContainsString('router.delete', $modalVue);
     }
 
     public function test_other_user_cannot_delete_competitor(): void

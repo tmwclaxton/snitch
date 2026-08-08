@@ -19,14 +19,14 @@
             })();
         </script>
 
-        {{-- Inline style to set the HTML background color based on our theme in app.css --}}
+        {{-- Inline style matches snitch paper so the first paint matches the shell --}}
         <style>
             html {
-                background-color: oklch(1 0 0);
+                background-color: #efe6d8;
             }
 
             html.dark {
-                background-color: oklch(0.145 0 0);
+                background-color: #1c1915;
             }
         </style>
 

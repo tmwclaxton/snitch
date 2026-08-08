@@ -246,7 +246,7 @@ class PublicPagesTest extends TestCase
             'Spot yellow face must inset by ticket stroke so charcoal rim follows clip',
         );
         $this->assertMatchesRegularExpression(
-            '/\.snitch-btn\.snitch-btn-spot\s*\{[^}]*background:\s*var\(--snitch-ink\)/s',
+            '/\.snitch-btn\.snitch-btn-spot\s*\{[^}]*background:\s*var\(--snitch-press\)/s',
             $css,
             'Spot outer fill must be charcoal so the wavy rim reads as outline',
         );

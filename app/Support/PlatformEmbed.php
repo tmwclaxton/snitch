@@ -40,6 +40,7 @@ class PlatformEmbed
             Platform::Instagram => self::instagram($trimmed, $compact),
             Platform::Facebook => self::facebook($trimmed),
             Platform::LinkedIn => self::linkedIn($trimmed),
+            Platform::Youtube => self::youtube($trimmed),
         };
     }
 
@@ -166,5 +167,32 @@ class PlatformEmbed
         }
 
         return null;
+    }
+
+    /**
+     * @return array{provider: string, src: string, title: string, aspect: string}|null
+     */
+    private static function youtube(string $url): ?array
+    {
+        $id = null;
+
+        if (preg_match('#youtube\.com/shorts/([A-Za-z0-9_-]{6,})#i', $url, $matches) === 1) {
+            $id = $matches[1];
+        } elseif (preg_match('#(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9_-]{6,})#i', $url, $matches) === 1) {
+            $id = $matches[1];
+        } elseif (preg_match('#youtube\.com/embed/([A-Za-z0-9_-]{6,})#i', $url, $matches) === 1) {
+            $id = $matches[1];
+        }
+
+        if ($id === null) {
+            return null;
+        }
+
+        return [
+            'provider' => 'youtube',
+            'src' => 'https://www.youtube.com/embed/'.$id,
+            'title' => 'YouTube Short',
+            'aspect' => '9/16',
+        ];
     }
 }

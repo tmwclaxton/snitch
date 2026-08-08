@@ -68,6 +68,9 @@
     --color-snitch-teal: var(--snitch-teal);
     --color-snitch-fog: var(--snitch-fog);
     --color-snitch-spot: var(--snitch-spot);
+    --color-snitch-press: var(--snitch-press);
+    --color-snitch-stock: var(--snitch-stock);
+    --color-snitch-on-spot: var(--snitch-on-spot);
 }
 
 @layer base {
@@ -99,6 +102,12 @@
     --snitch-paper: #efe6d8;
     --snitch-fog: #e4d9c8;
     --snitch-ink: #1c1b1a;
+    /* Stable charcoal / cream - film gutters, ticket rings, type on press */
+    --snitch-press: #1c1b1a;
+    --snitch-stock: #efe6d8;
+    --snitch-on-spot: #1c1b1a;
+    --snitch-lift: #ffffff;
+    --snitch-print-blend: multiply;
     --snitch-spot: #f0c400;
     --snitch-accent: #f0c400;
     --snitch-marker: #f0c400;
@@ -177,39 +186,66 @@
 }
 
 .dark {
-    --background: hsl(30 10% 9%);
-    --foreground: hsl(36 24% 90%);
+    /*
+      Warm night press - same riso system, inverted stock.
+      Paper / ink / fog flip for chrome + body type.
+      Press / stock / on-spot stay charcoal + cream for film,
+      ticket rings, and mustard fills.
+    */
+    --snitch-paper: #1c1915;
+    --snitch-fog: #2a251f;
+    --snitch-ink: #efe6d8;
+    --snitch-press: #1c1b1a;
+    --snitch-stock: #efe6d8;
+    --snitch-on-spot: #1c1b1a;
+    --snitch-lift: #3a342c;
+    --snitch-print-blend: soft-light;
+    --snitch-spot: #f0c400;
+    --snitch-accent: #f0c400;
+    --snitch-marker: #f0c400;
+    --snitch-teal: #7a9aa6;
+    --snitch-grade-tint: rgba(240, 196, 0, 0.14);
+    --snitch-grade-shadow: rgba(0, 0, 0, 0.55);
+    --snitch-grade-fade: rgba(28, 25, 21, 0.5);
+    --snitch-grade-warm: rgba(240, 196, 0, 0.08);
+    --snitch-halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Ccircle cx='2' cy='2' r='1.1' fill='%23efe6d8' fill-opacity='0.14'/%3E%3C/svg%3E");
+    --snitch-tape: rgba(240, 196, 0, 0.38);
+    --snitch-washi: rgba(42, 37, 31, 0.78);
+    --snitch-washi-fill: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='32' viewBox='0 0 64 32'%3E%3Crect width='64' height='32' fill='%23f0c400' fill-opacity='0.28'/%3E%3Cg stroke='%23c9a000' stroke-opacity='0.32' stroke-width='0.5'%3E%3Cpath d='M0 6h64M0 12h64M0 18h64M0 24h64'/%3E%3C/g%3E%3C/svg%3E");
+
+    --background: hsl(30 12% 9%);
+    --foreground: hsl(36 28% 90%);
     --card: hsl(30 10% 12%);
-    --card-foreground: hsl(36 24% 90%);
+    --card-foreground: hsl(36 28% 90%);
     --popover: hsl(30 10% 12%);
-    --popover-foreground: hsl(36 24% 90%);
-    --primary: hsl(36 24% 90%);
-    --primary-foreground: hsl(30 10% 10%);
-    --secondary: hsl(30 8% 16%);
-    --secondary-foreground: hsl(36 24% 90%);
-    --muted: hsl(30 8% 16%);
-    --muted-foreground: hsl(36 12% 64%);
-    --accent: hsl(30 8% 16%);
-    --accent-foreground: hsl(36 24% 90%);
+    --popover-foreground: hsl(36 28% 90%);
+    --primary: hsl(36 28% 90%);
+    --primary-foreground: hsl(30 12% 10%);
+    --secondary: hsl(30 10% 16%);
+    --secondary-foreground: hsl(36 28% 90%);
+    --muted: hsl(30 10% 16%);
+    --muted-foreground: hsl(36 14% 64%);
+    --accent: hsl(30 10% 16%);
+    --accent-foreground: hsl(36 28% 90%);
     --destructive: hsl(350 60% 48%);
-    --destructive-foreground: hsl(36 24% 92%);
-    --border: hsl(30 8% 18%);
-    --input: hsl(30 8% 18%);
+    --destructive-foreground: hsl(36 28% 92%);
+    --border: hsl(30 10% 20%);
+    --input: hsl(30 10% 18%);
     --ring: hsl(48 88% 52%);
     --chart-1: hsl(48 88% 52%);
     --chart-2: hsl(195 30% 42%);
     --chart-3: hsl(36 30% 55%);
     --chart-4: hsl(36 18% 62%);
     --chart-5: hsl(195 22% 48%);
-    --sidebar-background: hsl(30 10% 8%);
-    --sidebar-foreground: hsl(36 24% 90%);
-    --sidebar-primary: hsl(36 24% 92%);
-    --sidebar-primary-foreground: hsl(30 10% 10%);
-    --sidebar-accent: hsl(30 8% 14%);
-    --sidebar-accent-foreground: hsl(36 24% 90%);
-    --sidebar-border: hsl(30 8% 16%);
+    --sidebar-background: hsl(30 12% 8%);
+    --sidebar-foreground: hsl(36 28% 90%);
+    --sidebar-primary: hsl(36 28% 92%);
+    --sidebar-primary-foreground: hsl(30 12% 10%);
+    --sidebar-accent: hsl(30 10% 14%);
+    --sidebar-accent-foreground: hsl(36 28% 90%);
+    --sidebar-border: hsl(30 10% 18%);
     --sidebar-ring: hsl(48 88% 52%);
-    --sidebar: hsl(30 10% 10%);
+    --sidebar: hsl(30 12% 10%);
 }
 
 @layer base {
@@ -251,7 +287,7 @@
         background-image: var(--snitch-halftone);
         background-size: 7px 7px;
         opacity: 0.55;
-        mix-blend-mode: multiply;
+        mix-blend-mode: var(--snitch-print-blend);
     }
 
     .snitch-app-shell {
@@ -282,7 +318,7 @@
         background-image: var(--snitch-halftone);
         background-size: 8px 8px;
         opacity: 0.4;
-        mix-blend-mode: multiply;
+        mix-blend-mode: var(--snitch-print-blend);
     }
 
     .snitch-grain {
@@ -293,7 +329,7 @@
         opacity: 0.16;
         background-image: var(--snitch-grain);
         background-size: 140px 140px;
-        mix-blend-mode: multiply;
+        mix-blend-mode: var(--snitch-print-blend);
         animation: snitch-grain-drift 16s steps(8) infinite;
     }
 
@@ -334,9 +370,38 @@
         display: grid;
         gap: 0.85rem 1rem;
         padding: 1rem 1.1rem 1.05rem;
-        background: color-mix(in oklab, var(--snitch-paper) 90%, white);
+        background: color-mix(in oklab, var(--snitch-paper) 90%, var(--snitch-lift));
         border: 1px solid color-mix(in oklab, var(--snitch-ink) 14%, transparent);
         box-shadow: 2px 2px 0 color-mix(in oklab, var(--snitch-spot) 20%, transparent);
+    }
+
+    .snitch-explore-filters {
+        z-index: 30;
+        grid-template-columns: 1fr;
+        overflow: visible;
+    }
+
+    @media (min-width: 768px) {
+        .snitch-explore-filters {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .snitch-explore-filters .snitch-explore-search {
+            grid-column: 1 / -1;
+        }
+    }
+
+    .snitch-explore-filters .snitch-filter-field {
+        overflow: visible;
+    }
+
+    /* Open combobox must beat sibling filter fields (same base z-index). */
+    .snitch-explore-filters .snitch-filter-field:focus-within {
+        z-index: 40;
+    }
+
+    .snitch-term-picker-dialog [data-slot='dialog-close'] {
+        display: none;
     }
 
     .snitch-filter-bar::before {
@@ -347,7 +412,7 @@
         background-image: var(--snitch-halftone);
         background-size: 7px 7px;
         opacity: 0.22;
-        mix-blend-mode: multiply;
+        mix-blend-mode: var(--snitch-print-blend);
     }
 
     @media (min-width: 640px) {
@@ -390,7 +455,7 @@
         flex-wrap: wrap;
         align-items: stretch;
         border: 1.5px solid color-mix(in oklab, var(--snitch-ink) 20%, transparent);
-        background: color-mix(in oklab, white 40%, var(--snitch-paper));
+        background: color-mix(in oklab, var(--snitch-lift) 40%, var(--snitch-paper));
         box-shadow: 2px 2px 0 color-mix(in oklab, var(--snitch-spot) 18%, transparent);
     }
 
@@ -434,12 +499,12 @@
 
     .snitch-seg-item-active {
         background: var(--snitch-spot);
-        color: var(--snitch-ink);
+        color: var(--snitch-on-spot);
     }
 
     .snitch-seg-item-active:hover {
-        background: color-mix(in oklab, var(--snitch-spot) 88%, var(--snitch-ink));
-        color: var(--snitch-ink);
+        background: color-mix(in oklab, var(--snitch-spot) 88%, var(--snitch-press));
+        color: var(--snitch-on-spot);
     }
 
     /*
@@ -515,14 +580,14 @@
         line-height: 1.2;
         text-transform: uppercase;
         text-decoration: none;
-        background: color-mix(in oklab, white 48%, var(--snitch-paper));
+        background: color-mix(in oklab, var(--snitch-lift) 48%, var(--snitch-paper));
         box-shadow: 1px 1px 0 color-mix(in oklab, var(--snitch-spot) 18%, transparent);
     }
 
     .snitch-stamp-active {
         background: var(--snitch-spot);
-        color: var(--snitch-ink);
-        border-color: color-mix(in oklab, var(--snitch-ink) 28%, var(--snitch-spot));
+        color: var(--snitch-on-spot);
+        border-color: color-mix(in oklab, var(--snitch-press) 28%, var(--snitch-spot));
     }
 
     /* Charcoal platform marks with a soft yellow misregistration offset */
@@ -545,7 +610,7 @@
         gap: 0.5rem;
         border-radius: 0;
         border: 1.5px solid color-mix(in oklab, var(--snitch-ink) 22%, transparent);
-        background: color-mix(in oklab, white 55%, var(--snitch-paper));
+        background: color-mix(in oklab, var(--snitch-lift) 55%, var(--snitch-paper));
         padding: 0.55rem 0.75rem;
         color: var(--snitch-ink);
         font-size: 0.875rem;
@@ -560,7 +625,7 @@
     }
 
     .snitch-platform-select-trigger:hover {
-        background: color-mix(in oklab, white 45%, var(--snitch-paper));
+        background: color-mix(in oklab, var(--snitch-lift) 45%, var(--snitch-paper));
     }
 
     .snitch-platform-select-trigger:focus-visible,
@@ -610,7 +675,7 @@
         overflow: hidden;
         border-radius: 0;
         border: 1.5px solid color-mix(in oklab, var(--snitch-ink) 22%, transparent);
-        background: color-mix(in oklab, white 50%, var(--snitch-paper));
+        background: color-mix(in oklab, var(--snitch-lift) 50%, var(--snitch-paper));
         color: var(--snitch-ink);
         box-shadow:
             3px 3px 0 color-mix(in oklab, var(--snitch-spot) 35%, transparent),
@@ -650,7 +715,7 @@
 
     .snitch-doc {
         position: relative;
-        background: color-mix(in oklab, var(--snitch-paper) 94%, white);
+        background: color-mix(in oklab, var(--snitch-paper) 94%, var(--snitch-lift));
         border: 1px solid color-mix(in oklab, var(--snitch-ink) 12%, transparent);
         box-shadow:
             3px 3px 0 color-mix(in oklab, var(--snitch-spot) 18%, transparent),
@@ -665,12 +730,12 @@
         background-image: var(--snitch-halftone);
         background-size: 6px 6px;
         opacity: 0.28;
-        mix-blend-mode: multiply;
+        mix-blend-mode: var(--snitch-print-blend);
     }
 
     .snitch-scrap {
         position: relative;
-        background: color-mix(in oklab, var(--snitch-paper) 92%, white);
+        background: color-mix(in oklab, var(--snitch-paper) 92%, var(--snitch-lift));
         border: 1px solid color-mix(in oklab, var(--snitch-ink) 14%, transparent);
         box-shadow:
             2px 2px 0 color-mix(in oklab, var(--snitch-spot) 22%, transparent),
@@ -692,7 +757,7 @@
         background-image: var(--snitch-halftone);
         background-size: 7px 7px;
         opacity: 0.35;
-        mix-blend-mode: multiply;
+        mix-blend-mode: var(--snitch-print-blend);
     }
 
     .snitch-torn-top {
@@ -708,7 +773,7 @@
         top: -10px;
         height: 14px;
         z-index: 3;
-        background-color: color-mix(in oklab, var(--snitch-paper) 96%, white);
+        background-color: color-mix(in oklab, var(--snitch-paper) 96%, var(--snitch-lift));
         mask-image: var(--snitch-torn-mask);
         mask-size: 100% 100%;
         mask-repeat: no-repeat;
@@ -726,7 +791,7 @@
         background-image: var(--snitch-washi-fill);
         background-size: 48px 24px;
         opacity: 0.85;
-        mix-blend-mode: multiply;
+        mix-blend-mode: var(--snitch-print-blend);
         transform: rotate(-3deg);
         box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
         animation: snitch-tape-settle 720ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -739,7 +804,7 @@
 
     .snitch-polaroid {
         position: relative;
-        background: color-mix(in oklab, var(--snitch-paper) 88%, white);
+        background: color-mix(in oklab, var(--snitch-paper) 88%, var(--snitch-lift));
         padding: 0.55rem 0.55rem 1.65rem;
         box-shadow:
             2px 2px 0 color-mix(in oklab, var(--snitch-ink) 12%, transparent),
@@ -764,7 +829,7 @@
         width: 100%;
         object-fit: cover;
         filter: grayscale(0.35) contrast(1.05) sepia(0.12) saturate(0.85);
-        mix-blend-mode: multiply;
+        mix-blend-mode: var(--snitch-print-blend);
     }
 
     .snitch-polaroid-frame::after {
@@ -776,7 +841,7 @@
                 color-mix(in oklab, var(--snitch-spot) 18%, transparent),
                 color-mix(in oklab, var(--snitch-ink) 12%, transparent)
             );
-        mix-blend-mode: multiply;
+        mix-blend-mode: var(--snitch-print-blend);
         opacity: 0.55;
         pointer-events: none;
     }
@@ -807,7 +872,7 @@
         background:
             linear-gradient(
                 180deg,
-                color-mix(in oklab, var(--snitch-paper) 96%, white),
+                color-mix(in oklab, var(--snitch-paper) 96%, var(--snitch-lift)),
                 color-mix(in oklab, var(--snitch-paper) 88%, var(--snitch-fog))
             );
         border: 1px solid color-mix(in oklab, var(--snitch-ink) 16%, transparent);
@@ -824,7 +889,7 @@
         background-image: var(--snitch-halftone);
         background-size: 6px 6px;
         opacity: 0.2;
-        mix-blend-mode: multiply;
+        mix-blend-mode: var(--snitch-print-blend);
     }
 
     .snitch-contact-sheet-rail {
@@ -855,8 +920,8 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        background: color-mix(in oklab, var(--snitch-ink) 94%, var(--snitch-spot));
-        outline: 1px solid color-mix(in oklab, var(--snitch-ink) 30%, transparent);
+        background: color-mix(in oklab, var(--snitch-press) 94%, var(--snitch-spot));
+        outline: 1px solid color-mix(in oklab, var(--snitch-press) 30%, transparent);
         text-decoration: none;
         color: inherit;
         transition: transform 180ms ease, box-shadow 180ms ease;
@@ -871,7 +936,7 @@
         position: relative;
         aspect-ratio: 3 / 4;
         overflow: hidden;
-        background: color-mix(in oklab, var(--snitch-ink) 88%, #000);
+        background: color-mix(in oklab, var(--snitch-press) 88%, #000);
     }
 
     .snitch-contact-cell-frame img {
@@ -895,7 +960,7 @@
         background-image: var(--snitch-halftone);
         background-size: 5px 5px;
         opacity: 0.32;
-        mix-blend-mode: multiply;
+        mix-blend-mode: var(--snitch-print-blend);
         pointer-events: none;
     }
 
@@ -906,7 +971,7 @@
         z-index: 2;
         min-width: 1.35rem;
         padding: 0.12rem 0.3rem;
-        background: color-mix(in oklab, var(--snitch-paper) 88%, white);
+        background: color-mix(in oklab, var(--snitch-paper) 88%, var(--snitch-lift));
         color: var(--snitch-ink);
         font-family: var(--font-display);
         font-size: 0.62rem;
@@ -922,25 +987,26 @@
         flex-direction: column;
         gap: 0.2rem;
         padding: 0.55rem 0.55rem 0.65rem;
-        background: color-mix(in oklab, var(--snitch-ink) 90%, var(--snitch-spot));
-        border-top: 1px solid color-mix(in oklab, var(--snitch-paper) 12%, transparent);
+        background: color-mix(in oklab, var(--snitch-press) 90%, var(--snitch-spot));
+        border-top: 1px solid color-mix(in oklab, var(--snitch-stock) 12%, transparent);
     }
 
     .snitch-contact-cell-meta .snitch-ink-label {
-        color: color-mix(in oklab, var(--snitch-paper) 55%, transparent);
+        color: color-mix(in oklab, var(--snitch-stock) 55%, transparent);
     }
 
-    .snitch-contact-cell-meta .snitch-annotation {
+    .snitch-contact-cell-meta .snitch-annotation,
+    .snitch-contact-cell-meta .snitch-glance-title {
         color: var(--snitch-spot);
         font-size: 1.05rem;
-        line-height: 1.1;
+        line-height: 1.15;
     }
 
     .snitch-contact-cell-meta p {
         margin: 0;
         font-size: 0.7rem;
         line-height: 1.35;
-        color: color-mix(in oklab, var(--snitch-paper) 72%, transparent);
+        color: color-mix(in oklab, var(--snitch-stock) 72%, transparent);
     }
 
     .snitch-contact-cell-meta-link {
@@ -948,9 +1014,161 @@
         color: inherit;
     }
 
-    .snitch-contact-cell-meta-link:hover .snitch-annotation {
+    .snitch-contact-cell-meta-link:hover .snitch-glance-title {
         text-decoration: underline;
         text-decoration-color: color-mix(in oklab, var(--snitch-spot) 70%, transparent);
+    }
+
+    .snitch-glance-winner {
+        position: absolute;
+        top: 0.4rem;
+        right: 0.4rem;
+        z-index: 2;
+        padding: 0.14rem 0.35rem;
+        background: color-mix(in oklab, var(--snitch-spot) 88%, var(--snitch-lift));
+        color: var(--snitch-on-spot);
+        font-family: var(--font-display);
+        font-size: 0.62rem;
+        letter-spacing: 0.03em;
+        line-height: 1.2;
+        box-shadow: 1px 1px 0 color-mix(in oklab, var(--snitch-press) 35%, transparent);
+        transform: rotate(1.5deg);
+    }
+
+    .snitch-glance-metrics {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.2rem 0.45rem;
+        margin: 0;
+        font-size: 0.64rem !important;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: color-mix(in oklab, var(--snitch-stock) 68%, transparent) !important;
+    }
+
+    .snitch-glance-metric {
+        white-space: nowrap;
+    }
+
+    .snitch-glance-hook {
+        color: color-mix(in oklab, var(--snitch-stock) 82%, transparent) !important;
+    }
+
+    .snitch-glance-status {
+        font-size: 0.64rem !important;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: color-mix(in oklab, var(--snitch-stock) 48%, transparent) !important;
+    }
+
+    .snitch-glance-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        margin-top: 0.35rem;
+    }
+
+    .snitch-glance-tag {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding: 0.1rem 0.35rem;
+        background: color-mix(in oklab, var(--snitch-spot) 72%, var(--snitch-paper));
+        color: var(--snitch-on-spot);
+        font-size: 0.58rem;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        box-shadow: 1px 1px 0 color-mix(in oklab, var(--snitch-press) 28%, transparent);
+    }
+
+    .snitch-glance-tag:nth-child(2) {
+        background: color-mix(in oklab, var(--snitch-paper) 88%, var(--snitch-lift));
+        color: var(--snitch-ink);
+    }
+
+    .snitch-glance-tag:nth-child(3) {
+        background: color-mix(in oklab, var(--snitch-teal) 35%, var(--snitch-paper));
+        color: var(--snitch-ink);
+    }
+
+    .snitch-glance-account-link {
+        display: inline-block;
+        margin-top: 0.2rem;
+        font-size: 0.68rem;
+        letter-spacing: 0.02em;
+        text-decoration: underline;
+        text-decoration-color: color-mix(in oklab, var(--snitch-spot) 45%, transparent);
+        text-transform: none;
+        color: color-mix(in oklab, var(--snitch-stock) 78%, transparent);
+    }
+
+    .snitch-glance-account-link:hover {
+        color: var(--snitch-spot);
+    }
+
+    .snitch-glance-account-link--static {
+        text-decoration: none;
+        cursor: default;
+    }
+
+    .snitch-glance-account-link--static:hover {
+        color: color-mix(in oklab, var(--snitch-stock) 78%, transparent);
+    }
+
+    .snitch-metrics-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem 0.85rem;
+        padding: 0.7rem 0.9rem;
+        background: color-mix(in oklab, var(--snitch-paper) 88%, var(--snitch-lift));
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 12%, transparent);
+        box-shadow: 2px 2px 0 color-mix(in oklab, var(--snitch-spot) 22%, transparent);
+    }
+
+    .snitch-metrics-strip-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+        min-width: 3.5rem;
+    }
+
+    .snitch-metrics-strip-item strong {
+        font-family: var(--font-display);
+        font-size: 1.25rem;
+        font-weight: 400;
+        line-height: 1;
+        color: var(--snitch-ink);
+    }
+
+    .snitch-metrics-strip-item span {
+        font-size: 0.62rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: color-mix(in oklab, var(--snitch-ink) 48%, transparent);
+    }
+
+    .snitch-topic-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+
+    .snitch-topic-chip {
+        padding: 0.15rem 0.45rem;
+        background: color-mix(in oklab, var(--snitch-spot) 55%, var(--snitch-paper));
+        color: var(--snitch-on-spot);
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        box-shadow: 1px 1px 0 color-mix(in oklab, var(--snitch-press) 22%, transparent);
+    }
+
+    .snitch-topic-chip:nth-child(even) {
+        background: color-mix(in oklab, var(--snitch-paper) 90%, var(--snitch-lift));
+        color: var(--snitch-ink);
     }
 
     /* Platform player inside paper / contact frames */
@@ -960,12 +1178,12 @@
         height: 100%;
         min-height: 100%;
         overflow: hidden;
-        background: color-mix(in oklab, var(--snitch-ink) 92%, #000);
+        background: color-mix(in oklab, var(--snitch-press) 92%, #000);
     }
 
     .snitch-platform-embed-detail {
-        min-height: 22rem;
-        background: color-mix(in oklab, var(--snitch-ink) 88%, var(--snitch-spot));
+        min-height: 11rem;
+        background: color-mix(in oklab, var(--snitch-press) 88%, var(--snitch-spot));
     }
 
     .snitch-platform-embed-compact {
@@ -1014,7 +1232,7 @@
         bottom: 0.45rem;
         z-index: 3;
         padding: 0.25rem 0.45rem;
-        background: color-mix(in oklab, var(--snitch-paper) 92%, white);
+        background: color-mix(in oklab, var(--snitch-paper) 92%, var(--snitch-lift));
         color: var(--snitch-ink);
         font-size: 0.62rem;
         font-weight: 550;
@@ -1029,22 +1247,77 @@
     }
 
     .snitch-polaroid-frame .snitch-platform-embed {
-        min-height: 28rem;
+        min-height: 14rem;
     }
 
     @media (min-width: 640px) {
         .snitch-polaroid-frame .snitch-platform-embed {
-            min-height: 34rem;
+            min-height: 17rem;
         }
     }
 
     .snitch-sticker {
         position: relative;
-        background: color-mix(in oklab, var(--snitch-paper) 90%, white);
+        background: color-mix(in oklab, var(--snitch-paper) 90%, var(--snitch-lift));
         border: 1.5px solid color-mix(in oklab, var(--snitch-ink) 16%, transparent);
         padding: 0.85rem 1rem;
         box-shadow: 2px 2px 0 color-mix(in oklab, var(--snitch-spot) 28%, transparent);
-        transform: rotate(var(--snitch-tilt, -1.2deg));
+    }
+
+    .snitch-md {
+        font-size: 0.875rem;
+        line-height: 1.55;
+        color: color-mix(in oklab, var(--snitch-ink) 85%, transparent);
+    }
+
+    .snitch-md > :first-child {
+        margin-top: 0;
+    }
+
+    .snitch-md > :last-child {
+        margin-bottom: 0;
+    }
+
+    .snitch-md p,
+    .snitch-md ul,
+    .snitch-md ol {
+        margin: 0.65em 0;
+    }
+
+    .snitch-md ul,
+    .snitch-md ol {
+        padding-left: 1.25rem;
+    }
+
+    .snitch-md li + li {
+        margin-top: 0.35em;
+    }
+
+    .snitch-md strong {
+        font-weight: 650;
+        color: var(--snitch-ink);
+    }
+
+    .snitch-md em {
+        font-style: italic;
+    }
+
+    .snitch-md code {
+        font-size: 0.9em;
+        padding: 0.1em 0.35em;
+        background: color-mix(in oklab, var(--snitch-ink) 6%, transparent);
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 10%, transparent);
+    }
+
+    .snitch-md a {
+        color: var(--snitch-ink);
+        text-decoration: underline;
+        text-decoration-color: color-mix(in oklab, var(--snitch-spot) 70%, transparent);
+        text-underline-offset: 0.15em;
+    }
+
+    .snitch-md a:hover {
+        text-decoration-color: var(--snitch-spot);
     }
 
     .snitch-sticker::before {
@@ -1074,10 +1347,37 @@
             color-mix(in oklab, var(--snitch-paper) 65%, transparent);
     }
 
+    .snitch-tear-row {
+        display: grid;
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .snitch-tear-row-media {
+        width: min(100%, 14rem);
+        margin-inline: auto;
+    }
+
+    .snitch-tear-row-body {
+        min-width: 0;
+    }
+
+    @media (min-width: 640px) {
+        .snitch-tear-row {
+            grid-template-columns: minmax(11rem, 13.5rem) minmax(0, 1fr);
+            gap: 1.25rem 1.5rem;
+        }
+
+        .snitch-tear-row-media {
+            width: 100%;
+            margin-inline: 0;
+        }
+    }
+
     /*
-     * Clip-path eats box-shadow; use drop-shadow so the yellow offset
-     * reads as a cutout chip on paper. data-platform tints the offset +
-     * wash so Instagram / TikTok / Facebook / LinkedIn read at a glance.
+     * Clip-path eats box-shadow; use a soft drop-shadow so the platform
+     * tint reads as a cutout on paper. No hard 1px border - platform-colored
+     * edges read as accidental streaks against the corner crop marks.
      */
     .snitch-cutout {
         --snitch-cutout-offset: var(--snitch-spot);
@@ -1087,64 +1387,70 @@
             linear-gradient(
                 145deg,
                 var(--snitch-cutout-wash),
-                transparent 55%
+                transparent 58%
             ),
-            color-mix(in oklab, var(--snitch-paper) 92%, white);
-        border: 1px solid color-mix(in oklab, var(--snitch-ink) 14%, transparent);
+            color-mix(in oklab, var(--snitch-paper) 92%, var(--snitch-lift));
+        border: 0;
         clip-path: polygon(0% 2%, 97% 0%, 100% 96%, 3% 100%);
-        filter: drop-shadow(4px 4px 0 var(--snitch-cutout-offset));
+        filter:
+            drop-shadow(
+                3px 4px 1.5px color-mix(in oklab, var(--snitch-cutout-offset) 55%, transparent)
+            )
+            drop-shadow(
+                1px 2px 2px color-mix(in oklab, var(--snitch-ink) 10%, transparent)
+            );
     }
 
     .snitch-cutout[data-platform='instagram'] {
-        --snitch-cutout-offset: color-mix(
-            in oklab,
-            var(--snitch-spot) 72%,
-            #6b3a4a
-        );
-        --snitch-cutout-wash: color-mix(
-            in oklab,
-            #6b3a4a 10%,
-            transparent
-        );
+        --snitch-cutout-offset: color-mix(in oklab, #c45a7a 78%, var(--snitch-spot));
+        --snitch-cutout-wash: color-mix(in oklab, #c45a7a 18%, transparent);
     }
 
     .snitch-cutout[data-platform='tiktok'] {
-        --snitch-cutout-offset: color-mix(
-            in oklab,
-            var(--snitch-spot) 55%,
-            var(--snitch-teal)
-        );
-        --snitch-cutout-wash: color-mix(
-            in oklab,
-            var(--snitch-teal) 12%,
-            transparent
-        );
+        --snitch-cutout-offset: color-mix(in oklab, #1c1b1a 62%, #25f4ee);
+        --snitch-cutout-wash: color-mix(in oklab, #25f4ee 14%, transparent);
     }
 
     .snitch-cutout[data-platform='facebook'] {
-        --snitch-cutout-offset: color-mix(
-            in oklab,
-            var(--snitch-teal) 68%,
-            var(--snitch-spot)
-        );
-        --snitch-cutout-wash: color-mix(
-            in oklab,
-            var(--snitch-teal) 14%,
-            transparent
-        );
+        --snitch-cutout-offset: color-mix(in oklab, #3a5b9c 82%, var(--snitch-spot));
+        --snitch-cutout-wash: color-mix(in oklab, #3a5b9c 18%, transparent);
     }
 
     .snitch-cutout[data-platform='linkedin'] {
-        --snitch-cutout-offset: color-mix(
-            in oklab,
-            var(--snitch-ink) 38%,
-            var(--snitch-teal)
-        );
-        --snitch-cutout-wash: color-mix(
-            in oklab,
-            var(--snitch-ink) 8%,
-            transparent
-        );
+        --snitch-cutout-offset: color-mix(in oklab, #2a6aa8 85%, var(--snitch-spot));
+        --snitch-cutout-wash: color-mix(in oklab, #2a6aa8 16%, transparent);
+    }
+
+    .snitch-cutout[data-platform='youtube'] {
+        --snitch-cutout-offset: color-mix(in oklab, #b33a3a 80%, var(--snitch-spot));
+        --snitch-cutout-wash: color-mix(in oklab, #b33a3a 16%, transparent);
+    }
+
+    .snitch-cutout-remove {
+        position: absolute;
+        top: 0.65rem;
+        right: 0.85rem;
+        z-index: 20;
+        padding: 0.2rem 0.5rem;
+        background: color-mix(in oklab, var(--snitch-paper) 90%, var(--snitch-lift));
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 18%, transparent);
+        color: var(--snitch-ink);
+        font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+        font-size: 0.62rem;
+        font-weight: 650;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        cursor: pointer;
+        box-shadow: 1px 1px 0 color-mix(in oklab, var(--snitch-cutout-offset) 50%, transparent);
+    }
+
+    .snitch-cutout-remove:hover {
+        background: color-mix(in oklab, var(--snitch-ink) 7%, var(--snitch-paper));
+    }
+
+    .snitch-cutout-remove:focus-visible {
+        outline: 2px solid color-mix(in oklab, var(--snitch-ink) 45%, transparent);
+        outline-offset: 2px;
     }
 
     .snitch-cutout-platform-mark {
@@ -1181,7 +1487,7 @@
                 color-mix(in oklab, var(--snitch-spot) 16%, transparent) 68%,
                 transparent 100%
             );
-        mix-blend-mode: multiply;
+        mix-blend-mode: var(--snitch-print-blend);
     }
 
     .snitch-hero {
@@ -1222,6 +1528,9 @@
         z-index: 1;
         overflow: hidden;
         pointer-events: none;
+        /* Size frames to the stage, not 100vw (vw includes the scrollbar gutter). */
+        container-type: inline-size;
+        container-name: snitch-hero-marquee;
     }
 
     .snitch-hero-marquee-track {
@@ -1247,8 +1556,8 @@
 
     .snitch-hero-marquee-frame {
         display: block;
-        flex: 0 0 100vw;
-        width: 100vw;
+        flex: 0 0 100cqw;
+        width: 100cqw;
         height: 100%;
         max-width: none;
         object-fit: cover;
@@ -1295,11 +1604,11 @@
         width: 100%;
         max-width: none;
         border-radius: 0;
-        background-color: color-mix(in oklab, var(--snitch-paper) 97%, white);
+        background-color: color-mix(in oklab, var(--snitch-paper) 97%, var(--snitch-lift));
         background-image: linear-gradient(
             to bottom,
-            color-mix(in oklab, var(--snitch-paper) 98%, white) 0%,
-            color-mix(in oklab, var(--snitch-paper) 97%, white) 78%,
+            color-mix(in oklab, var(--snitch-paper) 98%, var(--snitch-lift)) 0%,
+            color-mix(in oklab, var(--snitch-paper) 97%, var(--snitch-lift)) 78%,
             color-mix(in oklab, var(--snitch-paper) 88%, transparent) 100%
         );
         box-shadow: 0 1px 0 color-mix(in oklab, var(--snitch-ink) 10%, transparent);
@@ -1307,11 +1616,11 @@
 
     .snitch-nav-hero .snitch-btn-ghost {
         color: var(--snitch-ink);
-        background: var(--snitch-ink);
+        background: var(--snitch-press);
     }
 
     .snitch-nav-hero .snitch-btn-ghost::before {
-        background: color-mix(in oklab, var(--snitch-paper) 88%, white);
+        background: color-mix(in oklab, var(--snitch-paper) 88%, var(--snitch-lift));
     }
 
     /*
@@ -1387,7 +1696,7 @@
         background:
             linear-gradient(
                 168deg,
-                color-mix(in oklab, white 55%, var(--snitch-paper)) 0%,
+                color-mix(in oklab, var(--snitch-lift) 55%, var(--snitch-paper)) 0%,
                 var(--snitch-paper) 42%,
                 color-mix(in oklab, var(--snitch-fog) 34%, var(--snitch-paper)) 100%
             );
@@ -1415,7 +1724,7 @@
             150px 150px,
             6px 6px;
         opacity: 0.28;
-        mix-blend-mode: multiply;
+        mix-blend-mode: var(--snitch-print-blend);
     }
 
     .snitch-hero-copy::after {
@@ -1470,8 +1779,8 @@
         font-size: 0.9rem;
         font-weight: 600;
         letter-spacing: 0.025em;
-        color: var(--snitch-paper);
-        background: var(--snitch-ink);
+        color: var(--snitch-stock);
+        background: var(--snitch-press);
         clip-path: var(--snitch-hero-ticket);
         box-shadow: none;
         filter: drop-shadow(2px 2px 0 var(--snitch-spot));
@@ -1485,7 +1794,7 @@
         z-index: 1;
         background-size: 4px 4px;
         opacity: 0.14;
-        mix-blend-mode: multiply;
+        mix-blend-mode: var(--snitch-print-blend);
     }
 
     .snitch-hero-copy .snitch-btn:hover {
@@ -1493,9 +1802,9 @@
     }
 
     .snitch-hero-copy .snitch-btn.snitch-btn-spot {
-        background: var(--snitch-ink);
-        color: var(--snitch-ink);
-        filter: drop-shadow(2px 2px 0 var(--snitch-ink));
+        background: var(--snitch-press);
+        color: var(--snitch-on-spot);
+        filter: drop-shadow(2px 2px 0 var(--snitch-press));
     }
 
     /* Beat .snitch-btn::before { content: none } and global spot clip */
@@ -1510,7 +1819,7 @@
     }
 
     .snitch-hero-copy .snitch-btn.snitch-btn-spot:hover {
-        filter: drop-shadow(3px 3px 0 var(--snitch-ink)) brightness(1.03);
+        filter: drop-shadow(3px 3px 0 var(--snitch-press)) brightness(1.03);
     }
 
     .snitch-riso-photo {
@@ -1525,7 +1834,7 @@
             color-mix(in oklab, var(--snitch-spot) 14%, transparent),
             var(--snitch-halftone);
         background-size: auto, 6px 6px;
-        mix-blend-mode: multiply;
+        mix-blend-mode: var(--snitch-print-blend);
         opacity: 0.65;
         pointer-events: none;
     }
@@ -1574,8 +1883,8 @@
         isolation: isolate;
         overflow: visible;
         border: none;
-        background: var(--snitch-ink);
-        color: var(--snitch-paper);
+        background: var(--snitch-press);
+        color: var(--snitch-stock);
         padding: 0.78rem 1.35rem;
         font-family: var(--font-sans);
         font-size: 0.92rem;
@@ -1619,7 +1928,7 @@
 
     .snitch-btn-ghost,
     .snitch-btn-ghost-light {
-        background: var(--snitch-ink);
+        background: var(--snitch-press);
         color: var(--snitch-ink);
         box-shadow: none;
     }
@@ -1630,20 +1939,20 @@
         position: absolute;
         inset: var(--snitch-ticket-stroke);
         z-index: -1;
-        background: color-mix(in oklab, var(--snitch-paper) 92%, white);
+        background: color-mix(in oklab, var(--snitch-paper) 92%, var(--snitch-lift));
         clip-path: var(--snitch-ticket-clip);
         pointer-events: none;
     }
 
     .snitch-btn-ghost:hover,
     .snitch-btn-ghost-light:hover {
-        background: var(--snitch-ink);
+        background: var(--snitch-press);
         filter: drop-shadow(3px 3px 0 var(--snitch-spot)) brightness(1.02);
     }
 
     .snitch-btn-ghost:hover::before,
     .snitch-btn-ghost-light:hover::before {
-        background: color-mix(in oklab, white 55%, var(--snitch-paper));
+        background: color-mix(in oklab, var(--snitch-lift) 55%, var(--snitch-paper));
     }
 
     .snitch-btn-light {
@@ -1657,11 +1966,11 @@
 
     /* Compound selector beats .snitch-btn::before { content: none } */
     .snitch-btn.snitch-btn-spot {
-        /* Outer ink ring; yellow face is inset ::before (same as ghost) */
-        background: var(--snitch-ink);
-        color: var(--snitch-ink);
+        /* Outer press ring; yellow face is inset ::before (same as ghost) */
+        background: var(--snitch-press);
+        color: var(--snitch-on-spot);
         /* Charcoal offset under yellow face (yellow misreg would not read) */
-        filter: drop-shadow(2px 2px 0 var(--snitch-ink));
+        filter: drop-shadow(2px 2px 0 var(--snitch-press));
     }
 
     .snitch-btn.snitch-btn-spot::before {
@@ -1675,13 +1984,13 @@
     }
 
     .snitch-btn.snitch-btn-spot:hover {
-        filter: drop-shadow(3px 3px 0 var(--snitch-ink)) brightness(1.03);
+        filter: drop-shadow(3px 3px 0 var(--snitch-press)) brightness(1.03);
     }
 
     .snitch-field {
         width: 100%;
         border: 1.5px solid color-mix(in oklab, var(--snitch-ink) 22%, transparent);
-        background: color-mix(in oklab, white 55%, var(--snitch-paper));
+        background: color-mix(in oklab, var(--snitch-lift) 55%, var(--snitch-paper));
         padding: 0.55rem 0.75rem;
         color: var(--snitch-ink);
         outline: none;
@@ -1699,7 +2008,7 @@
         width: 100%;
         min-width: 0;
         border: 1.5px solid color-mix(in oklab, var(--snitch-ink) 22%, transparent);
-        background: color-mix(in oklab, white 55%, var(--snitch-paper));
+        background: color-mix(in oklab, var(--snitch-lift) 55%, var(--snitch-paper));
         box-shadow: 2px 2px 0 color-mix(in oklab, var(--snitch-spot) 16%, transparent);
         color: var(--snitch-ink);
     }
@@ -1739,7 +2048,7 @@
 
     .snitch-paper-panel {
         position: relative;
-        background: color-mix(in oklab, var(--snitch-paper) 94%, white);
+        background: color-mix(in oklab, var(--snitch-paper) 94%, var(--snitch-lift));
         box-shadow: 2px 2px 0 color-mix(in oklab, var(--snitch-spot) 20%, transparent);
         border: 1px solid color-mix(in oklab, var(--snitch-ink) 12%, transparent);
     }

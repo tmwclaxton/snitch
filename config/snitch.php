@@ -23,13 +23,32 @@ return [
 
     'competitor_suggest' => [
         'model' => env('SNITCH_COMPETITOR_SUGGEST_MODEL', 'deepseek/deepseek-v4-flash'),
-        'max_tokens' => (int) env('SNITCH_COMPETITOR_SUGGEST_MAX_TOKENS', 1200),
+        'max_tokens' => (int) env('SNITCH_COMPETITOR_SUGGEST_MAX_TOKENS', 1600),
         'temperature' => (float) env('SNITCH_COMPETITOR_SUGGEST_TEMPERATURE', 0.3),
-        'max_candidates' => (int) env('SNITCH_COMPETITOR_SUGGEST_MAX_CANDIDATES', 10),
-        'max_resolves' => (int) env('SNITCH_COMPETITOR_SUGGEST_MAX_RESOLVES', 16),
-        'max_suggestions' => (int) env('SNITCH_COMPETITOR_SUGGEST_MAX_SUGGESTIONS', 8),
-        // Facebook/Instagram resolve most reliably for public brand pages; skip weak actors in v1.
-        'platforms' => ['facebook', 'instagram'],
+        // Target orgs from Firecrawl+LLM before Apify resolve.
+        'max_candidates' => (int) env('SNITCH_COMPETITOR_SUGGEST_MAX_CANDIDATES', 16),
+        'max_resolves' => (int) env('SNITCH_COMPETITOR_SUGGEST_MAX_RESOLVES', 32),
+        'max_suggestions' => (int) env('SNITCH_COMPETITOR_SUGGEST_MAX_SUGGESTIONS', 16),
+        'min_suggestions' => (int) env('SNITCH_COMPETITOR_SUGGEST_MIN_SUGGESTIONS', 6),
+        'search_limit' => (int) env('SNITCH_COMPETITOR_SUGGEST_SEARCH_LIMIT', 8),
+        // Concurrent Apify resolveProfile calls per verify batch (Http::pool).
+        'resolve_concurrency' => (int) env('SNITCH_COMPETITOR_SUGGEST_RESOLVE_CONCURRENCY', 4),
+        // Soft cap during verify so Facebook cannot starve other platforms when they resolve.
+        'max_per_platform' => (int) env('SNITCH_COMPETITOR_SUGGEST_MAX_PER_PLATFORM', 3),
+        // Multi-platform mix; Apify still must return external_id to keep a row.
+        'platforms' => ['instagram', 'tiktok', 'youtube', 'linkedin', 'facebook'],
+    ],
+
+    /*
+    | Cost-disciplined sync: only import posts from the last N days, with a modest
+    | per-account fetch cap. Analyze jobs also respect this recency window.
+    | min_interval_days skips re-sync when the account was successfully synced
+    | recently (scheduled + manual Show sync); failed syncs remain eligible.
+    */
+    'sync' => [
+        'recency_days' => (int) env('SNITCH_SYNC_RECENCY_DAYS', 30),
+        'posts_limit' => (int) env('SNITCH_SYNC_POSTS_LIMIT', 12),
+        'min_interval_days' => (int) env('SNITCH_SYNC_MIN_INTERVAL_DAYS', 7),
     ],
 
     'video_analysis' => [
@@ -41,10 +60,12 @@ return [
             'min_hook_window_end_seconds' => 3.0,
             'min_visual_summary_chars' => 40,
             'min_idea_chars' => 12,
+            'min_concept_chars' => 12,
             'require_sfx_array' => true,
             'require_sfx_labels_when_present' => true,
             'require_cta_field' => true,
             'require_how_to_copy_chars' => 20,
+            'max_caption_overlap_ratio' => 0.65,
         ],
     ],
 
@@ -98,7 +119,12 @@ return [
             'instagram' => env('APIFY_ACTOR_INSTAGRAM', 'apify/instagram-scraper'),
             'tiktok' => env('APIFY_ACTOR_TIKTOK', 'clockworks/tiktok-scraper'),
             'facebook' => env('APIFY_ACTOR_FACEBOOK', 'apify/facebook-posts-scraper'),
-            'linkedin' => env('APIFY_ACTOR_LINKEDIN', 'apimaestro/linkedin-profile-posts'),
+            // Brand competitor pages (default sync + company suggest resolves).
+            'linkedin' => env('APIFY_ACTOR_LINKEDIN', 'apimaestro/linkedin-company-posts'),
+            // Personal creator profiles (/in/...) for suggest verify.
+            'linkedin_profile' => env('APIFY_ACTOR_LINKEDIN_PROFILE', 'apimaestro/linkedin-profile-posts'),
+            // Shorts-only import policy via maxResultsShorts; skip long-form uploads.
+            'youtube' => env('APIFY_ACTOR_YOUTUBE', 'streamers/youtube-scraper'),
         ],
     ],
 

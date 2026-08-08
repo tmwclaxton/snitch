@@ -3,6 +3,7 @@ const PLATFORM_LABELS: Record<string, string> = {
     tiktok: 'TikTok',
     facebook: 'Facebook',
     linkedin: 'LinkedIn',
+    youtube: 'YouTube',
 };
 
 export function platformLabel(platform: string): string {

@@ -33,6 +33,17 @@ class ProbeCommandsTest extends TestCase
         $this->assertStringContainsString('SNITCH_LIVE_E2E', Artisan::output());
     }
 
+    public function test_analysis_matrix_probe_skips_without_live_flag(): void
+    {
+        $exit = Artisan::call('snitch:probe-analysis-matrix', [
+            '--platform' => ['instagram'],
+            '--url' => ['https://cdn.example.com/reel.mp4'],
+        ]);
+
+        $this->assertSame(0, $exit);
+        $this->assertStringContainsString('SNITCH_LIVE_ANALYSIS_MATRIX', Artisan::output());
+    }
+
     public function test_winners_probe_prints_for_user(): void
     {
         $user = User::factory()->create(['email' => 'probe@example.com']);

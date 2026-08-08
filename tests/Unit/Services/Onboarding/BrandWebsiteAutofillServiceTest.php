@@ -50,6 +50,7 @@ class BrandWebsiteAutofillServiceTest extends TestCase
         $this->assertSame('@grantgunner', $fields['own_handles']['linkedin']);
         $this->assertSame('@61588602791318', $fields['own_handles']['facebook']);
         $this->assertNull($fields['own_handles']['tiktok']);
+        $this->assertNull($fields['own_handles']['youtube']);
         $this->assertArrayNotHasKey('pinterest', $fields['own_handles']);
     }
 

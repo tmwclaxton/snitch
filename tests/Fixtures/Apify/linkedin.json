@@ -1,14 +1,70 @@
 [
   {
-    "id": "li_1",
-    "url": "https://linkedin.com/posts/rivalbakery-1",
-    "text": "Behind the counter process",
-    "postedAt": "2026-08-03T09:00:00Z",
-    "type": "image",
-    "images": ["https://cdn.example.com/li1.jpg"],
-    "likes": 150,
-    "comments": 12,
-    "shares": 4,
-    "author": { "id": "co_1", "name": "Rival Bakery", "image": null }
+    "activity_urn": "7123456789012345678",
+    "full_urn": "urn:li:activity:7123456789012345678",
+    "post_url": "https://www.linkedin.com/posts/rivalbakery-activity-7123456789012345678-abcd",
+    "text": "Behind the counter process reel",
+    "posted_at": {
+      "date": "2026-08-03 09:00:00",
+      "timestamp": 1785747600000
+    },
+    "post_type": "regular",
+    "author": {
+      "name": "Rival Bakery",
+      "company_url": "https://www.linkedin.com/company/rivalbakery/posts",
+      "logo_url": "https://cdn.example.com/li-avatar.jpg",
+      "follower_count": 1200
+    },
+    "stats": {
+      "total_reactions": 150,
+      "like": 140,
+      "comments": 12,
+      "reposts": 4
+    },
+    "media": {
+      "type": "video",
+      "url": "https://cdn.example.com/li1.mp4",
+      "items": [
+        {
+          "url": "https://cdn.example.com/li1.mp4",
+          "width": 1080,
+          "height": 1920
+        }
+      ]
+    },
+    "source_company": "rivalbakery"
+  },
+  {
+    "activity_urn": "7123456789012345999",
+    "full_urn": "urn:li:activity:7123456789012345999",
+    "post_url": "https://www.linkedin.com/posts/rivalbakery-image-only",
+    "text": "Static carousel card",
+    "posted_at": {
+      "date": "2026-08-03 10:00:00",
+      "timestamp": 1785751200000
+    },
+    "post_type": "regular",
+    "author": {
+      "name": "Rival Bakery",
+      "company_url": "https://www.linkedin.com/company/rivalbakery/posts",
+      "logo_url": null
+    },
+    "stats": {
+      "total_reactions": 10,
+      "like": 10,
+      "comments": 1,
+      "reposts": 0
+    },
+    "media": {
+      "type": "image",
+      "items": [
+        {
+          "url": "https://cdn.example.com/li-skip.jpg",
+          "width": 1080,
+          "height": 1080
+        }
+      ]
+    },
+    "source_company": "rivalbakery"
   }
 ]

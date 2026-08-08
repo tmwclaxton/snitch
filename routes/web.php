@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\BrandProfileController;
 use App\Http\Controllers\CompetitorController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExploreController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\Marketing\ContactController;
 use App\Http\Controllers\OnboardingController;
@@ -60,7 +62,7 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         ->name('onboarding.autofill.status');
 
     Route::middleware([EnsureBrandProfile::class])->group(function () {
-        Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+        Route::get('dashboard', DashboardController::class)->name('dashboard');
 
         Route::get('/competitors', [CompetitorController::class, 'index'])->name('competitors.index');
         Route::post('/competitors', [CompetitorController::class, 'store'])->name('competitors.store');
@@ -70,14 +72,19 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::get('/competitors/suggest/{suggestId}', [CompetitorController::class, 'suggestStatus'])
             ->name('competitors.suggest.status');
         Route::post('/competitors/confirm-suggestions', [CompetitorController::class, 'confirmSuggestions'])->name('competitors.confirm-suggestions');
+        Route::post('/competitors/dismiss-suggestions', [CompetitorController::class, 'dismissSuggestions'])->name('competitors.dismiss-suggestions');
+        Route::get('/competitors/{trackedAccount}', [CompetitorController::class, 'show'])->name('competitors.show');
         Route::delete('/competitors/{trackedAccount}', [CompetitorController::class, 'destroy'])->name('competitors.destroy');
         Route::post('/competitors/{trackedAccount}/sync', [CompetitorController::class, 'sync'])->name('competitors.sync');
 
         Route::get('/feed', [FeedController::class, 'index'])->name('feed.index');
         Route::get('/feed/{post}', [FeedController::class, 'show'])->name('feed.show');
 
+        Route::get('/explore', [ExploreController::class, 'index'])->name('explore.index');
+
         Route::get('/winners', [WinnerController::class, 'index'])->name('winners.index');
         Route::post('/winners/rescore', [WinnerController::class, 'rescore'])->name('winners.rescore');
+        Route::get('/winners/rescore/{runId}', [WinnerController::class, 'rescoreStatus'])->name('winners.rescore.status');
 
         Route::get('/brand', [BrandProfileController::class, 'edit'])->name('brand.edit');
         Route::put('/brand', [BrandProfileController::class, 'update'])->name('brand.update');

@@ -7,6 +7,7 @@ use App\Services\Apify\Adapters\FacebookAdapter;
 use App\Services\Apify\Adapters\InstagramAdapter;
 use App\Services\Apify\Adapters\LinkedInAdapter;
 use App\Services\Apify\Adapters\TikTokAdapter;
+use App\Services\Apify\Adapters\YoutubeAdapter;
 use App\Services\Apify\Contracts\PlatformAdapter;
 
 class PlatformAdapterManager
@@ -16,6 +17,7 @@ class PlatformAdapterManager
         private TikTokAdapter $tiktok,
         private FacebookAdapter $facebook,
         private LinkedInAdapter $linkedin,
+        private YoutubeAdapter $youtube,
     ) {}
 
     public function for(Platform|string $platform): PlatformAdapter
@@ -27,6 +29,7 @@ class PlatformAdapterManager
             Platform::TikTok => $this->tiktok,
             Platform::Facebook => $this->facebook,
             Platform::LinkedIn => $this->linkedin,
+            Platform::Youtube => $this->youtube,
         };
     }
 }

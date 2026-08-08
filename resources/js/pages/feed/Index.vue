@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { index as feedIndex, show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
+import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
+import { index as feedIndex } from '@/actions/App/Http/Controllers/FeedController';
+import FeedContactCell from '@/components/FeedContactCell.vue';
 import PaperSelect from '@/components/PaperSelect.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
-import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import type { PostMetrics } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 
 type Post = {
@@ -15,10 +17,18 @@ type Post = {
     url: string | null;
     caption: string | null;
     media_url: string | null;
+    media_availability?: string | null;
+    metrics?: PostMetrics | null;
     posted_at: string | null;
     embed?: EmbedConfig | null;
-    tracked_account?: { handle: string; display_name: string | null };
-    analysis?: { status: string; hook: string | null } | null;
+    tracked_account?: { id?: number; handle: string; display_name: string | null };
+    analysis?: {
+        status: string;
+        hook: string | null;
+        concept?: string | null;
+        topics?: string[] | null;
+    } | null;
+    winner_insight?: { score: number } | null;
 };
 
 const props = defineProps<{
@@ -124,8 +134,14 @@ function clearFilters(): void {
     });
 }
 
-function frameIndex(index: number): string {
-    return String(index + 1).padStart(2, '0');
+function accountHref(post: Post): string | null {
+    const id = post.tracked_account?.id;
+
+    if (id == null) {
+        return null;
+    }
+
+    return competitorShow.url(id);
 }
 
 function paginationLabel(label: string): string {
@@ -150,7 +166,7 @@ function paginationLabel(label: string): string {
                         Contact sheet
                     </h1>
                     <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
-                        Graded frames from every tracked competitor.
+                        Metrics, hooks, and craft tags at a glance - open a frame for the full dossier.
                     </p>
                 </div>
                 <div class="text-right">
@@ -219,45 +235,13 @@ function paginationLabel(label: string): string {
                     <p>{{ frameCount }} exposures</p>
                 </div>
 
-                <article
+                <FeedContactCell
                     v-for="(post, index) in posts.data"
                     :key="post.id"
-                    class="snitch-contact-cell group"
-                >
-                    <div class="snitch-contact-cell-frame">
-                        <span class="snitch-contact-cell-index">{{ frameIndex(index) }}</span>
-                        <PlatformEmbed
-                            :embed="post.embed"
-                            :media-url="post.media_url"
-                            :post-url="post.url"
-                            :platform="post.platform"
-                            compact
-                            lazy
-                        />
-                    </div>
-                    <Link
-                        :href="feedShow.url(post.id)"
-                        class="snitch-contact-cell-meta snitch-contact-cell-meta-link"
-                    >
-                        <span class="snitch-ink-label">
-                            {{ platformLabel(post.platform) }} · {{ post.type }}
-                        </span>
-                        <p class="snitch-annotation">
-                            @{{ post.tracked_account?.handle }}
-                        </p>
-                        <p
-                            v-if="post.analysis?.hook"
-                            class="line-clamp-2"
-                        >
-                            {{ post.analysis.hook }}
-                        </p>
-                        <p
-                            v-else-if="post.analysis?.status === 'pending' || post.analysis?.status === 'processing'"
-                        >
-                            Analysis pending…
-                        </p>
-                    </Link>
-                </article>
+                    :post="post"
+                    :index="index"
+                    :account-href="accountHref(post)"
+                />
             </div>
 
             <div

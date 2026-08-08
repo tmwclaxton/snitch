@@ -8,6 +8,7 @@ use App\Models\Post;
 use App\Models\PostAnalysis;
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Models\WinnerInsight;
 use App\Models\WinnerRule;
 use App\Services\Winners\WinnerScorer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -63,5 +64,92 @@ class WinnerScorerTest extends TestCase
 
         $this->assertTrue($scorer->evaluate($post, $aggressive)['passes']);
         $this->assertFalse($scorer->evaluate($post, $conservative)['passes']);
+    }
+
+    public function test_rescore_reuses_existing_how_to_copy_without_llm(): void
+    {
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
+                'choices' => [['message' => ['content' => '1) Should not be used']]],
+            ]),
+        ]);
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+
+        WinnerRule::factory()->for($user)->create([
+            'preset' => 'aggressive',
+            ...(array) config('snitch.winners.presets.aggressive'),
+            'advanced' => ['require_hook' => true, 'require_sfx' => false, 'min_score' => 5],
+        ]);
+
+        $post = Post::factory()->forAccount($account)->create([
+            'posted_at' => now()->subDay(),
+            'metrics' => ['views' => 5000, 'likes' => 400, 'comments' => 40, 'shares' => 10],
+        ]);
+        PostAnalysis::factory()->for($post)->create([
+            'status' => AnalysisStatus::Completed,
+            'hook' => 'Open on the steam',
+            'how_to_copy' => null,
+        ]);
+        WinnerInsight::factory()->forPost($post)->create([
+            'score' => 12.0,
+            'how_to_copy' => 'Keep this remake plan from the first score.',
+        ]);
+
+        $insight = app(WinnerScorer::class)->rescoreUser($user)->first();
+
+        $this->assertNotNull($insight);
+        $this->assertSame('Keep this remake plan from the first score.', $insight->how_to_copy);
+        Http::assertNothingSent();
+    }
+
+    public function test_new_winner_uses_analysis_how_to_copy_without_llm(): void
+    {
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
+                'choices' => [['message' => ['content' => '1) Should not be used']]],
+            ]),
+        ]);
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+
+        WinnerRule::factory()->for($user)->create([
+            'preset' => 'aggressive',
+            ...(array) config('snitch.winners.presets.aggressive'),
+            'advanced' => ['require_hook' => true, 'require_sfx' => false, 'min_score' => 5],
+        ]);
+
+        $post = Post::factory()->forAccount($account)->create([
+            'posted_at' => now()->subDay(),
+            'metrics' => ['views' => 5000, 'likes' => 400, 'comments' => 40, 'shares' => 10],
+        ]);
+        PostAnalysis::factory()->for($post)->create([
+            'status' => AnalysisStatus::Completed,
+            'hook' => 'Open on the steam',
+            'how_to_copy' => 'Open on steam. Cut to glaze. End on the pack shot.',
+        ]);
+
+        $insight = app(WinnerScorer::class)->rescoreUser($user)->first();
+
+        $this->assertNotNull($insight);
+        $this->assertSame(
+            'Open on steam. Cut to glaze. End on the pack shot.',
+            $insight->how_to_copy,
+        );
+        Http::assertNothingSent();
     }
 }

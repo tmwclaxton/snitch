@@ -49,6 +49,7 @@ class TrackedAccountFactory extends Factory
             Platform::TikTok => "https://tiktok.com/@{$handle}",
             Platform::Facebook => "https://facebook.com/{$handle}",
             Platform::LinkedIn => "https://linkedin.com/company/{$handle}",
+            Platform::Youtube => "https://youtube.com/@{$handle}",
         };
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Services\Apify\Adapters;
 
 use App\Enums\Platform;
+use App\Enums\PostType;
 
 class FacebookAdapter extends AbstractPlatformAdapter
 {
@@ -46,17 +47,41 @@ class FacebookAdapter extends AbstractPlatformAdapter
             return null;
         }
 
-        $mediaUrl = $item['videoUrl'] ?? $item['media'][0]['thumbnail'] ?? $item['image'] ?? null;
+        $isVideo = (bool) ($item['isVideo'] ?? false)
+            || str_contains(strtolower($url), '/reel')
+            || str_contains(strtolower($url), '/videos/');
+
+        if (! $isVideo) {
+            return null;
+        }
+
+        $mediaUrl = $this->firstVideoUrl(
+            $item['videoUrl'] ?? null,
+            $item['video']['url'] ?? null,
+            $item['media'][0]['videoDeliveryLegacyFields']['browser_native_hd_url'] ?? null,
+            $item['media'][0]['videoDeliveryLegacyFields']['browser_native_sd_url'] ?? null,
+            $item['media'][0]['videoUrl'] ?? null,
+        );
+
+        // Reject facebook.com page URLs - they are not analyzable video files.
+        if ($mediaUrl === null || str_contains($mediaUrl, 'facebook.com/')) {
+            return null;
+        }
+
+        $type = PostType::Reel->value;
+        if (! str_contains(strtolower($url), '/reel')) {
+            $type = PostType::Video->value;
+        }
 
         return [
             'external_id' => isset($item['postId']) ? (string) $item['postId'] : (isset($item['id']) ? (string) $item['id'] : null),
             'url' => $url,
             'posted_at' => $this->normalizeDate($item['time'] ?? $item['timestamp'] ?? $item['created_time'] ?? null),
-            'type' => $this->inferPostType((string) ($item['type'] ?? ''), is_string($mediaUrl) ? $mediaUrl : null),
+            'type' => $type,
             'caption' => isset($item['text']) ? (string) $item['text'] : (isset($item['message']) ? (string) $item['message'] : null),
-            'media_url' => is_string($mediaUrl) ? $mediaUrl : null,
+            'media_url' => $mediaUrl,
             'metrics' => $this->metrics(
-                $item['viewsCount'] ?? $item['videoViewCount'] ?? 0,
+                $item['viewsCount'] ?? $item['videoViewCount'] ?? $item['videoPostViewCount'] ?? 0,
                 $item['likes'] ?? $item['likesCount'] ?? 0,
                 $item['comments'] ?? $item['commentsCount'] ?? 0,
                 $item['shares'] ?? $item['sharesCount'] ?? 0,

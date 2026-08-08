@@ -86,6 +86,19 @@ class PlatformEmbedTest extends TestCase
         );
     }
 
+    public function test_resolves_youtube_shorts_embed(): void
+    {
+        $embed = PlatformEmbed::resolve(
+            Platform::Youtube,
+            'https://www.youtube.com/shorts/abc123XYZ',
+        );
+
+        $this->assertNotNull($embed);
+        $this->assertSame('youtube', $embed['provider']);
+        $this->assertSame('https://www.youtube.com/embed/abc123XYZ', $embed['src']);
+        $this->assertSame('9/16', $embed['aspect']);
+    }
+
     public function test_returns_null_when_url_missing_or_unrecognized(): void
     {
         $this->assertNull(PlatformEmbed::resolve(Platform::TikTok, null));

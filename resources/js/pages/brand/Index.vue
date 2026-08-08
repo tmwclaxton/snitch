@@ -25,7 +25,7 @@ defineOptions({
                 Brand
             </h1>
             <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
-                Scrapbook context so Snitch knows who you are - name, site, and your handles.
+                Scrapbook context so Snitch knows who you are - name, description, and your handles.
             </p>
 
             <BrandProfileForm

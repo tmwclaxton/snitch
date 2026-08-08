@@ -1,0 +1,267 @@
+<?php
+
+namespace Tests\Feature\Pipeline;
+
+use App\Enums\AnalysisStatus;
+use App\Enums\Platform;
+use App\Enums\PostType;
+use App\Jobs\AnalyzePostJob;
+use App\Jobs\ScoreWinnersJob;
+use App\Jobs\SyncTrackedAccountJob;
+use App\Models\Post;
+use App\Models\PostAnalysis;
+use App\Models\TrackedAccount;
+use App\Models\User;
+use App\Services\Apify\ApifyClient;
+use App\Services\Apify\PlatformAdapterManager;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
+use Mockery;
+use Tests\TestCase;
+
+class SyncTrackedAccountJobTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_sync_imports_recent_reels_skips_old_and_enqueues_analysis(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Facebook,
+            'handle' => 'rivalbakery',
+        ]);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('runActor')->andReturn([
+            [
+                'pageName' => 'Rival Bakery',
+                'pageId' => 'page_1',
+                'pageProfilePictureUrl' => null,
+                'postId' => 'recent_reel',
+                'url' => 'https://facebook.com/rivalbakery/videos/1',
+                'text' => 'Fresh reel',
+                'time' => now()->subDays(2)->toIso8601String(),
+                'type' => 'video',
+                'videoUrl' => 'https://cdn.example.com/recent.mp4',
+                'likes' => 10,
+                'comments' => 1,
+                'shares' => 0,
+                'viewsCount' => 100,
+            ],
+            [
+                'pageName' => 'Rival Bakery',
+                'pageId' => 'page_1',
+                'postId' => 'old_reel',
+                'url' => 'https://facebook.com/rivalbakery/videos/2',
+                'text' => 'Old reel',
+                'time' => now()->subDays(60)->toIso8601String(),
+                'type' => 'video',
+                'videoUrl' => 'https://cdn.example.com/old.mp4',
+                'likes' => 10,
+                'comments' => 1,
+                'shares' => 0,
+                'viewsCount' => 100,
+            ],
+            [
+                'pageName' => 'Rival Bakery',
+                'pageId' => 'page_1',
+                'postId' => 'image_skip',
+                'url' => 'https://facebook.com/rivalbakery/posts/3',
+                'text' => 'Still',
+                'time' => now()->subDays(1)->toIso8601String(),
+                'type' => 'photo',
+                'image' => 'https://cdn.example.com/still.jpg',
+                'likes' => 10,
+            ],
+        ]);
+        $this->app->instance(ApifyClient::class, $client);
+
+        config([
+            'snitch.sync.recency_days' => 30,
+            'snitch.sync.posts_limit' => 12,
+        ]);
+
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class));
+
+        $account->refresh();
+        $this->assertSame('success', $account->last_sync_status);
+        $this->assertNull($account->last_sync_error);
+        $this->assertNotNull($account->last_synced_at);
+
+        $this->assertSame(1, Post::query()->count());
+        $post = Post::query()->first();
+        $this->assertSame('recent_reel', $post->external_id);
+        $this->assertSame('https://cdn.example.com/recent.mp4', $post->media_url);
+        $this->assertContains($post->type, PostType::analyzable());
+
+        Queue::assertPushed(AnalyzePostJob::class, fn (AnalyzePostJob $job) => $job->postId === $post->id);
+        Queue::assertPushed(ScoreWinnersJob::class, fn (ScoreWinnersJob $job) => $job->userId === $user->id);
+    }
+
+    public function test_sync_retries_failed_analysis_and_records_sync_failure(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Facebook,
+            'handle' => 'rivalbakery',
+        ]);
+
+        $existing = Post::factory()->forAccount($account)->create([
+            'external_id' => 'recent_reel',
+            'type' => PostType::Video,
+            'media_url' => 'https://cdn.example.com/recent.mp4',
+            'posted_at' => now()->subDays(1),
+        ]);
+        PostAnalysis::factory()->for($existing)->create([
+            'status' => AnalysisStatus::Failed,
+            'error_message' => 'previous fail',
+        ]);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('runActor')->andReturn([
+            [
+                'pageName' => 'Rival Bakery',
+                'pageId' => 'page_1',
+                'postId' => 'recent_reel',
+                'url' => 'https://facebook.com/rivalbakery/videos/1',
+                'text' => 'Fresh reel',
+                'time' => now()->subDays(1)->toIso8601String(),
+                'type' => 'video',
+                'videoUrl' => 'https://cdn.example.com/recent.mp4',
+                'likes' => 10,
+            ],
+        ]);
+        $this->app->instance(ApifyClient::class, $client);
+
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class));
+
+        Queue::assertPushed(AnalyzePostJob::class, fn (AnalyzePostJob $job) => $job->postId === $existing->id);
+
+        $clientFail = Mockery::mock(ApifyClient::class);
+        $clientFail->shouldReceive('runActor')->andThrow(new \RuntimeException('Apify down'));
+        $this->app->instance(ApifyClient::class, $clientFail);
+
+        try {
+            // Force bypasses the weekly min-interval skip after a successful sync.
+            (new SyncTrackedAccountJob($account->id, force: true))->handle(app(PlatformAdapterManager::class));
+            $this->fail('Expected sync to throw');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('Apify down', $e->getMessage());
+        }
+
+        $account->refresh();
+        $this->assertSame('failed', $account->last_sync_status);
+        $this->assertSame('Apify down', $account->last_sync_error);
+    }
+
+    public function test_sync_skips_when_successfully_synced_within_min_interval(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        config(['snitch.sync.min_interval_days' => 7]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Facebook,
+            'handle' => 'rivalbakery',
+            'last_synced_at' => now()->subDays(2),
+            'last_sync_status' => 'success',
+        ]);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldNotReceive('runActor');
+        $this->app->instance(ApifyClient::class, $client);
+
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class));
+
+        Queue::assertNothingPushed();
+        $this->assertSame(0, Post::query()->count());
+        $this->assertSame('success', $account->fresh()?->last_sync_status);
+    }
+
+    public function test_sync_runs_when_already_marked_running_even_if_recently_synced(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        config([
+            'snitch.sync.min_interval_days' => 7,
+            'snitch.sync.recency_days' => 30,
+            'snitch.sync.posts_limit' => 12,
+        ]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Facebook,
+            'handle' => 'rivalbakery',
+            'last_synced_at' => now()->subDay(),
+            'last_sync_status' => 'running',
+        ]);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('runActor')->andReturn([
+            [
+                'pageName' => 'Rival Bakery',
+                'pageId' => 'page_1',
+                'postId' => 'queued_reel',
+                'url' => 'https://facebook.com/rivalbakery/videos/11',
+                'text' => 'Queued',
+                'time' => now()->subDay()->toIso8601String(),
+                'type' => 'video',
+                'videoUrl' => 'https://cdn.example.com/queued.mp4',
+                'likes' => 2,
+            ],
+        ]);
+        $this->app->instance(ApifyClient::class, $client);
+
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class));
+
+        $account->refresh();
+        $this->assertSame('success', $account->last_sync_status);
+        $this->assertSame(1, Post::query()->count());
+    }
+
+    public function test_force_sync_runs_even_when_recently_synced(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        config([
+            'snitch.sync.min_interval_days' => 7,
+            'snitch.sync.recency_days' => 30,
+            'snitch.sync.posts_limit' => 12,
+        ]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Facebook,
+            'handle' => 'rivalbakery',
+            'last_synced_at' => now()->subDay(),
+            'last_sync_status' => 'success',
+        ]);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('runActor')->andReturn([
+            [
+                'pageName' => 'Rival Bakery',
+                'pageId' => 'page_1',
+                'postId' => 'forced_reel',
+                'url' => 'https://facebook.com/rivalbakery/videos/9',
+                'text' => 'Forced',
+                'time' => now()->subDay()->toIso8601String(),
+                'type' => 'video',
+                'videoUrl' => 'https://cdn.example.com/forced.mp4',
+                'likes' => 3,
+            ],
+        ]);
+        $this->app->instance(ApifyClient::class, $client);
+
+        (new SyncTrackedAccountJob($account->id, force: true))->handle(app(PlatformAdapterManager::class));
+
+        $this->assertSame(1, Post::query()->count());
+        $account->refresh();
+        $this->assertSame('success', $account->last_sync_status);
+    }
+}

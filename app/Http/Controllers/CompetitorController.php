@@ -7,7 +7,10 @@ use App\Http\Requests\Competitors\ConfirmSuggestionsRequest;
 use App\Http\Requests\Competitors\StoreTrackedAccountRequest;
 use App\Jobs\SuggestCompetitorsJob;
 use App\Jobs\SyncTrackedAccountJob;
+use App\Models\Post;
 use App\Models\TrackedAccount;
+use App\Models\WinnerInsight;
+use App\Support\PlatformEmbed;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,6 +28,46 @@ class CompetitorController extends Controller
         $this->authorize('viewAny', TrackedAccount::class);
 
         return Inertia::render('competitors/Index', $this->pageProps($request));
+    }
+
+    public function show(Request $request, TrackedAccount $trackedAccount): Response
+    {
+        $this->authorize('view', $trackedAccount);
+
+        $trackedAccount->loadCount([
+            'posts' => fn ($query) => $query->reelLike(),
+        ]);
+
+        $posts = Post::query()
+            ->where('tracked_account_id', $trackedAccount->id)
+            ->where('user_id', $request->user()->id)
+            ->reelLike()
+            ->with(['trackedAccount', 'analysis', 'winnerInsight'])
+            ->latest('posted_at')
+            ->limit(24)
+            ->get()
+            ->map(function (Post $post): Post {
+                $post->setAttribute(
+                    'embed',
+                    PlatformEmbed::resolve($post->platform, $post->url, compact: true),
+                );
+
+                return $post;
+            });
+
+        $winners = WinnerInsight::query()
+            ->where('user_id', $request->user()->id)
+            ->whereHas('post', fn ($query) => $query->where('tracked_account_id', $trackedAccount->id))
+            ->with(['post.trackedAccount', 'post.analysis'])
+            ->orderByDesc('score')
+            ->limit(8)
+            ->get();
+
+        return Inertia::render('competitors/Show', [
+            'account' => $trackedAccount,
+            'posts' => $posts,
+            'winners' => $winners,
+        ]);
     }
 
     public function store(StoreTrackedAccountRequest $request): RedirectResponse
@@ -45,7 +88,13 @@ class CompetitorController extends Controller
             ],
         );
 
+        $account->markSyncRunning();
         SyncTrackedAccountJob::dispatch($account->id);
+
+        SuggestCompetitorsJob::pruneLatestSuggestions($request->user()->id, [[
+            'platform' => $platform->value,
+            'handle' => $handle,
+        ]]);
 
         return redirect()->route('competitors.index');
     }
@@ -60,16 +109,18 @@ class CompetitorController extends Controller
         $suggestId = (string) Str::uuid();
         $userId = $request->user()->id;
 
+        SuggestCompetitorsJob::clearLatest($userId);
+
         Cache::put(SuggestCompetitorsJob::cacheKeyFor($userId, $suggestId), [
             'status' => 'pending',
             'suggestions' => null,
             'error' => null,
-        ], now()->addMinutes(15));
+        ], now()->addHours(2));
 
         Cache::put(
             SuggestCompetitorsJob::activeCacheKeyFor($userId),
             $suggestId,
-            now()->addMinutes(15),
+            now()->addHours(2),
         );
 
         SuggestCompetitorsJob::dispatch($userId, $suggestId);
@@ -109,6 +160,8 @@ class CompetitorController extends Controller
 
     public function confirmSuggestions(ConfirmSuggestionsRequest $request): RedirectResponse
     {
+        $confirmed = [];
+
         foreach ($request->validated('suggestions') as $suggestion) {
             $handle = ltrim($suggestion['handle'], '@');
             $platform = Platform::from($suggestion['platform'] instanceof Platform ? $suggestion['platform']->value : $suggestion['platform']);
@@ -126,13 +179,29 @@ class CompetitorController extends Controller
                 ],
             );
 
+            $account->markSyncRunning();
             SyncTrackedAccountJob::dispatch($account->id);
+            $confirmed[] = [
+                'platform' => $platform->value,
+                'handle' => $handle,
+            ];
         }
+
+        SuggestCompetitorsJob::pruneLatestSuggestions($request->user()->id, $confirmed);
 
         Inertia::flash('toast', [
             'type' => 'success',
             'message' => __('Competitors added. Sync is starting.'),
         ]);
+
+        return redirect()->route('competitors.index');
+    }
+
+    public function dismissSuggestions(Request $request): RedirectResponse
+    {
+        $this->authorize('create', TrackedAccount::class);
+
+        SuggestCompetitorsJob::clearLatest($request->user()->id);
 
         return redirect()->route('competitors.index');
     }
@@ -150,13 +219,21 @@ class CompetitorController extends Controller
     {
         $this->authorize('update', $trackedAccount);
 
-        SyncTrackedAccountJob::dispatch($trackedAccount->id);
+        $trackedAccount->markSyncRunning();
+        SyncTrackedAccountJob::dispatch($trackedAccount->id, force: true);
+
+        Inertia::flash('toast', [
+            'type' => 'info',
+            'message' => __('Sync running for @:handle. This page updates when it finishes.', [
+                'handle' => $trackedAccount->handle,
+            ]),
+        ]);
 
         return back();
     }
 
     /**
-     * @return array{accounts: \Illuminate\Database\Eloquent\Collection<int, TrackedAccount>, platforms: Collection<int, string>, suggestions: list<array{platform: string, handle: string, url: string, display_name: string, avatar: string|null}>, suggestRun: array{id: string, status: string}|null}
+     * @return array{accounts: \Illuminate\Database\Eloquent\Collection<int, TrackedAccount>, platforms: Collection<int, string>, suggestions: list<array{platform: string, handle: string, url: string, display_name: string, avatar: string|null, source?: string|null}>, suggestRun: array{id: string, status: string}|null, suggestError: string|null}
      */
     private function pageProps(Request $request): array
     {
@@ -164,13 +241,72 @@ class CompetitorController extends Controller
             ->trackedAccounts()
             ->withCount('posts')
             ->latest()
-            ->get();
+            ->get()
+            ->each(function (TrackedAccount $account): void {
+                $account->setAttribute('sync_due', $account->isDueForSync());
+                $account->setAttribute(
+                    'next_sync_at',
+                    $account->nextSyncAt()?->toIso8601String(),
+                );
+            });
+
+        $latest = $this->latestSuggestPayload($request->user()->id);
+        $suggestions = is_array($latest['suggestions'] ?? null) ? $latest['suggestions'] : [];
+        $trackedKeys = $accounts
+            ->map(function (TrackedAccount $account): string {
+                $platform = $account->platform instanceof Platform
+                    ? $account->platform->value
+                    : (string) $account->platform;
+
+                return strtolower($platform).':'.strtolower(ltrim((string) $account->handle, '@'));
+            })
+            ->all();
+        $trackedLookup = array_fill_keys($trackedKeys, true);
+
+        $visibleSuggestions = array_values(array_filter(
+            $suggestions,
+            function (mixed $row) use ($trackedLookup): bool {
+                if (! is_array($row)) {
+                    return false;
+                }
+
+                $platform = strtolower(trim((string) ($row['platform'] ?? '')));
+                $handle = ltrim(strtolower(trim((string) ($row['handle'] ?? ''))), '@');
+
+                if ($platform === '' || $handle === '') {
+                    return false;
+                }
+
+                return ! isset($trackedLookup["{$platform}:{$handle}"]);
+            },
+        ));
+
+        // Persist the filtered set so reload / dismiss stay consistent with tracked accounts.
+        if ($visibleSuggestions !== $suggestions) {
+            SuggestCompetitorsJob::pruneLatestSuggestions(
+                $request->user()->id,
+                array_values(array_filter(
+                    $suggestions,
+                    function (mixed $row) use ($trackedLookup): bool {
+                        if (! is_array($row)) {
+                            return true;
+                        }
+
+                        $platform = strtolower(trim((string) ($row['platform'] ?? '')));
+                        $handle = ltrim(strtolower(trim((string) ($row['handle'] ?? ''))), '@');
+
+                        return isset($trackedLookup["{$platform}:{$handle}"]);
+                    },
+                )),
+            );
+        }
 
         return [
             'accounts' => $accounts,
             'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
-            'suggestions' => [],
+            'suggestions' => $visibleSuggestions,
             'suggestRun' => $this->activeSuggestRun($request->user()->id),
+            'suggestError' => is_string($latest['error'] ?? null) ? $latest['error'] : null,
         ];
     }
 
@@ -207,6 +343,26 @@ class CompetitorController extends Controller
         ];
     }
 
+    /**
+     * @return array{status?: string, suggestions?: list<array<string, mixed>>|null, error?: string|null}
+     */
+    private function latestSuggestPayload(int $userId): array
+    {
+        $suggestId = Cache::get(SuggestCompetitorsJob::latestCacheKeyFor($userId));
+
+        if (! is_string($suggestId) || ! Str::isUuid($suggestId)) {
+            return [];
+        }
+
+        $payload = Cache::get(SuggestCompetitorsJob::cacheKeyFor($userId, $suggestId));
+
+        if (! is_array($payload) || ($payload['status'] ?? null) !== 'completed') {
+            return [];
+        }
+
+        return $payload;
+    }
+
     private function defaultUrl(Platform $platform, string $handle): string
     {
         return match ($platform) {
@@ -214,6 +370,7 @@ class CompetitorController extends Controller
             Platform::TikTok => "https://tiktok.com/@{$handle}",
             Platform::Facebook => "https://facebook.com/{$handle}",
             Platform::LinkedIn => "https://linkedin.com/company/{$handle}",
+            Platform::Youtube => "https://youtube.com/@{$handle}",
         };
     }
 }

@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import {
     confirmSuggestions,
-    destroy,
+    dismissSuggestions,
+    show as competitorShow,
     store,
     suggest,
     suggestStatus,
     sync,
 } from '@/actions/App/Http/Controllers/CompetitorController';
 import PlatformSelect from '@/components/PlatformSelect.vue';
+import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
+import { lastSyncedLabel, nextSyncLabel } from '@/lib/syncSchedule';
 import { useToastStore } from '@/stores/toastStore';
 
 type Account = {
@@ -23,6 +26,9 @@ type Account = {
     url: string;
     posts_count?: number;
     last_synced_at: string | null;
+    last_sync_status?: string | null;
+    sync_due?: boolean;
+    next_sync_at?: string | null;
 };
 
 type Suggestion = {
@@ -31,6 +37,7 @@ type Suggestion = {
     url: string;
     display_name: string;
     avatar: string | null;
+    source?: string | null;
 };
 
 type SuggestStatusResponse = {
@@ -50,6 +57,7 @@ const props = defineProps<{
     platforms: string[];
     suggestions: Suggestion[];
     suggestRun?: SuggestRun | null;
+    suggestError?: string | null;
 }>();
 
 defineOptions({
@@ -59,10 +67,72 @@ defineOptions({
 const toast = useToastStore();
 
 const selected = ref<Record<string, boolean>>({});
-const localSuggestions = ref<Suggestion[]>([...props.suggestions]);
+const localSuggestions = ref<Suggestion[]>([]);
 const suggesting = ref(false);
-const suggestMessage = ref('');
+const suggestMessage = ref(props.suggestError ?? '');
+const removeDialogOpen = ref(false);
+const accountToRemove = ref<Account | null>(null);
+const syncingIds = ref<Record<number, boolean>>({});
+const nowMs = ref(Date.now());
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
+let countdownTimer: ReturnType<typeof setInterval> | null = null;
+let syncPollTimer: ReturnType<typeof setInterval> | null = null;
+
+const hasRunningSync = computed(() =>
+    props.accounts.some(
+        (account) =>
+            !!syncingIds.value[account.id] || account.last_sync_status === 'running',
+    ),
+);
+
+const trackedKeys = computed(() => {
+    const keys = new Set<string>();
+
+    for (const account of props.accounts) {
+        keys.add(`${account.platform}:${account.handle}`.toLowerCase());
+    }
+
+    return keys;
+});
+
+function withoutTracked(rows: Suggestion[]): Suggestion[] {
+    return rows.filter(
+        (item) => !trackedKeys.value.has(`${item.platform}:${item.handle}`.toLowerCase()),
+    );
+}
+
+function syncSuggestionsFromProps(rows: Suggestion[]): void {
+    const next = withoutTracked(rows);
+    localSuggestions.value = next;
+
+    const nextSelected: Record<string, boolean> = {};
+
+    for (const item of next) {
+        const key = suggestionKey(item);
+
+        if (selected.value[key]) {
+            nextSelected[key] = true;
+        }
+    }
+
+    selected.value = nextSelected;
+}
+
+watch(
+    () => props.suggestions,
+    (rows) => {
+        syncSuggestionsFromProps(rows);
+    },
+    { immediate: true, deep: true },
+);
+
+watch(
+    () => props.accounts,
+    () => {
+        syncSuggestionsFromProps(localSuggestions.value);
+    },
+    { deep: true },
+);
 
 const form = useForm({
     platform: props.platforms[0] ?? 'instagram',
@@ -78,9 +148,41 @@ const selectedSuggestions = computed(() =>
     localSuggestions.value.filter((item) => selected.value[`${item.platform}:${item.handle}`]),
 );
 
+const allSelected = computed(
+    () =>
+        localSuggestions.value.length > 0 &&
+        localSuggestions.value.every((item) => selected.value[`${item.platform}:${item.handle}`]),
+);
+
+function suggestionKey(item: Suggestion): string {
+    return `${item.platform}:${item.handle}`;
+}
+
 function toggle(item: Suggestion): void {
-    const key = `${item.platform}:${item.handle}`;
+    const key = suggestionKey(item);
     selected.value[key] = !selected.value[key];
+}
+
+function selectAll(): void {
+    const next: Record<string, boolean> = {};
+
+    for (const item of localSuggestions.value) {
+        next[suggestionKey(item)] = true;
+    }
+
+    selected.value = next;
+}
+
+function clearSelection(): void {
+    selected.value = {};
+}
+
+function toggleSelectAll(): void {
+    if (allSelected.value) {
+        clearSelection();
+    } else {
+        selectAll();
+    }
 }
 
 function clearPoll(): void {
@@ -90,7 +192,51 @@ function clearPoll(): void {
     }
 }
 
+function clearSyncPoll(): void {
+    if (syncPollTimer !== null) {
+        clearInterval(syncPollTimer);
+        syncPollTimer = null;
+    }
+}
+
+function ensureSyncPoll(): void {
+    if (!hasRunningSync.value) {
+        clearSyncPoll();
+
+        return;
+    }
+
+    if (syncPollTimer !== null) {
+        return;
+    }
+
+    syncPollTimer = setInterval(() => {
+        router.reload({
+            only: ['accounts'],
+            onFinish: () => {
+                if (!hasRunningSync.value) {
+                    clearSyncPoll();
+                }
+            },
+        });
+    }, 2500);
+}
+
+watch(hasRunningSync, () => {
+    ensureSyncPoll();
+}, { immediate: true });
+
 onMounted(() => {
+    countdownTimer = setInterval(() => {
+        nowMs.value = Date.now();
+    }, 30_000);
+
+    if (localSuggestions.value.length > 0 && Object.keys(selected.value).length === 0) {
+        selectAll();
+        suggestMessage.value =
+            suggestMessage.value || `Found ${localSuggestions.value.length} competitors.`;
+    }
+
     const run = props.suggestRun;
 
     if (!run?.id) {
@@ -108,14 +254,44 @@ onMounted(() => {
 
 onUnmounted(() => {
     clearPoll();
+    clearSyncPoll();
+
+    if (countdownTimer !== null) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+    }
 });
 
 function csrfToken(): string {
     return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 }
 
+function applySuggestionRows(rows: Suggestion[] | null | undefined, selectNew = true): void {
+    const next = withoutTracked(rows ?? []);
+    const previousKeys = new Set(localSuggestions.value.map((item) => suggestionKey(item)));
+
+    localSuggestions.value = next;
+
+    if (!selectNew) {
+        return;
+    }
+
+    const nextSelected = { ...selected.value };
+
+    for (const item of next) {
+        const key = suggestionKey(item);
+
+        if (!previousKeys.has(key)) {
+            nextSelected[key] = true;
+        }
+    }
+
+    selected.value = nextSelected;
+}
+
 async function pollSuggestions(id: string, attempt = 0): Promise<void> {
-    if (attempt > 60) {
+    // Job timeout is 300s; 200 × 1.5s ≈ 300s of client polling.
+    if (attempt > 200) {
         suggesting.value = false;
         suggestMessage.value = 'Timed out waiting for suggestions.';
         toast.error('Suggestion timed out. Try again in a moment.');
@@ -138,7 +314,7 @@ async function pollSuggestions(id: string, attempt = 0): Promise<void> {
     const payload = (await response.json()) as SuggestStatusResponse;
 
     if (payload.status === 'completed') {
-        localSuggestions.value = payload.suggestions ?? [];
+        applySuggestionRows(payload.suggestions);
         selected.value = {};
         suggesting.value = false;
         suggestMessage.value =
@@ -149,6 +325,7 @@ async function pollSuggestions(id: string, attempt = 0): Promise<void> {
         if (localSuggestions.value.length === 0) {
             toast.error('No verified competitor accounts found. Try again later.');
         } else {
+            selectAll();
             toast.success('Competitor picks ready.');
         }
 
@@ -156,14 +333,28 @@ async function pollSuggestions(id: string, attempt = 0): Promise<void> {
     }
 
     if (payload.status === 'failed' || payload.status === 'missing') {
+        applySuggestionRows(payload.suggestions);
         suggesting.value = false;
-        suggestMessage.value = payload.error || 'Suggestion failed.';
+        suggestMessage.value =
+            localSuggestions.value.length > 0
+                ? `${payload.error || 'Suggestion stopped.'} Showing ${localSuggestions.value.length} found.`
+                : payload.error || 'Suggestion failed.';
         toast.error(payload.error || 'Could not suggest competitors.');
+
+        if (localSuggestions.value.length > 0) {
+            selectAll();
+        }
 
         return;
     }
 
-    suggestMessage.value = payload.status === 'processing' ? 'Finding…' : 'Queued…';
+    if (Array.isArray(payload.suggestions) && payload.suggestions.length > 0) {
+        applySuggestionRows(payload.suggestions);
+        suggestMessage.value = `Found ${localSuggestions.value.length} so far…`;
+    } else {
+        suggestMessage.value = payload.status === 'processing' ? 'Finding…' : 'Queued…';
+    }
+
     pollTimer = setTimeout(() => {
         void pollSuggestions(id, attempt + 1);
     }, 1500);
@@ -177,6 +368,8 @@ async function requestSuggestions(): Promise<void> {
     clearPoll();
     suggesting.value = true;
     suggestMessage.value = 'Finding…';
+    localSuggestions.value = [];
+    selected.value = {};
 
     try {
         const response = await fetch(suggest.url(), {
@@ -209,41 +402,106 @@ async function requestSuggestions(): Promise<void> {
 }
 
 function submitConfirm(): void {
+    const confirmed = selectedSuggestions.value;
+    const confirmedKeys = new Set(confirmed.map((item) => suggestionKey(item).toLowerCase()));
+
     confirmForm
         .transform(() => ({
-            suggestions: selectedSuggestions.value,
+            suggestions: confirmed,
         }))
-        .post(confirmSuggestions.url(), { preserveScroll: true });
+        .post(confirmSuggestions.url(), {
+            preserveScroll: true,
+            onSuccess: () => {
+                localSuggestions.value = localSuggestions.value.filter(
+                    (item) => !confirmedKeys.has(suggestionKey(item).toLowerCase()),
+                );
+                selected.value = {};
+                suggestMessage.value =
+                    localSuggestions.value.length > 0
+                        ? `${localSuggestions.value.length} suggestions left.`
+                        : '';
+            },
+        });
 }
 
-function remove(account: Account): void {
-    router.delete(destroy.url(account.id));
+function dismiss(): void {
+    router.post(dismissSuggestions.url(), {}, { preserveScroll: true });
 }
 
-function syncNow(account: Account): void {
-    router.post(sync.url(account.id));
+function askRemove(account: Account): void {
+    accountToRemove.value = account;
+    removeDialogOpen.value = true;
+}
+
+function accountSyncDue(account: Account): boolean {
+    return account.sync_due ?? nextSyncLabel(account, nowMs.value) === 'Due now';
+}
+
+function accountNextSyncLabel(account: Account): string {
+    if (isAccountSyncing(account)) {
+        return 'Syncing…';
+    }
+
+    return nextSyncLabel(account, nowMs.value);
+}
+
+function isAccountSyncing(account: Account): boolean {
+    return !!syncingIds.value[account.id] || account.last_sync_status === 'running';
+}
+
+function emptyImportHint(account: Account): string | null {
+    if ((account.posts_count ?? 0) > 0) {
+        return null;
+    }
+
+    if (account.last_sync_status === 'failed') {
+        return 'Last sync failed';
+    }
+
+    if (account.last_sync_status === 'success') {
+        return 'No recent reels found';
+    }
+
+    return null;
+}
+
+function syncAccount(account: Account): void {
+    if (syncingIds.value[account.id]) {
+        return;
+    }
+
+    syncingIds.value = { ...syncingIds.value, [account.id]: true };
+
+    router.post(sync.url(account.id), {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            const next = { ...syncingIds.value };
+            delete next[account.id];
+            syncingIds.value = next;
+        },
+    });
 }
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
+    <div class="snitch-app-shell relative min-h-full min-w-0 px-5 py-6 sm:px-8 sm:py-8">
         <Head title="Competitors" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="relative z-10 mx-auto max-w-5xl">
-            <div class="flex flex-wrap items-end justify-between gap-4">
-                <div>
+        <div class="relative z-10 mx-auto w-full min-w-0 max-w-5xl">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div class="min-w-0">
                     <h1 class="snitch-display text-3xl text-snitch-ink sm:text-4xl">
                         Tracked accounts
                     </h1>
                     <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
-                        Cutout profiles from Instagram, TikTok, Facebook, and LinkedIn.
+                        Accounts you watch across Instagram, TikTok, YouTube Shorts, Facebook, and LinkedIn.
                     </p>
                 </div>
-                <div class="flex flex-col items-end gap-1">
+                <div class="flex min-w-0 flex-col gap-1 sm:items-end">
                     <button
                         type="button"
-                        class="snitch-btn snitch-btn-ghost"
+                        class="snitch-btn snitch-btn-ghost w-full sm:w-auto"
                         :disabled="suggesting"
                         @click="requestSuggestions"
                     >
@@ -251,7 +509,7 @@ function syncNow(account: Account): void {
                     </button>
                     <p
                         v-if="suggestMessage"
-                        class="snitch-annotation text-base text-snitch-ink/70"
+                        class="snitch-annotation text-base text-snitch-ink/70 sm:text-right"
                         aria-live="polite"
                     >
                         {{ suggestMessage }}
@@ -279,7 +537,8 @@ function syncNow(account: Account): void {
                             Scraping the neighborhood
                         </p>
                         <p class="mt-1 text-sm text-snitch-ink/65">
-                            Asking for rivals, then verifying real public profiles.
+                            Searching the web for rivals, then verifying real public profiles.
+                            Verified picks appear below as they land.
                         </p>
                     </div>
                 </div>
@@ -331,73 +590,135 @@ function syncNow(account: Account): void {
             </form>
 
             <section v-if="localSuggestions.length" class="mt-10">
-                <h2 class="snitch-display text-2xl text-snitch-ink">
-                    Polaroid picks
-                </h2>
-                <p class="mt-1.5 text-sm text-snitch-ink/65">
-                    Select competitors to track, then confirm.
-                </p>
-
-                <div class="snitch-contact-reveal mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <button
-                        v-for="(item, index) in localSuggestions"
-                        :key="`${item.platform}:${item.handle}`"
-                        type="button"
-                        class="snitch-polaroid text-left transition"
-                        :style="{
-                            '--snitch-tilt': index % 2 === 0 ? '-1.5deg' : '1.2deg',
-                        }"
-                        :class="
-                            selected[`${item.platform}:${item.handle}`]
-                                ? 'ring-2 ring-snitch-spot ring-offset-2 ring-offset-transparent'
-                                : ''
-                        "
-                        @click="toggle(item)"
-                    >
-                        <span
-                            class="snitch-tape -top-2"
-                            :class="index % 2 === 0 ? 'left-3' : 'right-3'"
-                            aria-hidden="true"
-                        />
-                        <div class="snitch-polaroid-frame !aspect-square">
-                            <img
-                                v-if="item.avatar"
-                                :src="item.avatar"
-                                alt=""
-                            />
-                            <div
-                                v-else
-                                class="flex h-full items-center justify-center bg-snitch-teal/25 text-2xl font-semibold text-snitch-ink/60"
-                            >
-                                {{ item.display_name.slice(0, 1) }}
-                            </div>
-                        </div>
-                        <p class="snitch-polaroid-caption">
-                            @{{ item.handle }}
+                <div class="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <h2 class="snitch-display text-2xl text-snitch-ink">
+                            Suggested rivals
+                        </h2>
+                        <p class="mt-1.5 text-sm text-snitch-ink/65">
+                            Select accounts to track, then confirm. Reload keeps this table until you dismiss or re-run.
                         </p>
-                        <div class="mt-1 px-0.5">
-                            <span class="flex items-center gap-1.5">
-                                <img
-                                    :src="platformIconSrc(item.platform)"
-                                    alt=""
-                                    class="snitch-platform-logo size-4 shrink-0"
-                                    width="16"
-                                    height="16"
-                                />
-                                <span class="snitch-ink-label">
-                                    {{ platformLabel(item.platform) }}
-                                </span>
-                            </span>
-                            <p class="snitch-display mt-2 text-lg">
-                                {{ item.display_name }}
-                            </p>
-                        </div>
-                    </button>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
+                            @click="toggleSelectAll"
+                        >
+                            {{ allSelected ? 'Clear selection' : 'Select all' }}
+                        </button>
+                        <button
+                            type="button"
+                            class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
+                            @click="dismiss"
+                        >
+                            Dismiss
+                        </button>
+                    </div>
+                </div>
+
+                <div class="snitch-scrap relative mt-6 overflow-x-auto p-3 pt-5 sm:p-4 sm:pt-6">
+                    <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
+                    <table class="relative z-10 w-full min-w-[36rem] border-collapse text-left text-sm">
+                        <thead>
+                            <tr class="border-b border-snitch-ink/15">
+                                <th class="w-10 px-2 py-2">
+                                    <input
+                                        type="checkbox"
+                                        class="size-4 accent-[var(--snitch-spot)]"
+                                        :checked="allSelected"
+                                        :aria-label="allSelected ? 'Clear selection' : 'Select all'"
+                                        @change="toggleSelectAll"
+                                    />
+                                </th>
+                                <th class="px-2 py-2">
+                                    <span class="snitch-ink-label">Platform</span>
+                                </th>
+                                <th class="px-2 py-2">
+                                    <span class="snitch-ink-label">Handle</span>
+                                </th>
+                                <th class="px-2 py-2">
+                                    <span class="snitch-ink-label">Name</span>
+                                </th>
+                                <th class="hidden px-2 py-2 md:table-cell">
+                                    <span class="snitch-ink-label">Source</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="item in localSuggestions"
+                                :key="suggestionKey(item)"
+                                class="cursor-pointer border-b border-snitch-ink/10 last:border-0"
+                                :class="
+                                    selected[suggestionKey(item)]
+                                        ? 'bg-snitch-spot/15'
+                                        : 'hover:bg-snitch-ink/[0.03]'
+                                "
+                                @click="toggle(item)"
+                            >
+                                <td class="px-2 py-2.5 align-middle" @click.stop>
+                                    <input
+                                        type="checkbox"
+                                        class="size-4 accent-[var(--snitch-spot)]"
+                                        :checked="!!selected[suggestionKey(item)]"
+                                        :aria-label="`Select ${item.display_name}`"
+                                        @change="toggle(item)"
+                                    />
+                                </td>
+                                <td class="px-2 py-2.5 align-middle">
+                                    <span class="flex items-center gap-1.5">
+                                        <img
+                                            :src="platformIconSrc(item.platform)"
+                                            alt=""
+                                            class="snitch-platform-logo size-4 shrink-0"
+                                            width="16"
+                                            height="16"
+                                        />
+                                        <span class="snitch-ink-label">
+                                            {{ platformLabel(item.platform) }}
+                                        </span>
+                                    </span>
+                                </td>
+                                <td class="px-2 py-2.5 align-middle">
+                                    <span class="snitch-annotation text-base">
+                                        @{{ item.handle }}
+                                    </span>
+                                </td>
+                                <td class="px-2 py-2.5 align-middle">
+                                    <div class="flex min-w-0 items-center gap-2">
+                                        <img
+                                            v-if="item.avatar"
+                                            :src="item.avatar"
+                                            alt=""
+                                            class="h-8 w-8 shrink-0 object-cover"
+                                            style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
+                                        />
+                                        <div
+                                            v-else
+                                            class="flex h-8 w-8 shrink-0 items-center justify-center bg-snitch-teal/20 text-xs font-semibold"
+                                            style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
+                                        >
+                                            {{ item.display_name.slice(0, 1) }}
+                                        </div>
+                                        <span class="snitch-display truncate text-base">
+                                            {{ item.display_name }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="hidden max-w-[14rem] px-2 py-2.5 align-middle text-xs text-snitch-ink/55 md:table-cell">
+                                    <span class="line-clamp-2">
+                                        {{ item.source || '-' }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
                 <button
                     type="button"
-                    class="snitch-btn snitch-btn-spot mt-6"
+                    class="snitch-btn snitch-btn-spot mt-6 w-full sm:w-auto"
                     :disabled="selectedSuggestions.length === 0 || confirmForm.processing"
                     @click="submitConfirm"
                 >
@@ -407,104 +728,188 @@ function syncNow(account: Account): void {
                 </button>
             </section>
 
-            <ul
+            <div
                 v-if="accounts.length"
-                class="snitch-contact-reveal mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+                class="snitch-scrap relative mt-8 overflow-x-auto p-3 pt-5 sm:p-4 sm:pt-6"
             >
-                <li
-                    v-for="(account, index) in accounts"
-                    :key="account.id"
-                    class="snitch-cutout relative overflow-hidden p-5"
-                    :data-platform="account.platform"
-                    :style="{
-                        '--snitch-tilt': index % 2 === 0 ? '-0.8deg' : '0.9deg',
-                        transform: 'rotate(var(--snitch-tilt, 0deg))',
-                    }"
-                >
-                    <img
-                        :src="platformIconSrc(account.platform)"
-                        alt=""
-                        class="snitch-cutout-platform-mark"
-                        width="72"
-                        height="72"
-                        aria-hidden="true"
-                    />
-                    <div class="relative z-10 flex items-center gap-2">
-                        <img
-                            :src="platformIconSrc(account.platform)"
-                            :alt="`${platformLabel(account.platform)} logo`"
-                            class="snitch-platform-logo size-5 shrink-0"
-                            width="20"
-                            height="20"
-                        />
-                        <span class="snitch-ink-label">
-                            {{ platformLabel(account.platform) }}
-                        </span>
-                    </div>
-                    <div class="relative z-10 mt-4 flex items-center gap-3">
-                        <img
-                            v-if="account.avatar"
-                            :src="account.avatar"
-                            alt=""
-                            class="h-14 w-14 object-cover"
-                            style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
-                        />
-                        <div
-                            v-else
-                            class="flex h-14 w-14 items-center justify-center bg-snitch-teal/20 text-sm font-semibold"
-                            style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
+                <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
+                <table class="relative z-10 w-full min-w-[48rem] border-collapse text-left text-sm">
+                    <thead>
+                        <tr class="border-b border-snitch-ink/15">
+                            <th class="px-2 py-2">
+                                <span class="snitch-ink-label">Platform</span>
+                            </th>
+                            <th class="px-2 py-2">
+                                <span class="snitch-ink-label">Account</span>
+                            </th>
+                            <th class="px-2 py-2">
+                                <span class="snitch-ink-label">Posts</span>
+                            </th>
+                            <th class="hidden px-2 py-2 md:table-cell">
+                                <span class="snitch-ink-label">Auto sync</span>
+                            </th>
+                            <th class="hidden px-2 py-2 lg:table-cell">
+                                <span class="snitch-ink-label">Last synced</span>
+                            </th>
+                            <th class="w-40 px-2 py-2 text-right">
+                                <span class="sr-only">Actions</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="account in accounts"
+                            :key="account.id"
+                            class="border-b border-snitch-ink/10 last:border-0 hover:bg-snitch-ink/[0.03]"
+                            :class="isAccountSyncing(account) ? 'bg-snitch-spot/10' : ''"
+                            :data-platform="account.platform"
+                            :data-syncing="isAccountSyncing(account) ? 'true' : undefined"
                         >
-                            {{ account.handle.slice(0, 2).toUpperCase() }}
-                        </div>
-                        <div class="min-w-0">
-                            <p class="snitch-display truncate text-xl">
-                                {{ account.display_name || account.handle }}
-                            </p>
-                            <p class="snitch-annotation text-lg">
-                                @{{ account.handle }}
-                            </p>
-                        </div>
-                    </div>
-                    <p class="relative z-10 mt-3 text-xs text-snitch-ink/55">
-                        {{ account.posts_count ?? 0 }} posts
-                    </p>
-                    <div class="relative z-10 mt-4 flex flex-wrap gap-2">
-                        <button
-                            type="button"
-                            class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
-                            @click="syncNow(account)"
-                        >
-                            Sync now
-                        </button>
-                        <button
-                            type="button"
-                            class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
-                            @click="remove(account)"
-                        >
-                            Remove
-                        </button>
-                        <Link
-                            v-if="account.url"
-                            :href="account.url"
-                            class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
-                            target="_blank"
-                        >
-                            Open
-                        </Link>
-                    </div>
-                </li>
-            </ul>
+                            <td class="px-2 py-2.5 align-middle">
+                                <Link
+                                    :href="competitorShow.url(account.id)"
+                                    class="flex items-center gap-1.5 text-inherit no-underline outline-none focus-visible:ring-2 focus-visible:ring-snitch-ink/30"
+                                >
+                                    <img
+                                        :src="platformIconSrc(account.platform)"
+                                        :alt="`${platformLabel(account.platform)} logo`"
+                                        class="snitch-platform-logo size-4 shrink-0"
+                                        width="16"
+                                        height="16"
+                                    />
+                                    <span class="snitch-ink-label">
+                                        {{ platformLabel(account.platform) }}
+                                    </span>
+                                </Link>
+                            </td>
+                            <td class="px-2 py-2.5 align-middle">
+                                <Link
+                                    :href="competitorShow.url(account.id)"
+                                    class="flex min-w-0 items-center gap-2 text-inherit no-underline outline-none focus-visible:ring-2 focus-visible:ring-snitch-ink/30"
+                                >
+                                    <img
+                                        v-if="account.avatar"
+                                        :src="account.avatar"
+                                        alt=""
+                                        class="h-8 w-8 shrink-0 object-cover"
+                                        style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
+                                    />
+                                    <div
+                                        v-else
+                                        class="flex h-8 w-8 shrink-0 items-center justify-center bg-snitch-teal/20 text-xs font-semibold"
+                                        style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
+                                    >
+                                        {{ account.handle.slice(0, 2).toUpperCase() }}
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="snitch-display truncate text-base">
+                                            {{ account.display_name || account.handle }}
+                                        </p>
+                                        <p class="snitch-annotation truncate text-base leading-tight">
+                                            @{{ account.handle }}
+                                        </p>
+                                        <p
+                                            v-if="isAccountSyncing(account)"
+                                            class="mt-0.5 text-xs font-medium text-snitch-ink"
+                                            aria-live="polite"
+                                        >
+                                            <span
+                                                class="mr-1 inline-block size-1.5 animate-pulse rounded-full bg-snitch-spot align-middle"
+                                                aria-hidden="true"
+                                            />
+                                            Sync in progress
+                                        </p>
+                                        <p
+                                            v-else-if="emptyImportHint(account)"
+                                            class="mt-0.5 text-xs font-medium text-snitch-ink/70"
+                                        >
+                                            {{ emptyImportHint(account) }}
+                                        </p>
+                                    </div>
+                                </Link>
+                            </td>
+                            <td class="px-2 py-2.5 align-middle text-snitch-ink/70">
+                                {{ account.posts_count ?? 0 }}
+                            </td>
+                            <td class="hidden px-2 py-2.5 align-middle text-xs md:table-cell">
+                                <span
+                                    class="font-medium"
+                                    :class="
+                                        isAccountSyncing(account)
+                                            ? 'text-snitch-ink'
+                                            : accountSyncDue(account)
+                                              ? 'text-snitch-ink'
+                                              : 'text-snitch-ink/55'
+                                    "
+                                    :aria-live="isAccountSyncing(account) ? 'polite' : undefined"
+                                >
+                                    <span
+                                        v-if="isAccountSyncing(account)"
+                                        class="mr-1.5 inline-block size-1.5 animate-pulse rounded-full bg-snitch-spot align-middle"
+                                        aria-hidden="true"
+                                    />
+                                    {{ accountNextSyncLabel(account) }}
+                                </span>
+                            </td>
+                            <td class="hidden px-2 py-2.5 align-middle text-xs text-snitch-ink/55 lg:table-cell">
+                                {{
+                                    isAccountSyncing(account)
+                                        ? 'In progress'
+                                        : lastSyncedLabel(account.last_synced_at) || '-'
+                                }}
+                            </td>
+                            <td class="px-2 py-2.5 align-middle text-right">
+                                <div class="flex flex-wrap justify-end gap-1.5">
+                                    <button
+                                        type="button"
+                                        class="snitch-btn snitch-btn-spot px-2.5 py-1 text-xs"
+                                        :disabled="isAccountSyncing(account)"
+                                        :title="
+                                            isAccountSyncing(account)
+                                                ? `Sync running for @${account.handle}`
+                                                : `Sync @${account.handle}`
+                                        "
+                                        :aria-label="
+                                            isAccountSyncing(account)
+                                                ? `Sync running for @${account.handle}`
+                                                : `Sync @${account.handle}`
+                                        "
+                                        @click="syncAccount(account)"
+                                    >
+                                        <span class="relative z-10">
+                                            {{ isAccountSyncing(account) ? 'Syncing…' : 'Sync' }}
+                                        </span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="snitch-btn snitch-btn-ghost px-2.5 py-1 text-xs"
+                                        :aria-label="`Remove @${account.handle}`"
+                                        @click="askRemove(account)"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
             <div
                 v-else-if="!localSuggestions.length && !suggesting"
                 class="snitch-scrap relative mx-auto mt-10 max-w-md p-8 text-center"
             >
                 <span class="snitch-tape left-8 -top-2" aria-hidden="true" />
-                <p class="snitch-display text-2xl">No cutouts yet</p>
+                <p class="snitch-display text-2xl">No competitors yet</p>
                 <p class="mt-2 text-sm text-snitch-ink/65">
                     Add a handle above, or ask Snitch to suggest competitors.
                 </p>
             </div>
         </div>
+
+        <RemoveCompetitorModal
+            v-model:open="removeDialogOpen"
+            :account="accountToRemove"
+        />
     </div>
 </template>

@@ -99,6 +99,63 @@ class BrandProfileUpdateTest extends TestCase
             ->assertRedirect(route('brand.edit'));
     }
 
+    public function test_brand_profile_can_be_updated_without_website(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create([
+            'name' => 'Old Name',
+            'website' => 'https://old.example',
+            'description' => 'Old description',
+        ]);
+
+        $this->actingAs($user)
+            ->put(route('brand.update'), [
+                'name' => 'Loaf Local',
+                'website' => '',
+                'description' => 'Neighborhood bakery content brand',
+                'own_handles' => [
+                    'instagram' => '@loaf',
+                    'tiktok' => '',
+                    'facebook' => '',
+                    'linkedin' => '',
+                    'youtube' => '',
+                ],
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('brand.edit'));
+
+        $this->assertDatabaseHas('brand_profiles', [
+            'user_id' => $user->id,
+            'name' => 'Loaf Local',
+            'website' => null,
+            'description' => 'Neighborhood bakery content brand',
+        ]);
+    }
+
+    public function test_brand_profile_can_be_updated_with_null_website(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create([
+            'website' => 'https://old.example',
+        ]);
+
+        $this->actingAs($user)
+            ->put(route('brand.update'), [
+                'name' => 'Loaf Local',
+                'website' => null,
+                'description' => 'Neighborhood bakery content brand',
+                'own_handles' => [],
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('brand.edit'));
+
+        $this->assertDatabaseHas('brand_profiles', [
+            'user_id' => $user->id,
+            'name' => 'Loaf Local',
+            'website' => null,
+        ]);
+    }
+
     public function test_sidebar_includes_brand_link(): void
     {
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
@@ -128,6 +185,13 @@ class BrandProfileUpdateTest extends TestCase
         $this->assertStringContainsString('snitch-field-prefix', $form);
         $this->assertStringContainsString('https://', $form);
         $this->assertStringContainsString('www.yourbrand.com', $form);
+        $this->assertStringContainsString('(optional)', $form);
+        $this->assertStringContainsString('field-sizing-content', $form);
+        $this->assertStringContainsString("website: website === '' ? null : website", $form);
+        $this->assertDoesNotMatchRegularExpression(
+            '/id="brand-website"[^>]*\brequired\b/',
+            $form,
+        );
         $this->assertTrue(
             strpos($form, 'Website') < strpos($form, 'Brand name'),
             'Website field should appear before brand name',

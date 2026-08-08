@@ -30,7 +30,7 @@ class WinnerRuleController extends Controller
             'advanced' => $data['advanced'] ?? $rule->advanced,
         ])->save();
 
-        ScoreWinnersJob::dispatch($request->user()->id);
+        ScoreWinnersJob::queueFor($request->user()->id);
 
         return back();
     }

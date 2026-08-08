@@ -28,6 +28,7 @@ const primaryCta = computed(() => {
 const platforms = [
     { name: 'TikTok', slug: 'tiktok' },
     { name: 'Instagram', slug: 'instagram' },
+    { name: 'YouTube', slug: 'youtube' },
     { name: 'Facebook', slug: 'facebook' },
     { name: 'LinkedIn', slug: 'linkedin' },
 ] as const;
@@ -80,12 +81,12 @@ const steps = [
                             <img
                                 src="/images/marketing/hero/platforms-back.png"
                                 alt=""
-                                class="snitch-hero-marquee-frame opacity-[0.72] mix-blend-multiply"
+                                class="snitch-hero-marquee-frame opacity-[0.72] mix-blend-multiply dark:mix-blend-soft-light dark:opacity-80"
                             />
                             <img
                                 src="/images/marketing/hero/platforms-back.png"
                                 alt=""
-                                class="snitch-hero-marquee-frame opacity-[0.72] mix-blend-multiply"
+                                class="snitch-hero-marquee-frame opacity-[0.72] mix-blend-multiply dark:mix-blend-soft-light dark:opacity-80"
                             />
                         </div>
                     </div>

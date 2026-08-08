@@ -91,4 +91,25 @@ class OnboardingTest extends TestCase
             'website' => 'https://www.grantgunner.org',
         ]);
     }
+
+    public function test_user_can_save_brand_profile_without_website(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('onboarding.store'), [
+                'name' => 'Loaf Local',
+                'website' => '',
+                'description' => 'Neighborhood bakery content brand',
+                'own_handles' => ['instagram' => '@loaf'],
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('competitors.index'));
+
+        $this->assertDatabaseHas('brand_profiles', [
+            'user_id' => $user->id,
+            'name' => 'Loaf Local',
+            'website' => null,
+        ]);
+    }
 }

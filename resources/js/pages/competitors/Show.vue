@@ -1,0 +1,389 @@
+<script setup lang="ts">
+import { Head, Link, router } from '@inertiajs/vue3';
+import { computed, onUnmounted, ref, watch } from 'vue';
+import {
+    index as competitorsIndex,
+    sync,
+} from '@/actions/App/Http/Controllers/CompetitorController';
+import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
+import FeedContactCell from '@/components/FeedContactCell.vue';
+import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
+import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
+import type { PostMetrics } from '@/lib/metrics';
+import { platformIconSrc, platformLabel } from '@/lib/platforms';
+
+type Account = {
+    id: number;
+    platform: string;
+    handle: string;
+    display_name: string | null;
+    avatar: string | null;
+    url: string;
+    posts_count?: number;
+    last_synced_at: string | null;
+    last_sync_status?: string | null;
+    last_sync_error?: string | null;
+};
+
+type Post = {
+    id: number;
+    platform: string;
+    type: string;
+    url: string | null;
+    media_url: string | null;
+    media_availability?: string | null;
+    metrics?: PostMetrics | null;
+    embed?: EmbedConfig | null;
+    tracked_account?: { id?: number; handle: string; display_name?: string | null } | null;
+    analysis?: {
+        status: string;
+        hook: string | null;
+        concept?: string | null;
+        topics?: string[] | null;
+    } | null;
+    winner_insight?: { score: number } | null;
+};
+
+const props = defineProps<{
+    account: Account;
+    posts: Post[];
+    winners: Array<{
+        id: number;
+        score: number;
+        why: string;
+        how_to_copy: string;
+        post: {
+            id: number;
+            platform: string;
+            analysis?: { hook: string | null; concept?: string | null } | null;
+        };
+    }>;
+}>();
+
+defineOptions({
+    layout: AppLayout,
+});
+
+const profileHref = computed(() => competitorsIndex.url());
+const syncRequested = ref(false);
+let syncPollTimer: ReturnType<typeof setInterval> | null = null;
+
+const isSyncing = computed(
+    () => props.account.last_sync_status === 'running' || syncRequested.value,
+);
+
+const lastSyncedLabel = computed(() => {
+    if (!props.account.last_synced_at) {
+        return null;
+    }
+
+    return `Last synced ${new Date(props.account.last_synced_at).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+    })}`;
+});
+
+const syncErrorLabel = computed(() => {
+    if (isSyncing.value || props.account.last_sync_status !== 'failed') {
+        return null;
+    }
+
+    return props.account.last_sync_error
+        ? `Sync failed: ${props.account.last_sync_error}`
+        : 'Sync failed';
+});
+
+const removeDialogOpen = ref(false);
+
+function clearSyncPoll(): void {
+    if (syncPollTimer !== null) {
+        clearInterval(syncPollTimer);
+        syncPollTimer = null;
+    }
+}
+
+function ensureSyncPoll(): void {
+    if (!isSyncing.value) {
+        clearSyncPoll();
+
+        return;
+    }
+
+    if (syncPollTimer !== null) {
+        return;
+    }
+
+    syncPollTimer = setInterval(() => {
+        router.reload({
+            only: ['account', 'posts', 'winners'],
+            onFinish: () => {
+                if (props.account.last_sync_status !== 'running') {
+                    syncRequested.value = false;
+                    clearSyncPoll();
+                }
+            },
+        });
+    }, 2500);
+}
+
+watch(isSyncing, () => {
+    ensureSyncPoll();
+}, { immediate: true });
+
+onUnmounted(() => {
+    clearSyncPoll();
+});
+
+function syncNow(): void {
+    if (isSyncing.value) {
+        return;
+    }
+
+    syncRequested.value = true;
+
+    router.post(sync.url(props.account.id), {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            if (props.account.last_sync_status !== 'running') {
+                syncRequested.value = false;
+            }
+        },
+    });
+}
+
+function askRemove(): void {
+    removeDialogOpen.value = true;
+}
+</script>
+
+<template>
+    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
+        <Head :title="`@${account.handle}`" />
+        <div class="snitch-grain" aria-hidden="true" />
+
+        <div class="relative z-10 mx-auto max-w-6xl">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <Link
+                    :href="profileHref"
+                    class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
+                >
+                    Back to competitors
+                </Link>
+                <div class="flex flex-wrap gap-2">
+                    <a
+                        v-if="account.url"
+                        :href="account.url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
+                    >
+                        Open on platform
+                    </a>
+                    <button
+                        type="button"
+                        class="snitch-btn snitch-btn-spot px-3 py-1.5 text-sm"
+                        :disabled="isSyncing"
+                        :title="isSyncing ? `Sync running for @${account.handle}` : undefined"
+                        :aria-label="
+                            isSyncing
+                                ? `Sync running for @${account.handle}`
+                                : `Sync @${account.handle}`
+                        "
+                        @click="syncNow"
+                    >
+                        <span class="relative z-10">
+                            {{ isSyncing ? 'Syncing…' : 'Sync' }}
+                        </span>
+                    </button>
+                    <button
+                        type="button"
+                        class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
+                        :aria-label="`Remove @${account.handle}`"
+                        @click="askRemove"
+                    >
+                        Remove
+                    </button>
+                </div>
+            </div>
+
+            <header class="mt-5 border-b border-snitch-ink/10 pb-6">
+                <div class="flex min-w-0 items-center gap-4 sm:gap-5">
+                    <img
+                        v-if="account.avatar"
+                        :src="account.avatar"
+                        alt=""
+                        class="h-16 w-16 shrink-0 object-cover sm:h-20 sm:w-20"
+                        style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
+                    />
+                    <div
+                        v-else
+                        class="flex h-16 w-16 shrink-0 items-center justify-center bg-snitch-teal/20 text-lg font-semibold sm:h-20 sm:w-20 sm:text-xl"
+                        style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
+                    >
+                        {{ account.handle.slice(0, 2).toUpperCase() }}
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <img
+                                :src="platformIconSrc(account.platform)"
+                                :alt="`${platformLabel(account.platform)} logo`"
+                                class="snitch-platform-logo size-4 shrink-0"
+                                width="16"
+                                height="16"
+                            />
+                            <p class="snitch-ink-label">
+                                {{ platformLabel(account.platform) }}
+                            </p>
+                        </div>
+                        <h1 class="snitch-display mt-1.5 truncate text-3xl text-snitch-ink sm:text-4xl">
+                            {{ account.display_name || account.handle }}
+                        </h1>
+                        <p class="mt-1 text-sm text-snitch-ink/65 sm:text-base">
+                            @{{ account.handle }}
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    v-if="isSyncing"
+                    class="snitch-scrap relative mt-4 max-w-xl px-4 py-3"
+                    aria-live="polite"
+                    data-syncing="true"
+                >
+                    <div class="relative z-10 flex items-center gap-3">
+                        <span
+                            class="inline-block size-2.5 shrink-0 animate-pulse bg-snitch-spot"
+                            style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
+                            aria-hidden="true"
+                        />
+                        <div>
+                            <p class="text-sm font-medium text-snitch-ink">
+                                Sync in progress
+                            </p>
+                            <p class="mt-0.5 text-xs text-snitch-ink/65">
+                                Pulling recent reels. This page updates when the run finishes.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-sm text-snitch-ink/60">
+                    <p>{{ account.posts_count ?? posts.length }} reels tracked</p>
+                    <p v-if="isSyncing">Last synced: in progress</p>
+                    <p v-else-if="lastSyncedLabel">{{ lastSyncedLabel }}</p>
+                </div>
+                <p
+                    v-if="syncErrorLabel"
+                    class="mt-2 text-xs text-red-800/80"
+                >
+                    {{ syncErrorLabel }}
+                </p>
+            </header>
+
+            <section class="mt-10">
+                <div class="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <p class="snitch-ink-label">Contact sheet</p>
+                        <h2 class="snitch-display mt-1 text-2xl text-snitch-ink">
+                            Recent posts
+                        </h2>
+                    </div>
+                </div>
+
+                <div
+                    v-if="posts.length"
+                    class="snitch-contact-sheet snitch-contact-reveal mt-5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                >
+                    <FeedContactCell
+                        v-for="(post, index) in posts"
+                        :key="post.id"
+                        :post="post"
+                        :index="index"
+                    />
+                </div>
+                <div
+                    v-else
+                    class="snitch-scrap relative mt-5 max-w-md p-6 text-center"
+                >
+                    <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
+                    <p class="snitch-display text-xl">
+                        {{ isSyncing ? 'Syncing reels…' : 'No reels yet' }}
+                    </p>
+                    <p class="mt-2 text-sm text-snitch-ink/65">
+                        {{
+                            isSyncing
+                                ? 'Hang tight - new posts will land here when the sync finishes.'
+                                : 'Sync this account to pull recent short-form posts.'
+                        }}
+                    </p>
+                </div>
+            </section>
+
+            <section class="mt-10">
+                <p class="snitch-ink-label">From this account</p>
+                <h2 class="snitch-display mt-1 text-2xl text-snitch-ink">
+                    Winners
+                </h2>
+
+                <div
+                    v-if="winners.length"
+                    class="snitch-tear-board mt-5 grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3"
+                >
+                    <Link
+                        v-for="(winner, index) in winners"
+                        :key="winner.id"
+                        :href="feedShow.url(winner.post.id)"
+                        class="snitch-polaroid relative block"
+                        :style="{
+                            '--snitch-tilt': index % 2 === 0 ? '-1deg' : '1.1deg',
+                        }"
+                    >
+                        <span
+                            class="snitch-tape -top-2"
+                            :class="index % 2 === 0 ? 'left-4' : 'right-4'"
+                            aria-hidden="true"
+                        />
+                        <div class="space-y-2 px-0.5">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="snitch-ink-label">#{{ index + 1 }}</span>
+                                <span class="snitch-annotation text-xl">
+                                    {{ winner.score.toFixed(1) }}
+                                </span>
+                            </div>
+                            <p
+                                v-if="winner.post.analysis?.concept"
+                                class="text-sm font-medium text-snitch-ink"
+                            >
+                                {{ winner.post.analysis.concept }}
+                            </p>
+                            <p
+                                v-else-if="winner.post.analysis?.hook"
+                                class="text-sm text-snitch-ink/80"
+                            >
+                                {{ winner.post.analysis.hook }}
+                            </p>
+                            <p class="text-sm text-snitch-ink/75">{{ winner.why }}</p>
+                        </div>
+                    </Link>
+                </div>
+                <div
+                    v-else
+                    class="snitch-scrap relative mt-5 max-w-md p-6"
+                >
+                    <span class="snitch-tape right-5 -top-2" aria-hidden="true" />
+                    <p class="snitch-display text-xl">No winners from this account</p>
+                    <p class="mt-2 text-sm text-snitch-ink/65">
+                        After analysis clears your rules, winners land here.
+                    </p>
+                </div>
+            </section>
+        </div>
+
+        <RemoveCompetitorModal
+            v-model:open="removeDialogOpen"
+            :account="account"
+        />
+    </div>
+</template>

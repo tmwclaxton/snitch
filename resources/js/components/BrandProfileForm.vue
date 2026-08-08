@@ -12,6 +12,7 @@ export type BrandOwnHandles = {
     tiktok: string;
     facebook: string;
     linkedin: string;
+    youtube: string;
 };
 
 export type BrandProfileFormData = {
@@ -80,6 +81,7 @@ const form = useForm({
         tiktok: props.brand?.own_handles?.tiktok ?? '',
         facebook: props.brand?.own_handles?.facebook ?? '',
         linkedin: props.brand?.own_handles?.linkedin ?? '',
+        youtube: props.brand?.own_handles?.youtube ?? '',
     } satisfies BrandOwnHandles,
 });
 
@@ -247,10 +249,14 @@ function submitBrand(): void {
         onSuccess: () => emit('saved'),
     };
 
-    const payload = form.transform((data) => ({
-        ...data,
-        website: absoluteWebsite(data.website),
-    }));
+    const payload = form.transform((data) => {
+        const website = absoluteWebsite(data.website);
+
+        return {
+            ...data,
+            website: website === '' ? null : website,
+        };
+    });
 
     if (props.submitMethod === 'put') {
         payload.put(props.submitUrl, options);
@@ -282,6 +288,7 @@ function submitBrand(): void {
         <div>
             <label for="brand-website" class="text-sm font-medium text-snitch-ink">
                 Website
+                <span class="font-normal text-snitch-ink/55">(optional)</span>
             </label>
             <div class="mt-0.5 flex flex-col gap-2 sm:flex-row sm:items-center">
                 <div class="snitch-field-group min-w-0 flex-1">
@@ -325,7 +332,8 @@ function submitBrand(): void {
             <span class="text-sm font-medium text-snitch-ink">Short description</span>
             <textarea
                 v-model="form.description"
-                class="snitch-field mt-0.5 min-h-20"
+                rows="1"
+                class="snitch-field mt-0.5 min-h-20 field-sizing-content"
                 required
             />
         </label>

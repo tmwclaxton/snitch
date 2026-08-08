@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Platform;
+use Carbon\CarbonInterface;
 use Database\Factories\TrackedAccountFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,6 +20,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'avatar',
     'display_name',
     'last_synced_at',
+    'last_sync_status',
+    'last_sync_error',
 ])]
 class TrackedAccount extends Model
 {
@@ -34,6 +37,60 @@ class TrackedAccount extends Model
             'platform' => Platform::class,
             'last_synced_at' => 'datetime',
         ];
+    }
+
+    public function isSyncing(): bool
+    {
+        return $this->last_sync_status === 'running';
+    }
+
+    public function markSyncRunning(): void
+    {
+        $this->fill([
+            'last_sync_status' => 'running',
+            'last_sync_error' => null,
+        ])->save();
+    }
+
+    /**
+     * Whether this account should be synced for new posts.
+     *
+     * Never-synced and failed syncs are always due. In-flight syncs are not.
+     * Successful syncs wait snitch.sync.min_interval_days (default 7) before
+     * another Apify pull.
+     */
+    public function isDueForSync(?int $minIntervalDays = null): bool
+    {
+        if ($this->isSyncing()) {
+            return false;
+        }
+
+        if ($this->last_synced_at === null) {
+            return true;
+        }
+
+        if ($this->last_sync_status === 'failed') {
+            return true;
+        }
+
+        $days = max(1, $minIntervalDays ?? (int) config('snitch.sync.min_interval_days', 7));
+
+        return $this->last_synced_at->lte(now()->subDays($days));
+    }
+
+    /**
+     * Earliest time a successful sync becomes eligible again.
+     * Null when the account is already due (never synced, failed, or interval elapsed).
+     */
+    public function nextSyncAt(?int $minIntervalDays = null): ?CarbonInterface
+    {
+        if ($this->isDueForSync($minIntervalDays)) {
+            return null;
+        }
+
+        $days = max(1, $minIntervalDays ?? (int) config('snitch.sync.min_interval_days', 7));
+
+        return $this->last_synced_at?->copy()->addDays($days);
     }
 
     /**

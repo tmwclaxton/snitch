@@ -1,0 +1,17 @@
+# Project Rules Index
+
+Before planning or editing, find the row whose globs match the file's path and read that rule file.
+
+| Applies to | Rule file |
+| --- | --- |
+| app/Services/Apify/Adapters/YoutubeAdapter.php | .ai/rules/adapters.md |
+| app/Services/Analysis/**, database/data/analysis_terms.php, app/Http/Controllers/ExploreController.php, resources/js/pages/explore/** | .ai/rules/analysis.md |
+| app/Services/Apify/** | .ai/rules/apify.md |
+| app/Console/Commands/** | .ai/rules/commands.md |
+| app/Services/Competitors/** | .ai/rules/competitors.md |
+| config/snitch.php | .ai/rules/config.md |
+| app/Jobs/** | .ai/rules/jobs.md |
+| app/Services/Winners/**, app/Jobs/ScoreWinnersJob.php, app/Http/Controllers/WinnerController.php | .ai/rules/winners.md |
+| app/Models/Post.php | .ai/rules/models.md |
+| resources/css/app.css, resources/js/**/*.{vue,ts,css}, resources/views/app.blade.php | .ai/rules/frontend-dark-mode.md |
+| tests/** | .ai/rules/tests.md |

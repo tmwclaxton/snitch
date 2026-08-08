@@ -8,4 +8,5 @@ enum Platform: string
     case Instagram = 'instagram';
     case Facebook = 'facebook';
     case LinkedIn = 'linkedin';
+    case Youtube = 'youtube';
 }

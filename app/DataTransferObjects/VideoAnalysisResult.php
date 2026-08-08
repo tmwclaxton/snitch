@@ -6,6 +6,11 @@ final readonly class VideoAnalysisResult
 {
     /**
      * @param  array<int, array{at_sec: float|null, label: string, role: string|null}>  $sfx
+     * @param  list<string>  $topics
+     * @param  list<string>  $hookTypeSlugs
+     * @param  list<string>  $topicSlugs
+     * @param  list<string>  $visualCraftSlugs
+     * @param  list<string>  $customTags
      * @param  array<string, mixed>  $raw
      */
     public function __construct(
@@ -14,9 +19,15 @@ final readonly class VideoAnalysisResult
         public float $hookWindowEndSeconds,
         public string $visualSummary,
         public string $idea,
+        public string $concept,
         public string $cta,
         public string $howToCopy,
         public array $sfx,
+        public array $topics,
+        public array $hookTypeSlugs,
+        public array $topicSlugs,
+        public array $visualCraftSlugs,
+        public array $customTags,
         public ?string $musicTitle,
         public ?string $musicArtist,
         public bool $isOriginalAudio,
@@ -50,15 +61,32 @@ final readonly class VideoAnalysisResult
             ];
         }
 
+        $topics = self::stringList($payload['topics'] ?? $payload['themes'] ?? []);
+        $hookTypeSlugs = self::slugList($payload['hook_type_slugs'] ?? []);
+        $topicSlugs = self::slugList($payload['topic_slugs'] ?? []);
+        $visualCraftSlugs = self::slugList($payload['visual_craft_slugs'] ?? []);
+        $customTags = self::stringList($payload['custom_tags'] ?? []);
+
+        $concept = trim((string) ($payload['concept'] ?? $payload['core_concept'] ?? ''));
+        if ($concept === '') {
+            $concept = trim((string) ($payload['idea'] ?? ''));
+        }
+
         return new self(
             hook: trim((string) ($payload['hook'] ?? '')),
             hookWindowStartSeconds: (float) ($hookWindow['start_sec'] ?? 0),
             hookWindowEndSeconds: (float) ($hookWindow['end_sec'] ?? 0),
             visualSummary: trim((string) ($payload['visual_summary'] ?? '')),
             idea: trim((string) ($payload['idea'] ?? '')),
+            concept: $concept,
             cta: trim((string) ($payload['cta'] ?? '')),
             howToCopy: trim((string) ($payload['how_to_copy'] ?? '')),
             sfx: $sfxItems,
+            topics: $topics,
+            hookTypeSlugs: $hookTypeSlugs,
+            topicSlugs: $topicSlugs,
+            visualCraftSlugs: $visualCraftSlugs,
+            customTags: $customTags,
             musicTitle: self::nullableString($payload['music_title'] ?? null),
             musicArtist: self::nullableString($payload['music_artist'] ?? null),
             isOriginalAudio: (bool) ($payload['is_original_audio'] ?? false),
@@ -80,14 +108,28 @@ final readonly class VideoAnalysisResult
             ],
             'visual_summary' => $this->visualSummary,
             'idea' => $this->idea,
+            'concept' => $this->concept,
             'cta' => $this->cta,
             'how_to_copy' => $this->howToCopy,
+            'topics' => $this->topics,
+            'hook_type_slugs' => $this->hookTypeSlugs,
+            'topic_slugs' => $this->topicSlugs,
+            'visual_craft_slugs' => $this->visualCraftSlugs,
+            'custom_tags' => $this->customTags,
             'sfx' => $this->sfx,
             'music_title' => $this->musicTitle,
             'music_artist' => $this->musicArtist,
             'is_original_audio' => $this->isOriginalAudio,
             'model' => $this->model,
         ];
+    }
+
+    public function hasTaxonomySignal(): bool
+    {
+        return $this->hookTypeSlugs !== []
+            || $this->topicSlugs !== []
+            || $this->visualCraftSlugs !== []
+            || $this->customTags !== [];
     }
 
     private static function nullableString(mixed $value): ?string
@@ -99,5 +141,54 @@ final readonly class VideoAnalysisResult
         $string = trim((string) $value);
 
         return $string === '' ? null : $string;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function stringList(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($value as $item) {
+            if (! is_string($item) && ! is_numeric($item)) {
+                continue;
+            }
+
+            $trimmed = trim((string) $item);
+            if ($trimmed !== '') {
+                $items[] = $trimmed;
+            }
+        }
+
+        return array_values(array_unique($items));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function slugList(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($value as $item) {
+            if (! is_string($item) && ! is_numeric($item)) {
+                continue;
+            }
+
+            $trimmed = strtolower(trim((string) $item));
+            $trimmed = preg_replace('/[^a-z0-9_\-]/', '', $trimmed) ?? '';
+            if ($trimmed !== '') {
+                $items[] = $trimmed;
+            }
+        }
+
+        return array_values(array_unique($items));
     }
 }

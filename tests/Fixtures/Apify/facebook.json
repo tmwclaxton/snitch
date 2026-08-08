@@ -1,16 +1,25 @@
 [
   {
     "postId": "fb_1",
-    "url": "https://facebook.com/rivalbakery/posts/1",
+    "url": "https://facebook.com/rivalbakery/reel/1",
     "text": "Weekend special reel",
     "time": "2026-08-02T12:00:00+00:00",
-    "type": "video",
-    "videoUrl": "https://cdn.example.com/fb1.mp4",
+    "isVideo": true,
     "likes": 800,
     "comments": 33,
     "shares": 12,
     "viewsCount": 9000,
     "pageName": "Rival Bakery",
-    "pageId": "page_1"
+    "pageId": "page_1",
+    "media": [
+      {
+        "__typename": "Video",
+        "url": "https://www.facebook.com/reel/1/",
+        "videoDeliveryLegacyFields": {
+          "browser_native_hd_url": "https://video.fbcdn.net/v/fb1.mp4",
+          "browser_native_sd_url": "https://video.fbcdn.net/v/fb1-sd.mp4"
+        }
+      }
+    ]
   }
 ]

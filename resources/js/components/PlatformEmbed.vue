@@ -37,6 +37,12 @@ const canEmbed = computed(
     () => Boolean(props.embed?.src) && shouldLoad.value && !embedFailed.value,
 );
 
+const isVideoMedia = computed(() => {
+    const url = (props.mediaUrl ?? '').split('?')[0]?.toLowerCase() ?? '';
+
+    return /\.(mp4|webm|ogg|m4v)$/i.test(url);
+});
+
 function startObserving(): void {
     if (!props.lazy || shouldLoad.value || !root.value) {
         return;
@@ -107,8 +113,16 @@ function onEmbedError(): void {
         />
 
         <template v-else>
+            <video
+                v-if="mediaUrl && isVideoMedia"
+                :src="mediaUrl"
+                class="snitch-platform-embed-fallback-img"
+                muted
+                playsinline
+                preload="metadata"
+            />
             <img
-                v-if="mediaUrl"
+                v-else-if="mediaUrl"
                 :src="mediaUrl"
                 alt=""
                 class="snitch-platform-embed-fallback-img"

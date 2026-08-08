@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\InsufficientCompetitorSuggestionsException;
 use App\Models\BrandProfile;
 use App\Services\Competitors\CompetitorSuggestionService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -19,7 +20,7 @@ class SuggestCompetitorsJob implements ShouldQueue
     /** @var list<int> */
     public array $backoff = [1, 5];
 
-    public int $timeout = 180;
+    public int $timeout = 300;
 
     public function __construct(
         public int $userId,
@@ -42,7 +43,23 @@ class SuggestCompetitorsJob implements ShouldQueue
             throw new \RuntimeException('Brand profile not found.');
         }
 
-        $rows = $suggestions->suggest($brand);
+        try {
+            $rows = $suggestions->suggest($brand, function (array $partial) {
+                $this->putStatus([
+                    'status' => 'processing',
+                    'suggestions' => $partial,
+                    'error' => null,
+                ]);
+            });
+        } catch (InsufficientCompetitorSuggestionsException $exception) {
+            $this->putStatus([
+                'status' => 'failed',
+                'suggestions' => $exception->suggestions !== [] ? $exception->suggestions : null,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return;
+        }
 
         $this->putStatus([
             'status' => 'completed',
@@ -59,9 +76,18 @@ class SuggestCompetitorsJob implements ShouldQueue
             'error' => $exception?->getMessage(),
         ]);
 
+        $existing = Cache::get($this->cacheKey());
+        $partials = is_array($existing) && is_array($existing['suggestions'] ?? null)
+            ? $existing['suggestions']
+            : null;
+
+        if ($exception instanceof InsufficientCompetitorSuggestionsException && $exception->suggestions !== []) {
+            $partials = $exception->suggestions;
+        }
+
         $this->putStatus([
             'status' => 'failed',
-            'suggestions' => null,
+            'suggestions' => $partials,
             'error' => $exception?->getMessage() ?: 'Unable to suggest competitors.',
         ]);
     }
@@ -71,7 +97,11 @@ class SuggestCompetitorsJob implements ShouldQueue
      */
     private function putStatus(array $payload): void
     {
-        Cache::put($this->cacheKey(), $payload, now()->addMinutes(15));
+        Cache::put($this->cacheKey(), $payload, now()->addHours(2));
+
+        if ($payload['status'] === 'completed') {
+            Cache::put(self::latestCacheKeyFor($this->userId), $this->suggestId, now()->addHours(2));
+        }
 
         if (in_array($payload['status'], ['completed', 'failed'], true)) {
             self::clearActive($this->userId, $this->suggestId);
@@ -86,6 +116,97 @@ class SuggestCompetitorsJob implements ShouldQueue
     public static function activeCacheKeyFor(int $userId): string
     {
         return "competitor-suggest-active:{$userId}";
+    }
+
+    public static function latestCacheKeyFor(int $userId): string
+    {
+        return "competitor-suggest-latest:{$userId}";
+    }
+
+    public static function clearLatest(int $userId): void
+    {
+        $latestId = Cache::get(self::latestCacheKeyFor($userId));
+
+        if (is_string($latestId)) {
+            Cache::forget(self::cacheKeyFor($userId, $latestId));
+        }
+
+        Cache::forget(self::latestCacheKeyFor($userId));
+    }
+
+    /**
+     * Drop confirmed/tracked rows from the persisted suggestion set so they stay gone after reload.
+     *
+     * @param  list<array{platform?: string, handle?: string}|string>  $keys  "platform:handle" or rows with those fields
+     */
+    public static function pruneLatestSuggestions(int $userId, array $keys): void
+    {
+        $remove = [];
+
+        foreach ($keys as $key) {
+            if (is_string($key) && $key !== '') {
+                $remove[strtolower($key)] = true;
+
+                continue;
+            }
+
+            if (! is_array($key)) {
+                continue;
+            }
+
+            $platform = strtolower(trim((string) ($key['platform'] ?? '')));
+            $handle = ltrim(strtolower(trim((string) ($key['handle'] ?? ''))), '@');
+
+            if ($platform === '' || $handle === '') {
+                continue;
+            }
+
+            $remove["{$platform}:{$handle}"] = true;
+        }
+
+        if ($remove === []) {
+            return;
+        }
+
+        $latestId = Cache::get(self::latestCacheKeyFor($userId));
+
+        if (! is_string($latestId)) {
+            return;
+        }
+
+        $payload = Cache::get(self::cacheKeyFor($userId, $latestId));
+
+        if (! is_array($payload) || ($payload['status'] ?? null) !== 'completed') {
+            return;
+        }
+
+        $suggestions = is_array($payload['suggestions'] ?? null) ? $payload['suggestions'] : [];
+        $kept = [];
+
+        foreach ($suggestions as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $platform = strtolower(trim((string) ($row['platform'] ?? '')));
+            $handle = ltrim(strtolower(trim((string) ($row['handle'] ?? ''))), '@');
+            $composite = "{$platform}:{$handle}";
+
+            if ($platform === '' || $handle === '' || isset($remove[$composite])) {
+                continue;
+            }
+
+            $kept[] = $row;
+        }
+
+        if ($kept === []) {
+            self::clearLatest($userId);
+
+            return;
+        }
+
+        $payload['suggestions'] = $kept;
+        Cache::put(self::cacheKeyFor($userId, $latestId), $payload, now()->addHours(2));
     }
 
     public static function clearActive(int $userId, ?string $suggestId = null): void

@@ -1,95 +1,245 @@
 {
   "brand": "GrantGunner",
-  "source": "live-eval-run3-sanitized",
-  "elapsed_s": 75.5,
+  "source": "phase-a-firecrawl-pipeline-fixture; mix fix expects URL-seeded interleave (ig/li/fb), soft-cap 3 => 9 rows",
+  "elapsed_s": 327.5,
+  "firecrawl_hits": [
+    {
+      "url": "https://www.instrumentl.com",
+      "title": "Instrumentl - Grant Discovery Software",
+      "description": "Find and win more grants with Instrumentl grant discovery."
+    },
+    {
+      "url": "https://instagram.com/instrumentl",
+      "title": "Instrumentl on Instagram",
+      "description": "Official Instrumentl Instagram."
+    },
+    {
+      "url": "https://facebook.com/instrumentl",
+      "title": "Instrumentl Facebook",
+      "description": "Instrumentl page on Facebook."
+    },
+    {
+      "url": "https://www.grantwatch.com",
+      "title": "GrantWatch",
+      "description": "Largest grant listing directory for nonprofits."
+    },
+    {
+      "url": "https://facebook.com/GrantWatch",
+      "title": "GrantWatch Facebook",
+      "description": "GrantWatch social page."
+    },
+    {
+      "url": "https://candid.org",
+      "title": "Candid - Foundation Directory Online",
+      "description": "Candid powers Foundation Directory Online for grant research."
+    },
+    {
+      "url": "https://linkedin.com/company/candid-org",
+      "title": "Candid on LinkedIn",
+      "description": "Candid company page."
+    },
+    {
+      "url": "https://www.grantstation.com",
+      "title": "GrantStation",
+      "description": "Grant research membership for nonprofits."
+    },
+    {
+      "url": "https://facebook.com/GrantStation",
+      "title": "GrantStation Facebook",
+      "description": "GrantStation page."
+    },
+    {
+      "url": "https://www.submittable.com",
+      "title": "Submittable",
+      "description": "Submission and grant management software."
+    },
+    {
+      "url": "https://linkedin.com/company/submittable",
+      "title": "Submittable LinkedIn",
+      "description": "Submittable company profile."
+    },
+    {
+      "url": "https://www.optimy.com",
+      "title": "Optimy",
+      "description": "Grant and sponsorship management platform."
+    },
+    {
+      "url": "https://instagram.com/optimysoftware",
+      "title": "Optimy Instagram",
+      "description": "Optimy software Instagram."
+    },
+    {
+      "url": "https://www.foundant.com",
+      "title": "Foundant Technologies",
+      "description": "Grantmaker and scholarship management software."
+    },
+    {
+      "url": "https://linkedin.com/company/foundant-technologies",
+      "title": "Foundant LinkedIn",
+      "description": "Foundant Technologies company page."
+    },
+    {
+      "url": "https://www.grantable.co",
+      "title": "Grantable",
+      "description": "AI grant writing workspace for nonprofits."
+    }
+  ],
   "nanogpt_competitors": {
     "competitors": [
       {
         "name": "Instrumentl",
+        "source": "Find and win more grants with Instrumentl grant discovery.",
         "handles": {
+          "instagram": "instrumentl",
           "facebook": "instrumentl",
-          "instagram": null
+          "linkedin": "instrumentl",
+          "tiktok": null
         }
       },
       {
         "name": "GrantWatch",
+        "source": "Largest grant listing directory for nonprofits.",
         "handles": {
+          "instagram": null,
           "facebook": "GrantWatch",
-          "instagram": null
+          "linkedin": null,
+          "tiktok": null
         }
       },
       {
-        "name": "Foundation Directory Online (Candid)",
+        "name": "Candid",
+        "source": "Candid powers Foundation Directory Online for grant research.",
         "handles": {
+          "instagram": null,
           "facebook": "CandidDotOrg",
-          "instagram": null
+          "linkedin": "candid-org",
+          "tiktok": null
         }
       },
       {
         "name": "GrantStation",
+        "source": "Grant research membership for nonprofits.",
         "handles": {
+          "instagram": null,
           "facebook": "GrantStation",
-          "instagram": null
+          "linkedin": null,
+          "tiktok": null
         }
       },
       {
         "name": "Submittable",
+        "source": "Submission and grant management software.",
         "handles": {
-          "facebook": "Submittable",
-          "instagram": null
+          "instagram": "submittable",
+          "facebook": null,
+          "linkedin": "submittable",
+          "tiktok": null
         }
       },
       {
         "name": "Optimy",
+        "source": "Grant and sponsorship management platform.",
         "handles": {
+          "instagram": "optimysoftware",
           "facebook": "Optimy",
-          "instagram": null
+          "linkedin": null,
+          "tiktok": null
+        }
+      },
+      {
+        "name": "Foundant Technologies",
+        "source": "Grantmaker and scholarship management software.",
+        "handles": {
+          "instagram": null,
+          "facebook": null,
+          "linkedin": "foundant-technologies",
+          "tiktok": null
+        }
+      },
+      {
+        "name": "Grantable",
+        "source": "AI grant writing workspace for nonprofits.",
+        "handles": {
+          "instagram": "grantable",
+          "facebook": null,
+          "linkedin": "grantable",
+          "tiktok": null
         }
       }
     ]
   },
   "suggestions": [
     {
+      "platform": "instagram",
+      "handle": "instrumentl",
+      "url": "https://instagram.com/instrumentl",
+      "display_name": "Instrumentl",
+      "avatar": "https://cdn.example.com/avatars/instrumentl-ig.jpg",
+      "source": "Find and win more grants with Instrumentl grant discovery."
+    },
+    {
+      "platform": "linkedin",
+      "handle": "candid-org",
+      "url": "https://linkedin.com/company/candid-org",
+      "display_name": "Candid",
+      "avatar": "https://cdn.example.com/avatars/candid-li.jpg",
+      "source": "Candid powers Foundation Directory Online for grant research."
+    },
+    {
       "platform": "facebook",
       "handle": "instrumentl",
       "url": "https://facebook.com/instrumentl",
       "display_name": "Instrumentl",
-      "avatar": "https://cdn.example.com/avatars/instrumentl.jpg"
+      "avatar": "https://cdn.example.com/avatars/instrumentl-fb.jpg",
+      "source": "Find and win more grants with Instrumentl grant discovery."
+    },
+    {
+      "platform": "instagram",
+      "handle": "optimysoftware",
+      "url": "https://instagram.com/optimysoftware",
+      "display_name": "Optimy",
+      "avatar": "https://cdn.example.com/avatars/optimy-ig.jpg",
+      "source": "Grant and sponsorship management platform."
+    },
+    {
+      "platform": "linkedin",
+      "handle": "submittable",
+      "url": "https://linkedin.com/company/submittable",
+      "display_name": "Submittable",
+      "avatar": "https://cdn.example.com/avatars/submittable-li.jpg",
+      "source": "Submission and grant management software."
     },
     {
       "platform": "facebook",
       "handle": "GrantWatch",
       "url": "https://facebook.com/GrantWatch",
       "display_name": "GrantWatch",
-      "avatar": "https://cdn.example.com/avatars/grantwatch.jpg"
+      "avatar": "https://cdn.example.com/avatars/grantwatch.jpg",
+      "source": "Largest grant listing directory for nonprofits."
     },
     {
-      "platform": "facebook",
-      "handle": "CandidDotOrg",
-      "url": "https://facebook.com/CandidDotOrg",
-      "display_name": "Foundation Directory Online (Candid)",
-      "avatar": "https://cdn.example.com/avatars/candiddotorg.jpg"
+      "platform": "instagram",
+      "handle": "submittable",
+      "url": "https://instagram.com/submittable",
+      "display_name": "Submittable",
+      "avatar": "https://cdn.example.com/avatars/submittable-ig.jpg",
+      "source": "Submission and grant management software."
+    },
+    {
+      "platform": "linkedin",
+      "handle": "foundant-technologies",
+      "url": "https://linkedin.com/company/foundant-technologies",
+      "display_name": "Foundant Technologies",
+      "avatar": "https://cdn.example.com/avatars/foundant-li.jpg",
+      "source": "Grantmaker and scholarship management software."
     },
     {
       "platform": "facebook",
       "handle": "GrantStation",
       "url": "https://facebook.com/GrantStation",
       "display_name": "GrantStation",
-      "avatar": "https://cdn.example.com/avatars/grantstation.jpg"
-    },
-    {
-      "platform": "facebook",
-      "handle": "Submittable",
-      "url": "https://facebook.com/Submittable",
-      "display_name": "Submittable",
-      "avatar": "https://cdn.example.com/avatars/submittable.jpg"
-    },
-    {
-      "platform": "facebook",
-      "handle": "Optimy",
-      "url": "https://facebook.com/Optimy",
-      "display_name": "Optimy",
-      "avatar": "https://cdn.example.com/avatars/optimy.jpg"
+      "avatar": "https://cdn.example.com/avatars/grantstation.jpg",
+      "source": "Grant research membership for nonprofits."
     }
   ]
 }
