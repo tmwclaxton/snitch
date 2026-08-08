@@ -9,6 +9,7 @@ use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Services\Apify\PlatformAdapterManager;
 use App\Services\SnitchAnalyticsService;
+use App\Support\SafeExceptionMessage;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -150,12 +151,12 @@ class SyncTrackedAccountJob implements ShouldQueue
         } catch (Throwable $e) {
             $account->fill([
                 'last_sync_status' => 'failed',
-                'last_sync_error' => mb_substr($e->getMessage(), 0, 1000),
+                'last_sync_error' => SafeExceptionMessage::forUsers($e, 'Sync failed.'),
             ])->save();
 
             Log::warning('SyncTrackedAccountJob failed', [
                 'tracked_account_id' => $this->trackedAccountId,
-                'error' => $e->getMessage(),
+                'error' => SafeExceptionMessage::forUsers($e, 'Sync failed.'),
             ]);
 
             throw $e;
@@ -172,7 +173,7 @@ class SyncTrackedAccountJob implements ShouldQueue
 
         $account->fill([
             'last_sync_status' => 'failed',
-            'last_sync_error' => mb_substr($e?->getMessage() ?? 'Sync failed.', 0, 1000),
+            'last_sync_error' => SafeExceptionMessage::forUsers($e, 'Sync failed.'),
         ])->save();
     }
 

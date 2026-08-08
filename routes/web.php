@@ -26,7 +26,7 @@ Route::get('/analytics.json', [AnalyticsController::class, 'json'])->name('analy
 
 Route::get('/contact', [ContactController::class, 'create'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])
-    ->middleware('throttle:10,1')
+    ->middleware('throttle:contact')
     ->name('contact.store');
 
 Route::get('/sitemap.xml', function () {

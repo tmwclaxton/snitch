@@ -159,6 +159,38 @@ class SyncTrackedAccountJobTest extends TestCase
         $this->assertSame('Apify down', $account->last_sync_error);
     }
 
+    public function test_sync_failure_redacts_apify_token_from_user_visible_error(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Facebook,
+            'handle' => 'rivalbakery',
+        ]);
+
+        $clientFail = Mockery::mock(ApifyClient::class);
+        $clientFail->shouldReceive('runActor')->andThrow(new \RuntimeException(
+            'cURL error 28: timed out for https://api.apify.com/v2/acts/x/run-sync-get-dataset-items?token=SECRET_APIFY_TOKEN_VALUE',
+        ));
+        $this->app->instance(ApifyClient::class, $clientFail);
+
+        try {
+            (new SyncTrackedAccountJob($account->id, force: true))->handle(
+                app(PlatformAdapterManager::class),
+                app(SnitchAnalyticsService::class),
+            );
+            $this->fail('Expected sync to throw');
+        } catch (\RuntimeException) {
+            // expected
+        }
+
+        $account->refresh();
+        $this->assertSame('failed', $account->last_sync_status);
+        $this->assertStringContainsString('token=[redacted]', (string) $account->last_sync_error);
+        $this->assertStringNotContainsString('SECRET_APIFY_TOKEN_VALUE', (string) $account->last_sync_error);
+    }
+
     public function test_sync_skips_when_successfully_synced_within_min_interval(): void
     {
         Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
