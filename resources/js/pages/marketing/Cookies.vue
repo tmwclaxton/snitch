@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import LegalDocument from '@/components/marketing/LegalDocument.vue';
-import SeoHead from '@/components/marketing/SeoHead.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 
 defineOptions({
@@ -10,12 +9,6 @@ defineOptions({
 
 <template>
     <div>
-        <SeoHead
-            title="Cookies"
-            description="Cookie notice for Snitch session and preference cookies."
-            path="/cookies"
-        />
-
         <LegalDocument title="Cookie notice" updated="7 August 2026">
             <p>
                 This notice explains cookies used by Snitch.

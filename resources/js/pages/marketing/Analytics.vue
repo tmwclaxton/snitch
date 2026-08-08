@@ -13,7 +13,6 @@ import {
 import { computed, ref, watch } from 'vue';
 import AnalysisTermChip from '@/components/AnalysisTermChip.vue';
 import DailyMetricChart from '@/components/analytics/DailyMetricChart.vue';
-import SeoHead from '@/components/marketing/SeoHead.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { analysisDimensionIcon } from '@/lib/analysisTerms';
 import { platformIconSrc } from '@/lib/platforms';
@@ -211,12 +210,6 @@ function commitDaysInput(): void {
 
 <template>
     <div>
-        <SeoHead
-            title="Analytics"
-            description="Public aggregate view of posts synced, analyses completed, and winners scored across Snitch. No personal data."
-            path="/analytics"
-        />
-
         <div class="px-5 py-14 sm:px-8 sm:py-20">
             <div class="mx-auto max-w-5xl">
                 <header class="mb-8 max-w-3xl">

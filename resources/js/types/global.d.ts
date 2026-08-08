@@ -25,6 +25,20 @@ export type SubscriptionSummary = {
     can_upgrade: boolean;
 } | null;
 
+export type SeoProps = {
+    title: string;
+    description: string;
+    image: string;
+    canonical: string;
+    path: string;
+    robots: string;
+    locale: string;
+    site_name: string;
+    twitter_card: string;
+    json_ld: Record<string, unknown>[];
+    indexable: boolean;
+};
+
 declare module '@inertiajs/core' {
     export interface InertiaConfig {
         sharedPageProps: {
@@ -32,6 +46,7 @@ declare module '@inertiajs/core' {
             auth: Auth;
             subscription: SubscriptionSummary;
             sidebarOpen: boolean;
+            seo: SeoProps;
             [key: string]: unknown;
         };
     }

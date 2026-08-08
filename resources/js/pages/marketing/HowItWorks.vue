@@ -2,7 +2,6 @@
 import { Link } from '@inertiajs/vue3';
 import { ArrowRight, Sparkles, Trophy, Users } from '@lucide/vue';
 import type { Component } from 'vue';
-import SeoHead from '@/components/marketing/SeoHead.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { login } from '@/routes';
 
@@ -31,12 +30,6 @@ const steps: Array<{ title: string; body: string; icon: Component }> = [
 
 <template>
     <div>
-        <SeoHead
-            title="How it works"
-            description="Track competitors, analyze posts, and surface winners with Snitch."
-            path="/how-it-works"
-        />
-
         <div class="px-5 py-14 sm:px-8 sm:py-20">
             <div class="mx-auto max-w-6xl">
                 <h1

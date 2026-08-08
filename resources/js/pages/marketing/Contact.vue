@@ -2,7 +2,6 @@
 import { Form } from '@inertiajs/vue3';
 import { LoaderCircle, Send } from '@lucide/vue';
 import InputError from '@/components/InputError.vue';
-import SeoHead from '@/components/marketing/SeoHead.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { store } from '@/routes/contact';
 
@@ -13,12 +12,6 @@ defineOptions({
 
 <template>
     <div>
-        <SeoHead
-            title="Contact"
-            description="Get in touch with the Snitch team."
-            path="/contact"
-        />
-
         <div class="px-5 py-14 sm:px-8 sm:py-20">
             <div class="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1fr_1.1fr]">
                 <div>
