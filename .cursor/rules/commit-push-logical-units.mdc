@@ -1,0 +1,55 @@
+---
+description: Commit and push completed work in logical feature units as you go
+alwaysApply: true
+---
+
+# Commit and Push in Logical Units
+
+As you finish discrete pieces of work, **commit and push** them. Do not wait for an explicit "commit" or "push" request, and do not batch unrelated features into one mega-commit at the end of a long session.
+
+## When to commit and push
+
+After a logical unit is done and verified:
+
+- One feature, bugfix, or refactor that stands alone
+- Backend + matching tests for that change
+- Frontend page/component work that completes a coherent UI slice
+- A migration + model + related wiring for one schema change
+- A focused docs/rules update that is the whole task
+
+Ship that unit before starting the next unrelated slice.
+
+## What counts as one unit
+
+Good (one commit each):
+
+- "Add YouTube adapter and fixture tests"
+- "Add Explore page route and Inertia view"
+- "Record analysis-term catalogue rules"
+
+Bad (do not dump together):
+
+- Unrelated competitor UI + Firecrawl client + marketing CSS in one commit
+- Half-finished feature mixed with an unrelated fix
+
+If work spans multiple concerns, split into sequential commits (and pushes) per concern.
+
+## Workflow
+
+1. Finish the unit (implementation + tests for that unit).
+2. Follow `.cursor/rules/pre-push-checks.mdc` (lint/tests as required).
+3. Commit with a concise why-focused message (HEREDOC), authored per `.cursor/rules/git-commit-author.mdc`.
+4. Push to the project remote (`origin` / tmwclaxton) on the current branch.
+5. Continue to the next unit.
+
+## Exceptions (do not auto-commit/push)
+
+- User explicitly says not to commit or not to push
+- Secrets or credential files (`.env`, keys, tokens) - never commit these
+- Incomplete/broken mid-change where checks fail - fix first
+- Destructive git ops (force-push, reset, amend of others' commits) - still require explicit user approval
+- User is mid-review or asked to hold changes locally
+
+## Conflict with "only commit when asked"
+
+For this repo, **this rule wins**: proactive commit + push of finished logical units is expected unless an exception above applies.
