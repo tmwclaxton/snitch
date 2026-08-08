@@ -85,4 +85,22 @@ class VideoAnalysisResultTest extends TestCase
 
         $this->assertSame(4.0, $customFloor->hookWindowEndSeconds);
     }
+
+    public function test_from_model_payload_floors_empty_cta(): void
+    {
+        $result = VideoAnalysisResult::fromModelPayload([
+            'concept' => 'Proof-first before CTA',
+            'hook' => 'Cold open on receipt',
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+            'visual_summary' => 'Tight crop on numbers then cut to face.',
+            'idea' => 'Status proof via specific dollar amount',
+            'topics' => ['social proof'],
+            'cta' => '',
+            'how_to_copy' => 'Lead with a concrete number, then your brand offer.',
+            'sfx' => [],
+            'is_original_audio' => true,
+        ], 'qwen3.7-flash');
+
+        $this->assertSame('No explicit CTA', $result->cta);
+    }
 }

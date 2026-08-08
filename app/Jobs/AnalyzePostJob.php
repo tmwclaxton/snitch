@@ -74,6 +74,12 @@ class AnalyzePostJob implements ShouldQueue
                 'error' => $e->getMessage(),
             ]);
 
+            // Checklist / validation failures already persist Failed on the analysis row.
+            // Do not burn queue retries on the same model output.
+            if (str_starts_with($e->getMessage(), 'Analysis failed checklist:')) {
+                return;
+            }
+
             throw $e;
         }
     }
