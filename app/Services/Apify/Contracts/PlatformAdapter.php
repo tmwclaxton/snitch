@@ -3,6 +3,7 @@
 namespace App\Services\Apify\Contracts;
 
 use App\Enums\Platform;
+use Carbon\CarbonImmutable;
 
 interface PlatformAdapter
 {
@@ -32,5 +33,31 @@ interface PlatformAdapter
      *     raw_payload: array<string, mixed>
      * }>
      */
-    public function listRecentPosts(string $handleOrUrl, int $limit = 12): array;
+    public function listRecentPosts(string $handleOrUrl, int $limit = 12, ?CarbonImmutable $since = null): array;
+
+    /**
+     * Fill downloadable media_url for posts that only have a watch URL (TikTok two-phase).
+     *
+     * @param  list<array{
+     *     external_id: string|null,
+     *     url: string,
+     *     posted_at: string|null,
+     *     type: string,
+     *     caption: string|null,
+     *     media_url: string|null,
+     *     metrics: array<string, mixed>,
+     *     raw_payload: array<string, mixed>
+     * }>  $posts
+     * @return list<array{
+     *     external_id: string|null,
+     *     url: string,
+     *     posted_at: string|null,
+     *     type: string,
+     *     caption: string|null,
+     *     media_url: string|null,
+     *     metrics: array<string, mixed>,
+     *     raw_payload: array<string, mixed>
+     * }>
+     */
+    public function hydrateMediaUrls(array $posts): array;
 }

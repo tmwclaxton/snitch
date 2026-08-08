@@ -4,6 +4,7 @@ namespace App\Services\Apify\Adapters;
 
 use App\Enums\Platform;
 use App\Enums\PostType;
+use Carbon\CarbonImmutable;
 
 class InstagramAdapter extends AbstractPlatformAdapter
 {
@@ -17,16 +18,14 @@ class InstagramAdapter extends AbstractPlatformAdapter
         return (string) config('snitch.apify.actors.instagram');
     }
 
-    protected function actorInput(string $handle, int $limit): array
+    protected function actorInput(string $handle, int $limit, ?CarbonImmutable $since = null): array
     {
-        $recencyDays = max(1, (int) config('snitch.sync.recency_days', 30));
-
         return [
             'directUrls' => [$this->profileUrl($handle)],
             'resultsType' => 'posts',
             // Profiles often lead with carousels; ask Apify for enough raw posts to fill reel quota after filtering.
             'resultsLimit' => max($limit, 12),
-            'onlyPostsNewerThan' => "{$recencyDays} days",
+            'onlyPostsNewerThan' => $this->dateFilterValue($since),
         ];
     }
 

@@ -19,7 +19,7 @@ abstract class AbstractPlatformAdapter implements PlatformAdapter
     /**
      * @return array<string, mixed>
      */
-    abstract protected function actorInput(string $handle, int $limit): array;
+    abstract protected function actorInput(string $handle, int $limit, ?CarbonImmutable $since = null): array;
 
     /**
      * @param  array<string, mixed>  $item
@@ -104,13 +104,11 @@ abstract class AbstractPlatformAdapter implements PlatformAdapter
         ];
     }
 
-    public function listRecentPosts(string $handleOrUrl, int $limit = 12): array
+    public function listRecentPosts(string $handleOrUrl, int $limit = 12, ?CarbonImmutable $since = null): array
     {
         $handle = $this->normalizeHandle($handleOrUrl);
-        // Over-fetch: reel-only mapping skips images/carousels, so the actor must return
-        // enough raw items to fill the requested short-video limit.
-        $fetchLimit = max($limit * 3, $limit);
-        $items = $this->client->runActor($this->actorId(), $this->actorInput($handle, $fetchLimit));
+        $fetchLimit = $this->fetchLimit($limit);
+        $items = $this->client->runActor($this->actorId(), $this->actorInput($handle, $fetchLimit, $since));
         $posts = [];
 
         foreach ($items as $item) {
@@ -128,6 +126,58 @@ abstract class AbstractPlatformAdapter implements PlatformAdapter
         }
 
         return $posts;
+    }
+
+    /**
+     * @param  list<array{
+     *     external_id: string|null,
+     *     url: string,
+     *     posted_at: string|null,
+     *     type: string,
+     *     caption: string|null,
+     *     media_url: string|null,
+     *     metrics: array<string, mixed>,
+     *     raw_payload: array<string, mixed>
+     * }>  $posts
+     * @return list<array{
+     *     external_id: string|null,
+     *     url: string,
+     *     posted_at: string|null,
+     *     type: string,
+     *     caption: string|null,
+     *     media_url: string|null,
+     *     metrics: array<string, mixed>,
+     *     raw_payload: array<string, mixed>
+     * }>
+     */
+    public function hydrateMediaUrls(array $posts): array
+    {
+        return $posts;
+    }
+
+    protected function fetchLimit(int $limit): int
+    {
+        $platform = $this->platform()->value;
+        $multiplier = (float) config("snitch.sync.fetch_multipliers.{$platform}", 2.0);
+
+        return max($limit, (int) ceil($limit * max(1.0, $multiplier)));
+    }
+
+    /**
+     * Actor date filters: relative "N days" for full window, ISO date for incremental since.
+     */
+    protected function dateFilterValue(?CarbonImmutable $since): string
+    {
+        $recencyDays = max(1, (int) config('snitch.sync.recency_days', 30));
+
+        if ($since === null) {
+            return "{$recencyDays} days";
+        }
+
+        $floor = CarbonImmutable::now()->subDays($recencyDays);
+        $effective = $since->greaterThan($floor) ? $since : $floor;
+
+        return $effective->toDateString();
     }
 
     /**

@@ -264,4 +264,182 @@ class SyncTrackedAccountJobTest extends TestCase
         $account->refresh();
         $this->assertSame('success', $account->last_sync_status);
     }
+
+    public function test_sync_skips_resolve_when_profile_fields_present(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Facebook,
+            'handle' => 'rivalbakery',
+            'external_id' => 'page_1',
+            'url' => 'https://facebook.com/rivalbakery',
+            'display_name' => 'Rival Bakery',
+            'last_synced_at' => null,
+            'last_sync_status' => null,
+        ]);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('runActor')->once()->andReturn([
+            [
+                'pageName' => 'Rival Bakery',
+                'pageId' => 'page_1',
+                'postId' => 'only_list',
+                'url' => 'https://facebook.com/rivalbakery/videos/22',
+                'text' => 'List only',
+                'time' => now()->subDay()->toIso8601String(),
+                'type' => 'video',
+                'videoUrl' => 'https://cdn.example.com/list-only.mp4',
+                'likes' => 4,
+            ],
+        ]);
+        $this->app->instance(ApifyClient::class, $client);
+
+        config([
+            'snitch.sync.recency_days' => 30,
+            'snitch.sync.posts_limit' => 12,
+        ]);
+
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class));
+
+        $this->assertSame(1, Post::query()->count());
+        $this->assertSame('page_1', $account->fresh()?->external_id);
+    }
+
+    public function test_sync_does_not_update_metrics_for_known_posts(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Facebook,
+            'handle' => 'rivalbakery',
+            'external_id' => 'page_1',
+            'url' => 'https://facebook.com/rivalbakery',
+            'display_name' => 'Rival Bakery',
+        ]);
+
+        $existing = Post::factory()->forAccount($account)->create([
+            'external_id' => 'known_reel',
+            'type' => PostType::Video,
+            'media_url' => 'https://cdn.example.com/known.mp4',
+            'posted_at' => now()->subDays(1),
+            'metrics' => ['views' => 10, 'likes' => 1, 'comments' => 0, 'shares' => 0],
+        ]);
+        PostAnalysis::factory()->for($existing)->create([
+            'status' => AnalysisStatus::Completed,
+        ]);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('runActor')->once()->andReturn([
+            [
+                'pageName' => 'Rival Bakery',
+                'pageId' => 'page_1',
+                'postId' => 'known_reel',
+                'url' => 'https://facebook.com/rivalbakery/videos/1',
+                'text' => 'Updated caption',
+                'time' => now()->subDays(1)->toIso8601String(),
+                'type' => 'video',
+                'videoUrl' => 'https://cdn.example.com/known.mp4',
+                'likes' => 999,
+                'viewsCount' => 5000,
+            ],
+        ]);
+        $this->app->instance(ApifyClient::class, $client);
+
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class));
+
+        $existing->refresh();
+        $this->assertSame(1, $existing->metrics['likes'] ?? null);
+        $this->assertSame(10, $existing->metrics['views'] ?? null);
+        $this->assertSame(1, Post::query()->count());
+        Queue::assertNotPushed(AnalyzePostJob::class);
+    }
+
+    public function test_tiktok_sync_hydrates_media_only_for_new_posts(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::TikTok,
+            'handle' => 'rivalbakery',
+            'external_id' => 'tt_user_1',
+            'url' => 'https://tiktok.com/@rivalbakery',
+            'display_name' => 'Rival Bakery',
+        ]);
+
+        Post::factory()->forAccount($account)->create([
+            'external_id' => 'known_tt',
+            'type' => PostType::Reel,
+            'url' => 'https://www.tiktok.com/@rivalbakery/video/111',
+            'media_url' => 'https://cdn.tiktokcdn.com/known.mp4',
+            'posted_at' => now()->subDays(2),
+        ]);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('runActor')
+            ->once()
+            ->withArgs(function (string $actorId, array $input): bool {
+                return $actorId === 'clockworks/tiktok-scraper'
+                    && ($input['shouldDownloadVideos'] ?? null) === false
+                    && isset($input['profiles']);
+            })
+            ->andReturn([
+                [
+                    'id' => 'known_tt',
+                    'webVideoUrl' => 'https://www.tiktok.com/@rivalbakery/video/111',
+                    'text' => 'Known',
+                    'createTime' => now()->subDays(2)->timestamp,
+                    'playCount' => 1,
+                    'diggCount' => 1,
+                    'commentCount' => 0,
+                    'shareCount' => 0,
+                ],
+                [
+                    'id' => 'new_tt',
+                    'webVideoUrl' => 'https://www.tiktok.com/@rivalbakery/video/222',
+                    'text' => 'New',
+                    'createTime' => now()->subDay()->timestamp,
+                    'playCount' => 5,
+                    'diggCount' => 2,
+                    'commentCount' => 0,
+                    'shareCount' => 0,
+                ],
+            ]);
+        $client->shouldReceive('runActor')
+            ->once()
+            ->withArgs(function (string $actorId, array $input): bool {
+                return $actorId === 'clockworks/tiktok-scraper'
+                    && ($input['shouldDownloadVideos'] ?? null) === true
+                    && ($input['postURLs'] ?? null) === ['https://www.tiktok.com/@rivalbakery/video/222'];
+            })
+            ->andReturn([[
+                'id' => 'new_tt',
+                'webVideoUrl' => 'https://www.tiktok.com/@rivalbakery/video/222',
+                'videoUrl' => 'https://cdn.tiktokcdn.com/new.mp4',
+                'text' => 'New',
+                'createTime' => now()->subDay()->timestamp,
+                'playCount' => 5,
+                'diggCount' => 2,
+                'commentCount' => 0,
+                'shareCount' => 0,
+            ]]);
+        $this->app->instance(ApifyClient::class, $client);
+
+        config([
+            'snitch.apify.actors.tiktok' => 'clockworks/tiktok-scraper',
+            'snitch.sync.recency_days' => 30,
+            'snitch.sync.posts_limit' => 12,
+        ]);
+
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class));
+
+        $this->assertSame(2, Post::query()->count());
+        $new = Post::query()->where('external_id', 'new_tt')->first();
+        $this->assertNotNull($new);
+        $this->assertSame('https://cdn.tiktokcdn.com/new.mp4', $new->media_url);
+        Queue::assertPushed(AnalyzePostJob::class, fn (AnalyzePostJob $job) => $job->postId === $new->id);
+    }
 }

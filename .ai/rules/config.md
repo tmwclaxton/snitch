@@ -10,3 +10,6 @@ Import and analyze only posts within snitch.sync.recency_days (default 30) with 
 
 ## Tracked accounts auto-sync about once a week
 snitch.sync.min_interval_days (default 7, SNITCH_SYNC_MIN_INTERVAL_DAYS) gates scheduled snitch:sync-accounts. Failed syncs and never-synced accounts stay eligible for the schedule. Manual UI sync always force-runs; the UI countdown shows the next auto sync only. Live probes may force. Do not schedule aggressive daily Apify pulls.
+
+## Per-platform Apify over-fetch multipliers
+snitch.sync.fetch_multipliers (instagram 2.5, facebook 2, linkedin 2, tiktok 1.25, youtube 1) sizes raw actor results so reel-only mapping can still fill posts_limit. Prefer these over a blanket 3x.

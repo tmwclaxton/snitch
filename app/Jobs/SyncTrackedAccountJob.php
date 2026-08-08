@@ -50,29 +50,37 @@ class SyncTrackedAccountJob implements ShouldQueue
 
         try {
             $adapter = $adapters->for($account->platform);
-            $profile = $adapter->resolveProfile($account->handle);
 
-            $account->fill([
-                'url' => $profile['url'] ?: $account->url,
-                'external_id' => $profile['external_id'] ?? $account->external_id,
-                'avatar' => $profile['avatar'] ?? $account->avatar,
-                'display_name' => $profile['display_name'] ?? $account->display_name,
-                'last_synced_at' => now(),
-                'last_sync_status' => 'success',
-                'last_sync_error' => null,
-            ])->save();
+            if ($this->shouldResolveProfile($account)) {
+                $profile = $adapter->resolveProfile($account->handle);
 
-            $posts = $adapter->listRecentPosts($account->handle, $limit);
+                $account->fill([
+                    'url' => $profile['url'] ?: $account->url,
+                    'external_id' => $profile['external_id'] ?? $account->external_id,
+                    'avatar' => $profile['avatar'] ?? $account->avatar,
+                    'display_name' => $profile['display_name'] ?? $account->display_name,
+                ]);
+            }
+
+            $since = $this->syncSince($account, $recencyDays);
+            $posts = $adapter->listRecentPosts($account->handle, $limit, $since);
+
+            $existingPosts = Post::query()
+                ->with('analysis')
+                ->where('tracked_account_id', $account->id)
+                ->get()
+                ->keyBy('external_id');
+
+            /** @var list<array<string, mixed>> $newPayloads */
+            $newPayloads = [];
 
             foreach ($posts as $payload) {
-                if (blank($payload['url'])) {
+                if (blank($payload['url'] ?? null)) {
                     continue;
                 }
 
                 $type = (string) ($payload['type'] ?? '');
-                $mediaUrl = $payload['media_url'] ?? null;
-
-                if (! in_array($type, PostType::analyzableValues(), true) || blank($mediaUrl)) {
+                if (! in_array($type, PostType::analyzableValues(), true)) {
                     continue;
                 }
 
@@ -84,31 +92,56 @@ class SyncTrackedAccountJob implements ShouldQueue
                     continue;
                 }
 
-                $externalId = $payload['external_id'] ?? md5($payload['url']);
+                $externalId = (string) ($payload['external_id'] ?? md5((string) $payload['url']));
 
-                $post = Post::query()->updateOrCreate(
-                    [
-                        'tracked_account_id' => $account->id,
-                        'external_id' => $externalId,
-                    ],
-                    [
-                        'user_id' => $account->user_id,
-                        'platform' => $account->platform,
-                        'type' => $type,
-                        'url' => $payload['url'],
-                        'posted_at' => $postedAt?->toDateTimeString(),
-                        'caption' => $payload['caption'] ?? null,
-                        'media_url' => $mediaUrl,
-                        'media_availability' => MediaAvailability::Available,
-                        'unavailable_at' => null,
-                        'unavailable_reason' => null,
-                        'metrics' => $payload['metrics'] ?? [],
-                        'raw_payload' => $payload['raw_payload'] ?? [],
-                    ],
-                );
+                if ($existingPosts->has($externalId)) {
+                    $this->dispatchAnalysisIfNeeded($existingPosts->get($externalId));
+
+                    continue;
+                }
+
+                $payload['external_id'] = $externalId;
+                $newPayloads[] = $payload;
+            }
+
+            $newPayloads = $adapter->hydrateMediaUrls($newPayloads);
+
+            foreach ($newPayloads as $payload) {
+                $mediaUrl = $payload['media_url'] ?? null;
+
+                if (blank($mediaUrl)) {
+                    continue;
+                }
+
+                $postedAt = isset($payload['posted_at'])
+                    ? CarbonImmutable::parse((string) $payload['posted_at'])
+                    : null;
+
+                $post = Post::query()->create([
+                    'tracked_account_id' => $account->id,
+                    'external_id' => (string) $payload['external_id'],
+                    'user_id' => $account->user_id,
+                    'platform' => $account->platform,
+                    'type' => (string) $payload['type'],
+                    'url' => (string) $payload['url'],
+                    'posted_at' => $postedAt?->toDateTimeString(),
+                    'caption' => $payload['caption'] ?? null,
+                    'media_url' => $mediaUrl,
+                    'media_availability' => MediaAvailability::Available,
+                    'unavailable_at' => null,
+                    'unavailable_reason' => null,
+                    'metrics' => $payload['metrics'] ?? [],
+                    'raw_payload' => $payload['raw_payload'] ?? [],
+                ]);
 
                 $this->dispatchAnalysisIfNeeded($post->fresh('analysis'));
             }
+
+            $account->fill([
+                'last_synced_at' => now(),
+                'last_sync_status' => 'success',
+                'last_sync_error' => null,
+            ])->save();
 
             ScoreWinnersJob::queueFor($account->user_id);
         } catch (Throwable $e) {
@@ -138,6 +171,30 @@ class SyncTrackedAccountJob implements ShouldQueue
             'last_sync_status' => 'failed',
             'last_sync_error' => mb_substr($e?->getMessage() ?? 'Sync failed.', 0, 1000),
         ])->save();
+    }
+
+    private function shouldResolveProfile(TrackedAccount $account): bool
+    {
+        if ($this->force) {
+            return true;
+        }
+
+        return blank($account->external_id)
+            || blank($account->url)
+            || blank($account->display_name);
+    }
+
+    private function syncSince(TrackedAccount $account, int $recencyDays): CarbonImmutable
+    {
+        $floor = CarbonImmutable::now()->subDays($recencyDays);
+
+        if ($account->last_synced_at === null) {
+            return $floor;
+        }
+
+        $withBuffer = CarbonImmutable::parse($account->last_synced_at->toIso8601String())->subDay();
+
+        return $withBuffer->greaterThan($floor) ? $withBuffer : $floor;
     }
 
     private function dispatchAnalysisIfNeeded(Post $post): void

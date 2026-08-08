@@ -49,6 +49,15 @@ return [
         'recency_days' => (int) env('SNITCH_SYNC_RECENCY_DAYS', 30),
         'posts_limit' => (int) env('SNITCH_SYNC_POSTS_LIMIT', 12),
         'min_interval_days' => (int) env('SNITCH_SYNC_MIN_INTERVAL_DAYS', 7),
+        // Over-fetch raw actor items so reel-only mapping can still fill posts_limit.
+        // TikTok is mostly video already; Instagram needs more headroom for carousels.
+        'fetch_multipliers' => [
+            'instagram' => 2.5,
+            'facebook' => 2.0,
+            'linkedin' => 2.0,
+            'tiktok' => 1.25,
+            'youtube' => 1.0,
+        ],
     ],
 
     'video_analysis' => [

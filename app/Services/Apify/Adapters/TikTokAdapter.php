@@ -4,6 +4,7 @@ namespace App\Services\Apify\Adapters;
 
 use App\Enums\Platform;
 use App\Enums\PostType;
+use Carbon\CarbonImmutable;
 
 class TikTokAdapter extends AbstractPlatformAdapter
 {
@@ -17,16 +18,14 @@ class TikTokAdapter extends AbstractPlatformAdapter
         return (string) config('snitch.apify.actors.tiktok');
     }
 
-    protected function actorInput(string $handle, int $limit): array
+    protected function actorInput(string $handle, int $limit, ?CarbonImmutable $since = null): array
     {
-        $recencyDays = max(1, (int) config('snitch.sync.recency_days', 30));
-
         return [
             'profiles' => [$handle],
             'resultsPerPage' => $limit,
-            'oldestPostDateUnified' => "{$recencyDays} days",
-            // Required for analyzable media_url; without this the actor omits video files.
-            'shouldDownloadVideos' => true,
+            'oldestPostDateUnified' => $this->dateFilterValue($since),
+            // Metadata-first: paid video download happens in hydrateMediaUrls for new posts only.
+            'shouldDownloadVideos' => false,
         ];
     }
 
@@ -68,10 +67,6 @@ class TikTokAdapter extends AbstractPlatformAdapter
             $item['videoMeta']['downloadAddr'] ?? null,
         );
 
-        if ($mediaUrl === null) {
-            return null;
-        }
-
         $music = is_array($item['musicMeta'] ?? null) ? $item['musicMeta'] : (is_array($item['music'] ?? null) ? $item['music'] : null);
 
         return [
@@ -80,6 +75,7 @@ class TikTokAdapter extends AbstractPlatformAdapter
             'posted_at' => $this->normalizeDate($item['createTime'] ?? $item['createTimeISO'] ?? null),
             'type' => PostType::Reel->value,
             'caption' => isset($item['text']) ? (string) $item['text'] : (isset($item['desc']) ? (string) $item['desc'] : null),
+            // Null until hydrateMediaUrls downloads the file (metadata-only list).
             'media_url' => $mediaUrl,
             'metrics' => $this->metrics(
                 $item['playCount'] ?? $item['videoMeta']['playCount'] ?? 0,
@@ -89,5 +85,111 @@ class TikTokAdapter extends AbstractPlatformAdapter
             ),
             'raw_payload' => array_merge($item, is_array($music) ? ['normalized_music' => $music] : []),
         ];
+    }
+
+    /**
+     * @param  list<array{
+     *     external_id: string|null,
+     *     url: string,
+     *     posted_at: string|null,
+     *     type: string,
+     *     caption: string|null,
+     *     media_url: string|null,
+     *     metrics: array<string, mixed>,
+     *     raw_payload: array<string, mixed>
+     * }>  $posts
+     * @return list<array{
+     *     external_id: string|null,
+     *     url: string,
+     *     posted_at: string|null,
+     *     type: string,
+     *     caption: string|null,
+     *     media_url: string|null,
+     *     metrics: array<string, mixed>,
+     *     raw_payload: array<string, mixed>
+     * }>
+     */
+    public function hydrateMediaUrls(array $posts): array
+    {
+        if ($posts === []) {
+            return [];
+        }
+
+        $needsDownload = [];
+
+        foreach ($posts as $index => $post) {
+            if (blank($post['media_url'] ?? null) && filled($post['url'] ?? null)) {
+                $needsDownload[$index] = $post;
+            }
+        }
+
+        if ($needsDownload === []) {
+            return array_values(array_filter(
+                $posts,
+                static fn (array $post): bool => filled($post['media_url'] ?? null),
+            ));
+        }
+
+        $postUrls = array_values(array_unique(array_map(
+            static fn (array $post): string => (string) $post['url'],
+            $needsDownload,
+        )));
+
+        $items = $this->client->runActor($this->actorId(), [
+            'postURLs' => $postUrls,
+            'resultsPerPage' => max(1, count($postUrls)),
+            'shouldDownloadVideos' => true,
+        ]);
+
+        $mediaByUrl = [];
+        $mediaByExternalId = [];
+
+        foreach ($items as $item) {
+            $mapped = $this->mapPost($item, 'hydrate');
+
+            if ($mapped === null || blank($mapped['media_url'])) {
+                continue;
+            }
+
+            $watchUrl = (string) ($mapped['url'] ?? '');
+            if ($watchUrl !== '') {
+                $mediaByUrl[$this->normalizeWatchUrl($watchUrl)] = $mapped['media_url'];
+            }
+
+            if (filled($mapped['external_id'])) {
+                $mediaByExternalId[(string) $mapped['external_id']] = $mapped['media_url'];
+            }
+        }
+
+        $hydrated = [];
+
+        foreach ($posts as $post) {
+            if (filled($post['media_url'] ?? null)) {
+                $hydrated[] = $post;
+
+                continue;
+            }
+
+            $externalId = isset($post['external_id']) ? (string) $post['external_id'] : '';
+            $watchKey = $this->normalizeWatchUrl((string) ($post['url'] ?? ''));
+            $mediaUrl = $mediaByExternalId[$externalId] ?? $mediaByUrl[$watchKey] ?? null;
+
+            if (blank($mediaUrl)) {
+                continue;
+            }
+
+            $post['media_url'] = $mediaUrl;
+            $hydrated[] = $post;
+        }
+
+        return $hydrated;
+    }
+
+    private function normalizeWatchUrl(string $url): string
+    {
+        $url = strtolower(trim($url));
+        $url = strtok($url, '?') ?: $url;
+
+        return rtrim($url, '/');
     }
 }

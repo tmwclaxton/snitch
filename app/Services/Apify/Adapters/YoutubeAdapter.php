@@ -4,6 +4,7 @@ namespace App\Services\Apify\Adapters;
 
 use App\Enums\Platform;
 use App\Enums\PostType;
+use Carbon\CarbonImmutable;
 
 class YoutubeAdapter extends AbstractPlatformAdapter
 {
@@ -17,10 +18,8 @@ class YoutubeAdapter extends AbstractPlatformAdapter
         return (string) config('snitch.apify.actors.youtube');
     }
 
-    protected function actorInput(string $handle, int $limit): array
+    protected function actorInput(string $handle, int $limit, ?CarbonImmutable $since = null): array
     {
-        $recencyDays = max(1, (int) config('snitch.sync.recency_days', 30));
-
         return [
             // Channel Shorts tab is required; plain channel URL often returns about-only.
             'startUrls' => [['url' => $this->profileUrl($handle).'/shorts']],
@@ -28,7 +27,7 @@ class YoutubeAdapter extends AbstractPlatformAdapter
             'maxResults' => 0,
             'maxResultsShorts' => $limit,
             'maxResultStreams' => 0,
-            'oldestPostDate' => "{$recencyDays} days",
+            'oldestPostDate' => $this->dateFilterValue($since),
             'sortVideosBy' => 'NEWEST',
         ];
     }

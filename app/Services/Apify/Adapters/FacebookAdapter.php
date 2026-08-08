@@ -4,6 +4,7 @@ namespace App\Services\Apify\Adapters;
 
 use App\Enums\Platform;
 use App\Enums\PostType;
+use Carbon\CarbonImmutable;
 
 class FacebookAdapter extends AbstractPlatformAdapter
 {
@@ -17,7 +18,7 @@ class FacebookAdapter extends AbstractPlatformAdapter
         return (string) config('snitch.apify.actors.facebook');
     }
 
-    protected function actorInput(string $handle, int $limit): array
+    protected function actorInput(string $handle, int $limit, ?CarbonImmutable $since = null): array
     {
         return [
             'startUrls' => [['url' => $this->profileUrl($handle)]],

@@ -4,6 +4,7 @@ namespace App\Services\Apify\Adapters;
 
 use App\Enums\Platform;
 use App\Enums\PostType;
+use Carbon\CarbonImmutable;
 
 class LinkedInAdapter extends AbstractPlatformAdapter
 {
@@ -42,7 +43,7 @@ class LinkedInAdapter extends AbstractPlatformAdapter
         return $this->profileFromActorItems($items, $job['handle']);
     }
 
-    protected function actorInput(string $handle, int $limit): array
+    protected function actorInput(string $handle, int $limit, ?CarbonImmutable $since = null): array
     {
         // Sync / listRecentPosts defaults to company pages (brand competitors).
         return $this->actorInputForKind('company', $handle, $limit);

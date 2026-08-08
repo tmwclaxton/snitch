@@ -9,6 +9,7 @@ use App\Services\Apify\Adapters\LinkedInAdapter;
 use App\Services\Apify\Adapters\TikTokAdapter;
 use App\Services\Apify\Adapters\YoutubeAdapter;
 use App\Services\Apify\ApifyClient;
+use Carbon\CarbonImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -222,5 +223,143 @@ class PlatformAdapterTest extends TestCase
         $this->assertSame('rivalbakery', $profile['handle']);
         $this->assertSame('UCrival1', $profile['external_id']);
         $this->assertSame('Rival Bakery', $profile['display_name']);
+    }
+
+    public function test_tiktok_list_input_disables_video_download(): void
+    {
+        $client = $this->createMock(ApifyClient::class);
+        $client->expects($this->once())
+            ->method('runActor')
+            ->with(
+                'clockworks/tiktok-scraper',
+                $this->callback(function (array $input): bool {
+                    return ($input['shouldDownloadVideos'] ?? null) === false
+                        && ($input['profiles'][0] ?? null) === 'rivalbakery'
+                        && isset($input['oldestPostDateUnified']);
+                }),
+            )
+            ->willReturn([]);
+
+        config(['snitch.apify.actors.tiktok' => 'clockworks/tiktok-scraper']);
+
+        (new TikTokAdapter($client))->listRecentPosts('rivalbakery', 12);
+    }
+
+    public function test_tiktok_maps_metadata_without_media_url(): void
+    {
+        $adapter = new TikTokAdapter($this->createMock(ApifyClient::class));
+
+        $posts = $adapter->mapFixturePosts([
+            [
+                'id' => 'tt_meta_1',
+                'webVideoUrl' => 'https://www.tiktok.com/@rivalbakery/video/123',
+                'text' => 'No download yet',
+                'createTime' => now()->subDay()->timestamp,
+                'playCount' => 10,
+                'diggCount' => 2,
+                'commentCount' => 0,
+                'shareCount' => 0,
+            ],
+        ], 'rivalbakery');
+
+        $this->assertCount(1, $posts);
+        $this->assertSame('tt_meta_1', $posts[0]['external_id']);
+        $this->assertNull($posts[0]['media_url']);
+        $this->assertSame(PostType::Reel->value, $posts[0]['type']);
+    }
+
+    public function test_tiktok_hydrate_media_urls_downloads_via_post_urls(): void
+    {
+        $client = $this->createMock(ApifyClient::class);
+        $client->expects($this->once())
+            ->method('runActor')
+            ->with(
+                'clockworks/tiktok-scraper',
+                $this->callback(function (array $input): bool {
+                    return ($input['shouldDownloadVideos'] ?? null) === true
+                        && ($input['postURLs'] ?? null) === ['https://www.tiktok.com/@rivalbakery/video/123']
+                        && ($input['resultsPerPage'] ?? null) === 1;
+                }),
+            )
+            ->willReturn([[
+                'id' => 'tt_meta_1',
+                'webVideoUrl' => 'https://www.tiktok.com/@rivalbakery/video/123',
+                'videoUrl' => 'https://cdn.tiktokcdn.com/video123.mp4',
+                'text' => 'Downloaded',
+                'createTime' => now()->subDay()->timestamp,
+                'playCount' => 10,
+                'diggCount' => 2,
+                'commentCount' => 0,
+                'shareCount' => 0,
+            ]]);
+
+        config(['snitch.apify.actors.tiktok' => 'clockworks/tiktok-scraper']);
+
+        $hydrated = (new TikTokAdapter($client))->hydrateMediaUrls([
+            [
+                'external_id' => 'tt_meta_1',
+                'url' => 'https://www.tiktok.com/@rivalbakery/video/123',
+                'posted_at' => now()->subDay()->toIso8601String(),
+                'type' => PostType::Reel->value,
+                'caption' => 'No download yet',
+                'media_url' => null,
+                'metrics' => ['views' => 10, 'likes' => 2, 'comments' => 0, 'shares' => 0],
+                'raw_payload' => [],
+            ],
+        ]);
+
+        $this->assertCount(1, $hydrated);
+        $this->assertSame('https://cdn.tiktokcdn.com/video123.mp4', $hydrated[0]['media_url']);
+    }
+
+    public function test_instagram_list_input_uses_since_date_and_multiplier(): void
+    {
+        $client = $this->createMock(ApifyClient::class);
+        $since = CarbonImmutable::parse('2026-08-01');
+
+        $client->expects($this->once())
+            ->method('runActor')
+            ->with(
+                'apify/instagram-scraper',
+                $this->callback(function (array $input) use ($since): bool {
+                    return ($input['onlyPostsNewerThan'] ?? null) === $since->toDateString()
+                        && ($input['resultsLimit'] ?? 0) >= 30;
+                }),
+            )
+            ->willReturn([]);
+
+        config([
+            'snitch.apify.actors.instagram' => 'apify/instagram-scraper',
+            'snitch.sync.fetch_multipliers.instagram' => 2.5,
+            'snitch.sync.posts_limit' => 12,
+            'snitch.sync.recency_days' => 30,
+        ]);
+
+        (new InstagramAdapter($client))->listRecentPosts('rivalbakery', 12, $since);
+    }
+
+    public function test_youtube_list_input_uses_since_date(): void
+    {
+        $client = $this->createMock(ApifyClient::class);
+        $since = CarbonImmutable::parse('2026-08-02');
+
+        $client->expects($this->once())
+            ->method('runActor')
+            ->with(
+                'streamers/youtube-scraper',
+                $this->callback(function (array $input) use ($since): bool {
+                    return ($input['oldestPostDate'] ?? null) === $since->toDateString()
+                        && ($input['maxResultsShorts'] ?? null) === 12;
+                }),
+            )
+            ->willReturn([]);
+
+        config([
+            'snitch.apify.actors.youtube' => 'streamers/youtube-scraper',
+            'snitch.sync.fetch_multipliers.youtube' => 1.0,
+            'snitch.sync.recency_days' => 30,
+        ]);
+
+        (new YoutubeAdapter($client))->listRecentPosts('rivalbakery', 12, $since);
     }
 }
