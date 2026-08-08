@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { ArrowLeft, ExternalLink } from '@lucide/vue';
 import { computed } from 'vue';
 import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feedIndex } from '@/actions/App/Http/Controllers/FeedController';
@@ -9,7 +10,7 @@ import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { metricPairs } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
-import { platformLabel } from '@/lib/platforms';
+import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import { postPrimaryTitle, postTypeLabel } from '@/lib/posts';
 
 type Analysis = {
@@ -148,7 +149,8 @@ const showDisplayName = computed(() => {
                     :href="feedIndex.url()"
                     class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
                 >
-                    Back to feed
+                    <ArrowLeft class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                    <span class="relative z-10">Back to feed</span>
                 </Link>
                 <a
                     v-if="post.url"
@@ -157,12 +159,20 @@ const showDisplayName = computed(() => {
                     rel="noopener noreferrer"
                     class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
                 >
-                    Open on {{ platformLabel(post.platform) }}
+                    <ExternalLink class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                    <span class="relative z-10">Open on {{ platformLabel(post.platform) }}</span>
                 </a>
             </div>
 
             <header class="mt-5 border-b border-snitch-ink/10 pb-5">
-                <p class="snitch-ink-label">
+                <p class="snitch-ink-label inline-flex flex-wrap items-center gap-1.5">
+                    <img
+                        :src="platformIconSrc(post.platform)"
+                        alt=""
+                        class="snitch-platform-logo size-3.5 shrink-0"
+                        width="14"
+                        height="14"
+                    >
                     {{ platformLabel(post.platform) }} · {{ postTypeLabel(post.type) }}
                     <span v-if="postedLabel"> · {{ postedLabel }}</span>
                 </p>

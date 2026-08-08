@@ -6,7 +6,7 @@ import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import { metricPairs } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
-import { platformLabel } from '@/lib/platforms';
+import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import { glanceTags, postPrimaryTitle, postTypeLabel } from '@/lib/posts';
 
 type AnalysisGlance = {
@@ -149,7 +149,14 @@ const winnerScore = computed(() => {
                 :href="feedShow.url(post.id)"
                 class="snitch-contact-cell-meta-link block space-y-1"
             >
-                <span class="snitch-ink-label">
+                <span class="snitch-ink-label inline-flex items-center gap-1.5">
+                    <img
+                        :src="platformIconSrc(post.platform)"
+                        alt=""
+                        class="snitch-platform-logo size-3.5 shrink-0"
+                        width="14"
+                        height="14"
+                    >
                     {{ platformLabel(post.platform) }} · {{ postTypeLabel(post.type) }}
                 </span>
                 <p class="snitch-annotation snitch-glance-title line-clamp-2">

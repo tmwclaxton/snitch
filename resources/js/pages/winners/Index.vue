@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { LoaderCircle, RefreshCw, SlidersHorizontal, Trophy } from '@lucide/vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import {
@@ -220,7 +221,8 @@ onUnmounted(() => {
                         :disabled="isRescoring"
                         @click="rulesOpen = true"
                     >
-                        Rules
+                        <SlidersHorizontal class="relative z-10 size-4 shrink-0" aria-hidden="true" />
+                        <span class="relative z-10">Rules</span>
                     </button>
                     <button
                         type="button"
@@ -228,7 +230,17 @@ onUnmounted(() => {
                         :disabled="isRescoring"
                         @click="requestRescore"
                     >
-                        <span class="relative z-10">
+                        <span class="relative z-10 inline-flex items-center gap-2">
+                            <LoaderCircle
+                                v-if="isRescoring"
+                                class="size-4 shrink-0 animate-spin"
+                                aria-hidden="true"
+                            />
+                            <RefreshCw
+                                v-else
+                                class="size-4 shrink-0"
+                                aria-hidden="true"
+                            />
                             {{ isRescoring ? rescoreMessage : 'Rescore' }}
                         </span>
                     </button>
@@ -336,7 +348,8 @@ onUnmounted(() => {
                     class="snitch-scrap relative mx-auto max-w-md p-8 text-center"
                 >
                     <span class="snitch-tape left-8 -top-2" aria-hidden="true" />
-                    <p class="snitch-display text-2xl">
+                    <Trophy class="mx-auto size-8 text-snitch-ink/35" aria-hidden="true" />
+                    <p class="snitch-display mt-3 text-2xl">
                         {{ isRescoring ? 'Rescoring…' : 'No winners yet' }}
                     </p>
                     <p class="mt-2 text-sm text-snitch-ink/65">
@@ -352,7 +365,8 @@ onUnmounted(() => {
                         class="snitch-btn snitch-btn-ghost mt-5"
                         @click="rulesOpen = true"
                     >
-                        Edit rules
+                        <SlidersHorizontal class="relative z-10 size-4 shrink-0" aria-hidden="true" />
+                        <span class="relative z-10">Edit rules</span>
                     </button>
                 </div>
             </div>

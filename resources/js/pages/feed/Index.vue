@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { Clapperboard, FilterX } from '@lucide/vue';
 import { computed } from 'vue';
 import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feedIndex } from '@/actions/App/Http/Controllers/FeedController';
@@ -219,9 +220,10 @@ function paginationLabel(label: string): string {
             >
                 <button
                     type="button"
-                    class="text-sm font-medium text-snitch-ink/55 underline decoration-snitch-ink/20 underline-offset-4 transition hover:text-snitch-ink"
+                    class="inline-flex items-center gap-1.5 text-sm font-medium text-snitch-ink/55 underline decoration-snitch-ink/20 underline-offset-4 transition hover:text-snitch-ink"
                     @click="clearFilters"
                 >
+                    <FilterX class="size-3.5 shrink-0" aria-hidden="true" />
                     Clear filters
                 </button>
             </div>
@@ -278,8 +280,16 @@ function paginationLabel(label: string): string {
                     class="snitch-btn snitch-btn-ghost mt-5"
                     @click="clearFilters"
                 >
-                    Clear filters
+                    <FilterX class="relative z-10 size-4 shrink-0" aria-hidden="true" />
+                    <span class="relative z-10">Clear filters</span>
                 </button>
+                <p
+                    v-else
+                    class="mt-5 inline-flex items-center justify-center gap-2 text-xs uppercase tracking-wide text-snitch-ink/40"
+                >
+                    <Clapperboard class="size-3.5 shrink-0" aria-hidden="true" />
+                    Waiting for sync
+                </p>
             </div>
 
             <nav

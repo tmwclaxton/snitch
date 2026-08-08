@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
+import { LoaderCircle, Save, WandSparkles } from '@lucide/vue';
 import { computed, onUnmounted, ref } from 'vue';
 import {
     autofillStatus,
@@ -311,7 +312,19 @@ function submitBrand(): void {
                     :disabled="!canAutofill"
                     @click="requestAutofill"
                 >
-                    {{ autofilling ? 'Scraping…' : 'Autofill from website' }}
+                    <LoaderCircle
+                        v-if="autofilling"
+                        class="relative z-10 size-3.5 shrink-0 animate-spin"
+                        aria-hidden="true"
+                    />
+                    <WandSparkles
+                        v-else
+                        class="relative z-10 size-3.5 shrink-0"
+                        aria-hidden="true"
+                    />
+                    <span class="relative z-10">
+                        {{ autofilling ? 'Scraping…' : 'Autofill from website' }}
+                    </span>
                 </button>
             </div>
             <p
@@ -362,7 +375,17 @@ function submitBrand(): void {
                 :disabled="form.processing || autofilling"
                 data-test="update-brand-button"
             >
-                <span class="relative z-10">
+                <span class="relative z-10 inline-flex items-center gap-2">
+                    <LoaderCircle
+                        v-if="form.processing"
+                        class="size-3.5 shrink-0 animate-spin"
+                        aria-hidden="true"
+                    />
+                    <Save
+                        v-else
+                        class="size-3.5 shrink-0"
+                        aria-hidden="true"
+                    />
                     {{ form.processing ? 'Saving…' : submitLabel }}
                 </span>
             </button>

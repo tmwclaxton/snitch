@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { Compass, FilterX, Search, X } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as exploreIndex } from '@/actions/App/Http/Controllers/ExploreController';
@@ -356,7 +357,10 @@ function paginationLabel(label: string): string {
                             type="submit"
                             class="snitch-btn snitch-btn-spot shrink-0 px-3 py-1.5 text-sm"
                         >
-                            <span class="relative z-10">Search</span>
+                            <span class="relative z-10 inline-flex items-center gap-1.5">
+                                <Search class="size-3.5 shrink-0" aria-hidden="true" />
+                                Search
+                            </span>
                         </button>
                     </div>
                 </label>
@@ -450,13 +454,14 @@ function paginationLabel(label: string): string {
                     @click="chip.clear"
                 >
                     <span>{{ chip.label }}</span>
-                    <span aria-hidden="true" class="text-snitch-ink/45">×</span>
+                    <X class="size-3 shrink-0 text-snitch-ink/45" aria-hidden="true" />
                 </button>
                 <button
                     type="button"
-                    class="ms-auto text-sm font-medium text-snitch-ink/55 underline decoration-snitch-ink/20 underline-offset-4 transition hover:text-snitch-ink"
+                    class="ms-auto inline-flex items-center gap-1.5 text-sm font-medium text-snitch-ink/55 underline decoration-snitch-ink/20 underline-offset-4 transition hover:text-snitch-ink"
                     @click="clearFilters"
                 >
+                    <FilterX class="size-3.5 shrink-0" aria-hidden="true" />
                     Clear all
                 </button>
             </div>
@@ -513,8 +518,16 @@ function paginationLabel(label: string): string {
                     class="snitch-btn snitch-btn-ghost mt-5"
                     @click="clearFilters"
                 >
-                    Clear filters
+                    <FilterX class="relative z-10 size-4 shrink-0" aria-hidden="true" />
+                    <span class="relative z-10">Clear filters</span>
                 </button>
+                <p
+                    v-else
+                    class="mt-5 inline-flex items-center justify-center gap-2 text-xs uppercase tracking-wide text-snitch-ink/40"
+                >
+                    <Compass class="size-3.5 shrink-0" aria-hidden="true" />
+                    Waiting for analysis
+                </p>
             </div>
 
             <nav
