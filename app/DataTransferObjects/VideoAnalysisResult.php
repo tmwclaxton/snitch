@@ -79,6 +79,13 @@ final readonly class VideoAnalysisResult
         $minHookEnd = $minHookWindowEndSeconds ?? 3.0;
         $hookWindowEnd = max($minHookEnd, (float) ($hookWindow['end_sec'] ?? 0));
 
+        // Prompt historically allowed empty CTA when no ask; evaluator requires a value.
+        // Floor empty CTA so real "no ask" posts do not burn AnalyzePostJob retries.
+        $cta = trim((string) ($payload['cta'] ?? ''));
+        if ($cta === '') {
+            $cta = 'No explicit CTA';
+        }
+
         return new self(
             hook: trim((string) ($payload['hook'] ?? '')),
             hookWindowStartSeconds: (float) ($hookWindow['start_sec'] ?? 0),
@@ -86,7 +93,7 @@ final readonly class VideoAnalysisResult
             visualSummary: trim((string) ($payload['visual_summary'] ?? '')),
             idea: trim((string) ($payload['idea'] ?? '')),
             concept: $concept,
-            cta: trim((string) ($payload['cta'] ?? '')),
+            cta: $cta,
             howToCopy: trim((string) ($payload['how_to_copy'] ?? '')),
             sfx: $sfxItems,
             topics: $topics,

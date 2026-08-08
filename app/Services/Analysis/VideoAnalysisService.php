@@ -193,7 +193,7 @@ Rules:
 - Taxonomy = ALWAYS pick catalogue slugs when they fit (required for filters). Prefer 1 hook_type_slug, 1-3 topic_slugs, 1-3 visual_craft_slugs. If topics mention myth-busting / pattern interrupt / etc., emit the matching slug.
 - custom_tags = short freeform labels ONLY when the catalogue misses something important.
 - how_to_copy = 2-4 actionable remake steps for another brand applying the SAME concept (required, never empty). Put each step on its own line as a Markdown numbered list (e.g. "1. ...\\n2. ...\\n3. ..."). Never pack steps onto one line. Do not bury the post CTA inside how_to_copy - CTA has its own field.
-- cta = the post's ask / next action only (separate from remake steps). Empty string if none.
+- cta = the post's ask / next action only (separate from remake steps). Always fill this string; use "No explicit CTA" when the post has no ask.
 - Do NOT dump the transcript or rewrite the caption.
 - Keep hook/concept/idea short and specific; name the mechanic.
 

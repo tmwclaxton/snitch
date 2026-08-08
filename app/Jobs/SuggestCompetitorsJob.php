@@ -15,12 +15,12 @@ class SuggestCompetitorsJob implements ShouldQueue
 {
     use Queueable;
 
-    public int $tries = 2;
+    public int $tries = 3;
 
     /** @var list<int> */
-    public array $backoff = [1, 5];
+    public array $backoff = [15, 60];
 
-    public int $timeout = 300;
+    public int $timeout = 600;
 
     public function __construct(
         public int $userId,

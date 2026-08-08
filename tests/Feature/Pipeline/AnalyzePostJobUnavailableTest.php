@@ -15,6 +15,7 @@ use App\Services\Winners\WinnerScorer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Mockery;
+use RuntimeException;
 use Tests\TestCase;
 
 class AnalyzePostJobUnavailableTest extends TestCase
@@ -102,5 +103,37 @@ class AnalyzePostJobUnavailableTest extends TestCase
         $this->assertSame(MediaAvailability::Available, $post->media_availability);
         $this->assertSame(AnalysisStatus::Failed, $post->analysis?->status);
         $this->assertStringContainsString('downloadable MP4', (string) $post->analysis?->error_message);
+    }
+
+    public function test_checklist_failures_do_not_rethrow_for_queue_retries(): void
+    {
+        Http::fake([
+            'https://cdn.example.com/clip.mp4' => Http::response(null, 200),
+        ]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+            'media_url' => 'https://cdn.example.com/clip.mp4',
+            'posted_at' => now()->subDay(),
+            'media_availability' => MediaAvailability::Available,
+        ]);
+
+        $analysis = Mockery::mock(VideoAnalysisService::class);
+        $analysis->shouldReceive('analyzePost')
+            ->once()
+            ->andThrow(new RuntimeException('Analysis failed checklist: cta missing'));
+        $this->app->instance(VideoAnalysisService::class, $analysis);
+
+        $scorer = Mockery::mock(WinnerScorer::class);
+        $scorer->shouldNotReceive('scoreAndPersist');
+
+        (new AnalyzePostJob($post->id))->handle(
+            app(VideoAnalysisService::class),
+            $scorer,
+        );
+
+        $this->assertSame(MediaAvailability::Available, $post->fresh()->media_availability);
     }
 }
