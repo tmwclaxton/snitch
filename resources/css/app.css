@@ -1661,6 +1661,28 @@
         object-position: center top;
     }
 
+    /*
+     * Mobile: keep the hero backdrop still. The multi-speed marquees read as
+     * parallax and fight with address-bar / dvh resize; freeze them and pin the
+     * wall image to the hero box instead of the tall desktop crop.
+     */
+    @media (max-width: 767px) {
+        .snitch-hero-bg-img {
+            height: 100%;
+            inset: 0;
+        }
+
+        .snitch-hero-marquee-track {
+            animation: none;
+            will-change: auto;
+            transform: none;
+        }
+
+        .snitch-hero .snitch-grain {
+            animation: none;
+        }
+    }
+
     .snitch-hero-marquee {
         overflow: hidden;
         pointer-events: none;

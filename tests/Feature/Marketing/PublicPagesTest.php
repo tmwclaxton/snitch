@@ -238,6 +238,23 @@ class PublicPagesTest extends TestCase
         );
     }
 
+    public function test_hero_background_is_static_on_mobile(): void
+    {
+        $css = file_get_contents(resource_path('css/app.css'));
+
+        $this->assertNotFalse($css, 'Missing app.css source');
+        $this->assertMatchesRegularExpression(
+            '/@media\s*\(max-width:\s*767px\)\s*\{[^}]*\.snitch-hero-bg-img\s*\{[^}]*height:\s*100%/s',
+            $css,
+            'Mobile hero wall image must fill the hero box instead of the tall desktop crop',
+        );
+        $this->assertMatchesRegularExpression(
+            '/@media\s*\(max-width:\s*767px\)\s*\{[\s\S]*?\.snitch-hero-marquee-track\s*\{[^}]*animation:\s*none/s',
+            $css,
+            'Mobile hero must freeze parallax marquee tracks',
+        );
+    }
+
     public function test_ghost_ticket_buttons_stroke_follows_clip_not_inset_shadow(): void
     {
         $css = file_get_contents(resource_path('css/app.css'));
