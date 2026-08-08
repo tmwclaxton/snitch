@@ -24,3 +24,4 @@ Public SEO copy and indexability live in `config/seo.php`. `App\Support\Seo::for
 - Unmatched 404s skip the `web` middleware group; `bootstrap/app.php` must share `seo` (and shell props) before rendering `errors/NotFound`.
 - Sitemap entries come from `Seo::sitemapEntries()`; never list disallowed app paths.
 - `public/robots.txt` Sitemap line must stay absolute: `https://www.snitchsocial.net/sitemap.xml`.
+- In `SeoHead.vue`, never put a raw `<script>` inside the Vue template (Vue ignores side-effect tags and Vite fails). Render JSON-LD with `<component :is="'script'" type="application/ld+json" v-text="...">`.

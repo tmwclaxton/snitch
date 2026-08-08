@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\BrandProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class SeoTest extends TestCase
@@ -113,5 +114,21 @@ class SeoTest extends TestCase
                 ->where('seo.title', 'Competitor social tracking')
                 ->where('seo.robots', 'index, follow')
             );
+    }
+
+    public function test_seo_head_renders_json_ld_without_raw_script_tag(): void
+    {
+        $seoHead = file_get_contents(resource_path('js/components/marketing/SeoHead.vue'));
+
+        $this->assertNotFalse($seoHead);
+        $this->assertStringContainsString(":is=\"'script'\"", $seoHead);
+        $this->assertStringContainsString('type="application/ld+json"', $seoHead);
+
+        $template = Str::after($seoHead, '<template>');
+        $this->assertDoesNotMatchRegularExpression(
+            '/<(?!\/)script\b/',
+            $template,
+            'Vue client templates reject raw <script>; JSON-LD must use <component :is="\'script\'">',
+        );
     }
 }
