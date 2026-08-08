@@ -61,7 +61,7 @@ class ApifyClient
                 $encodedActor = rawurlencode($job['actorId']);
                 $pool->as((string) $key)
                     ->baseUrl($baseUrl)
-                    ->withQueryParameters(['token' => $token])
+                    ->withToken($token)
                     ->acceptJson()
                     ->timeout($timeout)
                     ->post("/acts/{$encodedActor}/run-sync-get-dataset-items", $job['input']);
@@ -117,7 +117,7 @@ class ApifyClient
         }
 
         return Http::baseUrl((string) config('snitch.apify.base_url'))
-            ->withQueryParameters(['token' => $token])
+            ->withToken($token)
             ->acceptJson()
             ->timeout((int) config('snitch.apify.timeout', 180));
     }

@@ -7,6 +7,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Services/Apify/Adapters/YoutubeAdapter.php | .ai/rules/adapters.md |
 | app/Services/Analysis/**, database/data/analysis_terms.php, app/Http/Controllers/ExploreController.php, resources/js/pages/explore/** | .ai/rules/analysis.md |
 | app/Services/Apify/** | .ai/rules/apify.md |
+| bootstrap/app.php, app/Providers/AppServiceProvider.php, app/Services/Apify/**, app/Jobs/SyncTrackedAccountJob.php, app/Support/ClientIp.php, app/Support/SafeExceptionMessage.php | .ai/rules/security-proxies-secrets.md |
 | app/Console/Commands/** | .ai/rules/commands.md |
 | app/Services/SnitchAnalyticsService.php, app/Support/AnalyticsDateRange.php, app/Http/Controllers/AnalyticsController.php, app/Http/Requests/AnalyticsPeriodRequest.php, app/Console/Commands/BackfillAnalyticsCommand.php, app/Models/SnitchDailyStat.php, app/Models/SnitchDailyPlatformStat.php, resources/js/pages/marketing/Analytics.vue, resources/js/components/analytics/** | .ai/rules/analytics.md |
 | app/Services/Competitors/** | .ai/rules/competitors.md |
