@@ -61,6 +61,7 @@ class PublicPagesTest extends TestCase
         $pages = [
             'about' => 'marketing/About',
             'how-it-works' => 'marketing/HowItWorks',
+            'pricing' => 'marketing/Pricing',
             'analytics' => 'marketing/Analytics',
             'contact' => 'marketing/Contact',
             'privacy' => 'marketing/Privacy',
@@ -115,7 +116,7 @@ class PublicPagesTest extends TestCase
 
     public function test_footer_routes_resolve_for_guests(): void
     {
-        foreach (['about', 'how-it-works', 'analytics', 'contact', 'privacy', 'terms', 'cookies'] as $route) {
+        foreach (['about', 'how-it-works', 'pricing', 'analytics', 'contact', 'privacy', 'terms', 'cookies'] as $route) {
             $this->get(route($route))->assertOk();
         }
     }
@@ -133,6 +134,7 @@ class PublicPagesTest extends TestCase
         $response->assertSee(route('contact', absolute: true), false);
         $response->assertSee(route('about', absolute: true), false);
         $response->assertSee(route('analytics', absolute: true), false);
+        $response->assertSee(route('pricing', absolute: true), false);
     }
 
     public function test_contact_form_sends_mail(): void

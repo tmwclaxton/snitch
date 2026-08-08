@@ -33,7 +33,7 @@ class BillingCheckoutTest extends TestCase
             ->get(route('billing.edit'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('settings/Billing')
+                ->component('billing/Index')
                 ->has('subscription')
                 ->has('plans')
                 ->where('subscription.plan', 'basic')

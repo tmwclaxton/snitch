@@ -80,8 +80,8 @@ class BillingSmokeCommand extends Command
             );
 
             $checkout = $checkoutUser->newSubscription('default', $basicPrice)->checkout([
-                'success_url' => config('app.url').'/settings/billing?checkout=success',
-                'cancel_url' => config('app.url').'/settings/billing?checkout=cancelled',
+                'success_url' => route('billing.edit').'?checkout=success',
+                'cancel_url' => route('billing.edit').'?checkout=cancelled',
             ]);
 
             $url = $checkout->asStripeCheckoutSession()->url ?? null;
