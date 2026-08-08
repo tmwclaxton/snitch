@@ -50,6 +50,8 @@ class StripeSyncPlansCommand extends Command
             try {
                 $product = $stripe->products->create([
                     'name' => "Snitch {$name}",
+                    // Required when Stripe Managed Payments / tax is enabled on the account.
+                    'tax_code' => 'txcd_10000000',
                     'metadata' => [
                         'snitch_plan' => $key,
                     ],
