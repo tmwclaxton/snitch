@@ -7,6 +7,7 @@ import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController'
 import AnalysisTermChip from '@/components/AnalysisTermChip.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
+import { exploreHrefForTerm } from '@/lib/analysisTerms';
 import { metricPairs } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
@@ -230,6 +231,7 @@ const winnerScore = computed(() => {
                     :dimension="tag.dimension"
                     :section="tag.section"
                     :slug="tag.slug"
+                    :href="exploreHrefForTerm(tag)"
                 />
             </div>
         </div>
