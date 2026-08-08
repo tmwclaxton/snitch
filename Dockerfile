@@ -13,10 +13,9 @@ RUN apt-get update \
         unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Install one extension at a time - PHP 8.5 multi-ext installs race on modules/*.
+# PHP 8.5 ships Zend OPcache built-in; do not docker-php-ext-install opcache.
 RUN docker-php-ext-install bcmath \
     && docker-php-ext-install intl \
-    && docker-php-ext-install opcache \
     && docker-php-ext-install pdo_mysql \
     && docker-php-ext-install pdo_sqlite \
     && docker-php-ext-install zip
@@ -93,7 +92,6 @@ RUN apt-get update && apt-get upgrade -y \
     && docker-php-ext-install pdo_pgsql \
     && docker-php-ext-install bcmath \
     && docker-php-ext-install intl \
-    && docker-php-ext-install opcache \
     && docker-php-ext-install pdo_mysql \
     && docker-php-ext-install pdo_sqlite \
     && docker-php-ext-install zip \
