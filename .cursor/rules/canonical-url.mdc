@@ -1,0 +1,29 @@
+---
+description: Production canonical URL is HTTPS + www for snitchsocial.net
+alwaysApply: true
+---
+
+# Canonical production URL
+
+Canonical host for Snitch production is **`https://www.snitchsocial.net`**.
+
+## Defaults
+
+- Prefer **HTTPS** over HTTP
+- Prefer **`www.`** over the apex (`snitchsocial.net`)
+- Set `APP_URL=https://www.snitchsocial.net` in production env examples and live `.env`
+- Set WorkOS / OAuth redirect URIs to `https://www.snitchsocial.net/authenticate` (or `${APP_URL}/authenticate`)
+- Keep `SESSION_DOMAIN=.snitchsocial.net` so cookies work on both hosts during redirects
+
+## Cloudflare (enforced at the edge)
+
+Zone `snitchsocial.net` should keep:
+
+1. **Always Use HTTPS** = on (HTTP → HTTPS)
+2. **Single Redirect** (dynamic redirect phase): apex `snitchsocial.net` → `https://www.snitchsocial.net` with path + query preserved (301)
+
+Do not reverse this to apex-canonical without updating `APP_URL`, WorkOS redirects, and the Cloudflare rule together.
+
+## App / docs links
+
+When writing production links in README, deploy docs, or UI copy that should resolve without an extra hop, use `https://www.snitchsocial.net/...`. Apex links are fine for marketing shorthand if Cloudflare redirect is in place, but config and auth URLs must use www.

@@ -11,6 +11,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Services/SnitchAnalyticsService.php, app/Support/AnalyticsDateRange.php, app/Http/Controllers/AnalyticsController.php, app/Http/Requests/AnalyticsPeriodRequest.php, app/Console/Commands/BackfillAnalyticsCommand.php, app/Models/SnitchDailyStat.php, app/Models/SnitchDailyPlatformStat.php, resources/js/pages/marketing/Analytics.vue, resources/js/components/analytics/** | .ai/rules/analytics.md |
 | app/Services/Competitors/** | .ai/rules/competitors.md |
 | config/snitch.php | .ai/rules/config.md |
+| deploy/**, compose.prod.yaml, .github/workflows/prod_deploy.yml, scripts/deploy-production.sh | .ai/rules/production-url.md |
 | app/Jobs/** | .ai/rules/jobs.md |
 | app/Services/Winners/**, app/Jobs/ScoreWinnersJob.php, app/Http/Controllers/WinnerController.php | .ai/rules/winners.md |
 | app/Models/Post.php | .ai/rules/models.md |
