@@ -62,7 +62,9 @@ const canonical = computed(() => {
     return seo.value?.canonical ?? page.url;
 });
 
-const jsonLd = computed(() => seo.value?.json_ld ?? []);
+const jsonLdScripts = computed(() =>
+    (seo.value?.json_ld ?? []).map((node) => JSON.stringify(node)),
+);
 </script>
 
 <template>
@@ -109,13 +111,13 @@ const jsonLd = computed(() => seo.value?.json_ld ?? []);
             :content="absoluteImage"
         />
         <link head-key="canonical" rel="canonical" :href="canonical" />
-        <script
-            v-for="(node, index) in jsonLd"
+        <!-- Vue ignores side-effect tags in templates; render JSON-LD dynamically. -->
+        <component
+            :is="'script'"
+            v-for="(payload, index) in jsonLdScripts"
             :key="`ld-${index}`"
             type="application/ld+json"
             :head-key="`ld-json-${index}`"
-        >
-            {{ JSON.stringify(node) }}
-        </script>
+        >{{ payload }}</component>
     </Head>
 </template>
