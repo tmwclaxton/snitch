@@ -9,6 +9,12 @@ Route::middleware(['guest'])->group(function () {
     Route::get('login', fn (AuthKitLoginRequest $request) => $request->redirect())->name('login');
 
     Route::get('authenticate', function (AuthKitAuthenticationRequest $request) {
+        $code = $request->query('code');
+
+        if (! is_string($code) || $code === '') {
+            return redirect()->route('login');
+        }
+
         $request->authenticate();
 
         return redirect()->intended(route('dashboard'));

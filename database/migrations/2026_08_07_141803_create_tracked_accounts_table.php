@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('handle');
             $table->string('url')->nullable();
             $table->string('external_id')->nullable();
-            $table->string('avatar')->nullable();
+            $table->text('avatar')->nullable();
             $table->string('display_name')->nullable();
             $table->timestamp('last_synced_at')->nullable();
             $table->timestamps();
