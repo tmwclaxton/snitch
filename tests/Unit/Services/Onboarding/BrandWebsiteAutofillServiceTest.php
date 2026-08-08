@@ -18,7 +18,7 @@ class BrandWebsiteAutofillServiceTest extends TestCase
         ]);
 
         $fixture = json_decode(
-            (string) file_get_contents(base_path('tests/fixtures/firecrawl/grantgunner.org.json')),
+            (string) file_get_contents(base_path('tests/Fixtures/firecrawl/grantgunner.org.json')),
             true,
             flags: JSON_THROW_ON_ERROR,
         );

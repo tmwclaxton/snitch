@@ -171,12 +171,12 @@ class PublicPagesTest extends TestCase
         $this->assertNotFalse($css, 'Missing app.css source');
 
         $this->assertMatchesRegularExpression(
-            '/class="snitch-hero-cta[^"]*"[\s\S]*?class="snitch-btn">[\s\S]*?relative z-10">Log in[\s\S]*?class="snitch-btn snitch-btn-spot"[\s\S]*?relative z-10">Sign up/',
+            '/class="snitch-hero-cta[^"]*"[\s\S]*?class="snitch-btn">[\s\S]*?relative z-10[^"]*">[\s\S]*?Log in[\s\S]*?class="snitch-btn snitch-btn-spot"[\s\S]*?relative z-10[^"]*">[\s\S]*?Sign up/',
             $welcome,
             'Hero title card must use charcoal snitch-btn for Log in then spot yellow for Sign up, with visible z-10 labels',
         );
         $this->assertMatchesRegularExpression(
-            '/class="snitch-hero-cta[^"]*"[\s\S]*?v-if="isAuthenticated"[\s\S]*?class="snitch-btn snitch-btn-spot"[\s\S]*?relative z-10">Dashboard/',
+            '/class="snitch-hero-cta[^"]*"[\s\S]*?v-if="isAuthenticated"[\s\S]*?class="snitch-btn snitch-btn-spot"[\s\S]*?relative z-10[^"]*">[\s\S]*?Dashboard/',
             $welcome,
             'Authenticated hero CTA must be yellow spot ticket Dashboard with visible label',
         );
