@@ -68,6 +68,7 @@ class ExploreController extends Controller
                             ->orWhere('concept', 'like', $like)
                             ->orWhere('idea', 'like', $like)
                             ->orWhere('visual_summary', 'like', $like)
+                            ->orWhere('topics', 'like', $like)
                             ->orWhere('custom_tags', 'like', $like);
                     });
             });

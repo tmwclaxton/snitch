@@ -18,6 +18,7 @@ class VideoAnalysisService
         private NanoGptClient $client,
         private VideoAnalysisSuccessEvaluator $evaluator,
         private AnalysisTermCatalogue $catalogue,
+        private AnalysisTermInferrer $inferrer,
     ) {}
 
     public function analyzeUrl(string $mediaUrl, string $mediaKind = 'video', ?string $caption = null): VideoAnalysisResult
@@ -46,7 +47,7 @@ Prioritize reusable craft concepts and engagement mechanics.
 Never dump or paraphrase long stretches of spoken script or caption.
 Never invent music or SFX that are not audible in the media.
 Reject vague filler ("engaging", "relatable vibe", "great energy") - name the mechanic.
-Prefer catalogue slugs for hook_type_slugs, topic_slugs, and visual_craft_slugs. Use custom_tags only when nothing fits.
+Always fill hook_type_slugs, topic_slugs, and visual_craft_slugs from the controlled catalogue when they fit (e.g. myth_bust for myth-busting opens). Use custom_tags only when nothing fits.
 SYSTEM,
                 ],
                 [
@@ -97,11 +98,28 @@ SYSTEM,
                 throw new RuntimeException('Analysis failed checklist: '.implode(', ', $evaluation['failures']));
             }
 
-            $termIds = $this->resolveTermIds($result);
+            // Models often write freeform "myth-busting" topics but omit catalogue slugs;
+            // infer missing taxonomy so Explore filters stay useful.
+            $inferredSlugs = $this->inferrer->inferSlugs([
+                'hook' => $result->hook,
+                'concept' => $result->concept,
+                'idea' => $result->idea,
+                'visual_summary' => $result->visualSummary,
+                'topics' => $result->topics,
+                'custom_tags' => $result->customTags,
+            ]);
+            $hookTypeSlugs = array_values(array_unique(array_merge($result->hookTypeSlugs, $inferredSlugs['hook_type'])));
+            $topicSlugs = array_values(array_unique(array_merge($result->topicSlugs, $inferredSlugs['topic'])));
+            $visualCraftSlugs = array_values(array_unique(array_merge($result->visualCraftSlugs, $inferredSlugs['visual_craft'])));
+            $termIds = array_values(array_unique(array_merge(
+                $this->catalogue->resolveIds(AnalysisTermDimension::HookType, $hookTypeSlugs),
+                $this->catalogue->resolveIds(AnalysisTermDimension::Topic, $topicSlugs),
+                $this->catalogue->resolveIds(AnalysisTermDimension::VisualCraft, $visualCraftSlugs),
+            )));
             $catalogueLabels = array_values(array_unique(array_merge(
-                $this->catalogue->resolveLabels(AnalysisTermDimension::HookType, $result->hookTypeSlugs),
-                $this->catalogue->resolveLabels(AnalysisTermDimension::Topic, $result->topicSlugs),
-                $this->catalogue->resolveLabels(AnalysisTermDimension::VisualCraft, $result->visualCraftSlugs),
+                $this->catalogue->resolveLabels(AnalysisTermDimension::HookType, $hookTypeSlugs),
+                $this->catalogue->resolveLabels(AnalysisTermDimension::Topic, $topicSlugs),
+                $this->catalogue->resolveLabels(AnalysisTermDimension::VisualCraft, $visualCraftSlugs),
             )));
             $topics = array_values(array_unique(array_merge($result->topics, $catalogueLabels, $result->customTags)));
 
@@ -147,18 +165,6 @@ SYSTEM,
         }
     }
 
-    /**
-     * @return list<int>
-     */
-    private function resolveTermIds(VideoAnalysisResult $result): array
-    {
-        return array_values(array_unique(array_merge(
-            $this->catalogue->resolveIds(AnalysisTermDimension::HookType, $result->hookTypeSlugs),
-            $this->catalogue->resolveIds(AnalysisTermDimension::Topic, $result->topicSlugs),
-            $this->catalogue->resolveIds(AnalysisTermDimension::VisualCraft, $result->visualCraftSlugs),
-        )));
-    }
-
     private function buildPrompt(string $mediaKind, ?string $caption): string
     {
         $captionLine = $caption ? "Caption (context only, do not paraphrase as the analysis): {$caption}" : 'Caption: (none)';
@@ -176,7 +182,7 @@ Rules:
 - Visual cues = craft choices (composition, text-on-screen, cuts, framing).
 - Music/SFX = role in the concept when present; empty array / null when none. Do not invent.
 - Topics = short craft/theme labels in English (formats, niche memes, cultural hooks), not keyword stuffing.
-- Taxonomy = pick catalogue slugs when they fit. Prefer 1 hook_type_slug, 1-3 topic_slugs, 1-3 visual_craft_slugs.
+- Taxonomy = ALWAYS pick catalogue slugs when they fit (required for filters). Prefer 1 hook_type_slug, 1-3 topic_slugs, 1-3 visual_craft_slugs. If topics mention myth-busting / pattern interrupt / etc., emit the matching slug.
 - custom_tags = short freeform labels ONLY when the catalogue misses something important.
 - how_to_copy = 2-4 actionable remake steps for another brand applying the SAME concept (required, never empty).
 - Do NOT dump the transcript or rewrite the caption.

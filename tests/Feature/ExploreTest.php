@@ -174,4 +174,38 @@ class ExploreTest extends TestCase
                 ->where('posts.data.0.id', $post->id)
             );
     }
+
+    public function test_explore_search_matches_topics(): void
+    {
+        $this->seed(AnalysisTermSeeder::class);
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+        ]);
+        PostAnalysis::factory()->for($post)->create([
+            'status' => AnalysisStatus::Completed,
+            'topics' => ['myth-busting hook', 'lead magnet gating'],
+        ]);
+
+        $other = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+        ]);
+        PostAnalysis::factory()->for($other)->create([
+            'status' => AnalysisStatus::Completed,
+            'topics' => ['unrelated craft'],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('explore.index', ['q' => 'myth-busting']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('explore/Index')
+                ->has('posts.data', 1)
+                ->where('posts.data.0.id', $post->id)
+            );
+    }
 }

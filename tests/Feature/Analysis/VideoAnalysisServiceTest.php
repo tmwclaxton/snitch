@@ -4,7 +4,6 @@ namespace Tests\Feature\Analysis;
 
 use App\Enums\AnalysisStatus;
 use App\Enums\PostType;
-use App\Models\AnalysisTerm;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
@@ -128,12 +127,62 @@ class VideoAnalysisServiceTest extends TestCase
         $this->assertContains('steam-asmr', $analysis->topics);
         $this->assertSame(['steam-asmr'], $analysis->custom_tags);
         $this->assertSame(3, $analysis->hook_window_end_sec);
-        $this->assertSame(3, $analysis->terms()->count());
+        $this->assertGreaterThanOrEqual(3, $analysis->terms()->count());
+        $this->assertTrue($analysis->terms()->where('slug', 'silent_visual_hook')->exists());
+        $this->assertTrue($analysis->terms()->where('slug', 'content_strategy')->exists());
+        $this->assertTrue($analysis->terms()->where('slug', 'broll_overlay')->exists());
         $this->assertFalse(
             $analysis->terms()->where('slug', 'not_a_real_slug')->exists()
         );
+    }
+
+    public function test_analyze_post_infers_catalogue_terms_when_model_omits_slugs(): void
+    {
+        $this->seed(AnalysisTermSeeder::class);
+
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'content' => json_encode([
+                            'concept' => "A split-screen 'myth-busting' graphic with a gated Q&A payoff.",
+                            'hook' => 'Text overlay LIE stamp FALSE on a grant myth.',
+                            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+                            'visual_summary' => str_repeat('Split screen with bold FALSE stamp and talking-head replies. ', 2),
+                            'idea' => 'Myth callout then exclusivity gate for the lead magnet.',
+                            'topics' => ['myth-busting hook', 'lead magnet gating'],
+                            'hook_type_slugs' => [],
+                            'topic_slugs' => [],
+                            'visual_craft_slugs' => [],
+                            'custom_tags' => [],
+                            'cta' => 'Comment MYTH for the guide',
+                            'how_to_copy' => 'Open on the false claim stamp, cut to the gate, end on the CTA.',
+                            'sfx' => [],
+                            'is_original_audio' => true,
+                        ]),
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+            'media_url' => 'https://cdn.example.com/myth.mp4',
+        ]);
+
+        $analysis = app(VideoAnalysisService::class)->analyzePost($post);
+
+        $this->assertSame(AnalysisStatus::Completed, $analysis->status);
         $this->assertTrue(
-            AnalysisTerm::query()->where('slug', 'silent_visual_hook')->exists()
+            $analysis->terms()->where('slug', 'myth_bust')->exists(),
         );
+        $this->assertContains('Myth bust', $analysis->topics);
     }
 }
