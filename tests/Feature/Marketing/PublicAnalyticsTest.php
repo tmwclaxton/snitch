@@ -253,6 +253,7 @@ class PublicAnalyticsTest extends TestCase
 
         $this->assertSame('pattern_interrupt', $summary['top_terms']['hook_type'][0]['slug']);
         $this->assertSame(1, $summary['top_terms']['hook_type'][0]['count']);
+        $this->assertSame('Claims & takes', $summary['top_terms']['hook_type'][0]['section']);
         $this->assertArrayNotHasKey('caption', $summary['top_terms']['hook_type'][0]);
     }
 

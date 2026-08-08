@@ -8,6 +8,7 @@ use App\Enums\Platform;
 use App\Models\AnalysisTerm;
 use App\Models\SnitchDailyPlatformStat;
 use App\Models\SnitchDailyStat;
+use App\Services\Analysis\AnalysisTermCatalogue;
 use App\Support\AnalyticsDateRange;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -16,6 +17,10 @@ use Illuminate\Support\Facades\DB;
 class SnitchAnalyticsService
 {
     public const TOP_TERMS_PER_DIMENSION = 8;
+
+    public function __construct(
+        private AnalysisTermCatalogue $catalogue,
+    ) {}
 
     public function recordPostSynced(Platform $platform, int $count = 1, ?CarbonInterface $on = null): void
     {
@@ -85,9 +90,9 @@ class SnitchAnalyticsService
      *     },
      *     platforms: list<array{platform: string, label: string, count: int}>,
      *     top_terms: array{
-     *         hook_type: list<array{slug: string, label: string, count: int}>,
-     *         topic: list<array{slug: string, label: string, count: int}>,
-     *         visual_craft: list<array{slug: string, label: string, count: int}>,
+     *         hook_type: list<array{slug: string, label: string, section: string|null, count: int}>,
+     *         topic: list<array{slug: string, label: string, section: string|null, count: int}>,
+     *         visual_craft: list<array{slug: string, label: string, section: string|null, count: int}>,
      *     },
      * }
      */
@@ -271,9 +276,9 @@ class SnitchAnalyticsService
 
     /**
      * @return array{
-     *     hook_type: list<array{slug: string, label: string, count: int}>,
-     *     topic: list<array{slug: string, label: string, count: int}>,
-     *     visual_craft: list<array{slug: string, label: string, count: int}>,
+     *     hook_type: list<array{slug: string, label: string, section: string|null, count: int}>,
+     *     topic: list<array{slug: string, label: string, section: string|null, count: int}>,
+     *     visual_craft: list<array{slug: string, label: string, section: string|null, count: int}>,
      * }
      */
     private function topTerms(CarbonInterface $from, CarbonInterface $to): array
@@ -283,6 +288,7 @@ class SnitchAnalyticsService
             AnalysisTermDimension::Topic->value => [],
             AnalysisTermDimension::VisualCraft->value => [],
         ];
+        $sections = $this->catalogue->sectionByKey();
 
         $rows = AnalysisTerm::query()
             ->select([
@@ -320,9 +326,12 @@ class SnitchAnalyticsService
                 continue;
             }
 
+            $slug = (string) $row->slug;
+
             $result[$dimension][] = [
-                'slug' => (string) $row->slug,
+                'slug' => $slug,
                 'label' => (string) $row->label,
+                'section' => $sections[$dimension.':'.$slug] ?? null,
                 'count' => (int) $row->aggregate,
             ];
             $perDimension[$dimension]++;

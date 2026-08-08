@@ -11,9 +11,12 @@ import {
     Trophy,
 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
+import AnalysisTermChip from '@/components/AnalysisTermChip.vue';
 import DailyMetricChart from '@/components/analytics/DailyMetricChart.vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
+import { analysisDimensionIcon } from '@/lib/analysisTerms';
+import { platformIconSrc } from '@/lib/platforms';
 import { analytics as analyticsRoute } from '@/routes';
 
 interface MetricSummary {
@@ -49,6 +52,7 @@ interface AnalyticsRange {
 interface TermCount {
     slug: string;
     label: string;
+    section?: string | null;
     count: number;
 }
 
@@ -118,16 +122,19 @@ const termGroups = computed(() => [
     {
         key: 'hook_type',
         title: 'Hook types',
+        icon: analysisDimensionIcon('hook_type'),
         terms: props.analytics.top_terms.hook_type,
     },
     {
         key: 'topic',
         title: 'Topics',
+        icon: analysisDimensionIcon('topic'),
         terms: props.analytics.top_terms.topic,
     },
     {
         key: 'visual_craft',
         title: 'Visual craft',
+        icon: analysisDimensionIcon('visual_craft'),
         terms: props.analytics.top_terms.visual_craft,
     },
 ]);
@@ -428,10 +435,17 @@ function commitDaysInput(): void {
                         <li
                             v-for="row in analytics.platforms"
                             :key="row.platform"
-                            class="grid grid-cols-[6.5rem_minmax(0,1fr)_3rem] items-center gap-2"
+                            class="grid grid-cols-[7.5rem_minmax(0,1fr)_3rem] items-center gap-2"
                         >
-                            <span class="truncate text-sm text-snitch-ink/75">
-                                {{ row.label }}
+                            <span class="flex min-w-0 items-center gap-1.5 text-sm text-snitch-ink/75">
+                                <img
+                                    :src="platformIconSrc(row.platform)"
+                                    alt=""
+                                    class="snitch-platform-logo size-3.5 shrink-0"
+                                    width="14"
+                                    height="14"
+                                >
+                                <span class="truncate">{{ row.label }}</span>
                             </span>
                             <div
                                 class="h-2 overflow-hidden bg-snitch-ink/10"
@@ -468,7 +482,12 @@ function commitDaysInput(): void {
                             v-for="group in termGroups"
                             :key="group.key"
                         >
-                            <h3 class="text-sm font-semibold text-snitch-ink">
+                            <h3 class="flex items-center gap-1.5 text-sm font-semibold text-snitch-ink">
+                                <component
+                                    :is="group.icon"
+                                    class="size-3.5 shrink-0 text-snitch-ink/55"
+                                    aria-hidden="true"
+                                />
                                 {{ group.title }}
                             </h3>
                             <ul
@@ -478,12 +497,15 @@ function commitDaysInput(): void {
                                 <li
                                     v-for="term in group.terms"
                                     :key="term.slug"
-                                    class="border border-snitch-ink/15 bg-snitch-paper px-2.5 py-1 text-xs font-medium text-snitch-ink"
                                 >
-                                    {{ term.label }}
-                                    <span class="text-snitch-ink/50">
-                                        · {{ formatNumber(term.count) }}
-                                    </span>
+                                    <AnalysisTermChip
+                                        variant="picker"
+                                        :label="term.label"
+                                        :dimension="group.key"
+                                        :section="term.section"
+                                        :slug="term.slug"
+                                        :count="term.count"
+                                    />
                                 </li>
                             </ul>
                             <p v-else class="mt-3 text-sm text-snitch-ink/55">
