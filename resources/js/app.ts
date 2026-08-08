@@ -13,7 +13,7 @@ import { initializeFlashToast } from '@/lib/flashToast';
 
 library.add(fas, far, fab);
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Snitch';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
