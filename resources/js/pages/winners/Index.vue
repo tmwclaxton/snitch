@@ -70,15 +70,15 @@ const isRescoring = computed(() => rescoring.value);
 function winnerTags(winner: {
     post: {
         analysis?: {
-            concept?: string | null;
             topics?: string[] | null;
         } | null;
     };
 }): string[] {
+    // Concept / hook already print above; chips are topics only, full length.
     return glanceTags({
-        concept: winner.post.analysis?.concept,
         topics: winner.post.analysis?.topics,
-        limit: 2,
+        limit: 4,
+        maxLength: null,
     });
 }
 

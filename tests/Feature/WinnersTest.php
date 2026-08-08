@@ -61,7 +61,7 @@ class WinnersTest extends TestCase
             'status' => AnalysisStatus::Completed,
             'hook' => 'Strong opening line here',
             'concept' => 'Pattern interrupt with proof',
-            'topics' => ['proof', 'contrast'],
+            'topics' => ['social proof with receipts', 'contrast framing'],
         ]);
 
         $loserPost = Post::factory()->forAccount($account)->create([
@@ -91,7 +91,8 @@ class WinnersTest extends TestCase
                 ->where('winners.0.post.id', $winnerPost->id)
                 ->where('winners.0.post.analysis.hook', 'Strong opening line here')
                 ->where('winners.0.post.analysis.concept', 'Pattern interrupt with proof')
-                ->where('winners.0.post.analysis.topics.0', 'proof')
+                ->where('winners.0.post.analysis.topics.0', 'social proof with receipts')
+                ->where('winners.0.post.analysis.topics.1', 'contrast framing')
                 ->where('winners.0.post.embed.provider', 'tiktok')
                 ->where(
                     'winners.0.post.embed.src',

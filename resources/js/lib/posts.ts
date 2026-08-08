@@ -56,14 +56,24 @@ export function glanceTags(input: {
     concept?: string | null;
     topics?: string[] | null;
     limit?: number;
+    /**
+     * Character cap per tag.
+     * Omit for compact feed glance defaults (concept 28 / topic 22).
+     * Pass null to keep full labels (winners / roomier surfaces).
+     */
+    maxLength?: number | null;
 }): string[] {
     const limit = input.limit ?? 3;
     const tags: string[] = [];
+    const conceptMax =
+        input.maxLength === undefined ? 28 : input.maxLength;
+    const topicMax =
+        input.maxLength === undefined ? 22 : input.maxLength;
 
     const concept = input.concept?.trim();
 
     if (concept) {
-        tags.push(truncateLabel(concept, 28));
+        tags.push(formatTagLabel(concept, conceptMax));
     }
 
     for (const topic of input.topics ?? []) {
@@ -81,7 +91,7 @@ export function glanceTags(input: {
             continue;
         }
 
-        tags.push(truncateLabel(trimmed, 22));
+        tags.push(formatTagLabel(trimmed, topicMax));
     }
 
     return tags.slice(0, limit);
@@ -101,6 +111,14 @@ function firstCaptionLine(caption?: string | null): string | null {
     }
 
     return null;
+}
+
+function formatTagLabel(value: string, max: number | null): string {
+    if (max === null) {
+        return value;
+    }
+
+    return truncateLabel(value, max);
 }
 
 function truncateLabel(value: string, max: number): string {
