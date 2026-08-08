@@ -8,6 +8,7 @@ RUN apt-get update \
         curl \
         default-libmysqlclient-dev \
         libicu-dev \
+        libpq-dev \
         libsqlite3-dev \
         libzip-dev \
         unzip \
@@ -18,6 +19,7 @@ RUN docker-php-ext-install \
     intl \
     opcache \
     pdo_mysql \
+    pdo_pgsql \
     pdo_sqlite \
     zip
 
@@ -65,7 +67,7 @@ RUN npm run build \
 
 FROM php:8.5-cli-bookworm AS production
 
-LABEL maintainer="baseProject"
+LABEL maintainer="Snitch"
 
 ARG WWWGROUP=1000
 ARG WWWUSER=1337
@@ -86,6 +88,7 @@ RUN apt-get update && apt-get upgrade -y \
         gnupg gosu curl ca-certificates zip unzip git supervisor libcap2-bin \
         default-libmysqlclient-dev \
         libicu-dev \
+        libpq-dev \
         libsqlite3-dev \
         libzip-dev \
     && docker-php-ext-install \
@@ -93,6 +96,7 @@ RUN apt-get update && apt-get upgrade -y \
         intl \
         opcache \
         pdo_mysql \
+        pdo_pgsql \
         pdo_sqlite \
         zip \
     && pecl install redis \
@@ -103,11 +107,13 @@ RUN apt-get update && apt-get upgrade -y \
     && apt-get purge -y \
         default-libmysqlclient-dev \
         libicu-dev \
+        libpq-dev \
         libsqlite3-dev \
         libzip-dev \
     && apt-get install -y --no-install-recommends \
         libicu72 \
         libmariadb3 \
+        libpq5 \
         libsqlite3-0 \
         libzip4 \
     && apt-get autoremove -y \
