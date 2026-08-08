@@ -22,6 +22,8 @@ class BillingCheckoutTest extends TestCase
         config([
             'subscriptions.plans.basic.stripe_price' => 'price_basic_test',
             'subscriptions.plans.pro.stripe_price' => 'price_pro_test',
+            'subscriptions.plans.basic.stripe_price_yearly' => 'price_basic_yearly_test',
+            'subscriptions.plans.pro.stripe_price_yearly' => 'price_pro_yearly_test',
             'cashier.webhook.secret' => null,
         ]);
     }
@@ -39,7 +41,11 @@ class BillingCheckoutTest extends TestCase
                 ->has('plans')
                 ->where('subscription.plan', 'basic')
                 ->where('subscription.on_trial', true)
-                ->where('subscription.subscribed', false));
+                ->where('subscription.subscribed', false)
+                ->where('subscription.billing_interval', null)
+                ->where('yearlyDiscountPercent', 20)
+                ->where('plans.1.has_checkout_month', true)
+                ->where('plans.1.has_checkout_year', true));
     }
 
     public function test_checkout_redirects_when_price_missing(): void
@@ -49,8 +55,17 @@ class BillingCheckoutTest extends TestCase
         $user = User::factory()->onTrial()->create();
 
         $this->actingAs($user)
-            ->post(route('billing.checkout'), ['plan' => 'basic'])
+            ->post(route('billing.checkout'), ['plan' => 'basic', 'interval' => 'month'])
             ->assertRedirect(route('billing.edit'));
+    }
+
+    public function test_checkout_requires_interval(): void
+    {
+        $user = User::factory()->onTrial()->create();
+
+        $this->actingAs($user)
+            ->post(route('billing.checkout'), ['plan' => 'basic'])
+            ->assertSessionHasErrors('interval');
     }
 
     public function test_checkout_uses_inertia_location_for_stripe_session(): void
@@ -72,11 +87,37 @@ class BillingCheckoutTest extends TestCase
             ->andReturn($builder);
 
         $this->actingAs($user)
-            ->post(route('billing.checkout'), ['plan' => 'basic'], [
+            ->post(route('billing.checkout'), ['plan' => 'basic', 'interval' => 'month'], [
                 'X-Inertia' => 'true',
             ])
             ->assertStatus(409)
             ->assertHeader('X-Inertia-Location', 'https://checkout.stripe.com/c/pay/cs_test_123');
+    }
+
+    public function test_yearly_checkout_uses_yearly_price(): void
+    {
+        $user = User::factory()->onTrial()->create();
+
+        $session = (object) ['url' => 'https://checkout.stripe.com/c/pay/cs_test_yearly'];
+        $checkout = Mockery::mock(Checkout::class);
+        $checkout->shouldReceive('asStripeCheckoutSession')->once()->andReturn($session);
+
+        $builder = Mockery::mock(SubscriptionBuilder::class);
+        $builder->shouldReceive('checkout')->once()->andReturn($checkout);
+
+        $user = Mockery::mock($user)->makePartial();
+        $user->shouldReceive('subscribed')->with('default')->andReturn(false);
+        $user->shouldReceive('newSubscription')
+            ->once()
+            ->with('default', 'price_basic_yearly_test')
+            ->andReturn($builder);
+
+        $this->actingAs($user)
+            ->post(route('billing.checkout'), ['plan' => 'basic', 'interval' => 'year'], [
+                'X-Inertia' => 'true',
+            ])
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', 'https://checkout.stripe.com/c/pay/cs_test_yearly');
     }
 
     public function test_pro_checkout_uses_inertia_location(): void
@@ -98,7 +139,7 @@ class BillingCheckoutTest extends TestCase
             ->andReturn($builder);
 
         $this->actingAs($user)
-            ->post(route('billing.checkout'), ['plan' => 'pro'], [
+            ->post(route('billing.checkout'), ['plan' => 'pro', 'interval' => 'month'], [
                 'X-Inertia' => 'true',
             ])
             ->assertStatus(409)

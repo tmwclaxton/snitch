@@ -28,9 +28,12 @@ class BillingController extends Controller
                 'key' => $key,
                 'name' => $plan['name'],
                 'price_pence' => (int) $plan['price_pence'],
+                'yearly_price_pence' => (int) ($plan['yearly_price_pence'] ?? 0),
                 'competitor_limit' => (int) $plan['competitor_limit'],
-                'has_checkout' => in_array($key, ['basic', 'pro'], true)
+                'has_checkout_month' => in_array($key, ['basic', 'pro'], true)
                     && filled($plan['stripe_price'] ?? null),
+                'has_checkout_year' => in_array($key, ['basic', 'pro'], true)
+                    && filled($plan['stripe_price_yearly'] ?? null),
             ])
             ->values()
             ->all();
@@ -38,6 +41,7 @@ class BillingController extends Controller
         return Inertia::render('billing/Index', [
             'subscription' => $this->entitlements->summary($user),
             'plans' => $plans,
+            'yearlyDiscountPercent' => (int) config('subscriptions.yearly_discount_percent', 20),
         ]);
     }
 
@@ -45,10 +49,11 @@ class BillingController extends Controller
     {
         $data = $request->validate([
             'plan' => ['required', 'string', Rule::in(['basic', 'pro'])],
+            'interval' => ['required', 'string', Rule::in(['month', 'year'])],
         ]);
 
         $user = $request->user();
-        $priceId = $this->entitlements->stripePriceIdForPlan($data['plan']);
+        $priceId = $this->entitlements->stripePriceIdForPlan($data['plan'], $data['interval']);
 
         if ($priceId === null) {
             Inertia::flash('toast', [

@@ -22,6 +22,8 @@ class PlanEntitlementServiceTest extends TestCase
         config([
             'subscriptions.plans.basic.stripe_price' => 'price_basic_test',
             'subscriptions.plans.pro.stripe_price' => 'price_pro_test',
+            'subscriptions.plans.basic.stripe_price_yearly' => 'price_basic_yearly_test',
+            'subscriptions.plans.pro.stripe_price_yearly' => 'price_pro_yearly_test',
         ]);
 
         $this->entitlements = app(PlanEntitlementService::class);
@@ -62,6 +64,26 @@ class PlanEntitlementServiceTest extends TestCase
 
         $this->assertSame('pro', $this->entitlements->plan($user));
         $this->assertSame(50, $this->entitlements->competitorLimit($user));
+    }
+
+    public function test_yearly_basic_subscription_maps_to_basic_entitlements(): void
+    {
+        $user = User::factory()->freePlan()->create();
+        $this->createSubscription($user, 'price_basic_yearly_test');
+
+        $this->assertSame('basic', $this->entitlements->plan($user));
+        $this->assertSame(10, $this->entitlements->competitorLimit($user));
+        $this->assertSame('year', $this->entitlements->summary($user)['billing_interval']);
+    }
+
+    public function test_yearly_pro_subscription_maps_to_pro_entitlements(): void
+    {
+        $user = User::factory()->freePlan()->create();
+        $this->createSubscription($user, 'price_pro_yearly_test');
+
+        $this->assertSame('pro', $this->entitlements->plan($user));
+        $this->assertSame(50, $this->entitlements->competitorLimit($user));
+        $this->assertSame('year', $this->entitlements->summary($user)['billing_interval']);
     }
 
     public function test_competitors_remaining_respects_usage(): void
@@ -125,6 +147,7 @@ class PlanEntitlementServiceTest extends TestCase
 
         $this->assertSame('pro', $summary['plan']);
         $this->assertTrue($summary['subscribed']);
+        $this->assertSame('month', $summary['billing_interval']);
         $this->assertFalse($summary['can_upgrade']);
         $this->assertFalse($summary['on_trial']);
     }

@@ -19,6 +19,8 @@ class BillingSmokeCommand extends Command
         $secret = (string) config('cashier.secret');
         $basicPrice = (string) config('subscriptions.plans.basic.stripe_price');
         $proPrice = (string) config('subscriptions.plans.pro.stripe_price');
+        $basicYearly = (string) config('subscriptions.plans.basic.stripe_price_yearly');
+        $proYearly = (string) config('subscriptions.plans.pro.stripe_price_yearly');
 
         if ($secret === '' || ! str_starts_with($secret, 'sk_test_')) {
             $this->error('Billing smoke requires STRIPE_SECRET to be an sk_test_ key.');
@@ -32,6 +34,12 @@ class BillingSmokeCommand extends Command
             return self::FAILURE;
         }
 
+        if ($basicYearly === '' || $proYearly === '') {
+            $this->error('STRIPE_PRICE_BASIC_YEARLY and STRIPE_PRICE_PRO_YEARLY must be set.');
+
+            return self::FAILURE;
+        }
+
         $user = null;
 
         try {
@@ -40,6 +48,8 @@ class BillingSmokeCommand extends Command
             $this->info('Checking catalog prices...');
             $basic = $stripe->prices->retrieve($basicPrice);
             $pro = $stripe->prices->retrieve($proPrice);
+            $basicY = $stripe->prices->retrieve($basicYearly);
+            $proY = $stripe->prices->retrieve($proYearly);
 
             $this->assertSame('gbp', $basic->currency, 'Basic currency');
             $this->assertSame(2000, $basic->unit_amount, 'Basic amount');
@@ -47,6 +57,10 @@ class BillingSmokeCommand extends Command
             $this->assertSame('gbp', $pro->currency, 'Pro currency');
             $this->assertSame(9900, $pro->unit_amount, 'Pro amount');
             $this->assertSame('month', $pro->recurring?->interval, 'Pro interval');
+            $this->assertSame(19200, $basicY->unit_amount, 'Basic yearly amount');
+            $this->assertSame('year', $basicY->recurring?->interval, 'Basic yearly interval');
+            $this->assertSame(95040, $proY->unit_amount, 'Pro yearly amount');
+            $this->assertSame('year', $proY->recurring?->interval, 'Pro yearly interval');
             $this->line('  catalog OK');
 
             $user = $this->makeSmokeUser(
