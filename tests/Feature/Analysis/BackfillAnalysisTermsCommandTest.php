@@ -67,7 +67,8 @@ class BackfillAnalysisTermsCommandTest extends TestCase
         $analysis = PostAnalysis::factory()->for($post)->create([
             'status' => AnalysisStatus::Completed,
             'hook' => 'Did you know that the business you are building is also building you',
-            'concept' => 'Reframe business challenges as character-building exercises.',
+            'concept' => 'Reframe business challenges as character-building exercises for founders.',
+            'idea' => "Uses a 'myth_bust' mechanism by challenging the assumption that struggles are purely negative.",
             'visual_summary' => 'Static talking head shot of a woman against a plain wall.',
             'topics' => [
                 'entrepreneurship',

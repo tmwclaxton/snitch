@@ -30,7 +30,10 @@ class BackfillAnalysisTermsCommand extends Command
 
                 if ($dryRun) {
                     $topics = is_array($analysis->topics) ? $analysis->topics : [];
-                    $slugIds = $replace ? $inferrer->termIdsFromExactTopicSlugs($topics) : [];
+                    $extraIds = $replace ? array_values(array_unique(array_merge(
+                        $inferrer->termIdsFromExactTopicSlugs($topics),
+                        $inferrer->termIdsFromExactTopicLabels($topics, excludeHookTypes: true),
+                    ))) : [];
                     $cleaned = $replace
                         ? $inferrer->topicsWithoutCatalogueMirrors($topics)
                         : $topics;
@@ -41,7 +44,7 @@ class BackfillAnalysisTermsCommand extends Command
 
                     $ids = array_values(array_unique(array_merge(
                         $inferrer->inferIdsFromAnalysis($analysis),
-                        $slugIds,
+                        $extraIds,
                     )));
                     $existing = $analysis->terms()->pluck('analysis_terms.id')->map(fn ($id): int => (int) $id)->all();
                     $next = $replace

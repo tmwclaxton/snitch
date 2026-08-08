@@ -88,10 +88,11 @@ class AnalysisTermInferrer
     public function inferSlugs(array $fields): array
     {
         $haystacks = [
+            // Omit idea: models often narrate taxonomy slugs there ("uses a myth_bust mechanism"),
+            // which creates false-positive hook filters.
             'hook_type' => $this->normalizeHaystack([
                 $fields['hook'] ?? null,
                 $fields['concept'] ?? null,
-                $fields['idea'] ?? null,
                 ...($fields['topics'] ?? []),
                 ...($fields['custom_tags'] ?? []),
             ]),
@@ -172,7 +173,10 @@ class AnalysisTermInferrer
     public function replaceAnalysis(PostAnalysis $analysis): array
     {
         $topics = is_array($analysis->topics) ? $analysis->topics : [];
-        $slugIds = $this->termIdsFromExactTopicSlugs($topics);
+        $extraIds = array_values(array_unique(array_merge(
+            $this->termIdsFromExactTopicSlugs($topics),
+            $this->termIdsFromExactTopicLabels($topics, excludeHookTypes: true),
+        )));
         $cleanedTopics = $this->topicsWithoutCatalogueMirrors($topics);
 
         if ($cleanedTopics !== $topics) {
@@ -183,7 +187,7 @@ class AnalysisTermInferrer
         return $this->applyInferredTerms(
             $analysis->fresh() ?? $analysis,
             replace: true,
-            extraIds: $slugIds,
+            extraIds: $extraIds,
         );
     }
 
@@ -313,6 +317,54 @@ class AnalysisTermInferrer
 
             $dimension = $slugIndex[$key];
             $byDimension[$dimension][] = str_replace('-', '_', $key);
+        }
+
+        return array_values(array_unique(array_merge(
+            $this->catalogue->resolveIds(AnalysisTermDimension::HookType, $byDimension['hook_type']),
+            $this->catalogue->resolveIds(AnalysisTermDimension::Topic, $byDimension['topic']),
+            $this->catalogue->resolveIds(AnalysisTermDimension::VisualCraft, $byDimension['visual_craft']),
+        )));
+    }
+
+    /**
+     * Resolve term IDs from topics that exactly match catalogue labels.
+     * When $excludeHookTypes is true, skip hook_type labels so remirrored false
+     * positives like "Myth bust" are not re-attached during --replace.
+     *
+     * @param  list<string>  $topics
+     * @return list<int>
+     */
+    public function termIdsFromExactTopicLabels(array $topics, bool $excludeHookTypes = false): array
+    {
+        $byDimension = [
+            'hook_type' => [],
+            'topic' => [],
+            'visual_craft' => [],
+        ];
+
+        $labelIndex = [];
+
+        foreach ($this->catalogue->definitions() as $row) {
+            if ($excludeHookTypes && $row['dimension'] === 'hook_type') {
+                continue;
+            }
+
+            $labelIndex[strtolower(trim($row['label']))] = $row;
+        }
+
+        foreach ($topics as $topic) {
+            if (! is_string($topic)) {
+                continue;
+            }
+
+            $key = strtolower(trim($topic));
+
+            if ($key === '' || ! isset($labelIndex[$key])) {
+                continue;
+            }
+
+            $row = $labelIndex[$key];
+            $byDimension[$row['dimension']][] = $row['slug'];
         }
 
         return array_values(array_unique(array_merge(
