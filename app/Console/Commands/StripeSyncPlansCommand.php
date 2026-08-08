@@ -9,7 +9,7 @@ use Laravel\Cashier\Cashier;
 use Stripe\Exception\ApiErrorException;
 
 #[Signature('snitch:stripe-sync-plans {--dry-run : Print planned products without calling Stripe}')]
-#[Description('Create Stripe Products/Prices for Basic and Pro and print Price IDs for .env')]
+#[Description('Create Stripe Products/Prices for Basic and Pro (monthly + yearly) and print Price IDs for .env')]
 class StripeSyncPlansCommand extends Command
 {
     public function handle(): int
@@ -30,10 +30,11 @@ class StripeSyncPlansCommand extends Command
         if ($this->option('dry-run')) {
             foreach ($plans as $key => $plan) {
                 $this->line(sprintf(
-                    '[dry-run] %s: %s (%d pence GBP / month)',
+                    '[dry-run] %s: %s (%d pence / month, %d pence / year, 20%% off)',
                     $key,
                     $plan['name'] ?? $key,
                     (int) ($plan['price_pence'] ?? 0),
+                    (int) ($plan['yearly_price_pence'] ?? 0),
                 ));
             }
 
@@ -45,39 +46,75 @@ class StripeSyncPlansCommand extends Command
 
         foreach ($plans as $key => $plan) {
             $name = (string) ($plan['name'] ?? ucfirst($key));
-            $amount = (int) ($plan['price_pence'] ?? 0);
+            $monthlyAmount = (int) ($plan['price_pence'] ?? 0);
+            $yearlyAmount = (int) ($plan['yearly_price_pence'] ?? 0);
+            $existingMonthly = filled($plan['stripe_price'] ?? null) ? (string) $plan['stripe_price'] : null;
+            $existingYearly = filled($plan['stripe_price_yearly'] ?? null) ? (string) $plan['stripe_price_yearly'] : null;
 
             try {
-                $product = $stripe->products->create([
-                    'name' => "Snitch {$name}",
-                    // Required when Stripe Managed Payments / tax is enabled on the account.
-                    'tax_code' => 'txcd_10000000',
-                    'metadata' => [
-                        'snitch_plan' => $key,
-                    ],
-                ]);
+                $productId = null;
+                $monthlyPriceId = $existingMonthly;
+                $yearlyPriceId = $existingYearly;
 
-                $price = $stripe->prices->create([
-                    'product' => $product->id,
-                    'unit_amount' => $amount,
-                    'currency' => 'gbp',
-                    'recurring' => [
-                        'interval' => 'month',
-                    ],
-                    'metadata' => [
-                        'snitch_plan' => $key,
-                    ],
-                ]);
+                if (filled($existingMonthly)) {
+                    $existing = $stripe->prices->retrieve($existingMonthly);
+                    $productId = is_string($existing->product) ? $existing->product : $existing->product->id;
+                    $this->line("Reusing {$name} product={$productId} monthly={$existingMonthly}");
+                } else {
+                    $product = $stripe->products->create([
+                        'name' => "Snitch {$name}",
+                        // Required when Stripe Managed Payments / tax is enabled on the account.
+                        'tax_code' => 'txcd_10000000',
+                        'metadata' => [
+                            'snitch_plan' => $key,
+                        ],
+                    ]);
+                    $productId = $product->id;
+
+                    $monthly = $stripe->prices->create([
+                        'product' => $productId,
+                        'unit_amount' => $monthlyAmount,
+                        'currency' => 'gbp',
+                        'recurring' => [
+                            'interval' => 'month',
+                        ],
+                        'metadata' => [
+                            'snitch_plan' => $key,
+                            'snitch_interval' => 'month',
+                        ],
+                    ]);
+                    $monthlyPriceId = $monthly->id;
+                    $this->info("Created {$name} monthly: product={$productId} price={$monthlyPriceId}");
+                }
+
+                if (! filled($existingYearly)) {
+                    $yearly = $stripe->prices->create([
+                        'product' => $productId,
+                        'unit_amount' => $yearlyAmount,
+                        'currency' => 'gbp',
+                        'recurring' => [
+                            'interval' => 'year',
+                        ],
+                        'metadata' => [
+                            'snitch_plan' => $key,
+                            'snitch_interval' => 'year',
+                        ],
+                    ]);
+                    $yearlyPriceId = $yearly->id;
+                    $this->info("Created {$name} yearly: price={$yearlyPriceId}");
+                } else {
+                    $this->line("Reusing {$name} yearly={$existingYearly}");
+                }
             } catch (ApiErrorException $e) {
                 $this->error("Stripe API error for {$key}: {$e->getMessage()}");
 
                 return self::FAILURE;
             }
 
-            $envKey = $key === 'basic' ? 'STRIPE_PRICE_BASIC' : 'STRIPE_PRICE_PRO';
-            $printed[$envKey] = $price->id;
-
-            $this->info("Created {$name}: product={$product->id} price={$price->id}");
+            $monthlyEnv = $key === 'basic' ? 'STRIPE_PRICE_BASIC' : 'STRIPE_PRICE_PRO';
+            $yearlyEnv = $key === 'basic' ? 'STRIPE_PRICE_BASIC_YEARLY' : 'STRIPE_PRICE_PRO_YEARLY';
+            $printed[$monthlyEnv] = $monthlyPriceId;
+            $printed[$yearlyEnv] = $yearlyPriceId;
         }
 
         $this->newLine();

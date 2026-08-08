@@ -1,17 +1,21 @@
 <script setup lang="ts">
 import { Form, Head, Link, usePage } from '@inertiajs/vue3';
 import { CreditCard, LoaderCircle } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import BillingController from '@/actions/App/Http/Controllers/Settings/BillingController';
 import { pricing } from '@/routes';
 import { edit } from '@/routes/billing';
+
+type BillingInterval = 'month' | 'year';
 
 type PlanCard = {
     key: string;
     name: string;
     price_pence: number;
+    yearly_price_pence: number;
     competitor_limit: number;
-    has_checkout: boolean;
+    has_checkout_month: boolean;
+    has_checkout_year: boolean;
 };
 
 type SubscriptionSummary = {
@@ -23,12 +27,14 @@ type SubscriptionSummary = {
     on_trial: boolean;
     trial_ends_at: string | null;
     subscribed: boolean;
+    billing_interval: BillingInterval | null;
     can_upgrade: boolean;
 };
 
 const props = defineProps<{
     subscription: SubscriptionSummary;
     plans: PlanCard[];
+    yearlyDiscountPercent: number;
 }>();
 
 defineOptions({
@@ -43,6 +49,10 @@ defineOptions({
 });
 
 const page = usePage();
+const interval = ref<BillingInterval>(
+    props.subscription.billing_interval === 'year' ? 'year' : 'month',
+);
+
 const checkoutStatus = computed(() => {
     const raw = page.url.includes('checkout=success')
         ? 'success'
@@ -53,16 +63,40 @@ const checkoutStatus = computed(() => {
     return raw;
 });
 
-function formatPrice(pence: number): string {
-    if (pence <= 0) {
-        return '£0';
-    }
-
+function formatMoney(pence: number): string {
     return new Intl.NumberFormat('en-GB', {
         style: 'currency',
         currency: 'GBP',
-        maximumFractionDigits: 0,
+        maximumFractionDigits: pence % 100 === 0 ? 0 : 2,
     }).format(pence / 100);
+}
+
+function displayPrice(plan: PlanCard): string {
+    if (plan.price_pence <= 0) {
+        return '£0';
+    }
+
+    if (interval.value === 'year') {
+        return formatMoney(Math.round(plan.yearly_price_pence / 12));
+    }
+
+    return formatMoney(plan.price_pence);
+}
+
+function pricePeriod(plan: PlanCard): string {
+    if (plan.price_pence <= 0) {
+        return '';
+    }
+
+    return '/ mo';
+}
+
+function yearlyNote(plan: PlanCard): string | null {
+    if (plan.price_pence <= 0 || interval.value !== 'year') {
+        return null;
+    }
+
+    return `Billed ${formatMoney(plan.yearly_price_pence)} / yr`;
 }
 
 function trialLabel(): string | null {
@@ -84,16 +118,37 @@ function trialLabel(): string | null {
 }
 
 function isPaidCurrentPlan(plan: PlanCard): boolean {
-    return props.subscription.subscribed && props.subscription.plan === plan.key;
+    return (
+        props.subscription.subscribed &&
+        props.subscription.plan === plan.key &&
+        props.subscription.billing_interval === interval.value
+    );
+}
+
+function hasCheckout(plan: PlanCard): boolean {
+    return interval.value === 'year'
+        ? plan.has_checkout_year
+        : plan.has_checkout_month;
 }
 
 function canCheckout(plan: PlanCard): boolean {
-    return plan.has_checkout && !isPaidCurrentPlan(plan);
+    return hasCheckout(plan) && !isPaidCurrentPlan(plan);
 }
 
 function checkoutLabel(plan: PlanCard): string {
+    const samePlanDifferentInterval =
+        props.subscription.subscribed &&
+        props.subscription.plan === plan.key &&
+        props.subscription.billing_interval !== interval.value;
+
+    if (samePlanDifferentInterval) {
+        return interval.value === 'year' ? 'Switch to yearly' : 'Switch to monthly';
+    }
+
     if (plan.key === 'basic') {
-        return props.subscription.subscribed ? `Switch to ${plan.name}` : `Start ${plan.name}`;
+        return props.subscription.subscribed
+            ? `Switch to ${plan.name}`
+            : `Start ${plan.name}`;
     }
 
     if (props.subscription.subscribed || props.subscription.on_trial) {
@@ -105,10 +160,23 @@ function checkoutLabel(plan: PlanCard): string {
 
 function cardHighlight(plan: PlanCard): boolean {
     if (props.subscription.subscribed) {
-        return props.subscription.plan === plan.key;
+        return (
+            props.subscription.plan === plan.key &&
+            props.subscription.billing_interval === interval.value
+        );
     }
 
     return plan.key === 'basic' && props.subscription.on_trial;
+}
+
+function billingIntervalLabel(): string | null {
+    if (!props.subscription.subscribed || !props.subscription.billing_interval) {
+        return null;
+    }
+
+    return props.subscription.billing_interval === 'year'
+        ? 'Billed yearly'
+        : 'Billed monthly';
 }
 </script>
 
@@ -164,6 +232,12 @@ function cardHighlight(plan: PlanCard): boolean {
                                 (trial)
                             </span>
                         </p>
+                        <p
+                            v-if="billingIntervalLabel()"
+                            class="mt-1 text-sm text-snitch-ink/65"
+                        >
+                            {{ billingIntervalLabel() }}
+                        </p>
                         <p class="mt-1 text-sm text-snitch-ink/70">
                             Competitors:
                             {{ subscription.competitors_used }} /
@@ -205,6 +279,36 @@ function cardHighlight(plan: PlanCard): boolean {
                     </div>
                 </div>
 
+                <div class="relative z-10 flex flex-wrap items-center justify-between gap-3">
+                    <div class="snitch-seg" role="group" aria-label="Billing interval">
+                        <button
+                            type="button"
+                            class="snitch-seg-item"
+                            :class="interval === 'month' ? 'snitch-seg-item-active' : ''"
+                            @click="interval = 'month'"
+                        >
+                            Monthly
+                        </button>
+                        <button
+                            type="button"
+                            class="snitch-seg-item"
+                            :class="interval === 'year' ? 'snitch-seg-item-active' : ''"
+                            @click="interval = 'year'"
+                        >
+                            Yearly
+                            <span class="ml-1 text-xs opacity-80">
+                                -{{ yearlyDiscountPercent }}%
+                            </span>
+                        </button>
+                    </div>
+                    <p
+                        v-if="interval === 'year'"
+                        class="text-sm text-snitch-ink/60"
+                    >
+                        Pay annually, save {{ yearlyDiscountPercent }}%.
+                    </p>
+                </div>
+
                 <div class="relative z-10 grid gap-4 sm:grid-cols-3">
                     <article
                         v-for="plan in plans"
@@ -218,13 +322,19 @@ function cardHighlight(plan: PlanCard): boolean {
                     >
                         <p class="snitch-ink-label">{{ plan.name }}</p>
                         <p class="snitch-display mt-1 text-2xl text-snitch-ink">
-                            {{ formatPrice(plan.price_pence) }}
+                            {{ displayPrice(plan) }}
                             <span
-                                v-if="plan.price_pence > 0"
+                                v-if="pricePeriod(plan)"
                                 class="text-sm font-normal text-snitch-ink/55"
                             >
-                                / mo
+                                {{ pricePeriod(plan) }}
                             </span>
+                        </p>
+                        <p
+                            v-if="yearlyNote(plan)"
+                            class="mt-1 text-xs text-snitch-ink/55"
+                        >
+                            {{ yearlyNote(plan) }}
                         </p>
                         <p class="mt-2 text-sm text-snitch-ink/70">
                             {{ plan.competitor_limit }} competitors
@@ -256,6 +366,7 @@ function cardHighlight(plan: PlanCard): boolean {
                             #default="{ processing }"
                         >
                             <input type="hidden" name="plan" :value="plan.key" />
+                            <input type="hidden" name="interval" :value="interval" />
                             <button
                                 type="submit"
                                 class="snitch-btn w-full"

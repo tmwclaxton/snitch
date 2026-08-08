@@ -68,6 +68,7 @@ class PlanEntitlementService
      *     on_trial: bool,
      *     trial_ends_at: string|null,
      *     subscribed: bool,
+     *     billing_interval: string|null,
      *     can_upgrade: bool
      * }
      */
@@ -76,7 +77,8 @@ class PlanEntitlementService
         $plan = $this->plan($user);
         $limit = $this->competitorLimit($user);
         $used = $this->competitorsUsed($user);
-        $subscribed = $this->subscribedPlan($user) !== null;
+        $priceId = $this->subscribedStripePriceId($user);
+        $subscribed = $priceId !== null;
         $onTrial = $this->onTrial($user);
 
         return [
@@ -88,6 +90,7 @@ class PlanEntitlementService
             'on_trial' => $onTrial,
             'trial_ends_at' => $user->trial_ends_at?->toIso8601String(),
             'subscribed' => $subscribed,
+            'billing_interval' => $subscribed ? $this->billingIntervalForStripePrice($priceId) : null,
             'can_upgrade' => $plan !== 'pro',
         ];
     }
@@ -105,9 +108,10 @@ class PlanEntitlementService
         ])->save();
     }
 
-    public function stripePriceIdForPlan(string $plan): ?string
+    public function stripePriceIdForPlan(string $plan, string $interval = 'month'): ?string
     {
-        $price = config("subscriptions.plans.{$plan}.stripe_price");
+        $configKey = $interval === 'year' ? 'stripe_price_yearly' : 'stripe_price';
+        $price = config("subscriptions.plans.{$plan}.{$configKey}");
 
         return is_string($price) && $price !== '' ? $price : null;
     }
@@ -119,8 +123,31 @@ class PlanEntitlementService
         }
 
         foreach (['basic', 'pro'] as $plan) {
-            if ($this->stripePriceIdForPlan($plan) === $priceId) {
+            if ($this->stripePriceIdForPlan($plan, 'month') === $priceId) {
                 return $plan;
+            }
+
+            if ($this->stripePriceIdForPlan($plan, 'year') === $priceId) {
+                return $plan;
+            }
+        }
+
+        return null;
+    }
+
+    public function billingIntervalForStripePrice(?string $priceId): ?string
+    {
+        if ($priceId === null || $priceId === '') {
+            return null;
+        }
+
+        foreach (['basic', 'pro'] as $plan) {
+            if ($this->stripePriceIdForPlan($plan, 'month') === $priceId) {
+                return 'month';
+            }
+
+            if ($this->stripePriceIdForPlan($plan, 'year') === $priceId) {
+                return 'year';
             }
         }
 
@@ -129,6 +156,13 @@ class PlanEntitlementService
 
     private function subscribedPlan(User $user): ?string
     {
+        $priceId = $this->subscribedStripePriceId($user);
+
+        return $priceId === null ? null : $this->planKeyForStripePrice($priceId);
+    }
+
+    private function subscribedStripePriceId(User $user): ?string
+    {
         $type = (string) config('subscriptions.subscription_type', 'default');
         $subscription = $user->subscription($type);
 
@@ -136,6 +170,8 @@ class PlanEntitlementService
             return null;
         }
 
-        return $this->planKeyForStripePrice($subscription->stripe_price);
+        $priceId = $subscription->stripe_price;
+
+        return is_string($priceId) && $priceId !== '' ? $priceId : null;
     }
 }

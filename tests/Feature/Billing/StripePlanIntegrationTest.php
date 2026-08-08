@@ -132,7 +132,7 @@ class StripePlanIntegrationTest extends TestCase
         $user = $this->makeBillableUser();
 
         $response = $this->actingAs($user)
-            ->post(route('billing.checkout'), ['plan' => 'basic']);
+            ->post(route('billing.checkout'), ['plan' => 'basic', 'interval' => 'month']);
 
         $response->assertRedirect();
         $location = (string) $response->headers->get('Location');
@@ -153,7 +153,7 @@ class StripePlanIntegrationTest extends TestCase
         $user = $this->makeBillableUser();
 
         $response = $this->actingAs($user)
-            ->post(route('billing.checkout'), ['plan' => 'pro']);
+            ->post(route('billing.checkout'), ['plan' => 'pro', 'interval' => 'month']);
 
         $response->assertRedirect();
         $location = (string) $response->headers->get('Location');
@@ -195,6 +195,21 @@ class StripePlanIntegrationTest extends TestCase
         $this->assertSame('gbp', $pro->currency);
         $this->assertSame(9900, $pro->unit_amount);
         $this->assertSame('month', $pro->recurring?->interval);
+
+        $basicYearly = (string) config('subscriptions.plans.basic.stripe_price_yearly');
+        $proYearly = (string) config('subscriptions.plans.pro.stripe_price_yearly');
+
+        if ($basicYearly === '' || $proYearly === '') {
+            $this->markTestSkipped('Yearly Stripe price IDs are not configured yet.');
+        }
+
+        $basicY = $stripe->prices->retrieve($basicYearly);
+        $proY = $stripe->prices->retrieve($proYearly);
+
+        $this->assertSame(19200, $basicY->unit_amount);
+        $this->assertSame('year', $basicY->recurring?->interval);
+        $this->assertSame(95040, $proY->unit_amount);
+        $this->assertSame('year', $proY->recurring?->interval);
     }
 
     private function makeBillableUser(bool $onTrial = true): User
