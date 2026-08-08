@@ -25,9 +25,6 @@ setLayoutProps({ minimal: true });
             <h1 class="snitch-display text-3xl text-snitch-ink sm:text-4xl">
                 Tell Snitch about your brand
             </h1>
-            <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
-                A scrapbook of context so we know who you are. You can add competitors to watch on the next screen.
-            </p>
 
             <BrandProfileForm
                 class="mt-5"
