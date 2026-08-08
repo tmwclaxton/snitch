@@ -1,5 +1,15 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import {
+    Check,
+    LoaderCircle,
+    Plus,
+    RefreshCw,
+    Sparkles,
+    Trash2,
+    Users,
+    X,
+} from '@lucide/vue';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import {
     confirmSuggestions,
@@ -488,7 +498,7 @@ function syncAccount(account: Account): void {
         <Head title="Competitors" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="relative z-10 mx-auto w-full min-w-0 max-w-5xl">
+        <div class="relative z-10 mx-auto w-full min-w-0 max-w-6xl">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div class="min-w-0">
                     <h1 class="snitch-display text-3xl text-snitch-ink sm:text-4xl">
@@ -505,7 +515,19 @@ function syncAccount(account: Account): void {
                         :disabled="suggesting"
                         @click="requestSuggestions"
                     >
-                        {{ suggesting ? 'Finding…' : 'Suggest competitors' }}
+                        <LoaderCircle
+                            v-if="suggesting"
+                            class="relative z-10 size-4 shrink-0 animate-spin"
+                            aria-hidden="true"
+                        />
+                        <Sparkles
+                            v-else
+                            class="relative z-10 size-4 shrink-0"
+                            aria-hidden="true"
+                        />
+                        <span class="relative z-10">
+                            {{ suggesting ? 'Finding…' : 'Suggest competitors' }}
+                        </span>
                     </button>
                     <p
                         v-if="suggestMessage"
@@ -581,7 +603,17 @@ function syncAccount(account: Account): void {
                             class="snitch-btn snitch-btn-spot snitch-add-account-submit w-full sm:w-auto"
                             :disabled="form.processing || suggesting"
                         >
-                            <span class="relative z-10">
+                            <span class="relative z-10 inline-flex items-center gap-2">
+                                <LoaderCircle
+                                    v-if="form.processing"
+                                    class="size-3.5 shrink-0 animate-spin"
+                                    aria-hidden="true"
+                                />
+                                <Plus
+                                    v-else
+                                    class="size-3.5 shrink-0"
+                                    aria-hidden="true"
+                                />
                                 {{ form.processing ? 'Adding…' : 'Add' }}
                             </span>
                         </button>
@@ -612,84 +644,198 @@ function syncAccount(account: Account): void {
                             class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
                             @click="dismiss"
                         >
-                            Dismiss
+                            <X class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                            <span class="relative z-10">Dismiss</span>
                         </button>
                     </div>
                 </div>
 
-                <div class="snitch-scrap relative mt-6 overflow-x-auto p-3 pt-5 sm:p-4 sm:pt-6">
+                <div class="snitch-scrap relative mt-6 p-3 pt-5 sm:p-4 sm:pt-6">
                     <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
-                    <table class="relative z-10 w-full min-w-[36rem] border-collapse text-left text-sm">
+                    <div class="relative z-10 min-w-0 overflow-x-auto">
+                        <table class="w-full border-collapse text-left text-sm">
+                            <thead>
+                                <tr class="border-b border-snitch-ink/15">
+                                    <th class="w-10 px-1.5 py-2 sm:px-2">
+                                        <input
+                                            type="checkbox"
+                                            class="size-4 accent-[var(--snitch-spot)]"
+                                            :checked="allSelected"
+                                            :aria-label="allSelected ? 'Clear selection' : 'Select all'"
+                                            @change="toggleSelectAll"
+                                        />
+                                    </th>
+                                    <th class="hidden w-[7.5rem] px-2 py-2 sm:table-cell">
+                                        <span class="snitch-ink-label">Platform</span>
+                                    </th>
+                                    <th class="min-w-0 px-1.5 py-2 sm:px-2">
+                                        <span class="snitch-ink-label">Account</span>
+                                    </th>
+                                    <th class="hidden px-2 py-2 md:table-cell md:w-[30%]">
+                                        <span class="snitch-ink-label">Source</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="item in localSuggestions"
+                                    :key="suggestionKey(item)"
+                                    class="cursor-pointer border-b border-snitch-ink/10 last:border-0"
+                                    :class="
+                                        selected[suggestionKey(item)]
+                                            ? 'bg-snitch-spot/15'
+                                            : 'hover:bg-snitch-ink/[0.03]'
+                                    "
+                                    @click="toggle(item)"
+                                >
+                                    <td class="px-1.5 py-2.5 align-middle sm:px-2" @click.stop>
+                                        <input
+                                            type="checkbox"
+                                            class="size-4 accent-[var(--snitch-spot)]"
+                                            :checked="!!selected[suggestionKey(item)]"
+                                            :aria-label="`Select ${item.display_name}`"
+                                            @change="toggle(item)"
+                                        />
+                                    </td>
+                                    <td class="hidden px-2 py-2.5 align-middle sm:table-cell">
+                                        <span class="flex items-center gap-1.5">
+                                            <img
+                                                :src="platformIconSrc(item.platform)"
+                                                alt=""
+                                                class="snitch-platform-logo size-4 shrink-0"
+                                                width="16"
+                                                height="16"
+                                            />
+                                            <span class="snitch-ink-label">
+                                                {{ platformLabel(item.platform) }}
+                                            </span>
+                                        </span>
+                                    </td>
+                                    <td class="min-w-0 px-1.5 py-2.5 align-middle sm:px-2">
+                                        <div class="flex min-w-0 items-center gap-2">
+                                            <img
+                                                v-if="item.avatar"
+                                                :src="item.avatar"
+                                                alt=""
+                                                class="h-8 w-8 shrink-0 object-cover"
+                                                style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
+                                            />
+                                            <div
+                                                v-else
+                                                class="flex h-8 w-8 shrink-0 items-center justify-center bg-snitch-teal/20 text-xs font-semibold"
+                                                style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
+                                            >
+                                                {{ item.display_name.slice(0, 1) }}
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p class="snitch-display truncate text-base">
+                                                    {{ item.display_name }}
+                                                </p>
+                                                <p class="snitch-annotation truncate text-base leading-tight">
+                                                    @{{ item.handle }}
+                                                </p>
+                                                <p class="mt-0.5 flex items-center gap-1 sm:hidden">
+                                                    <img
+                                                        :src="platformIconSrc(item.platform)"
+                                                        alt=""
+                                                        class="snitch-platform-logo size-3.5 shrink-0"
+                                                        width="14"
+                                                        height="14"
+                                                    />
+                                                    <span class="snitch-ink-label">
+                                                        {{ platformLabel(item.platform) }}
+                                                    </span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="hidden max-w-0 px-2 py-2.5 align-middle text-xs text-snitch-ink/55 md:table-cell">
+                                        <span class="line-clamp-2 break-words">
+                                            {{ item.source || '-' }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    class="snitch-btn snitch-btn-spot mt-6 w-full sm:w-auto"
+                    :disabled="selectedSuggestions.length === 0 || confirmForm.processing"
+                    @click="submitConfirm"
+                >
+                    <span class="relative z-10 inline-flex items-center gap-2">
+                        <Check class="size-3.5 shrink-0" aria-hidden="true" />
+                        Confirm {{ selectedSuggestions.length }} competitors
+                    </span>
+                </button>
+            </section>
+
+            <div
+                v-if="accounts.length"
+                class="snitch-scrap relative mt-8 p-3 pt-5 sm:p-4 sm:pt-6"
+            >
+                <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
+                <div class="relative z-10 min-w-0 overflow-x-auto">
+                    <table class="w-full border-collapse text-left text-sm">
                         <thead>
                             <tr class="border-b border-snitch-ink/15">
-                                <th class="w-10 px-2 py-2">
-                                    <input
-                                        type="checkbox"
-                                        class="size-4 accent-[var(--snitch-spot)]"
-                                        :checked="allSelected"
-                                        :aria-label="allSelected ? 'Clear selection' : 'Select all'"
-                                        @change="toggleSelectAll"
-                                    />
-                                </th>
-                                <th class="px-2 py-2">
+                                <th class="hidden w-[7.5rem] px-2 py-2 sm:table-cell">
                                     <span class="snitch-ink-label">Platform</span>
                                 </th>
-                                <th class="px-2 py-2">
-                                    <span class="snitch-ink-label">Handle</span>
+                                <th class="min-w-0 px-1.5 py-2 sm:px-2">
+                                    <span class="snitch-ink-label">Account</span>
                                 </th>
-                                <th class="px-2 py-2">
-                                    <span class="snitch-ink-label">Name</span>
+                                <th class="w-14 px-1.5 py-2 text-right sm:px-2 sm:text-left">
+                                    <span class="snitch-ink-label">Posts</span>
                                 </th>
-                                <th class="hidden px-2 py-2 md:table-cell">
-                                    <span class="snitch-ink-label">Source</span>
+                                <th class="hidden px-2 py-2 md:table-cell md:w-[8.5rem]">
+                                    <span class="snitch-ink-label">Auto sync</span>
+                                </th>
+                                <th class="hidden px-2 py-2 lg:table-cell lg:w-[8.5rem]">
+                                    <span class="snitch-ink-label">Last synced</span>
+                                </th>
+                                <th class="w-auto px-1.5 py-2 text-right sm:px-2">
+                                    <span class="sr-only">Actions</span>
                                 </th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr
-                                v-for="item in localSuggestions"
-                                :key="suggestionKey(item)"
-                                class="cursor-pointer border-b border-snitch-ink/10 last:border-0"
-                                :class="
-                                    selected[suggestionKey(item)]
-                                        ? 'bg-snitch-spot/15'
-                                        : 'hover:bg-snitch-ink/[0.03]'
-                                "
-                                @click="toggle(item)"
+                                v-for="account in accounts"
+                                :key="account.id"
+                                class="border-b border-snitch-ink/10 last:border-0 hover:bg-snitch-ink/[0.03]"
+                                :class="isAccountSyncing(account) ? 'bg-snitch-spot/10' : ''"
+                                :data-platform="account.platform"
+                                :data-syncing="isAccountSyncing(account) ? 'true' : undefined"
                             >
-                                <td class="px-2 py-2.5 align-middle" @click.stop>
-                                    <input
-                                        type="checkbox"
-                                        class="size-4 accent-[var(--snitch-spot)]"
-                                        :checked="!!selected[suggestionKey(item)]"
-                                        :aria-label="`Select ${item.display_name}`"
-                                        @change="toggle(item)"
-                                    />
-                                </td>
-                                <td class="px-2 py-2.5 align-middle">
-                                    <span class="flex items-center gap-1.5">
+                                <td class="hidden px-2 py-2.5 align-middle sm:table-cell">
+                                    <Link
+                                        :href="competitorShow.url(account.id)"
+                                        class="flex items-center gap-1.5 text-inherit no-underline outline-none focus-visible:ring-2 focus-visible:ring-snitch-ink/30"
+                                    >
                                         <img
-                                            :src="platformIconSrc(item.platform)"
-                                            alt=""
+                                            :src="platformIconSrc(account.platform)"
+                                            :alt="`${platformLabel(account.platform)} logo`"
                                             class="snitch-platform-logo size-4 shrink-0"
                                             width="16"
                                             height="16"
                                         />
                                         <span class="snitch-ink-label">
-                                            {{ platformLabel(item.platform) }}
+                                            {{ platformLabel(account.platform) }}
                                         </span>
-                                    </span>
+                                    </Link>
                                 </td>
-                                <td class="px-2 py-2.5 align-middle">
-                                    <span class="snitch-annotation text-base">
-                                        @{{ item.handle }}
-                                    </span>
-                                </td>
-                                <td class="px-2 py-2.5 align-middle">
-                                    <div class="flex min-w-0 items-center gap-2">
+                                <td class="min-w-0 px-1.5 py-2.5 align-middle sm:px-2">
+                                    <Link
+                                        :href="competitorShow.url(account.id)"
+                                        class="flex min-w-0 items-center gap-2 text-inherit no-underline outline-none focus-visible:ring-2 focus-visible:ring-snitch-ink/30"
+                                    >
                                         <img
-                                            v-if="item.avatar"
-                                            :src="item.avatar"
+                                            v-if="account.avatar"
+                                            :src="account.avatar"
                                             alt=""
                                             class="h-8 w-8 shrink-0 object-cover"
                                             style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
@@ -699,200 +845,130 @@ function syncAccount(account: Account): void {
                                             class="flex h-8 w-8 shrink-0 items-center justify-center bg-snitch-teal/20 text-xs font-semibold"
                                             style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
                                         >
-                                            {{ item.display_name.slice(0, 1) }}
+                                            {{ account.handle.slice(0, 2).toUpperCase() }}
                                         </div>
-                                        <span class="snitch-display truncate text-base">
-                                            {{ item.display_name }}
-                                        </span>
-                                    </div>
+                                        <div class="min-w-0">
+                                            <p class="snitch-display truncate text-base">
+                                                {{ account.display_name || account.handle }}
+                                            </p>
+                                            <p class="snitch-annotation truncate text-base leading-tight">
+                                                @{{ account.handle }}
+                                            </p>
+                                            <p class="mt-0.5 flex items-center gap-1 sm:hidden">
+                                                <img
+                                                    :src="platformIconSrc(account.platform)"
+                                                    :alt="`${platformLabel(account.platform)} logo`"
+                                                    class="snitch-platform-logo size-3.5 shrink-0"
+                                                    width="14"
+                                                    height="14"
+                                                />
+                                                <span class="snitch-ink-label">
+                                                    {{ platformLabel(account.platform) }}
+                                                </span>
+                                            </p>
+                                            <p
+                                                v-if="isAccountSyncing(account)"
+                                                class="mt-0.5 text-xs font-medium text-snitch-ink"
+                                                aria-live="polite"
+                                            >
+                                                <span
+                                                    class="mr-1 inline-block size-1.5 animate-pulse rounded-full bg-snitch-spot align-middle"
+                                                    aria-hidden="true"
+                                                />
+                                                Sync in progress
+                                            </p>
+                                            <p
+                                                v-else-if="emptyImportHint(account)"
+                                                class="mt-0.5 text-xs font-medium text-snitch-ink/70"
+                                            >
+                                                {{ emptyImportHint(account) }}
+                                            </p>
+                                            <p
+                                                v-else
+                                                class="mt-0.5 text-[11px] text-snitch-ink/55 md:hidden"
+                                            >
+                                                Auto sync {{ accountNextSyncLabel(account) }}
+                                            </p>
+                                        </div>
+                                    </Link>
                                 </td>
-                                <td class="hidden max-w-[14rem] px-2 py-2.5 align-middle text-xs text-snitch-ink/55 md:table-cell">
-                                    <span class="line-clamp-2">
-                                        {{ item.source || '-' }}
+                                <td class="w-14 px-1.5 py-2.5 align-middle text-right tabular-nums text-snitch-ink/70 sm:px-2 sm:text-left">
+                                    {{ account.posts_count ?? 0 }}
+                                </td>
+                                <td class="hidden px-2 py-2.5 align-middle text-xs md:table-cell">
+                                    <span
+                                        class="font-medium"
+                                        :class="
+                                            isAccountSyncing(account)
+                                                ? 'text-snitch-ink'
+                                                : accountSyncDue(account)
+                                                  ? 'text-snitch-ink'
+                                                  : 'text-snitch-ink/55'
+                                        "
+                                        :aria-live="isAccountSyncing(account) ? 'polite' : undefined"
+                                    >
+                                        <span
+                                            v-if="isAccountSyncing(account)"
+                                            class="mr-1.5 inline-block size-1.5 animate-pulse rounded-full bg-snitch-spot align-middle"
+                                            aria-hidden="true"
+                                        />
+                                        {{ accountNextSyncLabel(account) }}
                                     </span>
+                                </td>
+                                <td class="hidden px-2 py-2.5 align-middle text-xs text-snitch-ink/55 lg:table-cell">
+                                    {{
+                                        isAccountSyncing(account)
+                                            ? 'In progress'
+                                            : lastSyncedLabel(account.last_synced_at) || '-'
+                                    }}
+                                </td>
+                                <td class="px-1.5 py-2.5 align-middle text-right sm:px-2">
+                                    <div class="flex flex-nowrap justify-end gap-1 sm:gap-1.5">
+                                        <button
+                                            type="button"
+                                            class="snitch-btn snitch-btn-spot shrink-0 px-2 py-1 text-xs sm:px-2.5"
+                                            :disabled="isAccountSyncing(account)"
+                                            :title="
+                                                isAccountSyncing(account)
+                                                    ? `Sync running for @${account.handle}`
+                                                    : `Sync @${account.handle}`
+                                            "
+                                            :aria-label="
+                                                isAccountSyncing(account)
+                                                    ? `Sync running for @${account.handle}`
+                                                    : `Sync @${account.handle}`
+                                            "
+                                            @click="syncAccount(account)"
+                                        >
+                                            <span class="relative z-10 inline-flex items-center gap-1.5">
+                                                <LoaderCircle
+                                                    v-if="isAccountSyncing(account)"
+                                                    class="size-3 shrink-0 animate-spin"
+                                                    aria-hidden="true"
+                                                />
+                                                <RefreshCw
+                                                    v-else
+                                                    class="size-3 shrink-0"
+                                                    aria-hidden="true"
+                                                />
+                                                {{ isAccountSyncing(account) ? 'Syncing…' : 'Sync' }}
+                                            </span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="snitch-btn snitch-btn-ghost shrink-0 px-2 py-1 text-xs sm:px-2.5"
+                                            :aria-label="`Remove @${account.handle}`"
+                                            @click="askRemove(account)"
+                                        >
+                                            <Trash2 class="relative z-10 size-3 shrink-0" aria-hidden="true" />
+                                            <span class="relative z-10">Remove</span>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-
-                <button
-                    type="button"
-                    class="snitch-btn snitch-btn-spot mt-6 w-full sm:w-auto"
-                    :disabled="selectedSuggestions.length === 0 || confirmForm.processing"
-                    @click="submitConfirm"
-                >
-                    <span class="relative z-10">
-                        Confirm {{ selectedSuggestions.length }} competitors
-                    </span>
-                </button>
-            </section>
-
-            <div
-                v-if="accounts.length"
-                class="snitch-scrap relative mt-8 overflow-x-auto p-3 pt-5 sm:p-4 sm:pt-6"
-            >
-                <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
-                <table class="relative z-10 w-full min-w-[48rem] border-collapse text-left text-sm">
-                    <thead>
-                        <tr class="border-b border-snitch-ink/15">
-                            <th class="px-2 py-2">
-                                <span class="snitch-ink-label">Platform</span>
-                            </th>
-                            <th class="px-2 py-2">
-                                <span class="snitch-ink-label">Account</span>
-                            </th>
-                            <th class="px-2 py-2">
-                                <span class="snitch-ink-label">Posts</span>
-                            </th>
-                            <th class="hidden px-2 py-2 md:table-cell">
-                                <span class="snitch-ink-label">Auto sync</span>
-                            </th>
-                            <th class="hidden px-2 py-2 lg:table-cell">
-                                <span class="snitch-ink-label">Last synced</span>
-                            </th>
-                            <th class="w-40 px-2 py-2 text-right">
-                                <span class="sr-only">Actions</span>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="account in accounts"
-                            :key="account.id"
-                            class="border-b border-snitch-ink/10 last:border-0 hover:bg-snitch-ink/[0.03]"
-                            :class="isAccountSyncing(account) ? 'bg-snitch-spot/10' : ''"
-                            :data-platform="account.platform"
-                            :data-syncing="isAccountSyncing(account) ? 'true' : undefined"
-                        >
-                            <td class="px-2 py-2.5 align-middle">
-                                <Link
-                                    :href="competitorShow.url(account.id)"
-                                    class="flex items-center gap-1.5 text-inherit no-underline outline-none focus-visible:ring-2 focus-visible:ring-snitch-ink/30"
-                                >
-                                    <img
-                                        :src="platformIconSrc(account.platform)"
-                                        :alt="`${platformLabel(account.platform)} logo`"
-                                        class="snitch-platform-logo size-4 shrink-0"
-                                        width="16"
-                                        height="16"
-                                    />
-                                    <span class="snitch-ink-label">
-                                        {{ platformLabel(account.platform) }}
-                                    </span>
-                                </Link>
-                            </td>
-                            <td class="px-2 py-2.5 align-middle">
-                                <Link
-                                    :href="competitorShow.url(account.id)"
-                                    class="flex min-w-0 items-center gap-2 text-inherit no-underline outline-none focus-visible:ring-2 focus-visible:ring-snitch-ink/30"
-                                >
-                                    <img
-                                        v-if="account.avatar"
-                                        :src="account.avatar"
-                                        alt=""
-                                        class="h-8 w-8 shrink-0 object-cover"
-                                        style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
-                                    />
-                                    <div
-                                        v-else
-                                        class="flex h-8 w-8 shrink-0 items-center justify-center bg-snitch-teal/20 text-xs font-semibold"
-                                        style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
-                                    >
-                                        {{ account.handle.slice(0, 2).toUpperCase() }}
-                                    </div>
-                                    <div class="min-w-0">
-                                        <p class="snitch-display truncate text-base">
-                                            {{ account.display_name || account.handle }}
-                                        </p>
-                                        <p class="snitch-annotation truncate text-base leading-tight">
-                                            @{{ account.handle }}
-                                        </p>
-                                        <p
-                                            v-if="isAccountSyncing(account)"
-                                            class="mt-0.5 text-xs font-medium text-snitch-ink"
-                                            aria-live="polite"
-                                        >
-                                            <span
-                                                class="mr-1 inline-block size-1.5 animate-pulse rounded-full bg-snitch-spot align-middle"
-                                                aria-hidden="true"
-                                            />
-                                            Sync in progress
-                                        </p>
-                                        <p
-                                            v-else-if="emptyImportHint(account)"
-                                            class="mt-0.5 text-xs font-medium text-snitch-ink/70"
-                                        >
-                                            {{ emptyImportHint(account) }}
-                                        </p>
-                                    </div>
-                                </Link>
-                            </td>
-                            <td class="px-2 py-2.5 align-middle text-snitch-ink/70">
-                                {{ account.posts_count ?? 0 }}
-                            </td>
-                            <td class="hidden px-2 py-2.5 align-middle text-xs md:table-cell">
-                                <span
-                                    class="font-medium"
-                                    :class="
-                                        isAccountSyncing(account)
-                                            ? 'text-snitch-ink'
-                                            : accountSyncDue(account)
-                                              ? 'text-snitch-ink'
-                                              : 'text-snitch-ink/55'
-                                    "
-                                    :aria-live="isAccountSyncing(account) ? 'polite' : undefined"
-                                >
-                                    <span
-                                        v-if="isAccountSyncing(account)"
-                                        class="mr-1.5 inline-block size-1.5 animate-pulse rounded-full bg-snitch-spot align-middle"
-                                        aria-hidden="true"
-                                    />
-                                    {{ accountNextSyncLabel(account) }}
-                                </span>
-                            </td>
-                            <td class="hidden px-2 py-2.5 align-middle text-xs text-snitch-ink/55 lg:table-cell">
-                                {{
-                                    isAccountSyncing(account)
-                                        ? 'In progress'
-                                        : lastSyncedLabel(account.last_synced_at) || '-'
-                                }}
-                            </td>
-                            <td class="px-2 py-2.5 align-middle text-right">
-                                <div class="flex flex-wrap justify-end gap-1.5">
-                                    <button
-                                        type="button"
-                                        class="snitch-btn snitch-btn-spot px-2.5 py-1 text-xs"
-                                        :disabled="isAccountSyncing(account)"
-                                        :title="
-                                            isAccountSyncing(account)
-                                                ? `Sync running for @${account.handle}`
-                                                : `Sync @${account.handle}`
-                                        "
-                                        :aria-label="
-                                            isAccountSyncing(account)
-                                                ? `Sync running for @${account.handle}`
-                                                : `Sync @${account.handle}`
-                                        "
-                                        @click="syncAccount(account)"
-                                    >
-                                        <span class="relative z-10">
-                                            {{ isAccountSyncing(account) ? 'Syncing…' : 'Sync' }}
-                                        </span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="snitch-btn snitch-btn-ghost px-2.5 py-1 text-xs"
-                                        :aria-label="`Remove @${account.handle}`"
-                                        @click="askRemove(account)"
-                                    >
-                                        Remove
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
             </div>
 
             <div
@@ -900,7 +976,8 @@ function syncAccount(account: Account): void {
                 class="snitch-scrap relative mx-auto mt-10 max-w-md p-8 text-center"
             >
                 <span class="snitch-tape left-8 -top-2" aria-hidden="true" />
-                <p class="snitch-display text-2xl">No competitors yet</p>
+                <Users class="mx-auto size-8 text-snitch-ink/35" aria-hidden="true" />
+                <p class="snitch-display mt-3 text-2xl">No competitors yet</p>
                 <p class="mt-2 text-sm text-snitch-ink/65">
                     Add a handle above, or ask Snitch to suggest competitors.
                 </p>

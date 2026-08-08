@@ -25,6 +25,11 @@ import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
     {
+        title: 'Dashboard',
+        href: dashboard(),
+        icon: LayoutGrid,
+    },
+    {
         title: 'Brand',
         href: brand(),
         icon: Store,
@@ -40,19 +45,14 @@ const mainNavItems: NavItem[] = [
         icon: Clapperboard,
     },
     {
-        title: 'Explore',
-        href: explore(),
-        icon: Compass,
-    },
-    {
         title: 'Winners',
         href: winners(),
         icon: Trophy,
     },
     {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
+        title: 'Explore',
+        href: explore(),
+        icon: Compass,
     },
 ];
 

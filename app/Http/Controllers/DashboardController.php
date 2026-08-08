@@ -6,6 +6,7 @@ use App\Enums\AnalysisStatus;
 use App\Enums\MediaAvailability;
 use App\Models\Post;
 use App\Models\WinnerInsight;
+use App\Services\Dashboard\DashboardActivityBuilder;
 use App\Support\PlatformEmbed;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,7 +14,7 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request, DashboardActivityBuilder $activity): Response
     {
         $user = $request->user();
 
@@ -68,7 +69,19 @@ class DashboardController extends Controller
             ->with(['post.trackedAccount', 'post.analysis'])
             ->orderByDesc('score')
             ->limit(4)
-            ->get();
+            ->get()
+            ->each(function (WinnerInsight $winner): void {
+                $post = $winner->post;
+
+                if ($post === null) {
+                    return;
+                }
+
+                $post->setAttribute(
+                    'embed',
+                    PlatformEmbed::resolve($post->platform, $post->url, compact: true),
+                );
+            });
 
         return Inertia::render('Dashboard', [
             'stats' => [
@@ -79,6 +92,7 @@ class DashboardController extends Controller
                 'analysis_failed' => $analysisFailed,
                 'last_synced_at' => $lastSyncedAt,
             ],
+            'activity' => $activity->forUser($user),
             'recent_posts' => $recentPosts,
             'top_winners' => $topWinners,
         ]);

@@ -89,6 +89,8 @@ class WinnersTest extends TestCase
                 ->component('winners/Index')
                 ->has('winners', 1)
                 ->where('winners.0.post.id', $winnerPost->id)
+                ->where('winners.0.post.metrics.views', 5000)
+                ->where('winners.0.post.metrics.likes', 400)
                 ->where('winners.0.post.analysis.hook', 'Strong opening line here')
                 ->where('winners.0.post.analysis.concept', 'Pattern interrupt with proof')
                 ->where('winners.0.post.analysis.topics.0', 'social proof with receipts')

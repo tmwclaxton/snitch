@@ -55,3 +55,38 @@ export function metricPairs(
 
     return pairs;
 }
+
+export type WinnerStatPill = {
+    key: string;
+    label: string;
+};
+
+export function winnerStatPills(
+    score: number,
+    metrics?: PostMetrics | null,
+): WinnerStatPill[] {
+    const pills: WinnerStatPill[] = [
+        { key: 'score', label: `Score ${score.toFixed(1)}` },
+    ];
+
+    const views = metrics?.views;
+    const likes = metrics?.likes;
+
+    if (typeof views === 'number' && views > 0) {
+        const compact = formatCompactCount(views);
+
+        if (compact) {
+            pills.push({ key: 'views', label: `Views ${compact}` });
+        }
+    }
+
+    if (typeof likes === 'number' && likes > 0) {
+        const compact = formatCompactCount(likes);
+
+        if (compact) {
+            pills.push({ key: 'likes', label: `Likes ${compact}` });
+        }
+    }
+
+    return pills;
+}

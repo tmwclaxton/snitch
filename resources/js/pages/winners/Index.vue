@@ -17,6 +17,9 @@ import type {
 } from '@/components/WinnerRulesForm.vue';
 import WinnerRulesModal from '@/components/WinnerRulesModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { winnerStatPills } from '@/lib/metrics';
+import type { PostMetrics } from '@/lib/metrics';
+import { platformLabel } from '@/lib/platforms';
 import { glanceTermChips } from '@/lib/posts';
 import { useToastStore } from '@/stores/toastStore';
 
@@ -43,6 +46,7 @@ const props = defineProps<{
             url: string | null;
             media_url: string | null;
             platform: string;
+            metrics?: PostMetrics | null;
             embed?: EmbedConfig | null;
             tracked_account?: { handle: string };
             analysis?: {
@@ -297,29 +301,30 @@ onUnmounted(() => {
 
                         <Link
                             :href="feedShow.url(winner.post.id)"
-                            class="snitch-tear-row-body relative z-10 block space-y-2"
+                            class="snitch-tear-row-body relative z-10 block space-y-2.5"
                         >
-                            <div class="flex items-center justify-between gap-2">
-                                <span class="snitch-ink-label">#{{ index + 1 }}</span>
-                                <span class="snitch-annotation text-xl">
-                                    {{ winner.score.toFixed(1) }}
-                                </span>
-                            </div>
                             <p class="text-xs uppercase tracking-wide text-snitch-ink/50">
                                 @{{ winner.post.tracked_account?.handle }} ·
-                                {{ winner.post.platform }}
+                                {{ platformLabel(winner.post.platform) }}
                             </p>
-                            <p
-                                v-if="winner.post.analysis?.concept"
-                                class="text-sm font-medium text-snitch-ink"
-                            >
-                                {{ winner.post.analysis.concept }}
-                            </p>
+                            <div class="snitch-topic-row">
+                                <span
+                                    v-for="pill in winnerStatPills(winner.score, winner.post.metrics)"
+                                    :key="pill.key"
+                                    class="snitch-topic-chip"
+                                >{{ pill.label }}</span>
+                            </div>
                             <p
                                 v-if="winner.post.analysis?.hook"
-                                class="text-sm text-snitch-ink/75"
+                                class="text-sm font-semibold text-snitch-ink"
                             >
-                                Hook: {{ winner.post.analysis.hook }}
+                                {{ winner.post.analysis.hook }}
+                            </p>
+                            <p
+                                v-else-if="winner.post.analysis?.concept"
+                                class="text-sm font-semibold text-snitch-ink"
+                            >
+                                {{ winner.post.analysis.concept }}
                             </p>
                             <div
                                 v-if="winnerTags(winner).length"
@@ -334,7 +339,6 @@ onUnmounted(() => {
                                     :slug="tag.slug"
                                 />
                             </div>
-                            <p class="text-sm text-snitch-ink/85">{{ winner.why }}</p>
                             <div class="border-t border-dashed border-snitch-ink/15 pt-3">
                                 <p class="snitch-annotation text-lg">How to copy</p>
                                 <MarkdownText
