@@ -92,6 +92,43 @@ class PlanEntitlementServiceTest extends TestCase
         $this->assertSame($original, $user->trial_ends_at->toIso8601String());
     }
 
+    public function test_unknown_subscription_price_does_not_masquerade_as_paid_plan(): void
+    {
+        $user = User::factory()->freePlan()->create();
+        $this->createSubscription($user, 'price_unknown_other');
+
+        $this->assertSame('free', $this->entitlements->plan($user));
+        $this->assertSame(3, $this->entitlements->competitorLimit($user));
+    }
+
+    public function test_summary_marks_trial_and_upgrade_flags(): void
+    {
+        $user = User::factory()->onTrial()->create();
+        TrackedAccount::factory()->count(3)->for($user)->create();
+
+        $summary = $this->entitlements->summary($user);
+
+        $this->assertSame('basic', $summary['plan']);
+        $this->assertTrue($summary['on_trial']);
+        $this->assertFalse($summary['subscribed']);
+        $this->assertTrue($summary['can_upgrade']);
+        $this->assertSame(3, $summary['competitors_used']);
+        $this->assertSame(7, $summary['competitors_remaining']);
+    }
+
+    public function test_pro_summary_cannot_upgrade_further(): void
+    {
+        $user = User::factory()->freePlan()->create();
+        $this->createSubscription($user, 'price_pro_test');
+
+        $summary = $this->entitlements->summary($user);
+
+        $this->assertSame('pro', $summary['plan']);
+        $this->assertTrue($summary['subscribed']);
+        $this->assertFalse($summary['can_upgrade']);
+        $this->assertFalse($summary['on_trial']);
+    }
+
     private function createSubscription(User $user, string $priceId): Subscription
     {
         return $user->subscriptions()->create([
