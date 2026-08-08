@@ -94,37 +94,63 @@ jobs:
       - name: Copy deploy files to server
         run: |
           set -euo pipefail
-          retry() {
-            local attempt
-            for attempt in 1 2 3; do
+          # SSH/SCP through Cloudflare Access can flap; backoff beyond a fixed 5s sleep.
+          retry_with_backoff() {
+            local max_attempts="$1"
+            shift
+            local attempt=1
+            local delay=5
+
+            while [ "$attempt" -le "$max_attempts" ]; do
               if "$@"; then
                 return 0
               fi
-              echo "Attempt ${attempt} failed; retrying in 5s..."
-              sleep 5
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                echo "Command failed after ${max_attempts} attempts: $*" >&2
+                return 1
+              fi
+              echo "Attempt ${attempt}/${max_attempts} failed; retrying in ${delay}s..."
+              sleep "$delay"
+              delay=$((delay * 2))
+              if [ "$delay" -gt 60 ]; then
+                delay=60
+              fi
+              attempt=$((attempt + 1))
             done
-            return 1
           }
 
-          retry scp compose.prod.yaml ${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/compose.prod.yaml
-          retry scp scripts/deploy-production.sh ${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/deploy-production.sh
+          retry_with_backoff 5 scp compose.prod.yaml ${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/compose.prod.yaml
+          retry_with_backoff 5 scp scripts/deploy-production.sh ${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/deploy-production.sh
 
       - name: Deploy to server
         run: |
           set -euo pipefail
-          retry() {
-            local attempt
-            for attempt in 1 2 3; do
+          # Outer retries cover SSH transport flaps; deploy-production.sh retries GHCR login/pull.
+          retry_with_backoff() {
+            local max_attempts="$1"
+            shift
+            local attempt=1
+            local delay=10
+
+            while [ "$attempt" -le "$max_attempts" ]; do
               if "$@"; then
                 return 0
               fi
-              echo "Attempt ${attempt} failed; retrying in 5s..."
-              sleep 5
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                echo "Command failed after ${max_attempts} attempts: $*" >&2
+                return 1
+              fi
+              echo "Attempt ${attempt}/${max_attempts} failed; retrying in ${delay}s..."
+              sleep "$delay"
+              delay=$((delay * 2))
+              if [ "$delay" -gt 90 ]; then
+                delay=90
+              fi
+              attempt=$((attempt + 1))
             done
-            return 1
           }
 
-          retry ssh ${{ env.DEPLOY_HOST }} "
+          retry_with_backoff 4 ssh ${{ env.DEPLOY_HOST }} "
             set -e
             cd ${{ env.DEPLOY_DIR }}
             chmod +x deploy-production.sh
