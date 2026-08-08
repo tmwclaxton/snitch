@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
+import { Trash2, TriangleAlert, X } from '@lucide/vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import {
     Dialog,
@@ -26,7 +27,8 @@ import {
 
         <div class="snitch-scrap relative space-y-3 p-4 pt-5">
             <span class="snitch-tape right-5 -top-2" aria-hidden="true" />
-            <p class="relative z-10 text-sm font-medium text-snitch-ink">
+            <p class="relative z-10 flex items-center gap-2 text-sm font-medium text-snitch-ink">
+                <TriangleAlert class="size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
                 Warning
             </p>
             <p class="relative z-10 text-sm text-snitch-ink/70">
@@ -40,7 +42,8 @@ import {
                         class="snitch-btn relative z-10"
                         data-test="delete-user-button"
                     >
-                        Delete account
+                        <Trash2 class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                        <span class="relative z-10">Delete account</span>
                     </button>
                 </DialogTrigger>
                 <DialogContent
@@ -59,7 +62,8 @@ import {
                     >
                         <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
                         <DialogHeader class="relative z-10 space-y-3 text-left">
-                            <DialogTitle class="snitch-display text-xl text-snitch-ink">
+                            <DialogTitle class="snitch-display flex items-center gap-2 text-xl text-snitch-ink">
+                                <Trash2 class="size-5 shrink-0 text-snitch-ink/55" aria-hidden="true" />
                                 Delete your account?
                             </DialogTitle>
                             <DialogDescription class="text-sm text-snitch-ink/65">
@@ -82,7 +86,8 @@ import {
                                         }
                                     "
                                 >
-                                    Cancel
+                                    <X class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                                    <span class="relative z-10">Cancel</span>
                                 </button>
                             </DialogClose>
 
@@ -92,7 +97,8 @@ import {
                                 :disabled="processing"
                                 data-test="confirm-delete-user-button"
                             >
-                                Delete account
+                                <Trash2 class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                                <span class="relative z-10">Delete account</span>
                             </button>
                         </DialogFooter>
                     </Form>

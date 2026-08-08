@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft, ExternalLink } from '@lucide/vue';
+import {
+    AlertCircle,
+    ArrowLeft,
+    Ban,
+    ExternalLink,
+    Music,
+    Sparkles,
+    Trophy,
+    WandSparkles,
+} from '@lucide/vue';
 import { computed } from 'vue';
 import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feedIndex } from '@/actions/App/Http/Controllers/FeedController';
@@ -9,6 +18,8 @@ import MarkdownText from '@/components/MarkdownText.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { analysisDimensionIcon } from '@/lib/analysisTerms';
+import { metricIcon } from '@/lib/metricIcons';
 import { metricPairs } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
@@ -239,7 +250,11 @@ const termChips = computed(() => {
                     v-if="post.winner_insight"
                     class="snitch-sticker"
                 >
-                    <p class="snitch-annotation text-xl font-bold">
+                    <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
+                        <Trophy
+                            class="size-5 shrink-0 opacity-80"
+                            aria-hidden="true"
+                        />
                         Winner · {{ post.winner_insight.score.toFixed(1) }}
                     </p>
                     <p class="mt-2 text-sm text-snitch-ink/85">
@@ -284,7 +299,14 @@ const termChips = computed(() => {
                                 class="snitch-metrics-strip-item"
                             >
                                 <strong class="tabular-nums">{{ metric.value }}</strong>
-                                <span>{{ metric.label }}</span>
+                                <span class="inline-flex items-center gap-1">
+                                    <component
+                                        :is="metricIcon(metric.key)"
+                                        class="size-3 shrink-0 opacity-70"
+                                        aria-hidden="true"
+                                    />
+                                    {{ metric.label }}
+                                </span>
                             </div>
                         </div>
 
@@ -305,12 +327,26 @@ const termChips = computed(() => {
                                 v-if="post.analysis.concept"
                                 class="snitch-sticker"
                             >
-                                <p class="snitch-annotation text-xl font-bold">Concept</p>
+                                <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
+                                    <component
+                                        :is="analysisDimensionIcon('concept')"
+                                        class="size-5 shrink-0 opacity-80"
+                                        aria-hidden="true"
+                                    />
+                                    Concept
+                                </p>
                                 <p class="mt-1 text-snitch-ink">{{ post.analysis.concept }}</p>
                             </div>
 
                             <div class="snitch-sticker">
-                                <p class="snitch-annotation text-xl font-bold">Hook</p>
+                                <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
+                                    <component
+                                        :is="analysisDimensionIcon('hook_type')"
+                                        class="size-5 shrink-0 opacity-80"
+                                        aria-hidden="true"
+                                    />
+                                    Hook
+                                </p>
                                 <p class="mt-1 text-snitch-ink">{{ post.analysis.hook }}</p>
                                 <p
                                     v-if="post.analysis.hook_window_end_sec != null"
@@ -324,7 +360,13 @@ const termChips = computed(() => {
                                 v-if="post.analysis.idea"
                                 class="snitch-sticker"
                             >
-                                <p class="snitch-annotation text-xl font-bold">Why it engages</p>
+                                <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
+                                    <Sparkles
+                                        class="size-5 shrink-0 opacity-80"
+                                        aria-hidden="true"
+                                    />
+                                    Why it engages
+                                </p>
                                 <p class="mt-1 text-snitch-ink">{{ post.analysis.idea }}</p>
                             </div>
 
@@ -332,7 +374,14 @@ const termChips = computed(() => {
                                 v-if="post.analysis.visual_summary"
                                 class="snitch-sticker"
                             >
-                                <p class="snitch-annotation text-xl font-bold">Visual craft</p>
+                                <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
+                                    <component
+                                        :is="analysisDimensionIcon('visual_craft')"
+                                        class="size-5 shrink-0 opacity-80"
+                                        aria-hidden="true"
+                                    />
+                                    Visual craft
+                                </p>
                                 <p class="mt-1 text-sm text-snitch-ink/85">
                                     {{ post.analysis.visual_summary }}
                                 </p>
@@ -342,7 +391,13 @@ const termChips = computed(() => {
                                 v-if="musicLine || post.analysis.sfx?.length"
                                 class="snitch-sticker"
                             >
-                                <p class="snitch-annotation text-xl font-bold">Music / SFX</p>
+                                <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
+                                    <Music
+                                        class="size-5 shrink-0 opacity-80"
+                                        aria-hidden="true"
+                                    />
+                                    Music / SFX
+                                </p>
                                 <p
                                     v-if="musicLine"
                                     class="mt-1 text-sm text-snitch-ink/85"
@@ -376,7 +431,13 @@ const termChips = computed(() => {
                                 v-if="post.analysis.how_to_copy || post.analysis.cta"
                                 class="snitch-sticker"
                             >
-                                <p class="snitch-annotation text-xl font-bold">How to remake</p>
+                                <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
+                                    <WandSparkles
+                                        class="size-5 shrink-0 opacity-80"
+                                        aria-hidden="true"
+                                    />
+                                    How to remake
+                                </p>
                                 <MarkdownText
                                     v-if="post.analysis.how_to_copy || post.analysis.how_to_copy_html"
                                     class="mt-1"
@@ -396,7 +457,13 @@ const termChips = computed(() => {
                             v-else-if="isUnavailable"
                             class="snitch-sticker"
                         >
-                            <p class="snitch-annotation text-xl font-bold">Unavailable</p>
+                            <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
+                                <Ban
+                                    class="size-5 shrink-0 opacity-80"
+                                    aria-hidden="true"
+                                />
+                                Unavailable
+                            </p>
                             <p class="mt-2 text-sm text-snitch-ink/70">
                                 {{
                                     post.unavailable_reason ||
@@ -410,7 +477,13 @@ const termChips = computed(() => {
                             v-else-if="isFailed"
                             class="snitch-sticker"
                         >
-                            <p class="snitch-annotation text-xl font-bold">Analysis failed</p>
+                            <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
+                                <AlertCircle
+                                    class="size-5 shrink-0 opacity-80"
+                                    aria-hidden="true"
+                                />
+                                Analysis failed
+                            </p>
                             <p class="mt-2 text-sm text-snitch-ink/70">
                                 {{ post.analysis?.error_message || 'We could not finish analyzing this reel.' }}
                             </p>

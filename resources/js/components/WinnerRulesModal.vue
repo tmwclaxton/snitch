@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { SlidersHorizontal, X } from '@lucide/vue';
 import {
     Dialog,
     DialogClose,
@@ -38,7 +39,8 @@ function setOpen(value: boolean): void {
 
                 <div class="relative z-10 flex items-start justify-between gap-4">
                     <div>
-                        <DialogTitle class="snitch-display text-2xl text-snitch-ink">
+                        <DialogTitle class="snitch-display flex items-center gap-2 text-2xl text-snitch-ink">
+                            <SlidersHorizontal class="size-5 shrink-0 text-snitch-ink/55" aria-hidden="true" />
                             Winner rules
                         </DialogTitle>
                         <DialogDescription class="mt-1.5 text-sm text-snitch-ink/65">
@@ -49,7 +51,8 @@ function setOpen(value: boolean): void {
                         class="snitch-btn snitch-btn-ghost shrink-0 px-2.5 py-1.5 text-sm"
                         aria-label="Close rules"
                     >
-                        Close
+                        <X class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                        <span class="relative z-10">Close</span>
                     </DialogClose>
                 </div>
 

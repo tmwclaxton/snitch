@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
+import { LoaderCircle, Send } from '@lucide/vue';
 import InputError from '@/components/InputError.vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
@@ -106,7 +107,19 @@ defineOptions({
                             class="snitch-btn"
                             :disabled="processing"
                         >
-                            {{ processing ? 'Sending...' : 'Send message' }}
+                            <LoaderCircle
+                                v-if="processing"
+                                class="relative z-10 size-3.5 shrink-0 animate-spin"
+                                aria-hidden="true"
+                            />
+                            <Send
+                                v-else
+                                class="relative z-10 size-3.5 shrink-0"
+                                aria-hidden="true"
+                            />
+                            <span class="relative z-10">
+                                {{ processing ? 'Sending...' : 'Send message' }}
+                            </span>
                         </button>
 
                         <p

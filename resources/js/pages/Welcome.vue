@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
+import { ArrowRight, LayoutGrid, LogIn, UserPlus } from '@lucide/vue';
 import { computed } from 'vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
@@ -190,17 +191,26 @@ const steps = [
                                     :href="dashboard()"
                                     class="snitch-btn snitch-btn-spot"
                                 >
-                                    <span class="relative z-10">Dashboard</span>
+                                    <span class="relative z-10 inline-flex items-center gap-2">
+                                        <LayoutGrid class="size-3.5 shrink-0" aria-hidden="true" />
+                                        Dashboard
+                                    </span>
                                 </Link>
                                 <template v-else>
                                     <Link :href="login()" class="snitch-btn">
-                                        <span class="relative z-10">Log in</span>
+                                        <span class="relative z-10 inline-flex items-center gap-2">
+                                            <LogIn class="size-3.5 shrink-0" aria-hidden="true" />
+                                            Log in
+                                        </span>
                                     </Link>
                                     <Link
                                         :href="login()"
                                         class="snitch-btn snitch-btn-spot"
                                     >
-                                        <span class="relative z-10">Sign up</span>
+                                        <span class="relative z-10 inline-flex items-center gap-2">
+                                            <UserPlus class="size-3.5 shrink-0" aria-hidden="true" />
+                                            Sign up
+                                        </span>
                                     </Link>
                                 </template>
                             </div>
@@ -325,7 +335,19 @@ const steps = [
                         :href="primaryCta.href"
                         class="snitch-btn snitch-btn-spot"
                     >
-                        <span class="relative z-10">{{ primaryCta.label }}</span>
+                        <span class="relative z-10 inline-flex items-center gap-2">
+                            <LayoutGrid
+                                v-if="isAuthenticated"
+                                class="size-3.5 shrink-0"
+                                aria-hidden="true"
+                            />
+                            <ArrowRight
+                                v-else
+                                class="size-3.5 shrink-0"
+                                aria-hidden="true"
+                            />
+                            {{ primaryCta.label }}
+                        </span>
                     </Link>
                 </div>
             </div>

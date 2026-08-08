@@ -527,7 +527,9 @@
 
     .snitch-paper-nav-link {
         position: relative;
-        display: block;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
         padding: 0.4rem 0.15rem;
         color: color-mix(in oklab, var(--snitch-ink) 62%, transparent);
         font-size: 0.9375rem;

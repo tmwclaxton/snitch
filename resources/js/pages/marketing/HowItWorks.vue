@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { ArrowRight, Sparkles, Trophy, Users } from '@lucide/vue';
+import type { Component } from 'vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { login } from '@/routes';
@@ -8,17 +10,20 @@ defineOptions({
     layout: PublicLayout,
 });
 
-const steps = [
+const steps: Array<{ title: string; body: string; icon: Component }> = [
     {
         title: 'Track',
+        icon: Users,
         body: 'Connect your brand context, then add competitor handles on TikTok, Instagram, YouTube Shorts, Facebook, and LinkedIn. Snitch syncs recent public reels into one feed.',
     },
     {
         title: 'Analyze',
+        icon: Sparkles,
         body: 'Video and reel posts get full-video analysis: the opening hook, visual summary, SFX, music cues, and the core idea - annotated on the frame like stickers on a scrap.',
     },
     {
         title: 'Winners',
+        icon: Trophy,
         body: 'Your quality rules score the board. Open a tear sheet of posts that clear the bar, with why they won and how to copy the move.',
     },
 ];
@@ -55,8 +60,13 @@ const steps = [
                             aria-hidden="true"
                         />
                         <p
-                            class="snitch-annotation text-3xl font-medium text-snitch-ink"
+                            class="flex items-center gap-2 snitch-annotation text-3xl font-medium text-snitch-ink"
                         >
+                            <component
+                                :is="step.icon"
+                                class="size-6 shrink-0 text-snitch-ink/55"
+                                aria-hidden="true"
+                            />
                             0{{ index + 1 }}
                         </p>
                         <h2
@@ -75,7 +85,12 @@ const steps = [
                 </ol>
 
                 <div class="mt-12">
-                    <Link :href="login()" class="snitch-btn">Get started</Link>
+                    <Link :href="login()" class="snitch-btn">
+                        <span class="relative z-10 inline-flex items-center gap-2">
+                            <ArrowRight class="size-3.5 shrink-0" aria-hidden="true" />
+                            Get started
+                        </span>
+                    </Link>
                 </div>
             </div>
         </div>

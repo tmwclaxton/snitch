@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Check, X } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import AnalysisTermChip from '@/components/AnalysisTermChip.vue';
 import {
@@ -201,14 +202,18 @@ function isSelected(slug: string): boolean {
                             class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
                             @click="setOpen(false)"
                         >
-                            Cancel
+                            <X class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                            <span class="relative z-10">Cancel</span>
                         </button>
                         <button
                             type="button"
                             class="snitch-btn snitch-btn-spot px-3 py-1.5 text-sm"
                             @click="apply"
                         >
-                            <span class="relative z-10">Apply</span>
+                            <span class="relative z-10 inline-flex items-center gap-1.5">
+                                <Check class="size-3.5 shrink-0" aria-hidden="true" />
+                                Apply
+                            </span>
                         </button>
                     </div>
                 </DialogFooter>

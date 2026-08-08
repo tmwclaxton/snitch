@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { Palette, User } from '@lucide/vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
@@ -10,10 +11,12 @@ const sidebarNavItems: NavItem[] = [
     {
         title: 'Profile',
         href: editProfile(),
+        icon: User,
     },
     {
         title: 'Appearance',
         href: editAppearance(),
+        icon: Palette,
     },
 ];
 
@@ -52,6 +55,12 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                                     : ''
                             "
                         >
+                            <component
+                                :is="item.icon"
+                                v-if="item.icon"
+                                class="size-3.5 shrink-0 opacity-70"
+                                aria-hidden="true"
+                            />
                             {{ item.title }}
                         </Link>
                     </nav>

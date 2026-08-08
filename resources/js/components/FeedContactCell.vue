@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { AlertCircle, Ban, Hourglass } from '@lucide/vue';
 import { computed } from 'vue';
+import type { Component } from 'vue';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import AnalysisTermChip from '@/components/AnalysisTermChip.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
@@ -65,16 +67,16 @@ const tags = computed(() => {
     });
 });
 
-const statusLabel = computed(() => {
+const statusStamp = computed((): { label: string; icon: Component } | null => {
     if (
         props.post.analysis?.status === 'unavailable' ||
         props.post.media_availability === 'unavailable'
     ) {
-        return 'Unavailable';
+        return { label: 'Unavailable', icon: Ban };
     }
 
     if (props.post.analysis?.status === 'failed') {
-        return 'Failed';
+        return { label: 'Failed', icon: AlertCircle };
     }
 
     if (
@@ -82,7 +84,7 @@ const statusLabel = computed(() => {
         props.post.analysis?.status === 'processing' ||
         !props.post.analysis
     ) {
-        return 'Pending';
+        return { label: 'Pending', icon: Hourglass };
     }
 
     return null;
@@ -192,10 +194,15 @@ const winnerScore = computed(() => {
                     {{ hookLine }}
                 </p>
                 <p
-                    v-else-if="statusLabel"
-                    class="snitch-glance-status"
+                    v-else-if="statusStamp"
+                    class="snitch-glance-status inline-flex items-center gap-1"
                 >
-                    {{ statusLabel }}
+                    <component
+                        :is="statusStamp.icon"
+                        class="size-3 shrink-0 opacity-80"
+                        aria-hidden="true"
+                    />
+                    {{ statusStamp.label }}
                 </p>
             </Link>
             <Link

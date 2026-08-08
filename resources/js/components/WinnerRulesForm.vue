@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
+import { LoaderCircle, Save } from '@lucide/vue';
 import { update } from '@/actions/App/Http/Controllers/Settings/WinnerRuleController';
 
 export type WinnerRuleFormData = {
@@ -145,7 +146,17 @@ function submit(): void {
                 class="snitch-btn snitch-btn-spot"
                 :disabled="form.processing"
             >
-                <span class="relative z-10">
+                <span class="relative z-10 inline-flex items-center gap-2">
+                    <LoaderCircle
+                        v-if="form.processing"
+                        class="size-3.5 shrink-0 animate-spin"
+                        aria-hidden="true"
+                    />
+                    <Save
+                        v-else
+                        class="size-3.5 shrink-0"
+                        aria-hidden="true"
+                    />
                     {{ form.processing ? 'Saving…' : 'Save rules' }}
                 </span>
             </button>

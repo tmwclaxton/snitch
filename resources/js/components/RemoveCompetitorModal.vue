@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
+import { LoaderCircle, Trash2, X } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { destroy } from '@/actions/App/Http/Controllers/CompetitorController';
 import {
@@ -67,7 +68,8 @@ function confirmRemove(): void {
                 <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
 
                 <DialogHeader class="relative z-10 space-y-3 text-left">
-                    <DialogTitle class="snitch-display text-xl text-snitch-ink">
+                    <DialogTitle class="snitch-display flex items-center gap-2 text-xl text-snitch-ink">
+                        <Trash2 class="size-5 shrink-0 text-snitch-ink/55" aria-hidden="true" />
                         Remove this competitor?
                     </DialogTitle>
                     <DialogDescription class="text-sm text-snitch-ink/65">
@@ -83,7 +85,8 @@ function confirmRemove(): void {
                 <DialogFooter class="relative z-10 gap-2 sm:justify-start">
                     <DialogClose as-child>
                         <button type="button" class="snitch-btn snitch-btn-ghost">
-                            Cancel
+                            <X class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                            <span class="relative z-10">Cancel</span>
                         </button>
                     </DialogClose>
 
@@ -94,7 +97,19 @@ function confirmRemove(): void {
                         data-test="confirm-remove-competitor-button"
                         @click="confirmRemove"
                     >
-                        {{ processing ? 'Removing…' : 'Remove' }}
+                        <LoaderCircle
+                            v-if="processing"
+                            class="relative z-10 size-3.5 shrink-0 animate-spin"
+                            aria-hidden="true"
+                        />
+                        <Trash2
+                            v-else
+                            class="relative z-10 size-3.5 shrink-0"
+                            aria-hidden="true"
+                        />
+                        <span class="relative z-10">
+                            {{ processing ? 'Removing…' : 'Remove' }}
+                        </span>
                     </button>
                 </DialogFooter>
             </div>

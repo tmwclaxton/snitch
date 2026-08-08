@@ -1,5 +1,14 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import {
+    ArrowLeft,
+    Clapperboard,
+    ExternalLink,
+    LoaderCircle,
+    RefreshCw,
+    Trash2,
+    Trophy,
+} from '@lucide/vue';
 import { computed, onUnmounted, ref, watch } from 'vue';
 import {
     index as competitorsIndex,
@@ -169,7 +178,8 @@ function askRemove(): void {
                     :href="profileHref"
                     class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
                 >
-                    Back to competitors
+                    <ArrowLeft class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                    <span class="relative z-10">Back to competitors</span>
                 </Link>
                 <div class="flex flex-wrap gap-2">
                     <a
@@ -179,7 +189,8 @@ function askRemove(): void {
                         rel="noopener noreferrer"
                         class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
                     >
-                        Open on platform
+                        <ExternalLink class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                        <span class="relative z-10">Open on platform</span>
                     </a>
                     <button
                         type="button"
@@ -193,7 +204,17 @@ function askRemove(): void {
                         "
                         @click="syncNow"
                     >
-                        <span class="relative z-10">
+                        <span class="relative z-10 inline-flex items-center gap-1.5">
+                            <LoaderCircle
+                                v-if="isSyncing"
+                                class="size-3.5 shrink-0 animate-spin"
+                                aria-hidden="true"
+                            />
+                            <RefreshCw
+                                v-else
+                                class="size-3.5 shrink-0"
+                                aria-hidden="true"
+                            />
                             {{ isSyncing ? 'Syncing…' : 'Sync' }}
                         </span>
                     </button>
@@ -203,7 +224,8 @@ function askRemove(): void {
                         :aria-label="`Remove @${account.handle}`"
                         @click="askRemove"
                     >
-                        Remove
+                        <Trash2 class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                        <span class="relative z-10">Remove</span>
                     </button>
                 </div>
             </div>
@@ -253,9 +275,8 @@ function askRemove(): void {
                     data-syncing="true"
                 >
                     <div class="relative z-10 flex items-center gap-3">
-                        <span
-                            class="inline-block size-2.5 shrink-0 animate-pulse bg-snitch-spot"
-                            style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
+                        <LoaderCircle
+                            class="size-4 shrink-0 animate-spin text-snitch-ink/55"
                             aria-hidden="true"
                         />
                         <div>
@@ -308,7 +329,17 @@ function askRemove(): void {
                     class="snitch-scrap relative mt-5 max-w-md p-6 text-center"
                 >
                     <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
-                    <p class="snitch-display text-xl">
+                    <LoaderCircle
+                        v-if="isSyncing"
+                        class="mx-auto size-8 animate-spin text-snitch-ink/35"
+                        aria-hidden="true"
+                    />
+                    <Clapperboard
+                        v-else
+                        class="mx-auto size-8 text-snitch-ink/35"
+                        aria-hidden="true"
+                    />
+                    <p class="snitch-display mt-3 text-xl">
                         {{ isSyncing ? 'Syncing reels…' : 'No reels yet' }}
                     </p>
                     <p class="mt-2 text-sm text-snitch-ink/65">
@@ -373,7 +404,8 @@ function askRemove(): void {
                     class="snitch-scrap relative mt-5 max-w-md p-6"
                 >
                     <span class="snitch-tape right-5 -top-2" aria-hidden="true" />
-                    <p class="snitch-display text-xl">No winners from this account</p>
+                    <Trophy class="size-8 text-snitch-ink/35" aria-hidden="true" />
+                    <p class="snitch-display mt-3 text-xl">No winners from this account</p>
                     <p class="mt-2 text-sm text-snitch-ink/65">
                         After analysis clears your rules, winners land here.
                     </p>

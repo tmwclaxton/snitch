@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { House, LogIn } from '@lucide/vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { home, login } from '@/routes';
@@ -37,9 +38,15 @@ defineOptions({
                 tracking competitors.
             </p>
             <div class="mt-8 flex flex-wrap gap-3">
-                <Link :href="home()" class="snitch-btn">Back home</Link>
+                <Link :href="home()" class="snitch-btn">
+                    <span class="relative z-10 inline-flex items-center gap-2">
+                        <House class="size-3.5 shrink-0" aria-hidden="true" />
+                        Back home
+                    </span>
+                </Link>
                 <Link :href="login()" class="snitch-btn snitch-btn-ghost">
-                    Log in
+                    <LogIn class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                    <span class="relative z-10">Log in</span>
                 </Link>
             </div>
         </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
+import { LayoutGrid, LogIn, LogOut, UserPlus } from '@lucide/vue';
 import { computed } from 'vue';
 import SnitchBrand from '@/components/SnitchBrand.vue';
 import {
@@ -78,7 +79,8 @@ const links = [
                         class="snitch-btn snitch-btn-ghost px-3 py-2 text-sm"
                         data-test="logout-button"
                     >
-                        Log out
+                        <LogOut class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                        <span class="relative z-10">Log out</span>
                     </Link>
                 </template>
                 <template v-else>
@@ -87,20 +89,25 @@ const links = [
                         :href="dashboard()"
                         class="snitch-btn snitch-btn-ghost px-3 py-2 text-sm"
                     >
-                        Dashboard
+                        <LayoutGrid class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                        <span class="relative z-10">Dashboard</span>
                     </Link>
                     <template v-else>
                         <Link
                             :href="login()"
                             class="snitch-btn hidden px-3 py-2 text-sm sm:inline-flex"
                         >
-                            Log in
+                            <LogIn class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                            <span class="relative z-10">Log in</span>
                         </Link>
                         <Link
                             :href="login()"
                             class="snitch-btn snitch-btn-spot px-3 py-2 text-sm"
                         >
-                            Sign up
+                            <span class="relative z-10 inline-flex items-center gap-2">
+                                <UserPlus class="size-3.5 shrink-0" aria-hidden="true" />
+                                Sign up
+                            </span>
                         </Link>
                     </template>
                 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { LoaderCircle, Save } from '@lucide/vue';
 import { computed } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/DeleteUser.vue';
@@ -86,7 +87,17 @@ function submit(): void {
                         :disabled="form.processing"
                         data-test="update-profile-button"
                     >
-                        <span class="relative z-10">
+                        <span class="relative z-10 inline-flex items-center gap-2">
+                            <LoaderCircle
+                                v-if="form.processing"
+                                class="size-3.5 shrink-0 animate-spin"
+                                aria-hidden="true"
+                            />
+                            <Save
+                                v-else
+                                class="size-3.5 shrink-0"
+                                aria-hidden="true"
+                            />
                             {{ form.processing ? 'Saving…' : 'Save' }}
                         </span>
                     </button>
