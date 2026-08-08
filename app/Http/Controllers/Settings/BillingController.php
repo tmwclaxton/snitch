@@ -33,7 +33,7 @@ class BillingController extends Controller
             ->values()
             ->all();
 
-        return Inertia::render('settings/Billing', [
+        return Inertia::render('billing/Index', [
             'subscription' => $this->entitlements->summary($user),
             'plans' => $plans,
         ]);

@@ -17,6 +17,7 @@ use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
 Route::inertia('/', 'Welcome')->name('home');
 Route::inertia('/about', 'marketing/About')->name('about');
 Route::inertia('/how-it-works', 'marketing/HowItWorks')->name('how-it-works');
+Route::inertia('/pricing', 'marketing/Pricing')->name('pricing');
 Route::inertia('/privacy', 'marketing/Privacy')->name('privacy');
 Route::inertia('/terms', 'marketing/Terms')->name('terms');
 Route::inertia('/cookies', 'marketing/Cookies')->name('cookies');
@@ -34,6 +35,7 @@ Route::get('/sitemap.xml', function () {
         route('home', absolute: true),
         route('about', absolute: true),
         route('how-it-works', absolute: true),
+        route('pricing', absolute: true),
         route('analytics', absolute: true),
         route('contact', absolute: true),
         route('privacy', absolute: true),

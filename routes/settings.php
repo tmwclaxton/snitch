@@ -17,7 +17,9 @@ Route::middleware([
 
     Route::inertia('settings/appearance', 'settings/Appearance')->name('appearance.edit');
 
-    Route::get('settings/billing', [BillingController::class, 'index'])->name('billing.edit');
-    Route::post('settings/billing/checkout', [BillingController::class, 'checkout'])->name('billing.checkout');
-    Route::post('settings/billing/portal', [BillingController::class, 'portal'])->name('billing.portal');
+    Route::get('billing', [BillingController::class, 'index'])->name('billing.edit');
+    Route::post('billing/checkout', [BillingController::class, 'checkout'])->name('billing.checkout');
+    Route::post('billing/portal', [BillingController::class, 'portal'])->name('billing.portal');
+
+    Route::redirect('settings/billing', '/billing');
 });

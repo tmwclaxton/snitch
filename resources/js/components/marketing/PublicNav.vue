@@ -12,6 +12,7 @@ import {
     howItWorks,
     login,
     logout,
+    pricing,
 } from '@/routes';
 
 withDefaults(
@@ -31,6 +32,7 @@ const overHero = computed(
 
 const links = [
     { label: 'How it works', href: howItWorks() },
+    { label: 'Pricing', href: pricing() },
     { label: 'Analytics', href: analytics() },
     { label: 'About', href: about() },
     { label: 'Contact', href: contact() },

@@ -8,6 +8,7 @@ import {
     cookies,
     home,
     howItWorks,
+    pricing,
     privacy,
     terms,
 } from '@/routes';
@@ -15,6 +16,7 @@ import {
 const footerLinks = [
     { label: 'About', href: about() },
     { label: 'How it works', href: howItWorks() },
+    { label: 'Pricing', href: pricing() },
     { label: 'Analytics', href: analytics() },
     { label: 'Contact', href: contact() },
     { label: 'Privacy', href: privacy() },
