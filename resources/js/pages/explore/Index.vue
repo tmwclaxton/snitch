@@ -17,6 +17,7 @@ type AnalysisTermOption = {
     slug: string;
     label: string;
     section: string;
+    count: number;
 };
 
 type Post = {
@@ -94,6 +95,7 @@ const hookPickerOptions = computed(() =>
         slug: term.slug,
         label: term.label,
         section: term.section,
+        count: term.count,
     })),
 );
 
@@ -102,6 +104,7 @@ const topicPickerOptions = computed(() =>
         slug: term.slug,
         label: term.label,
         section: term.section,
+        count: term.count,
     })),
 );
 
@@ -110,6 +113,7 @@ const craftPickerOptions = computed(() =>
         slug: term.slug,
         label: term.label,
         section: term.section,
+        count: term.count,
     })),
 );
 

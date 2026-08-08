@@ -13,6 +13,7 @@ export type PaperTermPickerOption = {
     slug: string;
     label: string;
     section: string;
+    count?: number;
 };
 
 const props = defineProps<{
@@ -164,6 +165,16 @@ function isSelected(slug: string): boolean {
                                 @click="toggle(term.slug)"
                             >
                                 {{ term.label }}
+                                <span
+                                    v-if="term.count != null && term.count > 0"
+                                    :class="
+                                        isSelected(term.slug)
+                                            ? 'text-snitch-on-spot/70'
+                                            : 'text-snitch-ink/50'
+                                    "
+                                >
+                                    · {{ term.count }}
+                                </span>
                             </button>
                         </div>
                     </section>

@@ -33,6 +33,8 @@ class ExploreTest extends TestCase
         $this->assertStringContainsString('aria-pressed', $pickerVue);
         $this->assertStringContainsString('Clear selection', $pickerVue);
         $this->assertStringContainsString('Apply', $pickerVue);
+        $this->assertStringContainsString('term.count', $pickerVue);
+        $this->assertStringContainsString('· {{ term.count }}', $pickerVue);
     }
 
     public function test_explore_lists_completed_analyses_for_owner(): void
@@ -73,11 +75,62 @@ class ExploreTest extends TestCase
                 ->where('posts.data.0.id', $post->id)
                 ->has('terms.hook_type')
                 ->where('terms.hook_type.0.section', fn ($section) => is_string($section) && $section !== '')
+                ->where('terms.hook_type', function ($terms) use ($term): bool {
+                    $match = collect($terms)->firstWhere('slug', $term->slug);
+
+                    return is_array($match)
+                        && ($match['count'] ?? null) === 1;
+                })
                 ->has('terms.topic')
                 ->has('terms.visual_craft')
                 ->where('filters.hook_types', [])
                 ->missing('accounts')
                 ->missing('filters.account')
+            );
+    }
+
+    public function test_explore_term_counts_are_scoped_to_owner(): void
+    {
+        $this->seed(AnalysisTermSeeder::class);
+
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+
+        $term = AnalysisTerm::query()
+            ->where('dimension', AnalysisTermDimension::HookType)
+            ->where('slug', 'myth_bust')
+            ->firstOrFail();
+
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+        ]);
+        $analysis = PostAnalysis::factory()->for($post)->create([
+            'status' => AnalysisStatus::Completed,
+        ]);
+        $analysis->terms()->attach($term->id);
+
+        $otherAccount = TrackedAccount::factory()->for($other)->create();
+        $otherPost = Post::factory()->forAccount($otherAccount)->create([
+            'type' => PostType::Reel,
+        ]);
+        $otherAnalysis = PostAnalysis::factory()->for($otherPost)->create([
+            'status' => AnalysisStatus::Completed,
+        ]);
+        $otherAnalysis->terms()->attach($term->id);
+
+        $this->actingAs($user)
+            ->get(route('explore.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('explore/Index')
+                ->where('terms.hook_type', function ($terms) use ($term): bool {
+                    $match = collect($terms)->firstWhere('slug', $term->slug);
+
+                    return is_array($match)
+                        && ($match['count'] ?? null) === 1;
+                })
             );
     }
 

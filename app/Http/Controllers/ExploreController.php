@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Enums\AnalysisStatus;
 use App\Enums\AnalysisTermDimension;
 use App\Enums\Platform;
+use App\Enums\PostType;
 use App\Models\AnalysisTerm;
 use App\Models\Post;
 use App\Services\Analysis\AnalysisTermCatalogue;
 use App\Support\PlatformEmbed;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -101,11 +103,12 @@ class ExploreController extends Controller
         });
 
         $sections = $this->catalogue->sectionByKey();
+        $termCounts = $this->termUsageCounts($user->id);
         $terms = AnalysisTerm::query()
             ->orderBy('dimension')
             ->orderBy('label')
             ->get(['id', 'dimension', 'slug', 'label'])
-            ->map(function (AnalysisTerm $term) use ($sections): array {
+            ->map(function (AnalysisTerm $term) use ($sections, $termCounts): array {
                 $dimension = $term->dimension instanceof AnalysisTermDimension
                     ? $term->dimension->value
                     : (string) $term->dimension;
@@ -116,6 +119,7 @@ class ExploreController extends Controller
                     'slug' => $term->slug,
                     'label' => $term->label,
                     'section' => $sections[$dimension.':'.$term->slug] ?? 'Other',
+                    'count' => $termCounts[$term->id] ?? 0,
                 ];
             })
             ->groupBy('dimension')
@@ -137,6 +141,30 @@ class ExploreController extends Controller
             ],
             'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
         ]);
+    }
+
+    /**
+     * How often each catalogue term appears on the user's completed reel-like analyses.
+     *
+     * @return array<int, int>
+     */
+    private function termUsageCounts(int $userId): array
+    {
+        return AnalysisTerm::query()
+            ->select([
+                'analysis_terms.id',
+                DB::raw('COUNT(DISTINCT posts.id) as aggregate'),
+            ])
+            ->join('analysis_term_post_analysis', 'analysis_terms.id', '=', 'analysis_term_post_analysis.analysis_term_id')
+            ->join('post_analyses', 'post_analyses.id', '=', 'analysis_term_post_analysis.post_analysis_id')
+            ->join('posts', 'posts.id', '=', 'post_analyses.post_id')
+            ->where('posts.user_id', $userId)
+            ->whereIn('posts.type', PostType::analyzableValues())
+            ->where('post_analyses.status', AnalysisStatus::Completed)
+            ->groupBy('analysis_terms.id')
+            ->pluck('aggregate', 'id')
+            ->map(fn (mixed $count): int => (int) $count)
+            ->all();
     }
 
     /**
