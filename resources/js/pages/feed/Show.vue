@@ -189,209 +189,211 @@ const showDisplayName = computed(() => {
                 </p>
             </header>
 
-            <div class="mt-6 grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-                <div>
+            <div class="mt-6 space-y-6">
+                <div
+                    v-if="post.winner_insight"
+                    class="snitch-sticker"
+                >
+                    <p class="snitch-annotation text-xl">
+                        Winner · {{ post.winner_insight.score.toFixed(1) }}
+                    </p>
+                    <p class="mt-2 text-sm text-snitch-ink/85">
+                        {{ post.winner_insight.why }}
+                    </p>
                     <div
-                        class="snitch-polaroid relative mx-auto w-full max-w-[16rem] sm:max-w-[18rem]"
-                        style="--snitch-tilt: -0.6deg"
+                        v-if="post.winner_insight.how_to_copy"
+                        class="mt-3 border-t border-dashed border-snitch-ink/15 pt-3"
                     >
-                        <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
-                        <div class="snitch-polaroid-frame !aspect-auto overflow-hidden">
-                            <PlatformEmbed
-                                :embed="post.embed"
-                                :media-url="post.media_url"
-                                :post-url="post.url"
-                                :platform="post.platform"
-                                :lazy="false"
-                            />
-                        </div>
-                    </div>
-
-                    <div
-                        v-if="metrics.length"
-                        class="snitch-metrics-strip mt-5"
-                    >
-                        <div
-                            v-for="metric in metrics"
-                            :key="metric.key"
-                            class="snitch-metrics-strip-item"
-                        >
-                            <strong class="tabular-nums">{{ metric.value }}</strong>
-                            <span>{{ metric.label }}</span>
-                        </div>
-                    </div>
-
-                    <div
-                        v-if="post.caption"
-                        class="snitch-scrap relative mt-5 p-4"
-                    >
-                        <p class="snitch-ink-label">Caption</p>
-                        <p class="relative z-10 mt-3 whitespace-pre-wrap text-sm leading-relaxed text-snitch-ink/80">
-                            {{ post.caption }}
-                        </p>
+                        <MarkdownText
+                            :html="post.winner_insight.how_to_copy_html"
+                            :source="post.winner_insight.how_to_copy"
+                        />
                     </div>
                 </div>
 
-                <div class="space-y-4">
-                    <div
-                        v-if="post.winner_insight"
-                        class="snitch-sticker"
-                    >
-                        <p class="snitch-annotation text-xl">
-                            Winner · {{ post.winner_insight.score.toFixed(1) }}
-                        </p>
-                        <p class="mt-2 text-sm text-snitch-ink/85">
-                            {{ post.winner_insight.why }}
-                        </p>
+                <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] lg:gap-8">
+                    <div>
                         <div
-                            v-if="post.winner_insight.how_to_copy"
-                            class="mt-3 border-t border-dashed border-snitch-ink/15 pt-3"
+                            class="snitch-polaroid relative w-full"
+                            style="--snitch-tilt: -0.6deg"
                         >
-                            <MarkdownText
-                                :html="post.winner_insight.how_to_copy_html"
-                                :source="post.winner_insight.how_to_copy"
-                            />
-                        </div>
-                    </div>
-
-                    <template v-if="analysisDone && post.analysis">
-                        <div
-                            v-if="post.analysis.concept"
-                            class="snitch-sticker"
-                        >
-                            <p class="snitch-annotation text-xl">Concept</p>
-                            <p class="mt-1 text-snitch-ink">{{ post.analysis.concept }}</p>
-                        </div>
-
-                        <div class="snitch-sticker">
-                            <p class="snitch-annotation text-xl">Hook</p>
-                            <p class="mt-1 text-snitch-ink">{{ post.analysis.hook }}</p>
-                            <p
-                                v-if="post.analysis.hook_window_end_sec != null"
-                                class="mt-2 text-xs text-snitch-ink/50"
-                            >
-                                Window ~{{ post.analysis.hook_window_end_sec }}s
-                            </p>
-                        </div>
-
-                        <div
-                            v-if="post.analysis.idea"
-                            class="snitch-sticker"
-                        >
-                            <p class="snitch-annotation text-xl">Why it engages</p>
-                            <p class="mt-1 text-snitch-ink">{{ post.analysis.idea }}</p>
-                        </div>
-
-                        <div
-                            v-if="post.analysis.topics?.length"
-                            class="snitch-sticker"
-                        >
-                            <p class="snitch-annotation text-xl">Topics</p>
-                            <div class="snitch-topic-row mt-2">
-                                <span
-                                    v-for="topic in post.analysis.topics"
-                                    :key="topic"
-                                    class="snitch-topic-chip"
-                                >{{ topic }}</span>
+                            <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
+                            <div class="snitch-polaroid-frame !aspect-auto overflow-hidden">
+                                <PlatformEmbed
+                                    :embed="post.embed"
+                                    :media-url="post.media_url"
+                                    :post-url="post.url"
+                                    :platform="post.platform"
+                                    :lazy="false"
+                                />
                             </div>
                         </div>
 
                         <div
-                            v-if="post.analysis.visual_summary"
-                            class="snitch-sticker"
+                            v-if="metrics.length"
+                            class="snitch-metrics-strip mt-5"
                         >
-                            <p class="snitch-annotation text-xl">Visual craft</p>
-                            <p class="mt-1 text-sm text-snitch-ink/85">
-                                {{ post.analysis.visual_summary }}
-                            </p>
+                            <div
+                                v-for="metric in metrics"
+                                :key="metric.key"
+                                class="snitch-metrics-strip-item"
+                            >
+                                <strong class="tabular-nums">{{ metric.value }}</strong>
+                                <span>{{ metric.label }}</span>
+                            </div>
                         </div>
 
                         <div
-                            v-if="musicLine || post.analysis.sfx?.length"
-                            class="snitch-sticker"
+                            v-if="post.caption"
+                            class="snitch-scrap relative mt-5 p-4"
                         >
-                            <p class="snitch-annotation text-xl">Music / SFX</p>
-                            <p
-                                v-if="musicLine"
-                                class="mt-1 text-sm text-snitch-ink/85"
-                            >
-                                {{ musicLine }}
+                            <p class="snitch-ink-label">Caption</p>
+                            <p class="relative z-10 mt-3 whitespace-pre-wrap text-sm leading-relaxed text-snitch-ink/80">
+                                {{ post.caption }}
                             </p>
-                            <ul
-                                v-if="post.analysis.sfx?.length"
-                                class="mt-2 space-y-1 text-sm"
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <template v-if="analysisDone && post.analysis">
+                            <div
+                                v-if="post.analysis.concept"
+                                class="snitch-sticker"
                             >
-                                <li
-                                    v-for="(fx, i) in post.analysis.sfx"
-                                    :key="i"
+                                <p class="snitch-annotation text-xl">Concept</p>
+                                <p class="mt-1 text-snitch-ink">{{ post.analysis.concept }}</p>
+                            </div>
+
+                            <div class="snitch-sticker">
+                                <p class="snitch-annotation text-xl">Hook</p>
+                                <p class="mt-1 text-snitch-ink">{{ post.analysis.hook }}</p>
+                                <p
+                                    v-if="post.analysis.hook_window_end_sec != null"
+                                    class="mt-2 text-xs text-snitch-ink/50"
                                 >
-                                    <span class="snitch-marker-underline">{{ fx.label }}</span>
+                                    Window ~{{ post.analysis.hook_window_end_sec }}s
+                                </p>
+                            </div>
+
+                            <div
+                                v-if="post.analysis.idea"
+                                class="snitch-sticker"
+                            >
+                                <p class="snitch-annotation text-xl">Why it engages</p>
+                                <p class="mt-1 text-snitch-ink">{{ post.analysis.idea }}</p>
+                            </div>
+
+                            <div
+                                v-if="post.analysis.topics?.length"
+                                class="snitch-sticker"
+                            >
+                                <p class="snitch-annotation text-xl">Topics</p>
+                                <div class="snitch-topic-row mt-2">
                                     <span
-                                        v-if="fx.role"
-                                        class="text-snitch-ink/55"
-                                    > · {{ fx.role }}</span>
-                                    <span
-                                        v-if="fx.at_sec != null"
-                                        class="text-snitch-ink/45"
+                                        v-for="topic in post.analysis.topics"
+                                        :key="topic"
+                                        class="snitch-topic-chip"
+                                    >{{ topic }}</span>
+                                </div>
+                            </div>
+
+                            <div
+                                v-if="post.analysis.visual_summary"
+                                class="snitch-sticker"
+                            >
+                                <p class="snitch-annotation text-xl">Visual craft</p>
+                                <p class="mt-1 text-sm text-snitch-ink/85">
+                                    {{ post.analysis.visual_summary }}
+                                </p>
+                            </div>
+
+                            <div
+                                v-if="musicLine || post.analysis.sfx?.length"
+                                class="snitch-sticker"
+                            >
+                                <p class="snitch-annotation text-xl">Music / SFX</p>
+                                <p
+                                    v-if="musicLine"
+                                    class="mt-1 text-sm text-snitch-ink/85"
+                                >
+                                    {{ musicLine }}
+                                </p>
+                                <ul
+                                    v-if="post.analysis.sfx?.length"
+                                    class="mt-2 space-y-1 text-sm"
+                                >
+                                    <li
+                                        v-for="(fx, i) in post.analysis.sfx"
+                                        :key="i"
                                     >
-                                        @ {{ fx.at_sec }}s
-                                    </span>
-                                </li>
-                            </ul>
+                                        <span class="snitch-marker-underline">{{ fx.label }}</span>
+                                        <span
+                                            v-if="fx.role"
+                                            class="text-snitch-ink/55"
+                                        > · {{ fx.role }}</span>
+                                        <span
+                                            v-if="fx.at_sec != null"
+                                            class="text-snitch-ink/45"
+                                        >
+                                            @ {{ fx.at_sec }}s
+                                        </span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div
+                                v-if="post.analysis.how_to_copy || post.analysis.cta"
+                                class="snitch-sticker"
+                            >
+                                <p class="snitch-annotation text-xl">How to remake</p>
+                                <MarkdownText
+                                    v-if="post.analysis.how_to_copy || post.analysis.how_to_copy_html"
+                                    class="mt-1"
+                                    :html="post.analysis.how_to_copy_html"
+                                    :source="post.analysis.how_to_copy"
+                                />
+                                <p
+                                    v-if="post.analysis.cta"
+                                    class="mt-3 border-t border-dashed border-snitch-ink/15 pt-3 text-sm text-snitch-ink/70"
+                                >
+                                    CTA: {{ post.analysis.cta }}
+                                </p>
+                            </div>
+                        </template>
+
+                        <div
+                            v-else-if="isUnavailable"
+                            class="snitch-sticker"
+                        >
+                            <p class="snitch-annotation text-xl">Unavailable</p>
+                            <p class="mt-2 text-sm text-snitch-ink/70">
+                                {{
+                                    post.unavailable_reason ||
+                                        post.analysis?.error_message ||
+                                        'Post or media is no longer available.'
+                                }}
+                            </p>
                         </div>
 
                         <div
-                            v-if="post.analysis.how_to_copy || post.analysis.cta"
+                            v-else-if="isFailed"
                             class="snitch-sticker"
                         >
-                            <p class="snitch-annotation text-xl">How to remake</p>
-                            <MarkdownText
-                                v-if="post.analysis.how_to_copy || post.analysis.how_to_copy_html"
-                                class="mt-1"
-                                :html="post.analysis.how_to_copy_html"
-                                :source="post.analysis.how_to_copy"
-                            />
-                            <p
-                                v-if="post.analysis.cta"
-                                class="mt-3 border-t border-dashed border-snitch-ink/15 pt-3 text-sm text-snitch-ink/70"
-                            >
-                                CTA: {{ post.analysis.cta }}
+                            <p class="snitch-annotation text-xl">Analysis failed</p>
+                            <p class="mt-2 text-sm text-snitch-ink/70">
+                                {{ post.analysis?.error_message || 'We could not finish analyzing this reel.' }}
                             </p>
                         </div>
-                    </template>
 
-                    <div
-                        v-else-if="isUnavailable"
-                        class="snitch-sticker"
-                    >
-                        <p class="snitch-annotation text-xl">Unavailable</p>
-                        <p class="mt-2 text-sm text-snitch-ink/70">
-                            {{
-                                post.unavailable_reason ||
-                                    post.analysis?.error_message ||
-                                    'Post or media is no longer available.'
-                            }}
-                        </p>
-                    </div>
-
-                    <div
-                        v-else-if="isFailed"
-                        class="snitch-sticker"
-                    >
-                        <p class="snitch-annotation text-xl">Analysis failed</p>
-                        <p class="mt-2 text-sm text-snitch-ink/70">
-                            {{ post.analysis?.error_message || 'We could not finish analyzing this reel.' }}
-                        </p>
-                    </div>
-
-                    <div
-                        v-else
-                        class="snitch-sticker animate-pulse space-y-3"
-                    >
-                        <div class="h-4 w-24 bg-snitch-ink/10" />
-                        <div class="h-16 bg-snitch-ink/10" />
-                        <div class="h-16 bg-snitch-ink/10" />
-                        <p class="text-sm text-snitch-ink/50">Analysis pending…</p>
+                        <div
+                            v-else
+                            class="snitch-sticker animate-pulse space-y-3"
+                        >
+                            <div class="h-4 w-24 bg-snitch-ink/10" />
+                            <div class="h-16 bg-snitch-ink/10" />
+                            <div class="h-16 bg-snitch-ink/10" />
+                            <p class="text-sm text-snitch-ink/50">Analysis pending…</p>
+                        </div>
                     </div>
                 </div>
             </div>
