@@ -13,13 +13,13 @@ RUN apt-get update \
         unzip \
     && rm -rf /var/lib/apt/lists/*
 
-RUN docker-php-ext-install \
-    bcmath \
-    intl \
-    opcache \
-    pdo_mysql \
-    pdo_sqlite \
-    zip
+# Install one extension at a time - PHP 8.5 multi-ext installs race on modules/*.
+RUN docker-php-ext-install bcmath \
+    && docker-php-ext-install intl \
+    && docker-php-ext-install opcache \
+    && docker-php-ext-install pdo_mysql \
+    && docker-php-ext-install pdo_sqlite \
+    && docker-php-ext-install zip
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -91,13 +91,12 @@ RUN apt-get update && apt-get upgrade -y \
         libzip-dev \
     && docker-php-ext-configure pgsql --with-pgsql \
     && docker-php-ext-install pdo_pgsql \
-    && docker-php-ext-install \
-        bcmath \
-        intl \
-        opcache \
-        pdo_mysql \
-        pdo_sqlite \
-        zip \
+    && docker-php-ext-install bcmath \
+    && docker-php-ext-install intl \
+    && docker-php-ext-install opcache \
+    && docker-php-ext-install pdo_mysql \
+    && docker-php-ext-install pdo_sqlite \
+    && docker-php-ext-install zip \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && rm -rf /tmp/pear \
