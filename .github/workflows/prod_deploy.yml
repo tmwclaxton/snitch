@@ -94,16 +94,27 @@ jobs:
       - name: Copy deploy files to server
         run: |
           set -euo pipefail
+          # Outer transport retries (SSH/SCP via Cloudflare Access can reset).
           retry() {
-            local attempt
-            for attempt in 1 2 3; do
+            local attempt=1
+            local delay=5
+            local max_attempts=5
+
+            while true; do
               if "$@"; then
                 return 0
               fi
-              echo "Attempt ${attempt} failed; retrying in 5s..."
-              sleep 5
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                return 1
+              fi
+              echo "Attempt ${attempt}/${max_attempts} failed; retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+              if [ "$delay" -gt 60 ]; then
+                delay=60
+              fi
             done
-            return 1
           }
 
           retry scp compose.prod.yaml ${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/compose.prod.yaml
@@ -112,16 +123,28 @@ jobs:
       - name: Deploy to server
         run: |
           set -euo pipefail
+          # Outer transport retries. deploy-production.sh also retries GHCR login/pull
+          # with exponential backoff for TLS handshake timeouts / connection resets.
           retry() {
-            local attempt
-            for attempt in 1 2 3; do
+            local attempt=1
+            local delay=10
+            local max_attempts=5
+
+            while true; do
               if "$@"; then
                 return 0
               fi
-              echo "Attempt ${attempt} failed; retrying in 5s..."
-              sleep 5
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                return 1
+              fi
+              echo "Attempt ${attempt}/${max_attempts} failed; retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+              if [ "$delay" -gt 120 ]; then
+                delay=120
+              fi
             done
-            return 1
           }
 
           retry ssh ${{ env.DEPLOY_HOST }} "
