@@ -54,4 +54,35 @@ class VideoAnalysisResultTest extends TestCase
         $this->assertSame(['foundation-report-drop'], $result->customTags);
         $this->assertTrue($result->hasTaxonomySignal());
     }
+
+    public function test_from_model_payload_floors_short_hook_window(): void
+    {
+        $result = VideoAnalysisResult::fromModelPayload([
+            'concept' => 'Proof-first before CTA',
+            'hook' => 'Cold open on receipt',
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 1.2],
+            'visual_summary' => 'Tight crop on numbers then cut to face.',
+            'idea' => 'Status proof via specific dollar amount',
+            'topics' => ['social proof'],
+            'cta' => 'Apply today',
+            'how_to_copy' => 'Lead with a concrete number, then your brand offer.',
+            'sfx' => [],
+            'is_original_audio' => true,
+        ], 'qwen3.7-flash');
+
+        $this->assertSame(3.0, $result->hookWindowEndSeconds);
+
+        $customFloor = VideoAnalysisResult::fromModelPayload([
+            'concept' => 'Proof-first before CTA',
+            'hook' => 'Cold open on receipt',
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 1.2],
+            'visual_summary' => 'Tight crop on numbers then cut to face.',
+            'idea' => 'Status proof via specific dollar amount',
+            'cta' => 'Apply today',
+            'how_to_copy' => 'Lead with a concrete number, then your brand offer.',
+            'sfx' => [],
+        ], 'qwen3.7-flash', 4.0);
+
+        $this->assertSame(4.0, $customFloor->hookWindowEndSeconds);
+    }
 }

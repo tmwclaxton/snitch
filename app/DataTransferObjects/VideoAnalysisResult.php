@@ -38,8 +38,11 @@ final readonly class VideoAnalysisResult
     /**
      * @param  array<string, mixed>  $payload
      */
-    public static function fromModelPayload(array $payload, string $model): self
-    {
+    public static function fromModelPayload(
+        array $payload,
+        string $model,
+        ?float $minHookWindowEndSeconds = null,
+    ): self {
         $hookWindow = is_array($payload['hook_window'] ?? null) ? $payload['hook_window'] : [];
         $sfxItems = [];
 
@@ -72,10 +75,14 @@ final readonly class VideoAnalysisResult
             $concept = trim((string) ($payload['idea'] ?? ''));
         }
 
+        // Models often return 0-2.5s for short opens; floor to the same minimum we persist.
+        $minHookEnd = $minHookWindowEndSeconds ?? 3.0;
+        $hookWindowEnd = max($minHookEnd, (float) ($hookWindow['end_sec'] ?? 0));
+
         return new self(
             hook: trim((string) ($payload['hook'] ?? '')),
             hookWindowStartSeconds: (float) ($hookWindow['start_sec'] ?? 0),
-            hookWindowEndSeconds: (float) ($hookWindow['end_sec'] ?? 0),
+            hookWindowEndSeconds: $hookWindowEnd,
             visualSummary: trim((string) ($payload['visual_summary'] ?? '')),
             idea: trim((string) ($payload['idea'] ?? '')),
             concept: $concept,

@@ -11,6 +11,9 @@ paths:
 ## Analysis is concept-first not transcript dump
 Persist concept, topics, how_to_copy, hook, idea, visual, music/SFX. Evaluator rejects caption echo and vague filler. Prompts forbid long script regurgitation and invented SFX.
 
+## Hook window floors to the success minimum
+Models often return `hook_window.end_sec` under 3s. `VideoAnalysisResult::fromModelPayload` floors to `snitch.video_analysis.success.min_hook_window_end_seconds` (default 3) before evaluate/persist so short opens do not burn AnalyzePostJob retries.
+
 ## Analysis output is English only
 Prompts require US English for every JSON string (concept, idea, topics, how_to_copy, visual, cta, labels). Spoken-word quotes in hook may keep the source language. Evaluator rejects Han/CJK prose so Qwen and similar models cannot persist Chinese analysis fields.
 

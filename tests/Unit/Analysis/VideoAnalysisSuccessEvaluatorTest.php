@@ -54,23 +54,25 @@ class VideoAnalysisSuccessEvaluatorTest extends TestCase
         $this->assertNotEmpty($evaluation['failures']);
     }
 
-    public function test_fails_short_hook_window(): void
+    public function test_short_hook_window_is_clamped_before_evaluate(): void
     {
         $result = VideoAnalysisResult::fromModelPayload([
             'concept' => 'Contrast cut between mess and clean pack',
-            'hook' => 'Too short hook',
+            'hook' => 'Too short hook window from the model',
             'hook_window' => ['start_sec' => 0, 'end_sec' => 1.5],
             'visual_summary' => str_repeat('Visual detail here. ', 5),
-            'idea' => 'An idea line',
+            'idea' => 'An idea line naming the mechanic',
             'cta' => 'Shop now',
             'how_to_copy' => 'Remake with your brand product first.',
             'sfx' => [],
         ], 'qwen3.7-flash');
 
+        $this->assertSame(3.0, $result->hookWindowEndSeconds);
+
         $evaluation = app(VideoAnalysisSuccessEvaluator::class)->evaluate($result);
 
-        $this->assertFalse($evaluation['passed']);
-        $this->assertContains('hook window end below 3 seconds', $evaluation['failures']);
+        $this->assertTrue($evaluation['passed']);
+        $this->assertNotContains('hook window end below 3 seconds', $evaluation['failures']);
     }
 
     public function test_fails_chinese_prose_fields(): void

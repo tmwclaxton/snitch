@@ -70,7 +70,11 @@ SYSTEM,
             throw new RuntimeException('Video analysis did not return valid JSON.');
         }
 
-        return VideoAnalysisResult::fromModelPayload($payload, $model);
+        return VideoAnalysisResult::fromModelPayload(
+            $payload,
+            $model,
+            (float) config('snitch.video_analysis.success.min_hook_window_end_seconds'),
+        );
     }
 
     public function analyzePost(Post $post): PostAnalysis

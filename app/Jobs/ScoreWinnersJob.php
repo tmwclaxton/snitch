@@ -26,9 +26,13 @@ class ScoreWinnersJob implements ShouldQueue
         public int $userId,
         public string $runId = '',
     ) {
-        if ($this->runId === '') {
-            $this->runId = (string) Str::uuid();
-        }
+        $this->ensureRunId();
+    }
+
+    public function __wakeup(): void
+    {
+        // Older queued payloads may omit runId; constructor does not run on unserialize.
+        $this->ensureRunId();
     }
 
     public static function queueFor(int $userId): string
@@ -50,6 +54,8 @@ class ScoreWinnersJob implements ShouldQueue
 
     public function handle(WinnerScorer $scorer): void
     {
+        $this->ensureRunId();
+
         $this->putStatus([
             'status' => 'processing',
             'error' => null,
@@ -79,6 +85,8 @@ class ScoreWinnersJob implements ShouldQueue
 
     public function failed(?Throwable $exception): void
     {
+        $this->ensureRunId();
+
         Log::warning('ScoreWinnersJob failed', [
             'user_id' => $this->userId,
             'run_id' => $this->runId,
@@ -175,16 +183,27 @@ class ScoreWinnersJob implements ShouldQueue
      */
     private function putStatus(array $payload): void
     {
+        $runId = $this->ensureRunId();
+
         Cache::put($this->cacheKey(), $payload, now()->addHour());
-        Cache::put(self::activeCacheKeyFor($this->userId), $this->runId, now()->addHour());
+        Cache::put(self::activeCacheKeyFor($this->userId), $runId, now()->addHour());
 
         if (in_array($payload['status'], ['completed', 'failed'], true)) {
-            self::clearActive($this->userId, $this->runId);
+            self::clearActive($this->userId, $runId);
         }
     }
 
     private function cacheKey(): string
     {
-        return self::cacheKeyFor($this->userId, $this->runId);
+        return self::cacheKeyFor($this->userId, $this->ensureRunId());
+    }
+
+    private function ensureRunId(): string
+    {
+        if (! isset($this->runId) || $this->runId === '') {
+            $this->runId = (string) Str::uuid();
+        }
+
+        return $this->runId;
     }
 }
