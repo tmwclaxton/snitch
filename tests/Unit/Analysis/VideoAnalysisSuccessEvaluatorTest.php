@@ -75,6 +75,27 @@ class VideoAnalysisSuccessEvaluatorTest extends TestCase
         $this->assertNotContains('hook window end below 3 seconds', $evaluation['failures']);
     }
 
+    public function test_empty_cta_is_floored_before_evaluate(): void
+    {
+        $result = VideoAnalysisResult::fromModelPayload([
+            'concept' => 'Contrast cut between mess and clean pack',
+            'hook' => 'Cold open on the before state',
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+            'visual_summary' => str_repeat('Visual detail here. ', 5),
+            'idea' => 'An idea line naming the mechanic',
+            'cta' => '',
+            'how_to_copy' => 'Remake with your brand product first.',
+            'sfx' => [],
+        ], 'qwen3.7-flash');
+
+        $this->assertSame('No explicit CTA', $result->cta);
+
+        $evaluation = app(VideoAnalysisSuccessEvaluator::class)->evaluate($result);
+
+        $this->assertTrue($evaluation['passed']);
+        $this->assertNotContains('cta missing', $evaluation['failures']);
+    }
+
     public function test_fails_chinese_prose_fields(): void
     {
         $result = VideoAnalysisResult::fromModelPayload([

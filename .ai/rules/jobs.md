@@ -8,6 +8,9 @@ paths:
 ## Queue worker required for async sync and analyze
 QUEUE_CONNECTION=database. SyncTrackedAccountJob and AnalyzePostJob are ShouldQueue; ConfirmSuggestions / UI sync need a running queue worker. Live probes may dispatchSync. Never assume sync/analyze finished because the HTTP request returned.
 
+## SuggestCompetitorsJob needs longer attempts
+Firecrawl + Apify verify can exceed a short worker window, and deploys can SIGTERM mid-run. Keep `$tries` at least 3 with backoff (15s/60s) and a 600s timeout so MaxAttemptsExceeded is not the first failure mode after a restart.
+
 ## SyncTrackedAccountJob respects weekly min interval for schedule
 Unless force=true, the job no-ops when TrackedAccount::isDueForSync() is false (successful sync within snitch.sync.min_interval_days). Scheduled snitch:sync-accounts filters due accounts. Manual UI sync always dispatches with force=true; the next-sync countdown is informational for auto sync only.
 
