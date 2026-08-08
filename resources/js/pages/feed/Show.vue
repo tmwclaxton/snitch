@@ -187,6 +187,16 @@ const showDisplayName = computed(() => {
                         {{ post.tracked_account?.display_name }}
                     </span>
                 </p>
+                <div
+                    v-if="analysisDone && post.analysis?.topics?.length"
+                    class="snitch-topic-row mt-3"
+                >
+                    <span
+                        v-for="topic in post.analysis.topics"
+                        :key="topic"
+                        class="snitch-topic-chip"
+                    >{{ topic }}</span>
+                </div>
             </header>
 
             <div class="mt-6 space-y-6">
@@ -281,20 +291,6 @@ const showDisplayName = computed(() => {
                             >
                                 <p class="snitch-annotation text-xl">Why it engages</p>
                                 <p class="mt-1 text-snitch-ink">{{ post.analysis.idea }}</p>
-                            </div>
-
-                            <div
-                                v-if="post.analysis.topics?.length"
-                                class="snitch-sticker"
-                            >
-                                <p class="snitch-annotation text-xl">Topics</p>
-                                <div class="snitch-topic-row mt-2">
-                                    <span
-                                        v-for="topic in post.analysis.topics"
-                                        :key="topic"
-                                        class="snitch-topic-chip"
-                                    >{{ topic }}</span>
-                                </div>
                             </div>
 
                             <div
