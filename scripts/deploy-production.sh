@@ -21,6 +21,10 @@ compose up -d
 echo "Running migrations..."
 compose exec -T app php artisan migrate --force
 
+# Idempotent catalogue sync for Explore / analysis taxonomy filters.
+echo "Syncing analysis term catalogue..."
+compose exec -T app php artisan db:seed --class=AnalysisTermSeeder --force
+
 echo "Ensuring public storage link..."
 compose exec -T app php artisan storage:link --force --no-interaction 2>/dev/null || compose exec -T app php artisan storage:link --no-interaction 2>/dev/null || true
 
