@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\Billing\PlanEntitlementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Cashier\Checkout;
 use Laravel\Cashier\SubscriptionBuilder;
 use Mockery;
 use Tests\TestCase;
@@ -37,7 +38,8 @@ class BillingCheckoutTest extends TestCase
                 ->has('subscription')
                 ->has('plans')
                 ->where('subscription.plan', 'basic')
-                ->where('subscription.on_trial', true));
+                ->where('subscription.on_trial', true)
+                ->where('subscription.subscribed', false));
     }
 
     public function test_checkout_redirects_when_price_missing(): void
@@ -51,24 +53,56 @@ class BillingCheckoutTest extends TestCase
             ->assertRedirect(route('billing.edit'));
     }
 
-    public function test_checkout_redirects_to_stripe_checkout_session(): void
+    public function test_checkout_uses_inertia_location_for_stripe_session(): void
     {
         $user = User::factory()->onTrial()->create();
 
+        $session = (object) ['url' => 'https://checkout.stripe.com/c/pay/cs_test_123'];
+        $checkout = Mockery::mock(Checkout::class);
+        $checkout->shouldReceive('asStripeCheckoutSession')->once()->andReturn($session);
+
         $builder = Mockery::mock(SubscriptionBuilder::class);
-        $builder->shouldReceive('checkout')
-            ->once()
-            ->andReturn(redirect()->away('https://checkout.stripe.com/c/pay/cs_test_123'));
+        $builder->shouldReceive('checkout')->once()->andReturn($checkout);
 
         $user = Mockery::mock($user)->makePartial();
+        $user->shouldReceive('subscribed')->with('default')->andReturn(false);
         $user->shouldReceive('newSubscription')
             ->once()
             ->with('default', 'price_basic_test')
             ->andReturn($builder);
 
         $this->actingAs($user)
-            ->post(route('billing.checkout'), ['plan' => 'basic'])
-            ->assertRedirect('https://checkout.stripe.com/c/pay/cs_test_123');
+            ->post(route('billing.checkout'), ['plan' => 'basic'], [
+                'X-Inertia' => 'true',
+            ])
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', 'https://checkout.stripe.com/c/pay/cs_test_123');
+    }
+
+    public function test_pro_checkout_uses_inertia_location(): void
+    {
+        $user = User::factory()->onTrial()->create();
+
+        $session = (object) ['url' => 'https://checkout.stripe.com/c/pay/cs_test_pro'];
+        $checkout = Mockery::mock(Checkout::class);
+        $checkout->shouldReceive('asStripeCheckoutSession')->once()->andReturn($session);
+
+        $builder = Mockery::mock(SubscriptionBuilder::class);
+        $builder->shouldReceive('checkout')->once()->andReturn($checkout);
+
+        $user = Mockery::mock($user)->makePartial();
+        $user->shouldReceive('subscribed')->with('default')->andReturn(false);
+        $user->shouldReceive('newSubscription')
+            ->once()
+            ->with('default', 'price_pro_test')
+            ->andReturn($builder);
+
+        $this->actingAs($user)
+            ->post(route('billing.checkout'), ['plan' => 'pro'], [
+                'X-Inertia' => 'true',
+            ])
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', 'https://checkout.stripe.com/c/pay/cs_test_pro');
     }
 
     public function test_webhook_subscription_created_grants_basic_limit(): void
