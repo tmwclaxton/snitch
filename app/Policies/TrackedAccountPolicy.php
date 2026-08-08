@@ -4,9 +4,12 @@ namespace App\Policies;
 
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Services\Billing\PlanEntitlementService;
 
 class TrackedAccountPolicy
 {
+    public function __construct(private PlanEntitlementService $entitlements) {}
+
     public function viewAny(User $user): bool
     {
         return true;
@@ -19,7 +22,7 @@ class TrackedAccountPolicy
 
     public function create(User $user): bool
     {
-        return true;
+        return $this->entitlements->canAddCompetitors($user, 1);
     }
 
     public function update(User $user, TrackedAccount $trackedAccount): bool

@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Billing\PlanEntitlementService;
 use Illuminate\Support\Facades\Route;
 use Laravel\WorkOS\Http\Requests\AuthKitAuthenticationRequest;
 use Laravel\WorkOS\Http\Requests\AuthKitLoginRequest;
@@ -16,6 +17,11 @@ Route::middleware(['guest'])->group(function () {
         }
 
         $request->authenticate();
+
+        $user = $request->user();
+        if ($user !== null) {
+            app(PlanEntitlementService::class)->ensureTrialStarted($user);
+        }
 
         return redirect()->intended(route('dashboard'));
     });

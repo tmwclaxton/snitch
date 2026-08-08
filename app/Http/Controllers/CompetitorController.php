@@ -10,6 +10,7 @@ use App\Jobs\SyncTrackedAccountJob;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\WinnerInsight;
+use App\Services\Billing\PlanEntitlementService;
 use App\Support\PlatformEmbed;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -23,6 +24,8 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class CompetitorController extends Controller
 {
+    public function __construct(private PlanEntitlementService $entitlements) {}
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', TrackedAccount::class);
@@ -75,10 +78,21 @@ class CompetitorController extends Controller
         $data = $request->validated();
         $handle = $data['handle'];
         $platform = Platform::from($data['platform'] instanceof Platform ? $data['platform']->value : $data['platform']);
+        $user = $request->user();
+
+        $exists = TrackedAccount::query()
+            ->where('user_id', $user->id)
+            ->where('platform', $platform)
+            ->where('handle', $handle)
+            ->exists();
+
+        if (! $exists && ! $this->entitlements->canAddCompetitors($user, 1)) {
+            return $this->competitorLimitExceededRedirect();
+        }
 
         $account = TrackedAccount::query()->updateOrCreate(
             [
-                'user_id' => $request->user()->id,
+                'user_id' => $user->id,
                 'platform' => $platform,
                 'handle' => $handle,
             ],
@@ -91,7 +105,7 @@ class CompetitorController extends Controller
         $account->markSyncRunning();
         SyncTrackedAccountJob::dispatch($account->id);
 
-        SuggestCompetitorsJob::pruneLatestSuggestions($request->user()->id, [[
+        SuggestCompetitorsJob::pruneLatestSuggestions($user->id, [[
             'platform' => $platform->value,
             'handle' => $handle,
         ]]);
@@ -160,15 +174,23 @@ class CompetitorController extends Controller
 
     public function confirmSuggestions(ConfirmSuggestionsRequest $request): RedirectResponse
     {
+        $user = $request->user();
+        $suggestions = $request->validated('suggestions');
+        $netNew = $this->countNetNewSuggestions($user->id, $suggestions);
+
+        if (! $this->entitlements->canAddCompetitors($user, $netNew)) {
+            return $this->competitorLimitExceededRedirect();
+        }
+
         $confirmed = [];
 
-        foreach ($request->validated('suggestions') as $suggestion) {
+        foreach ($suggestions as $suggestion) {
             $handle = ltrim($suggestion['handle'], '@');
             $platform = Platform::from($suggestion['platform'] instanceof Platform ? $suggestion['platform']->value : $suggestion['platform']);
 
             $account = TrackedAccount::query()->updateOrCreate(
                 [
-                    'user_id' => $request->user()->id,
+                    'user_id' => $user->id,
                     'platform' => $platform,
                     'handle' => $handle,
                 ],
@@ -187,7 +209,7 @@ class CompetitorController extends Controller
             ];
         }
 
-        SuggestCompetitorsJob::pruneLatestSuggestions($request->user()->id, $confirmed);
+        SuggestCompetitorsJob::pruneLatestSuggestions($user->id, $confirmed);
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -307,7 +329,58 @@ class CompetitorController extends Controller
             'suggestions' => $visibleSuggestions,
             'suggestRun' => $this->activeSuggestRun($request->user()->id),
             'suggestError' => is_string($latest['error'] ?? null) ? $latest['error'] : null,
+            'competitorCap' => $this->entitlements->summary($request->user()),
         ];
+    }
+
+    private function competitorLimitExceededRedirect(): RedirectResponse
+    {
+        Inertia::flash('toast', [
+            'type' => 'error',
+            'message' => __('You have reached your competitor limit for this plan. Upgrade in Billing to track more.'),
+        ]);
+
+        return redirect()->route('competitors.index');
+    }
+
+    /**
+     * @param  list<array{platform: mixed, handle: string}>  $suggestions
+     */
+    private function countNetNewSuggestions(int $userId, array $suggestions): int
+    {
+        $existing = TrackedAccount::query()
+            ->where('user_id', $userId)
+            ->get(['platform', 'handle'])
+            ->mapWithKeys(function (TrackedAccount $account): array {
+                $platform = $account->platform instanceof Platform
+                    ? $account->platform->value
+                    : (string) $account->platform;
+
+                $key = strtolower($platform).':'.strtolower(ltrim((string) $account->handle, '@'));
+
+                return [$key => true];
+            })
+            ->all();
+
+        $netNew = 0;
+        $seen = [];
+
+        foreach ($suggestions as $suggestion) {
+            $platform = $suggestion['platform'] instanceof Platform
+                ? $suggestion['platform']->value
+                : (string) $suggestion['platform'];
+            $handle = ltrim(strtolower(trim((string) $suggestion['handle'])), '@');
+            $key = strtolower($platform).':'.$handle;
+
+            if (isset($existing[$key]) || isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $netNew++;
+        }
+
+        return $netNew;
     }
 
     /**

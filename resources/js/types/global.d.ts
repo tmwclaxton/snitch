@@ -13,11 +13,24 @@ declare module 'vite/client' {
     }
 }
 
+export type SubscriptionSummary = {
+    plan: string;
+    plan_name: string;
+    competitor_limit: number;
+    competitors_used: number;
+    competitors_remaining: number;
+    on_trial: boolean;
+    trial_ends_at: string | null;
+    subscribed: boolean;
+    can_upgrade: boolean;
+} | null;
+
 declare module '@inertiajs/core' {
     export interface InertiaConfig {
         sharedPageProps: {
             name: string;
             auth: Auth;
+            subscription: SubscriptionSummary;
             sidebarOpen: boolean;
             [key: string]: unknown;
         };
