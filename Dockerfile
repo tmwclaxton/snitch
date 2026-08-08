@@ -43,7 +43,10 @@ RUN --mount=type=cache,target=/root/.npm \
 # Copy full source code — only invalidates steps below, not the heavy installs above
 COPY . .
 
+# Blank APP_URL so Wayfinder emits path-only URLs into the Vite build.
+# A non-empty APP_URL + URL::forceRootUrl would bake http://localhost into JS links.
 RUN cp .env.example .env \
+    && sed -i 's|^APP_URL=.*|APP_URL=|' .env \
     && sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env \
     && sed -i 's|^DB_DATABASE=.*|DB_DATABASE=/app/database/database.sqlite|' .env \
     && sed -i 's/^SESSION_DRIVER=.*/SESSION_DRIVER=array/' .env \
