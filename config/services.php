@@ -41,4 +41,9 @@ return [
         'redirect_url' => env('WORKOS_REDIRECT_URL'),
     ],
 
+    'postal' => [
+        'key' => env('POSTAL_API_KEY'),
+        'base_url' => env('POSTAL_BASE_URL', 'https://postal.grantgunner.org'),
+    ],
+
 ];

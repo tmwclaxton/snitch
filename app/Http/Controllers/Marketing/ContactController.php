@@ -19,7 +19,9 @@ class ContactController extends Controller
 
     public function store(ContactRequest $request): RedirectResponse
     {
-        Mail::to(config('mail.from.address'))->send(
+        $to = (string) config('snitch.contact_to');
+
+        Mail::to($to)->send(
             new ContactMessage(
                 name: $request->string('name')->toString(),
                 email: $request->string('email')->toString(),

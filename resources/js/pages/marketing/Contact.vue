@@ -34,10 +34,10 @@ defineOptions({
                     >
                         Prefer email?
                         <a
-                            href="mailto:hello@snitch.app"
+                            href="mailto:hello@snitchsocial.net"
                             class="snitch-marker-underline text-snitch-ink"
                         >
-                            hello@snitch.app
+                            hello@snitchsocial.net
                         </a>
                     </p>
                 </div>

@@ -140,6 +140,7 @@ class PublicPagesTest extends TestCase
     public function test_contact_form_sends_mail(): void
     {
         Mail::fake();
+        config(['snitch.contact_to' => 'tmwclaxton@gmail.com']);
 
         $this->post(route('contact.store'), [
             'name' => 'Ada Lovelace',
@@ -147,7 +148,20 @@ class PublicPagesTest extends TestCase
             'message' => 'Hello from the contact form.',
         ])->assertRedirect();
 
-        Mail::assertSent(ContactMessage::class);
+        Mail::assertSent(ContactMessage::class, function (ContactMessage $mail): bool {
+            return $mail->hasTo('tmwclaxton@gmail.com')
+                && $mail->email === 'ada@example.com'
+                && $mail->name === 'Ada Lovelace';
+        });
+    }
+
+    public function test_contact_page_shows_snitchsocial_support_address(): void
+    {
+        $contents = file_get_contents(resource_path('js/pages/marketing/Contact.vue'));
+
+        $this->assertNotFalse($contents);
+        $this->assertStringContainsString('hello@snitchsocial.net', $contents);
+        $this->assertStringNotContainsString('hello@snitch.app', $contents);
     }
 
     public function test_contact_page_uses_readable_ink_contrast(): void
