@@ -57,9 +57,17 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * Keep absolute URLs on the configured APP_URL host (ignore spoofed forwarded Host).
+     *
+     * Skip while the process is `wayfinder:generate` so TypeScript helpers stay
+     * path-only (e.g. `/feed`). Otherwise Docker/CI builds bake APP_URL from
+     * `.env.example` (`http://localhost`) into production assets.
      */
     protected function configureUrlGenerator(): void
     {
+        if ($this->runningWayfinderGenerate()) {
+            return;
+        }
+
         $root = rtrim((string) config('app.url'), '/');
 
         if ($root !== '') {
@@ -69,6 +77,25 @@ class AppServiceProvider extends ServiceProvider
         if (str_starts_with($root, 'https://')) {
             URL::forceScheme('https');
         }
+    }
+
+    /**
+     * Detect a real `php artisan wayfinder:generate` process via argv.
+     * (PHPUnit's in-process artisan runner does not change argv.)
+     */
+    protected function runningWayfinderGenerate(): bool
+    {
+        if (! $this->app->runningInConsole()) {
+            return false;
+        }
+
+        foreach ($_SERVER['argv'] ?? [] as $arg) {
+            if (is_string($arg) && str_contains($arg, 'wayfinder:generate')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
