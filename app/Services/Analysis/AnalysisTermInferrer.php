@@ -155,32 +155,68 @@ class AnalysisTermInferrer
     /**
      * Attach inferred catalogue terms onto a completed analysis (merge, do not wipe).
      *
-     * @return array{attached: int, total: int}
+     * @return array{attached: int, detached: int, total: int}
      */
     public function backfillAnalysis(PostAnalysis $analysis): array
     {
-        $inferredIds = $this->inferIdsFromAnalysis($analysis);
+        return $this->applyInferredTerms($analysis, replace: false);
+    }
 
-        if ($inferredIds === []) {
-            return [
-                'attached' => 0,
-                'total' => $analysis->terms()->count(),
-            ];
+    /**
+     * Strip mirrored catalogue labels from topics, re-infer, and replace pivot terms.
+     * Use after a bad merge backfill that polluted topics and attached false positives.
+     * Exact catalogue slugs still present in topics are kept as term links.
+     *
+     * @return array{attached: int, detached: int, total: int}
+     */
+    public function replaceAnalysis(PostAnalysis $analysis): array
+    {
+        $topics = is_array($analysis->topics) ? $analysis->topics : [];
+        $slugIds = $this->termIdsFromExactTopicSlugs($topics);
+        $cleanedTopics = $this->topicsWithoutCatalogueMirrors($topics);
+
+        if ($cleanedTopics !== $topics) {
+            $analysis->topics = $cleanedTopics;
+            $analysis->save();
         }
 
-        $existingIds = $analysis->terms()->pluck('analysis_terms.id')->map(fn ($id): int => (int) $id)->all();
-        $mergedIds = array_values(array_unique(array_merge($existingIds, $inferredIds)));
-        $analysis->terms()->sync($mergedIds);
+        return $this->applyInferredTerms(
+            $analysis->fresh() ?? $analysis,
+            replace: true,
+            extraIds: $slugIds,
+        );
+    }
 
-        $labels = AnalysisTerm::query()
-            ->whereIn('id', $inferredIds)
-            ->orderBy('label')
-            ->pluck('label')
-            ->map(fn ($label): string => (string) $label)
-            ->all();
+    /**
+     * @param  list<int>  $extraIds
+     * @return array{attached: int, detached: int, total: int}
+     */
+    private function applyInferredTerms(PostAnalysis $analysis, bool $replace, array $extraIds = []): array
+    {
+        $inferredIds = $this->inferIdsFromAnalysis($analysis);
+        $existingIds = $analysis->terms()->pluck('analysis_terms.id')->map(fn ($id): int => (int) $id)->all();
+
+        $candidateIds = array_values(array_unique(array_merge($inferredIds, $extraIds)));
+        $nextIds = $replace
+            ? $candidateIds
+            : array_values(array_unique(array_merge($existingIds, $candidateIds)));
+
+        $analysis->terms()->sync($nextIds);
+
+        $labels = $nextIds === []
+            ? []
+            : AnalysisTerm::query()
+                ->whereIn('id', $nextIds)
+                ->orderBy('label')
+                ->pluck('label')
+                ->map(fn ($label): string => (string) $label)
+                ->all();
 
         $topics = is_array($analysis->topics) ? $analysis->topics : [];
-        $mergedTopics = array_values(array_unique(array_merge($topics, $labels)));
+        $baseTopics = $replace
+            ? $this->topicsWithoutCatalogueMirrors($topics)
+            : $topics;
+        $mergedTopics = array_values(array_unique(array_merge($baseTopics, $labels)));
 
         if ($mergedTopics !== $topics) {
             $analysis->topics = $mergedTopics;
@@ -188,9 +224,102 @@ class AnalysisTermInferrer
         }
 
         return [
-            'attached' => count(array_diff($inferredIds, $existingIds)),
-            'total' => count($mergedIds),
+            'attached' => count(array_diff($nextIds, $existingIds)),
+            'detached' => count(array_diff($existingIds, $nextIds)),
+            'total' => count($nextIds),
         ];
+    }
+
+    /**
+     * Drop topics that are only mirrored catalogue labels/slugs (keeps freeform phrases).
+     *
+     * @param  list<string>  $topics
+     * @return list<string>
+     */
+    public function topicsWithoutCatalogueMirrors(array $topics): array
+    {
+        $mirrors = [];
+
+        foreach ($this->catalogue->definitions() as $row) {
+            $mirrors[strtolower(trim($row['label']))] = true;
+            $mirrors[strtolower(trim($row['slug']))] = true;
+            $mirrors[str_replace('_', ' ', strtolower(trim($row['slug'])))] = true;
+            $mirrors[str_replace('_', '-', strtolower(trim($row['slug'])))] = true;
+        }
+
+        $kept = [];
+
+        foreach ($topics as $topic) {
+            if (! is_string($topic)) {
+                continue;
+            }
+
+            $trimmed = trim($topic);
+
+            if ($trimmed === '') {
+                continue;
+            }
+
+            $key = strtolower($trimmed);
+
+            if (isset($mirrors[$key])) {
+                continue;
+            }
+
+            $kept[] = $trimmed;
+        }
+
+        return array_values(array_unique($kept));
+    }
+
+    /**
+     * Resolve catalogue term IDs from topics that look like canonical slugs
+     * (`personal_brand` / `personal-brand`), not mirrored labels (`Personal brand`).
+     *
+     * @param  list<string>  $topics
+     * @return list<int>
+     */
+    public function termIdsFromExactTopicSlugs(array $topics): array
+    {
+        $byDimension = [
+            'hook_type' => [],
+            'topic' => [],
+            'visual_craft' => [],
+        ];
+
+        $slugIndex = [];
+
+        foreach ($this->catalogue->definitions() as $row) {
+            $slug = strtolower(trim($row['slug']));
+            $slugIndex[$slug] = $row['dimension'];
+            $slugIndex[str_replace('_', '-', $slug)] = $row['dimension'];
+        }
+
+        foreach ($topics as $topic) {
+            if (! is_string($topic)) {
+                continue;
+            }
+
+            $key = strtolower(trim($topic));
+
+            // Slug-shaped only: avoid promoting mirrored Title Case labels.
+            if ($key === '' || preg_match('/^[a-z0-9]+(?:[_-][a-z0-9]+)*$/', $key) !== 1) {
+                continue;
+            }
+
+            if (! isset($slugIndex[$key])) {
+                continue;
+            }
+
+            $dimension = $slugIndex[$key];
+            $byDimension[$dimension][] = str_replace('-', '_', $key);
+        }
+
+        return array_values(array_unique(array_merge(
+            $this->catalogue->resolveIds(AnalysisTermDimension::HookType, $byDimension['hook_type']),
+            $this->catalogue->resolveIds(AnalysisTermDimension::Topic, $byDimension['topic']),
+            $this->catalogue->resolveIds(AnalysisTermDimension::VisualCraft, $byDimension['visual_craft']),
+        )));
     }
 
     /**
