@@ -164,6 +164,23 @@ class PublicPagesTest extends TestCase
         $this->assertStringNotContainsString('hello@snitch.app', $contents);
     }
 
+    public function test_browser_tab_title_defaults_to_snitch_not_laravel(): void
+    {
+        $appTs = file_get_contents(resource_path('js/app.ts'));
+        $envExample = file_get_contents(base_path('.env.example'));
+        $blade = file_get_contents(resource_path('views/app.blade.php'));
+
+        $this->assertNotFalse($appTs);
+        $this->assertNotFalse($envExample);
+        $this->assertNotFalse($blade);
+
+        $this->assertStringContainsString("|| 'Snitch'", $appTs);
+        $this->assertStringNotContainsString("|| 'Laravel'", $appTs);
+        $this->assertMatchesRegularExpression('/^APP_NAME=Snitch$/m', $envExample);
+        $this->assertStringContainsString("config('app.name', 'Snitch')", $blade);
+        $this->assertSame('Snitch', config('app.name'));
+    }
+
     public function test_contact_page_uses_readable_ink_contrast(): void
     {
         $contents = file_get_contents(resource_path('js/pages/marketing/Contact.vue'));
