@@ -11,6 +11,7 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\Settings\WinnerRuleController;
 use App\Http\Controllers\WinnerController;
 use App\Http\Middleware\EnsureBrandProfile;
+use App\Support\Seo;
 use Illuminate\Support\Facades\Route;
 use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
 
@@ -31,20 +32,13 @@ Route::post('/contact', [ContactController::class, 'store'])
     ->name('contact.store');
 
 Route::get('/sitemap.xml', function () {
-    $urls = [
-        route('home', absolute: true),
-        route('about', absolute: true),
-        route('how-it-works', absolute: true),
-        route('pricing', absolute: true),
-        route('analytics', absolute: true),
-        route('contact', absolute: true),
-        route('privacy', absolute: true),
-        route('terms', absolute: true),
-        route('cookies', absolute: true),
-    ];
-
-    $body = collect($urls)->map(function (string $loc): string {
-        return '  <url><loc>'.e($loc).'</loc></url>';
+    $body = collect(Seo::sitemapEntries())->map(function (array $entry): string {
+        return '  <url>'
+            .'<loc>'.e($entry['loc']).'</loc>'
+            .'<lastmod>'.e($entry['lastmod']).'</lastmod>'
+            .'<changefreq>'.e($entry['changefreq']).'</changefreq>'
+            .'<priority>'.e($entry['priority']).'</priority>'
+            .'</url>';
     })->implode("\n");
 
     return response(

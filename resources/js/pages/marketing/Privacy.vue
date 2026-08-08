@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import LegalDocument from '@/components/marketing/LegalDocument.vue';
-import SeoHead from '@/components/marketing/SeoHead.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 
 defineOptions({
@@ -10,12 +9,6 @@ defineOptions({
 
 <template>
     <div>
-        <SeoHead
-            title="Privacy"
-            description="Privacy policy for Snitch - how we handle account data, scraping, and AI analysis."
-            path="/privacy"
-        />
-
         <LegalDocument title="Privacy policy" updated="7 August 2026">
             <p>
                 This policy describes how Snitch ("we") handles information when

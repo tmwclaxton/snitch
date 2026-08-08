@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import LegalDocument from '@/components/marketing/LegalDocument.vue';
-import SeoHead from '@/components/marketing/SeoHead.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 
 defineOptions({
@@ -10,12 +9,6 @@ defineOptions({
 
 <template>
     <div>
-        <SeoHead
-            title="Terms"
-            description="Terms of use for Snitch - acceptable use, public data tracking, and AI disclaimers."
-            path="/terms"
-        />
-
         <LegalDocument title="Terms of use" updated="7 August 2026">
             <p>
                 These terms govern use of Snitch.

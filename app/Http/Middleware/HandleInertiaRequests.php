@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Services\Billing\PlanEntitlementService;
+use App\Support\Seo;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -37,6 +38,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        $seo = Seo::forRequest($request);
 
         return [
             ...parent::share($request),
@@ -48,6 +50,7 @@ class HandleInertiaRequests extends Middleware
                 ? app(PlanEntitlementService::class)->summary($user)
                 : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'seo' => $seo,
         ];
     }
 }

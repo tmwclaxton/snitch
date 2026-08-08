@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import SeoHead from '@/components/marketing/SeoHead.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 
 defineOptions({
@@ -9,12 +8,6 @@ defineOptions({
 
 <template>
     <div>
-        <SeoHead
-            title="About"
-            description="Snitch is a personal competitor social tracker for local brands, creators, and agencies."
-            path="/about"
-        />
-
         <div class="px-5 py-14 sm:px-8 sm:py-20">
             <article class="snitch-doc relative mx-auto max-w-3xl px-6 py-10 sm:px-10">
                 <h1

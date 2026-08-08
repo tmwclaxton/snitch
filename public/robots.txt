@@ -1,20 +1,15 @@
 User-agent: *
 Allow: /
-Allow: /about
-Allow: /how-it-works
-Allow: /contact
-Allow: /privacy
-Allow: /terms
-Allow: /cookies
-Allow: /sitemap.xml
-
-Disallow: /settings
-Disallow: /invitations
-Disallow: /authenticate
 Disallow: /dashboard
 Disallow: /onboarding
 Disallow: /competitors
 Disallow: /feed
+Disallow: /explore
 Disallow: /winners
+Disallow: /brand
+Disallow: /billing
+Disallow: /settings
+Disallow: /invitations
+Disallow: /authenticate
 
-Sitemap: /sitemap.xml
+Sitemap: https://www.snitchsocial.net/sitemap.xml

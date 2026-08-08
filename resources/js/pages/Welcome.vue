@@ -2,7 +2,6 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import { ArrowRight, LayoutGrid, LogIn, UserPlus } from '@lucide/vue';
 import { computed } from 'vue';
-import SeoHead from '@/components/marketing/SeoHead.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { dashboard, login } from '@/routes';
 
@@ -55,12 +54,6 @@ const steps = [
 
 <template>
     <div>
-        <SeoHead
-            title="See what competitors post"
-            description="Snitch tracks competitor social posts, explains why they work, and surfaces winners you can remake."
-            path="/"
-        />
-
         <!-- Nav overlays this section (absolute snitch-nav-hero); together = one dvh. -->
         <section
             class="snitch-hero relative h-dvh w-full overflow-hidden"

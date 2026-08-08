@@ -2,7 +2,6 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import { ArrowRight, Check } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import SeoHead from '@/components/marketing/SeoHead.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { dashboard, login } from '@/routes';
 import { edit as billing } from '@/routes/billing';
@@ -103,12 +102,6 @@ function yearlyNote(plan: (typeof plans)[number]): string | null {
 
 <template>
     <div>
-        <SeoHead
-            title="Pricing"
-            description="Snitch plans: 7-day free trial, then Free (3 competitors), Basic (£20 / 10), or Pro (£99 / 50). Save 20% with yearly billing."
-            path="/pricing"
-        />
-
         <div class="snitch-app-shell relative px-5 py-14 sm:px-8 sm:py-20">
             <div class="snitch-grain" aria-hidden="true" />
 

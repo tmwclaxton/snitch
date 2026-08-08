@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Support\Seo;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -43,6 +44,19 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($response->getStatusCode() !== 404 || $request->expectsJson()) {
                 return $response;
             }
+
+            // Unmatched routes skip the web middleware group, so share SEO (and
+            // minimal shell props) here for first-byte meta on the NotFound page.
+            Inertia::setRootView('app');
+            Inertia::share([
+                'name' => config('app.name'),
+                'auth' => [
+                    'user' => $request->user(),
+                ],
+                'subscription' => null,
+                'sidebarOpen' => true,
+                'seo' => Seo::forRequest($request),
+            ]);
 
             return Inertia::render('errors/NotFound')
                 ->toResponse($request)

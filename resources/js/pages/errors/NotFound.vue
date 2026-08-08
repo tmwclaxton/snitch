@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { House, LogIn } from '@lucide/vue';
-import SeoHead from '@/components/marketing/SeoHead.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { home, login } from '@/routes';
 
@@ -12,12 +11,6 @@ defineOptions({
 
 <template>
     <div class="px-5 py-16 sm:px-8 sm:py-24">
-        <SeoHead
-            title="Page not found"
-            description="That scrap is missing from the Snitch contact sheet."
-            path="/404"
-        />
-
         <div class="snitch-scrap relative mx-auto max-w-xl overflow-hidden p-8 pt-10 sm:p-12">
             <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
             <div class="snitch-polaroid mx-auto mb-6 max-w-sm" style="--snitch-tilt: -1deg">
