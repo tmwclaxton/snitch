@@ -2,6 +2,7 @@
 
 namespace App\Services\Analysis;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -64,6 +65,7 @@ class NanoGptClient
         return Http::baseUrl((string) config('snitch.nanogpt.base_url'))
             ->withToken($apiKey)
             ->acceptJson()
-            ->timeout((int) config('snitch.nanogpt.timeout', 180));
+            ->timeout((int) config('snitch.nanogpt.timeout', 180))
+            ->retry(2, 1000, fn (mixed $exception): bool => $exception instanceof ConnectionException);
     }
 }
