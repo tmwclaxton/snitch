@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import AnalysisTermChip from '@/components/AnalysisTermChip.vue';
 import {
     Dialog,
     DialogContent,
@@ -8,6 +9,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { analysisTermIcon } from '@/lib/analysisTerms';
+import type { AnalysisTermDimension } from '@/lib/analysisTerms';
 
 export type PaperTermPickerOption = {
     slug: string;
@@ -22,6 +25,7 @@ const props = defineProps<{
     description?: string;
     options: PaperTermPickerOption[];
     modelValue: string[];
+    dimension?: AnalysisTermDimension;
 }>();
 
 const emit = defineEmits<{
@@ -106,7 +110,12 @@ function isSelected(slug: string): boolean {
                 <span class="snitch-tape left-8 -top-2" aria-hidden="true" />
 
                 <DialogHeader class="relative z-10 shrink-0 space-y-2 text-left">
-                    <DialogTitle class="snitch-display text-2xl text-snitch-ink">
+                    <DialogTitle class="snitch-display flex items-center gap-2 text-2xl text-snitch-ink">
+                        <component
+                            :is="analysisTermIcon({ dimension })"
+                            class="size-5 shrink-0 text-snitch-ink/55"
+                            aria-hidden="true"
+                        />
                         {{ title }}
                     </DialogTitle>
                     <DialogDescription class="text-sm text-snitch-ink/65">
@@ -144,9 +153,14 @@ function isSelected(slug: string): boolean {
                         :key="section.name"
                         class="mb-5 last:mb-1"
                     >
-                        <h3 class="snitch-ink-label mb-2">
+                        <h3 class="snitch-ink-label mb-2 inline-flex items-center gap-1.5">
+                            <component
+                                :is="analysisTermIcon({ dimension, section: section.name })"
+                                class="size-3 shrink-0 opacity-70"
+                                aria-hidden="true"
+                            />
                             {{ section.name }}
-                            <span class="ms-1 normal-case tracking-normal text-snitch-ink/40">
+                            <span class="ms-0.5 normal-case tracking-normal text-snitch-ink/40">
                                 ({{ section.terms.length }})
                             </span>
                         </h3>
@@ -155,26 +169,19 @@ function isSelected(slug: string): boolean {
                                 v-for="term in section.terms"
                                 :key="term.slug"
                                 type="button"
-                                class="border px-2.5 py-1.5 text-left text-sm transition"
-                                :class="
-                                    isSelected(term.slug)
-                                        ? 'border-snitch-ink/25 bg-snitch-spot text-snitch-on-spot shadow-[2px_2px_0_color-mix(in_oklab,var(--snitch-press)_35%,transparent)]'
-                                        : 'border-snitch-ink/15 bg-[color-mix(in_oklab,var(--snitch-lift)_55%,var(--snitch-paper))] text-snitch-ink shadow-[1px_1px_0_color-mix(in_oklab,var(--snitch-spot)_18%,transparent)] hover:border-snitch-ink/30'
-                                "
+                                class="p-0"
                                 :aria-pressed="isSelected(term.slug)"
                                 @click="toggle(term.slug)"
                             >
-                                {{ term.label }}
-                                <span
-                                    v-if="term.count != null && term.count > 0"
-                                    :class="
-                                        isSelected(term.slug)
-                                            ? 'text-snitch-on-spot/70'
-                                            : 'text-snitch-ink/50'
-                                    "
-                                >
-                                    · {{ term.count }}
-                                </span>
+                                <AnalysisTermChip
+                                    variant="picker"
+                                    :label="term.label"
+                                    :dimension="dimension"
+                                    :section="section.name"
+                                    :slug="term.slug"
+                                    :count="term.count"
+                                    :selected="isSelected(term.slug)"
+                                />
                             </button>
                         </div>
                     </section>

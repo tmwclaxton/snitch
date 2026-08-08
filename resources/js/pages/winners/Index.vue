@@ -7,6 +7,7 @@ import {
     rescore,
     rescoreStatus,
 } from '@/actions/App/Http/Controllers/WinnerController';
+import AnalysisTermChip from '@/components/AnalysisTermChip.vue';
 import MarkdownText from '@/components/MarkdownText.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
@@ -16,7 +17,7 @@ import type {
 } from '@/components/WinnerRulesForm.vue';
 import WinnerRulesModal from '@/components/WinnerRulesModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { glanceTags } from '@/lib/posts';
+import { glanceTermChips } from '@/lib/posts';
 import { useToastStore } from '@/stores/toastStore';
 
 type RescoreRun = {
@@ -74,9 +75,9 @@ function winnerTags(winner: {
             topics?: string[] | null;
         } | null;
     };
-}): string[] {
+}) {
     // Concept / hook already print above; chips are topics only, full length.
-    return glanceTags({
+    return glanceTermChips({
         topics: winner.post.analysis?.topics,
         limit: 4,
         maxLength: null,
@@ -324,11 +325,14 @@ onUnmounted(() => {
                                 v-if="winnerTags(winner).length"
                                 class="snitch-topic-row"
                             >
-                                <span
+                                <AnalysisTermChip
                                     v-for="tag in winnerTags(winner)"
-                                    :key="tag"
-                                    class="snitch-topic-chip"
-                                >{{ tag }}</span>
+                                    :key="tag.key"
+                                    :label="tag.label"
+                                    :dimension="tag.dimension"
+                                    :section="tag.section"
+                                    :slug="tag.slug"
+                                />
                             </div>
                             <p class="text-sm text-snitch-ink/85">{{ winner.why }}</p>
                             <div class="border-t border-dashed border-snitch-ink/15 pt-3">

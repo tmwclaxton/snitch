@@ -4,6 +4,7 @@ import { ArrowLeft, ExternalLink } from '@lucide/vue';
 import { computed } from 'vue';
 import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feedIndex } from '@/actions/App/Http/Controllers/FeedController';
+import AnalysisTermChip from '@/components/AnalysisTermChip.vue';
 import MarkdownText from '@/components/MarkdownText.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
@@ -11,7 +12,12 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { metricPairs } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
-import { postPrimaryTitle, postTypeLabel } from '@/lib/posts';
+import {
+    glanceTermChips,
+    postPrimaryTitle,
+    postTypeLabel,
+} from '@/lib/posts';
+import type { AnalysisTermLabel } from '@/lib/posts';
 
 type Analysis = {
     status: string;
@@ -21,6 +27,8 @@ type Analysis = {
     idea: string | null;
     concept: string | null;
     topics: string[] | null;
+    custom_tags?: string[] | null;
+    term_labels?: AnalysisTermLabel[] | null;
     cta: string | null;
     how_to_copy: string | null;
     how_to_copy_html?: string | null;
@@ -136,6 +144,20 @@ const showDisplayName = computed(() => {
 
     return display.toLowerCase() !== handle.toLowerCase();
 });
+
+const termChips = computed(() => {
+    if (!analysisDone.value) {
+        return [];
+    }
+
+    return glanceTermChips({
+        topics: props.post.analysis?.topics,
+        termLabels: props.post.analysis?.term_labels,
+        customTags: props.post.analysis?.custom_tags,
+        limit: 12,
+        maxLength: null,
+    });
+});
 </script>
 
 <template>
@@ -198,14 +220,17 @@ const showDisplayName = computed(() => {
                     </span>
                 </p>
                 <div
-                    v-if="analysisDone && post.analysis?.topics?.length"
+                    v-if="termChips.length"
                     class="snitch-topic-row mt-3"
                 >
-                    <span
-                        v-for="topic in post.analysis.topics"
-                        :key="topic"
-                        class="snitch-topic-chip"
-                    >{{ topic }}</span>
+                    <AnalysisTermChip
+                        v-for="chip in termChips"
+                        :key="chip.key"
+                        :label="chip.label"
+                        :dimension="chip.dimension"
+                        :section="chip.section"
+                        :slug="chip.slug"
+                    />
                 </div>
             </header>
 
@@ -214,7 +239,7 @@ const showDisplayName = computed(() => {
                     v-if="post.winner_insight"
                     class="snitch-sticker"
                 >
-                    <p class="snitch-annotation text-xl">
+                    <p class="snitch-annotation text-xl font-bold">
                         Winner · {{ post.winner_insight.score.toFixed(1) }}
                     </p>
                     <p class="mt-2 text-sm text-snitch-ink/85">
@@ -280,12 +305,12 @@ const showDisplayName = computed(() => {
                                 v-if="post.analysis.concept"
                                 class="snitch-sticker"
                             >
-                                <p class="snitch-annotation text-xl">Concept</p>
+                                <p class="snitch-annotation text-xl font-bold">Concept</p>
                                 <p class="mt-1 text-snitch-ink">{{ post.analysis.concept }}</p>
                             </div>
 
                             <div class="snitch-sticker">
-                                <p class="snitch-annotation text-xl">Hook</p>
+                                <p class="snitch-annotation text-xl font-bold">Hook</p>
                                 <p class="mt-1 text-snitch-ink">{{ post.analysis.hook }}</p>
                                 <p
                                     v-if="post.analysis.hook_window_end_sec != null"
@@ -299,7 +324,7 @@ const showDisplayName = computed(() => {
                                 v-if="post.analysis.idea"
                                 class="snitch-sticker"
                             >
-                                <p class="snitch-annotation text-xl">Why it engages</p>
+                                <p class="snitch-annotation text-xl font-bold">Why it engages</p>
                                 <p class="mt-1 text-snitch-ink">{{ post.analysis.idea }}</p>
                             </div>
 
@@ -307,7 +332,7 @@ const showDisplayName = computed(() => {
                                 v-if="post.analysis.visual_summary"
                                 class="snitch-sticker"
                             >
-                                <p class="snitch-annotation text-xl">Visual craft</p>
+                                <p class="snitch-annotation text-xl font-bold">Visual craft</p>
                                 <p class="mt-1 text-sm text-snitch-ink/85">
                                     {{ post.analysis.visual_summary }}
                                 </p>
@@ -317,7 +342,7 @@ const showDisplayName = computed(() => {
                                 v-if="musicLine || post.analysis.sfx?.length"
                                 class="snitch-sticker"
                             >
-                                <p class="snitch-annotation text-xl">Music / SFX</p>
+                                <p class="snitch-annotation text-xl font-bold">Music / SFX</p>
                                 <p
                                     v-if="musicLine"
                                     class="mt-1 text-sm text-snitch-ink/85"
@@ -351,7 +376,7 @@ const showDisplayName = computed(() => {
                                 v-if="post.analysis.how_to_copy || post.analysis.cta"
                                 class="snitch-sticker"
                             >
-                                <p class="snitch-annotation text-xl">How to remake</p>
+                                <p class="snitch-annotation text-xl font-bold">How to remake</p>
                                 <MarkdownText
                                     v-if="post.analysis.how_to_copy || post.analysis.how_to_copy_html"
                                     class="mt-1"
@@ -371,7 +396,7 @@ const showDisplayName = computed(() => {
                             v-else-if="isUnavailable"
                             class="snitch-sticker"
                         >
-                            <p class="snitch-annotation text-xl">Unavailable</p>
+                            <p class="snitch-annotation text-xl font-bold">Unavailable</p>
                             <p class="mt-2 text-sm text-snitch-ink/70">
                                 {{
                                     post.unavailable_reason ||
@@ -385,7 +410,7 @@ const showDisplayName = computed(() => {
                             v-else-if="isFailed"
                             class="snitch-sticker"
                         >
-                            <p class="snitch-annotation text-xl">Analysis failed</p>
+                            <p class="snitch-annotation text-xl font-bold">Analysis failed</p>
                             <p class="mt-2 text-sm text-snitch-ink/70">
                                 {{ post.analysis?.error_message || 'We could not finish analyzing this reel.' }}
                             </p>

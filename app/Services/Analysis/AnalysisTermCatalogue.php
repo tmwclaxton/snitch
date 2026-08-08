@@ -33,6 +33,33 @@ class AnalysisTermCatalogue
         return $map;
     }
 
+    /**
+     * Frontend chip payload for attached analysis terms.
+     *
+     * @param  iterable<int, AnalysisTerm>  $terms
+     * @return list<array{dimension: string, slug: string, label: string, section: string|null}>
+     */
+    public function frontendLabels(iterable $terms): array
+    {
+        $sections = $this->sectionByKey();
+        $labels = [];
+
+        foreach ($terms as $term) {
+            $dimension = $term->dimension instanceof AnalysisTermDimension
+                ? $term->dimension->value
+                : (string) $term->dimension;
+
+            $labels[] = [
+                'dimension' => $dimension,
+                'slug' => $term->slug,
+                'label' => $term->label,
+                'section' => $sections[$dimension.':'.$term->slug] ?? null,
+            ];
+        }
+
+        return $labels;
+    }
+
     public function syncToDatabase(): int
     {
         $count = 0;

@@ -3,15 +3,18 @@
 namespace Tests\Feature;
 
 use App\Enums\AnalysisStatus;
+use App\Enums\AnalysisTermDimension;
 use App\Enums\MediaAvailability;
 use App\Enums\Platform;
 use App\Enums\PostType;
+use App\Models\AnalysisTerm;
 use App\Models\BrandProfile;
 use App\Models\Post;
 use App\Models\PostAnalysis;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Models\WinnerInsight;
+use Database\Seeders\AnalysisTermSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -259,6 +262,45 @@ class FeedTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('feed/Show')
                 ->where('post.embed', null)
+            );
+    }
+
+    public function test_feed_includes_analysis_term_labels_with_sections(): void
+    {
+        $this->seed(AnalysisTermSeeder::class);
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+        ]);
+        $analysis = PostAnalysis::factory()->for($post)->create([
+            'status' => AnalysisStatus::Completed,
+        ]);
+        $term = AnalysisTerm::query()
+            ->where('dimension', AnalysisTermDimension::Topic)
+            ->where('slug', 'fundraising')
+            ->firstOrFail();
+        $analysis->terms()->attach($term->id);
+
+        $this->actingAs($user)
+            ->get(route('feed.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('feed/Index')
+                ->where('posts.data.0.analysis.term_labels.0.slug', 'fundraising')
+                ->where('posts.data.0.analysis.term_labels.0.section', 'Grants & nonprofit')
+            );
+
+        $this->actingAs($user)
+            ->get(route('feed.show', $post))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('feed/Show')
+                ->where('post.analysis.term_labels.0.slug', 'fundraising')
+                ->where('post.analysis.term_labels.0.dimension', 'topic')
             );
     }
 }

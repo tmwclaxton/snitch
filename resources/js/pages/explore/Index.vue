@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Compass, FilterX, Search, X } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
+import type { Component } from 'vue';
 import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as exploreIndex } from '@/actions/App/Http/Controllers/ExploreController';
 import FeedContactCell from '@/components/FeedContactCell.vue';
@@ -9,6 +10,7 @@ import PaperSelect from '@/components/PaperSelect.vue';
 import PaperTermPicker from '@/components/PaperTermPicker.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { analysisDimensionIcon } from '@/lib/analysisTerms';
 import type { PostMetrics } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 
@@ -158,12 +160,18 @@ const craftSummary = computed(() =>
 );
 
 const activeChips = computed(() => {
-    const chips: Array<{ key: string; label: string; clear: () => void }> = [];
+    const chips: Array<{
+        key: string;
+        label: string;
+        icon: Component;
+        clear: () => void;
+    }> = [];
 
     if (props.filters.q) {
         chips.push({
             key: 'q',
             label: `Search: ${props.filters.q}`,
+            icon: analysisDimensionIcon('search'),
             clear: () => {
                 searchDraft.value = '';
                 visitFilters(currentFilters({ q: null }));
@@ -174,7 +182,8 @@ const activeChips = computed(() => {
     for (const slug of props.filters.hook_types) {
         chips.push({
             key: `hook:${slug}`,
-            label: `Hook: ${labelForSlug('hook_type', slug)}`,
+            label: labelForSlug('hook_type', slug),
+            icon: analysisDimensionIcon('hook_type'),
             clear: () =>
                 visitFilters(
                     currentFilters({
@@ -187,7 +196,8 @@ const activeChips = computed(() => {
     for (const slug of props.filters.topics) {
         chips.push({
             key: `topic:${slug}`,
-            label: `Topic: ${labelForSlug('topic', slug)}`,
+            label: labelForSlug('topic', slug),
+            icon: analysisDimensionIcon('topic'),
             clear: () =>
                 visitFilters(
                     currentFilters({
@@ -200,7 +210,8 @@ const activeChips = computed(() => {
     for (const slug of props.filters.visual_crafts) {
         chips.push({
             key: `craft:${slug}`,
-            label: `Craft: ${labelForSlug('visual_craft', slug)}`,
+            label: labelForSlug('visual_craft', slug),
+            icon: analysisDimensionIcon('visual_craft'),
             clear: () =>
                 visitFilters(
                     currentFilters({
@@ -214,6 +225,7 @@ const activeChips = computed(() => {
         chips.push({
             key: 'platform',
             label: platformLabel(props.filters.platform),
+            icon: analysisDimensionIcon('custom'),
             clear: () => visitFilters(currentFilters({ platform: null })),
         });
     }
@@ -366,7 +378,14 @@ function paginationLabel(label: string): string {
                 </label>
 
                 <div class="snitch-filter-field">
-                    <span>Hook type</span>
+                    <span class="inline-flex items-center gap-1.5">
+                        <component
+                            :is="analysisDimensionIcon('hook_type')"
+                            class="size-3 shrink-0 opacity-70"
+                            aria-hidden="true"
+                        />
+                        Hook type
+                    </span>
                     <button
                         type="button"
                         class="snitch-platform-select-trigger w-full rounded-none text-left text-sm"
@@ -374,12 +393,26 @@ function paginationLabel(label: string): string {
                         aria-label="Open hook type catalogue"
                         @click="hookPickerOpen = true"
                     >
-                        <span class="truncate">{{ hookSummary }}</span>
+                        <span class="inline-flex min-w-0 items-center gap-1.5">
+                            <component
+                                :is="analysisDimensionIcon('hook_type')"
+                                class="size-3.5 shrink-0 opacity-70"
+                                aria-hidden="true"
+                            />
+                            <span class="truncate">{{ hookSummary }}</span>
+                        </span>
                     </button>
                 </div>
 
                 <div class="snitch-filter-field">
-                    <span>Topic</span>
+                    <span class="inline-flex items-center gap-1.5">
+                        <component
+                            :is="analysisDimensionIcon('topic')"
+                            class="size-3 shrink-0 opacity-70"
+                            aria-hidden="true"
+                        />
+                        Topic
+                    </span>
                     <button
                         type="button"
                         class="snitch-platform-select-trigger w-full rounded-none text-left text-sm"
@@ -387,12 +420,26 @@ function paginationLabel(label: string): string {
                         aria-label="Open topic catalogue"
                         @click="topicPickerOpen = true"
                     >
-                        <span class="truncate">{{ topicSummary }}</span>
+                        <span class="inline-flex min-w-0 items-center gap-1.5">
+                            <component
+                                :is="analysisDimensionIcon('topic')"
+                                class="size-3.5 shrink-0 opacity-70"
+                                aria-hidden="true"
+                            />
+                            <span class="truncate">{{ topicSummary }}</span>
+                        </span>
                     </button>
                 </div>
 
                 <div class="snitch-filter-field">
-                    <span>Visual craft</span>
+                    <span class="inline-flex items-center gap-1.5">
+                        <component
+                            :is="analysisDimensionIcon('visual_craft')"
+                            class="size-3 shrink-0 opacity-70"
+                            aria-hidden="true"
+                        />
+                        Visual craft
+                    </span>
                     <button
                         type="button"
                         class="snitch-platform-select-trigger w-full rounded-none text-left text-sm"
@@ -400,7 +447,14 @@ function paginationLabel(label: string): string {
                         aria-label="Open visual craft catalogue"
                         @click="craftPickerOpen = true"
                     >
-                        <span class="truncate">{{ craftSummary }}</span>
+                        <span class="inline-flex min-w-0 items-center gap-1.5">
+                            <component
+                                :is="analysisDimensionIcon('visual_craft')"
+                                class="size-3.5 shrink-0 opacity-70"
+                                aria-hidden="true"
+                            />
+                            <span class="truncate">{{ craftSummary }}</span>
+                        </span>
                     </button>
                 </div>
 
@@ -420,6 +474,7 @@ function paginationLabel(label: string): string {
                 v-model:open="hookPickerOpen"
                 title="Hook types"
                 description="Browse every hook pattern by section. Select as many as you want."
+                dimension="hook_type"
                 :options="hookPickerOptions"
                 :model-value="filters.hook_types"
                 @update:model-value="onHookTypesChange"
@@ -428,6 +483,7 @@ function paginationLabel(label: string): string {
                 v-model:open="topicPickerOpen"
                 title="Topics"
                 description="Browse every topic by section. Select as many as you want."
+                dimension="topic"
                 :options="topicPickerOptions"
                 :model-value="filters.topics"
                 @update:model-value="onTopicsChange"
@@ -436,6 +492,7 @@ function paginationLabel(label: string): string {
                 v-model:open="craftPickerOpen"
                 title="Visual crafts"
                 description="Browse every visual craft by section. Select as many as you want."
+                dimension="visual_craft"
                 :options="craftPickerOptions"
                 :model-value="filters.visual_crafts"
                 @update:model-value="onVisualCraftsChange"
@@ -453,6 +510,20 @@ function paginationLabel(label: string): string {
                     :aria-label="`Remove ${chip.label}`"
                     @click="chip.clear"
                 >
+                    <img
+                        v-if="chip.key === 'platform' && filters.platform"
+                        :src="platformIconSrc(filters.platform)"
+                        alt=""
+                        class="snitch-platform-logo size-3 shrink-0"
+                        width="12"
+                        height="12"
+                    >
+                    <component
+                        v-else
+                        :is="chip.icon"
+                        class="size-3 shrink-0 opacity-70"
+                        aria-hidden="true"
+                    />
                     <span>{{ chip.label }}</span>
                     <X class="size-3 shrink-0 text-snitch-ink/45" aria-hidden="true" />
                 </button>

@@ -2,18 +2,26 @@
 import { Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
+import AnalysisTermChip from '@/components/AnalysisTermChip.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import { metricPairs } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
-import { glanceTags, postPrimaryTitle, postTypeLabel } from '@/lib/posts';
+import {
+    glanceTermChips,
+    postPrimaryTitle,
+    postTypeLabel,
+} from '@/lib/posts';
+import type { AnalysisTermLabel } from '@/lib/posts';
 
 type AnalysisGlance = {
     status: string;
     hook?: string | null;
     concept?: string | null;
     topics?: string[] | null;
+    custom_tags?: string[] | null;
+    term_labels?: AnalysisTermLabel[] | null;
 };
 
 const props = defineProps<{
@@ -48,9 +56,11 @@ const tags = computed(() => {
         return [];
     }
 
-    return glanceTags({
+    return glanceTermChips({
         concept: props.post.analysis?.concept,
         topics: props.post.analysis?.topics,
+        termLabels: props.post.analysis?.term_labels,
+        customTags: props.post.analysis?.custom_tags,
         limit: 3,
     });
 });
@@ -205,11 +215,15 @@ const winnerScore = computed(() => {
                 v-if="tags.length"
                 class="snitch-glance-tags"
             >
-                <span
+                <AnalysisTermChip
                     v-for="tag in tags"
-                    :key="tag"
-                    class="snitch-glance-tag"
-                >{{ tag }}</span>
+                    :key="tag.key"
+                    variant="glance"
+                    :label="tag.label"
+                    :dimension="tag.dimension"
+                    :section="tag.section"
+                    :slug="tag.slug"
+                />
             </div>
         </div>
     </article>

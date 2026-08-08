@@ -1069,7 +1069,10 @@
     }
 
     .snitch-glance-tag {
+        display: inline-flex;
         max-width: 100%;
+        align-items: center;
+        gap: 0.2rem;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -1156,6 +1159,11 @@
     }
 
     .snitch-topic-chip {
+        display: inline-flex;
+        max-width: 100%;
+        align-items: center;
+        gap: 0.25rem;
+        overflow: hidden;
         padding: 0.15rem 0.45rem;
         background: color-mix(in oklab, var(--snitch-spot) 55%, var(--snitch-paper));
         color: var(--snitch-on-spot);

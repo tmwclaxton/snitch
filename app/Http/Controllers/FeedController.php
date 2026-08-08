@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\Platform;
 use App\Enums\PostType;
 use App\Models\Post;
+use App\Services\Analysis\AnalysisTermCatalogue;
 use App\Support\PlatformEmbed;
 use App\Support\SafeMarkdown;
 use Illuminate\Http\Request;
@@ -13,6 +14,10 @@ use Inertia\Response;
 
 class FeedController extends Controller
 {
+    public function __construct(
+        private AnalysisTermCatalogue $catalogue,
+    ) {}
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', Post::class);
@@ -22,7 +27,7 @@ class FeedController extends Controller
         $query = Post::query()
             ->where('user_id', $user->id)
             ->reelLike()
-            ->with(['trackedAccount', 'analysis', 'winnerInsight'])
+            ->with(['trackedAccount', 'analysis.terms', 'winnerInsight'])
             ->latest('posted_at');
 
         if ($request->filled('platform')) {
@@ -47,6 +52,13 @@ class FeedController extends Controller
                 PlatformEmbed::resolve($post->platform, $post->url, compact: true),
             );
 
+            if ($post->analysis !== null) {
+                $post->analysis->setAttribute(
+                    'term_labels',
+                    $this->catalogue->frontendLabels($post->analysis->terms),
+                );
+            }
+
             return $post;
         });
 
@@ -67,7 +79,7 @@ class FeedController extends Controller
     {
         $this->authorize('view', $post);
 
-        $post->load(['trackedAccount', 'analysis', 'winnerInsight']);
+        $post->load(['trackedAccount', 'analysis.terms', 'winnerInsight']);
         $post->setAttribute(
             'embed',
             PlatformEmbed::resolve($post->platform, $post->url),
@@ -77,6 +89,10 @@ class FeedController extends Controller
             $post->analysis->setAttribute(
                 'how_to_copy_html',
                 SafeMarkdown::toHtml($post->analysis->how_to_copy),
+            );
+            $post->analysis->setAttribute(
+                'term_labels',
+                $this->catalogue->frontendLabels($post->analysis->terms),
             );
         }
 

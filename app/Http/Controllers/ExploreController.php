@@ -86,16 +86,7 @@ class ExploreController extends Controller
             if ($post->analysis !== null) {
                 $post->analysis->setAttribute(
                     'term_labels',
-                    $post->analysis->terms
-                        ->map(fn (AnalysisTerm $term): array => [
-                            'dimension' => $term->dimension instanceof AnalysisTermDimension
-                                ? $term->dimension->value
-                                : (string) $term->dimension,
-                            'slug' => $term->slug,
-                            'label' => $term->label,
-                        ])
-                        ->values()
-                        ->all(),
+                    $this->catalogue->frontendLabels($post->analysis->terms),
                 );
             }
 

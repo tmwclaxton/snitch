@@ -24,17 +24,21 @@ class ExploreTest extends TestCase
     {
         $indexVue = file_get_contents(resource_path('js/pages/explore/Index.vue'));
         $pickerVue = file_get_contents(resource_path('js/components/PaperTermPicker.vue'));
+        $chipVue = file_get_contents(resource_path('js/components/AnalysisTermChip.vue'));
 
         $this->assertIsString($indexVue);
         $this->assertIsString($pickerVue);
+        $this->assertIsString($chipVue);
         $this->assertStringContainsString('PaperTermPicker', $indexVue);
         $this->assertStringContainsString('Open a catalogue picker', $indexVue);
         $this->assertStringContainsString('Browse every hook pattern by section', $indexVue);
+        $this->assertStringContainsString('dimension="hook_type"', $indexVue);
         $this->assertStringContainsString('aria-pressed', $pickerVue);
         $this->assertStringContainsString('Clear selection', $pickerVue);
         $this->assertStringContainsString('Apply', $pickerVue);
-        $this->assertStringContainsString('term.count', $pickerVue);
-        $this->assertStringContainsString('· {{ term.count }}', $pickerVue);
+        $this->assertStringContainsString('AnalysisTermChip', $pickerVue);
+        $this->assertStringContainsString(':count="term.count"', $pickerVue);
+        $this->assertStringContainsString('· {{ count }}', $chipVue);
     }
 
     public function test_explore_lists_completed_analyses_for_owner(): void
@@ -73,6 +77,8 @@ class ExploreTest extends TestCase
                 ->component('explore/Index')
                 ->has('posts.data', 1)
                 ->where('posts.data.0.id', $post->id)
+                ->where('posts.data.0.analysis.term_labels.0.slug', 'pattern_interrupt')
+                ->where('posts.data.0.analysis.term_labels.0.section', 'Claims & takes')
                 ->has('terms.hook_type')
                 ->where('terms.hook_type.0.section', fn ($section) => is_string($section) && $section !== '')
                 ->where('terms.hook_type', function ($terms) use ($term): bool {
