@@ -19,9 +19,9 @@ RUN docker-php-ext-install \
     intl \
     opcache \
     pdo_mysql \
-    pdo_pgsql \
     pdo_sqlite \
-    zip
+    zip \
+    && docker-php-ext-install pdo_pgsql
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -96,9 +96,9 @@ RUN apt-get update && apt-get upgrade -y \
         intl \
         opcache \
         pdo_mysql \
-        pdo_pgsql \
         pdo_sqlite \
         zip \
+    && docker-php-ext-install pdo_pgsql \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && rm -rf /tmp/pear \
