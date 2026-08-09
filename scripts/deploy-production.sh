@@ -157,6 +157,16 @@ ensure_edge_image() {
 
 start_edge_proxy() {
     ensure_edge_image
+
+    local orphan_edge_id
+    orphan_edge_id="$(docker ps -aq -f name='^/snitch-edge-1$' || true)"
+    local compose_edge_id
+    compose_edge_id="$(compose ps -q edge 2>/dev/null || true)"
+    if [ -n "$orphan_edge_id" ] && [ "$orphan_edge_id" != "$compose_edge_id" ]; then
+        echo "Removing orphan edge container snitch-edge-1..."
+        docker rm -f snitch-edge-1 2>/dev/null || true
+    fi
+
     compose up -d --no-deps --pull never --force-recreate edge
 }
 
