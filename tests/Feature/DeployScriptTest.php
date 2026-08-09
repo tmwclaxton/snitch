@@ -53,6 +53,10 @@ class DeployScriptTest extends TestCase
         $this->assertStringContainsString('nginx:1.27-alpine', $script);
         $this->assertStringContainsString('compose up -d --no-deps --pull never', $script);
 
+        $edgeConf = file_get_contents(base_path('docker/production/edge/conf.d/snitch.conf'));
+        $this->assertNotFalse($edgeConf);
+        $this->assertStringContainsString('proxy_buffer_size 128k', $edgeConf);
+
         $compose = file_get_contents(base_path('compose.prod.yaml'));
 
         $this->assertNotFalse($compose);

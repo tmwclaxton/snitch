@@ -31,6 +31,8 @@ Deploy flow (`scripts/deploy-production.sh`):
 4. Rewrite `edge/upstream-active.conf`, `nginx -s reload` on edge.
 
 Mount upstream at `/etc/nginx/snitch/upstream-active.conf` (not under `conf.d/`, or nginx parses it as a top-level server block).
+
+Edge nginx must use enlarged proxy buffers (`proxy_buffer_size 128k`, `proxy_buffers 8 128k`) or Inertia/Laravel response headers cause `502 upstream sent too big header` on `/` while `/up` still returns 200.
 5. Stop the retired slot; flip `.deploy-slot` (`blue` or `green`).
 
 First deploy after this change retires legacy `app` / `snitch-app-1` if present (brief one-time cutover while port 8095 moves to edge). Copy edge configs in CI (`docker/production/edge/**`) and ensure `/opt/snitch/edge/upstream-active.conf` exists (seed from `upstream-active.conf.default`).
