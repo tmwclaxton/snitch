@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import McpEndpoints from '@/components/agents/McpEndpoints.vue';
 
 type ClientGuide = {
     id: string;
@@ -9,26 +10,47 @@ type ClientGuide = {
     steps: string[];
 };
 
-const props = defineProps<{
-    mcpUrl: string;
-    registerUrl: string;
-    clients: ClientGuide[];
-    general: {
-        title: string;
-        blurb: string;
-        snippet: string;
-        steps: string[];
-    };
-    tools: string[];
-}>();
+const props = withDefaults(
+    defineProps<{
+        mcpUrl: string;
+        registerUrl: string;
+        clients: ClientGuide[];
+        general: {
+            title: string;
+            blurb: string;
+            snippet: string;
+            steps: string[];
+        };
+        tools: string[];
+        apiToken?: string | null;
+        showEndpoints?: boolean;
+    }>(),
+    {
+        apiToken: null,
+        showEndpoints: true,
+    },
+);
+
+const tokenPlaceholder = 'YOUR_SNITCH_API_TOKEN';
+
+function withToken(snippet: string): string {
+    if (!props.apiToken) {
+        return snippet;
+    }
+
+    return snippet.split(tokenPlaceholder).join(props.apiToken);
+}
 
 const options = computed<ClientGuide[]>(() => [
-    ...props.clients,
+    ...props.clients.map((client) => ({
+        ...client,
+        snippet: withToken(client.snippet),
+    })),
     {
         id: 'general',
         name: props.general.title,
         blurb: props.general.blurb,
-        snippet: props.general.snippet,
+        snippet: withToken(props.general.snippet),
         steps: props.general.steps,
     },
 ]);
@@ -50,22 +72,11 @@ async function copyText(value: string): Promise<void> {
 
 <template>
     <div class="space-y-6">
-        <section class="snitch-scrap relative space-y-3 p-5 pt-6 sm:p-6">
-            <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
-            <h2 class="snitch-display text-2xl text-snitch-ink">Endpoints</h2>
-            <ul class="grid gap-4 text-sm text-snitch-ink/80 sm:grid-cols-2">
-                <li class="min-w-0 space-y-1">
-                    <span class="snitch-ink-label">Register</span>
-                    <code class="block break-all">{{ registerUrl }}</code>
-                    <span class="text-snitch-ink/65">create_account (no auth)</span>
-                </li>
-                <li class="min-w-0 space-y-1">
-                    <span class="snitch-ink-label">API</span>
-                    <code class="block break-all">{{ mcpUrl }}</code>
-                    <span class="text-snitch-ink/65">bearer token required</span>
-                </li>
-            </ul>
-        </section>
+        <McpEndpoints
+            v-if="showEndpoints"
+            :mcp-url="mcpUrl"
+            :register-url="registerUrl"
+        />
 
         <section class="snitch-scrap relative space-y-4 p-5 pt-6 sm:p-6">
             <span class="snitch-tape right-4 -top-2" aria-hidden="true" />
@@ -102,6 +113,12 @@ async function copyText(value: string): Promise<void> {
                             {{ step }}
                         </li>
                     </ol>
+                    <p
+                        v-if="apiToken"
+                        class="text-xs text-snitch-ink/55"
+                    >
+                        Preview includes your newly created token. Copy the config before you leave this page.
+                    </p>
                 </div>
                 <div class="relative min-w-0">
                     <pre class="overflow-x-auto bg-snitch-ink/5 p-3 text-xs text-snitch-ink lg:min-h-48">{{ activeClient.snippet }}</pre>
