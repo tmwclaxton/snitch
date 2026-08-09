@@ -348,14 +348,12 @@ function paginationLabel(label: string): string {
 
         <div class="relative z-10 mx-auto max-w-6xl">
             <header class="flex flex-wrap items-end justify-between gap-4 border-b border-snitch-ink/10 pb-5">
-                <div class="min-w-0 max-w-xl">
+                <div class="min-w-0">
                     <p class="snitch-ink-label">Snitch / Explore</p>
                     <h1 class="snitch-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
                         Craft catalogue
                     </h1>
-                    <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
-                        Open a catalogue picker, select multiple hooks, topics, or crafts, then skim the matches.
-                    </p>
+                    <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">Open a catalogue picker, select multiple hooks, topics, or crafts, then skim the matches.</p>
                 </div>
                 <div class="text-right">
                     <p class="snitch-display text-2xl tabular-nums text-snitch-ink sm:text-3xl">
