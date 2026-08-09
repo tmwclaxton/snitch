@@ -134,6 +134,79 @@ class UsageBillingService
     }
 
     /**
+     * Daily charged usage (Apify / NanoGPT / Firecrawl) for stacked spend charts.
+     *
+     * @return array{
+     *     days: int,
+     *     from: string,
+     *     to: string,
+     *     points: list<array{date: string, label: string, apify: int, nanogpt: int, firecrawl: int, total: int}>
+     * }
+     */
+    public function dailySpendSeries(User $user, int $days = 30): array
+    {
+        $days = max(7, min(90, $days));
+        $from = now()->subDays($days - 1)->startOfDay();
+        $to = now()->endOfDay();
+        $vendorKeys = [
+            BillingVendor::Apify->value,
+            BillingVendor::NanoGpt->value,
+            BillingVendor::Firecrawl->value,
+        ];
+
+        /** @var array<string, array{date: string, label: string, apify: int, nanogpt: int, firecrawl: int, total: int}> $buckets */
+        $buckets = [];
+
+        for ($offset = 0; $offset < $days; $offset++) {
+            $day = $from->copy()->addDays($offset);
+            $key = $day->toDateString();
+            $buckets[$key] = [
+                'date' => $key,
+                'label' => $day->format('j M'),
+                'apify' => 0,
+                'nanogpt' => 0,
+                'firecrawl' => 0,
+                'total' => 0,
+            ];
+        }
+
+        $entries = CreditLedgerEntry::query()
+            ->where('user_id', $user->id)
+            ->where('amount_pence', '<', 0)
+            ->whereIn('vendor', $vendorKeys)
+            ->where('created_at', '>=', $from)
+            ->where('created_at', '<=', $to)
+            ->get(['vendor', 'amount_pence', 'created_at']);
+
+        foreach ($entries as $entry) {
+            $key = $entry->created_at?->toDateString();
+
+            if ($key === null || ! isset($buckets[$key])) {
+                continue;
+            }
+
+            $vendor = $entry->vendor instanceof BillingVendor
+                ? $entry->vendor->value
+                : (string) $entry->vendor;
+
+            if (! array_key_exists($vendor, $buckets[$key])) {
+                continue;
+            }
+
+            $pence = abs((int) $entry->amount_pence);
+            $buckets[$key][$vendor] += $pence;
+            $buckets[$key]['total'] += $pence;
+        }
+
+        return [
+            'days' => $days,
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'points' => array_values($buckets),
+        ];
+    }
+
+    /**
      * @return array{
      *     balance_pence: int,
      *     subscribed: bool,

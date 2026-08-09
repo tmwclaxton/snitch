@@ -100,6 +100,32 @@ class UsageBillingServiceTest extends TestCase
         $this->assertArrayNotHasKey('markup', $summary);
     }
 
+    public function test_daily_spend_series_stacks_vendor_charges(): void
+    {
+        $user = User::factory()->create();
+        $this->subscribe($user);
+        $this->billing->creditFromTopUp($user, 5000, 'topup:series');
+
+        $this->billing->charge($user, 'sync.account', BillingVendor::Apify, 0.05);
+        $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.04);
+        $this->billing->charge($user, 'brand.autofill', BillingVendor::Firecrawl, 0.01);
+
+        $series = $this->billing->dailySpendSeries($user, 14);
+
+        $this->assertSame(14, $series['days']);
+        $this->assertCount(14, $series['points']);
+
+        $today = collect($series['points'])->firstWhere('date', now()->toDateString());
+        $this->assertNotNull($today);
+        $this->assertGreaterThan(0, $today['apify']);
+        $this->assertGreaterThan(0, $today['nanogpt']);
+        $this->assertGreaterThan(0, $today['firecrawl']);
+        $this->assertSame(
+            $today['apify'] + $today['nanogpt'] + $today['firecrawl'],
+            $today['total'],
+        );
+    }
+
     private function subscribe(User $user): Subscription
     {
         return $user->subscriptions()->create([
