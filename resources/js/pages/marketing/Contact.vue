@@ -19,8 +19,8 @@ defineOptions({
                         Say hello.
                     </h1>
                     <p class="mt-4 max-w-md text-snitch-ink/80">
-                        Questions about Snitch, partnerships, or privacy? Send a
-                        note. We read every message.
+                        Questions about Snitch, billing, partnerships, or
+                        privacy? Send a note. We read every message.
                     </p>
                     <p
                         class="snitch-annotation contact-annotation mt-6 text-xl text-snitch-ink"

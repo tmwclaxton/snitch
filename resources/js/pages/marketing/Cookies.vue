@@ -9,9 +9,10 @@ defineOptions({
 
 <template>
     <div>
-        <LegalDocument title="Cookie notice" updated="7 August 2026">
+        <LegalDocument title="Cookie notice" updated="9 August 2026">
             <p>
-                This notice explains cookies used by Snitch.
+                This notice explains cookies used by Snitch on
+                www.snitchsocial.net.
             </p>
 
             <h2 class="snitch-display text-xl text-snitch-ink">
@@ -33,12 +34,24 @@ defineOptions({
             </p>
 
             <h2 class="snitch-display text-xl text-snitch-ink">
+                Payments
+            </h2>
+            <p>
+                Checkout and the customer portal run on Stripe. When you start a
+                paid plan, Stripe may set its own cookies on stripe.com. Those
+                are controlled by Stripe, not by Snitch session cookies on this
+                site.
+            </p>
+
+            <h2 class="snitch-display text-xl text-snitch-ink">
                 Analytics
             </h2>
             <p>
-                v1 does not ship third-party marketing analytics cookies by
-                default. If we add analytics later, this page will be updated
-                before those cookies are enabled.
+                Snitch does not ship third-party marketing analytics cookies by
+                default. The public Analytics page shows aggregate product
+                counters without advertising trackers. If we add marketing
+                analytics later, this page will be updated before those cookies
+                are enabled.
             </p>
 
             <h2 class="snitch-display text-xl text-snitch-ink">

@@ -116,9 +116,32 @@ class PublicPagesTest extends TestCase
 
     public function test_footer_routes_resolve_for_guests(): void
     {
-        foreach (['about', 'how-it-works', 'pricing', 'analytics', 'contact', 'privacy', 'terms', 'cookies'] as $route) {
+        foreach (['about', 'how-it-works', 'pricing', 'analytics', 'contact', 'privacy', 'terms', 'cookies', 'blog.index'] as $route) {
             $this->get(route($route))->assertOk();
         }
+    }
+
+    public function test_marketing_copy_matches_current_product(): void
+    {
+        $pricing = file_get_contents(resource_path('js/pages/marketing/Pricing.vue'));
+        $privacy = file_get_contents(resource_path('js/pages/marketing/Privacy.vue'));
+        $terms = file_get_contents(resource_path('js/pages/marketing/Terms.vue'));
+        $how = file_get_contents(resource_path('js/pages/marketing/HowItWorks.vue'));
+        $about = file_get_contents(resource_path('js/pages/marketing/About.vue'));
+
+        $this->assertNotFalse($pricing);
+        $this->assertNotFalse($privacy);
+        $this->assertNotFalse($terms);
+        $this->assertNotFalse($how);
+        $this->assertNotFalse($about);
+
+        $this->assertStringNotContainsString('seats', strtolower($pricing));
+        $this->assertStringContainsString('Explore filters', $pricing);
+        $this->assertStringContainsString('Stripe', $privacy);
+        $this->assertStringContainsString('Stripe', $terms);
+        $this->assertStringContainsString('YouTube Shorts', $how);
+        $this->assertStringContainsString('Explore', $how);
+        $this->assertStringContainsString('Blog', $about);
     }
 
     public function test_sitemap_lists_public_routes(): void

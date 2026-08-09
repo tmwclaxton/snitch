@@ -13,17 +13,17 @@ const steps: Array<{ title: string; body: string; icon: Component }> = [
     {
         title: 'Track',
         icon: Users,
-        body: 'Connect your brand context, then add competitor handles on TikTok, Instagram, YouTube Shorts, Facebook, and LinkedIn. Snitch syncs recent public reels into one feed.',
+        body: 'Set your brand context, then add competitor handles on TikTok, Instagram, YouTube Shorts, Facebook, and LinkedIn - or use suggest to find public rivals in your niche. Snitch syncs recent public reels and Shorts into one feed (images and carousels stay out).',
     },
     {
         title: 'Analyse',
         icon: Sparkles,
-        body: 'Video and reel posts get full-video analysis: the opening hook, visual summary, SFX, music cues, and the core idea - annotated on the frame like stickers on a scrap.',
+        body: 'Video posts get full-video analysis: opening hook, visual craft, SFX and music cues, concept, and how-to-copy notes - tagged with catalogue terms you can filter in Explore. Stickers sit on the frame like scrap annotations.',
     },
     {
         title: 'Winners',
         icon: Trophy,
-        body: 'Your quality rules score the board. Open a tear sheet of posts that clear the bar, with why they won and how to copy the move.',
+        body: 'Your quality rules score the board. Open a tear sheet of posts that clear the bar, with why they won and how to remake the move in your brand voice.',
     },
 ];
 </script>
@@ -39,7 +39,8 @@ const steps: Array<{ title: string; body: string; icon: Component }> = [
                 </h1>
                 <p class="mt-4 max-w-2xl text-snitch-ink/80">
                     Three steps from empty account to a scrapbook of posts worth
-                    stealing (ethically).
+                    stealing (ethically). Public posts only - no private
+                    credentials for rival accounts.
                 </p>
 
                 <ol class="snitch-contact-reveal mt-12 grid gap-6 md:grid-cols-3">
