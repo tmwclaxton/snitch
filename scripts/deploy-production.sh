@@ -245,6 +245,9 @@ zero_downtime_deploy_app() {
 
     echo "Stopping retired slot ${active_service}..."
     compose stop "$active_service"
+    # Remove the exited container so host monitors do not report "1 container down"
+    # / unhealthy for the intentionally inactive blue/green slot.
+    compose rm -f "$active_service"
 
     write_deploy_slot "$inactive_slot_name"
     echo "Zero-downtime app deploy complete. Live slot: ${inactive_slot_name}"
