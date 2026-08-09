@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Blog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 
 class Seo
 {
@@ -113,18 +114,20 @@ class Seo
             ];
         }
 
-        Blog::query()
-            ->published()
-            ->orderByDesc('published_at')
-            ->get(['slug', 'updated_at'])
-            ->each(function (Blog $blog) use (&$entries): void {
-                $entries[] = [
-                    'loc' => route('blog.show', $blog, absolute: true),
-                    'lastmod' => $blog->updated_at?->toDateString() ?? Carbon::now()->toDateString(),
-                    'changefreq' => 'weekly',
-                    'priority' => '0.7',
-                ];
-            });
+        if (Schema::hasTable('blogs')) {
+            Blog::query()
+                ->published()
+                ->orderByDesc('published_at')
+                ->get(['slug', 'updated_at'])
+                ->each(function (Blog $blog) use (&$entries): void {
+                    $entries[] = [
+                        'loc' => route('blog.show', $blog, absolute: true),
+                        'lastmod' => $blog->updated_at?->toDateString() ?? Carbon::now()->toDateString(),
+                        'changefreq' => 'weekly',
+                        'priority' => '0.7',
+                    ];
+                });
+        }
 
         return $entries;
     }
