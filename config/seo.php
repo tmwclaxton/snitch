@@ -118,6 +118,16 @@ return [
             ],
         ],
 
+        'blog.index' => [
+            'title' => 'Blog',
+            'description' => 'Competitor social tracking notes from Snitch: hooks, remakes, and cross-platform workflows for brands and agencies.',
+            'json_ld' => 'webpage',
+            'sitemap' => [
+                'changefreq' => 'daily',
+                'priority' => '0.8',
+            ],
+        ],
+
     ],
 
 ];

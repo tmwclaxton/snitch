@@ -22,4 +22,5 @@ Before planning or editing, find the row whose globs match the file's path and r
 | resources/css/app.css, resources/js/**/*.{vue,ts,css}, resources/views/app.blade.php | .ai/rules/frontend-dark-mode.md |
 | resources/js/app.ts, vite.config.ts | .ai/rules/inertia-ssr.md |
 | config/seo.php, app/Support/Seo.php, resources/views/app.blade.php, resources/js/components/marketing/SeoHead.vue, resources/js/components/AppHead.vue, resources/js/layouts/PublicLayout.vue, public/robots.txt, routes/web.php, bootstrap/app.php | .ai/rules/seo.md |
+| app/Models/Blog.php, app/Enums/BlogStatus.php, app/Http/Controllers/BlogController.php, app/Services/Blog/**, app/Console/Commands/GenerateBlogPostCommand.php, app/Console/Commands/PublishBlogDraftsCommand.php, config/blog.php, resources/js/pages/blog/**, routes/web.php, routes/console.php | .ai/rules/blog.md |
 | tests/** | .ai/rules/tests.md |

@@ -54,6 +54,32 @@ class NanoGptClient
         return trim((string) $content);
     }
 
+    /**
+     * Chat expecting a JSON object; returns decoded array or null.
+     *
+     * @param  list<array{role: string, content: string}>  $messages
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>|null
+     */
+    public function chatJson(array $messages, ?string $model = null, array $options = []): ?array
+    {
+        $options['response_format'] = $options['response_format'] ?? ['type' => 'json_object'];
+
+        $text = $this->extractAssistantText($this->chat($messages, $model, $options));
+
+        if ($text === '') {
+            return null;
+        }
+
+        if (preg_match('/\{.*\}/s', $text, $matches) === 1) {
+            $text = $matches[0];
+        }
+
+        $decoded = json_decode($text, true);
+
+        return is_array($decoded) ? $decoded : null;
+    }
+
     protected function http(): PendingRequest
     {
         $apiKey = (string) config('snitch.nanogpt.api_key');

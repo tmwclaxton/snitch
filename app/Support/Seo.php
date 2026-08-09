@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Blog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -27,12 +28,21 @@ class Seo
     public static function forRequest(Request $request): array
     {
         $routeName = $request->route()?->getName();
+        $siteName = (string) config('seo.site_name', config('app.name', 'Snitch'));
+
+        if ($routeName === 'blog.show') {
+            $blog = $request->route('blog');
+
+            if ($blog instanceof Blog) {
+                return self::forBlogPost($blog, $siteName);
+            }
+        }
+
         $pages = config('seo.pages', []);
         $page = is_string($routeName) && isset($pages[$routeName])
             ? $pages[$routeName]
             : null;
 
-        $siteName = (string) config('seo.site_name', config('app.name', 'Snitch'));
         $indexable = is_array($page);
         $isMissingRoute = $routeName === null;
         $robots = $indexable
@@ -79,7 +89,7 @@ class Seo
     }
 
     /**
-     * Sitemap entries for public indexable routes.
+     * Sitemap entries for public indexable routes and published blog posts.
      *
      * @return list<array{loc: string, lastmod: string, changefreq: string, priority: string}>
      */
@@ -103,7 +113,96 @@ class Seo
             ];
         }
 
+        Blog::query()
+            ->published()
+            ->orderByDesc('published_at')
+            ->get(['slug', 'updated_at'])
+            ->each(function (Blog $blog) use (&$entries): void {
+                $entries[] = [
+                    'loc' => route('blog.show', $blog, absolute: true),
+                    'lastmod' => $blog->updated_at?->toDateString() ?? Carbon::now()->toDateString(),
+                    'changefreq' => 'weekly',
+                    'priority' => '0.7',
+                ];
+            });
+
         return $entries;
+    }
+
+    /**
+     * @return array{
+     *     title: string,
+     *     description: string,
+     *     image: string,
+     *     canonical: string,
+     *     path: string,
+     *     robots: string,
+     *     locale: string,
+     *     site_name: string,
+     *     twitter_card: string,
+     *     json_ld: list<array<string, mixed>>,
+     *     indexable: bool
+     * }
+     */
+    private static function forBlogPost(Blog $blog, string $siteName): array
+    {
+        $canonical = route('blog.show', $blog, absolute: true);
+        $path = parse_url($canonical, PHP_URL_PATH);
+        $path = is_string($path) && $path !== '' ? $path : '/blog/'.$blog->slug;
+
+        $image = $blog->image_url
+            ?? self::absoluteUrl((string) config('seo.default_image', '/images/marketing/og.jpg'));
+
+        if (! str_starts_with($image, 'http://') && ! str_starts_with($image, 'https://')) {
+            $image = self::absoluteUrl($image);
+        }
+
+        $title = $blog->title;
+        $description = $blog->excerpt !== ''
+            ? $blog->excerpt
+            : (string) config('seo.default_description');
+
+        $home = rtrim((string) config('app.url'), '/').'/';
+
+        return [
+            'title' => $title,
+            'description' => $description,
+            'image' => $image,
+            'canonical' => $canonical,
+            'path' => $path,
+            'robots' => (string) config('seo.public_robots', 'index, follow'),
+            'locale' => (string) config('seo.locale', 'en_GB'),
+            'site_name' => $siteName,
+            'twitter_card' => (string) config('seo.twitter_card', 'summary_large_image'),
+            'json_ld' => [
+                [
+                    '@context' => 'https://schema.org',
+                    '@type' => 'Article',
+                    'headline' => $title,
+                    'description' => $description,
+                    'image' => $image,
+                    'url' => $canonical,
+                    'datePublished' => $blog->published_at?->toIso8601String(),
+                    'dateModified' => $blog->updated_at?->toIso8601String(),
+                    'author' => [
+                        '@type' => 'Organization',
+                        'name' => $siteName,
+                        'url' => $home,
+                    ],
+                    'publisher' => [
+                        '@type' => 'Organization',
+                        'name' => $siteName,
+                        'url' => $home,
+                        'logo' => self::absoluteUrl('/images/brand/mascot-mark.png'),
+                    ],
+                    'mainEntityOfPage' => [
+                        '@type' => 'WebPage',
+                        '@id' => $canonical,
+                    ],
+                ],
+            ],
+            'indexable' => true,
+        ];
     }
 
     /**
