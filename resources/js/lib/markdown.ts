@@ -7,7 +7,7 @@ export function renderMarkdown(source: string | null | undefined): string {
         return '';
     }
 
-    const trimmed = normalizeListBreaks(source.replace(/\r\n?/g, '\n')).trim();
+    const trimmed = coerceRemakeSteps(source.replace(/\r\n?/g, '\n')).trim();
 
     if (trimmed === '') {
         return '';
@@ -38,6 +38,77 @@ export function normalizeListBreaks(text: string): string {
     next = next.replace(/(?<=[.;:!?\]])[ \t]+(?=[-*+]\s+\S)/gu, '\n');
 
     return next;
+}
+
+/**
+ * Turn unnumbered multi-step remake copy into a Markdown ordered list.
+ */
+export function coerceRemakeSteps(text: string): string {
+    const next = normalizeListBreaks(text);
+
+    if (hasStepMarkers(next)) {
+        return next;
+    }
+
+    const paragraphs = next
+        .trim()
+        .split(/\n{2,}/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+
+    if (paragraphs.length >= 2) {
+        return numberSteps(paragraphs);
+    }
+
+    const lines = next
+        .trim()
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+    if (lines.length >= 2) {
+        return numberSteps(lines);
+    }
+
+    if (lines.length === 1) {
+        const sentences = splitSentences(lines[0]);
+
+        if (sentences.length >= 2) {
+            return numberSteps(sentences);
+        }
+    }
+
+    return next;
+}
+
+function numberSteps(steps: string[]): string {
+    return steps.map((step, index) => `${index + 1}. ${step.trim()}`).join('\n');
+}
+
+function splitSentences(text: string): string[] {
+    return text
+        .trim()
+        .split(/(?<=[.!?])\s+(?=[A-Z0-9"'(])/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+}
+
+function hasStepMarkers(text: string): boolean {
+    return text
+        .trim()
+        .split(/\n+/)
+        .some((line) => {
+            const trimmed = line.trim();
+
+            if (trimmed === '') {
+                return false;
+            }
+
+            return (
+                /^(\*\*)?\d+[.)]\s+\S/u.test(trimmed) ||
+                /^[-*+•·]\s+\S/u.test(trimmed)
+            );
+        });
 }
 
 function renderBlock(block: string): string {

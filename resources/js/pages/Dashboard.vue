@@ -324,7 +324,7 @@ function accountHref(post: RecentPost): string | null {
                                             :post-url="winner.post.url"
                                             :platform="winner.post.platform"
                                             compact
-                                            lazy
+                                            :lazy="false"
                                         />
                                     </div>
                                 </div>

@@ -941,6 +941,20 @@
         background: color-mix(in oklab, var(--snitch-press) 88%, #000);
     }
 
+    .snitch-contact-cell-frame .snitch-platform-embed {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        aspect-ratio: auto;
+    }
+
+    .snitch-contact-cell-frame .snitch-platform-embed-compact {
+        aspect-ratio: auto;
+    }
+
     .snitch-contact-cell-frame img {
         height: 100%;
         width: 100%;
@@ -1316,6 +1330,11 @@
     .snitch-md ul,
     .snitch-md ol {
         padding-left: 1.25rem;
+        list-style-position: outside;
+    }
+
+    .snitch-md ol {
+        list-style-type: decimal;
     }
 
     .snitch-md li + li {
