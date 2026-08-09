@@ -13,6 +13,8 @@ paths:
 ## Web server
 Production image must serve via **nginx + php-fpm**, not `php artisan serve`. The built-in server is single-threaded; one slow authenticated request stalls the whole site (dashboard / competitors / brand).
 
+Use `docker/production/supervisord.conf` (include workers + `web.conf` only). Do not copy Sail's `docker/8.5/supervisord.conf`, which requires `SUPERVISOR_PHP_COMMAND` for `artisan serve`. After deleting `www-data`, set nginx's main `user` to `sail` or nginx will fail with `getpwnam("www-data")`.
+
 ## IPv4 preference
 Docker bridges often lack working IPv6 egress. WorkOS DNS returns A+AAAA; without `/etc/gai.conf` preferring IPv4 (`precedence :ffff:0:0/96  100`), JWKS and refresh-token calls hang ~60s.
 
