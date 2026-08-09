@@ -58,6 +58,8 @@ export type GlanceTermChip = {
     dimension: string;
     section?: string | null;
     slug?: string | null;
+    /** Full raw value for Explore links (custom tags); not truncated. */
+    searchValue?: string | null;
 };
 
 export type AnalysisTermLabel = {
@@ -111,7 +113,7 @@ export function glanceTermChips(input: {
             return;
         }
 
-        const key = chip.label.toLowerCase();
+        const key = (chip.searchValue ?? chip.slug ?? chip.label).toLowerCase();
 
         if (!key || seen.has(key)) {
             return;
@@ -151,8 +153,9 @@ export function glanceTermChips(input: {
 
             pushChip({
                 key: `custom:${trimmed.toLowerCase()}`,
-                label: formatTagLabel(trimmed, topicMax),
+                label: formatTagLabel(humanizeTagLabel(trimmed), topicMax),
                 dimension: 'custom',
+                searchValue: trimmed,
             });
         }
 
@@ -166,6 +169,7 @@ export function glanceTermChips(input: {
             key: `concept:${concept.toLowerCase()}`,
             label: formatTagLabel(concept, conceptMax),
             dimension: 'concept',
+            searchValue: concept,
         });
     }
 
@@ -178,8 +182,9 @@ export function glanceTermChips(input: {
 
         pushChip({
             key: `topic:${trimmed.toLowerCase()}`,
-            label: formatTagLabel(trimmed, topicMax),
+            label: formatTagLabel(humanizeTagLabel(trimmed), topicMax),
             dimension: 'topic',
+            searchValue: trimmed,
         });
     }
 
@@ -192,12 +197,28 @@ export function glanceTermChips(input: {
 
         pushChip({
             key: `custom:${trimmed.toLowerCase()}`,
-            label: formatTagLabel(trimmed, topicMax),
+            label: formatTagLabel(humanizeTagLabel(trimmed), topicMax),
             dimension: 'custom',
+            searchValue: trimmed,
         });
     }
 
     return chips;
+}
+
+/** Turn snake/kebab model tags into readable chip labels. */
+export function humanizeTagLabel(value: string): string {
+    const spaced = value
+        .trim()
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    if (spaced === '') {
+        return value;
+    }
+
+    return spaced.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function firstCaptionLine(caption?: string | null): string | null {

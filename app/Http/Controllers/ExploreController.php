@@ -8,10 +8,12 @@ use App\Enums\Platform;
 use App\Enums\PostType;
 use App\Models\AnalysisTerm;
 use App\Models\Post;
+use App\Services\Analysis\AnalysisEmbeddingService;
 use App\Services\Analysis\AnalysisTermCatalogue;
 use App\Support\PlatformEmbed;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,6 +22,7 @@ class ExploreController extends Controller
 {
     public function __construct(
         private AnalysisTermCatalogue $catalogue,
+        private AnalysisEmbeddingService $embeddings,
     ) {}
 
     public function index(Request $request): Response
@@ -33,6 +36,7 @@ class ExploreController extends Controller
         $visualCrafts = $this->slugList($request, 'visual_crafts', 'visual_craft');
         $platform = $this->nullableString($request->query('platform'));
         $queryText = $this->nullableString($request->query('q'));
+        $customTag = $this->nullableString($request->query('custom_tag'));
 
         $query = Post::query()
             ->where('user_id', $user->id)
@@ -59,24 +63,21 @@ class ExploreController extends Controller
             $this->constrainByTermSlugs($query, AnalysisTermDimension::VisualCraft, $visualCrafts);
         }
 
-        if ($queryText !== null) {
-            $like = '%'.$queryText.'%';
-            $query->where(function (Builder $builder) use ($like): void {
-                $builder
-                    ->where('caption', 'like', $like)
-                    ->orWhereHas('analysis', function (Builder $analysis) use ($like): void {
-                        $analysis
-                            ->where('hook', 'like', $like)
-                            ->orWhere('concept', 'like', $like)
-                            ->orWhere('idea', 'like', $like)
-                            ->orWhere('visual_summary', 'like', $like)
-                            ->orWhere('topics', 'like', $like)
-                            ->orWhere('custom_tags', 'like', $like);
-                    });
-            });
+        $semanticQuery = $customTag ?? $queryText;
+        $posts = null;
+
+        if ($semanticQuery !== null) {
+            $posts = $this->paginateSemanticOrFallback(
+                $request,
+                $query,
+                $semanticQuery,
+                $customTag,
+                $queryText,
+            );
         }
 
-        $posts = $query->paginate(24)->withQueryString();
+        $posts ??= $query->paginate(24)->withQueryString();
+
         $posts->getCollection()->transform(function (Post $post): Post {
             $post->setAttribute(
                 'embed',
@@ -120,6 +121,7 @@ class ExploreController extends Controller
             'posts' => $posts,
             'filters' => [
                 'q' => $queryText,
+                'custom_tag' => $customTag,
                 'hook_types' => $hookTypes,
                 'topics' => $topics,
                 'visual_crafts' => $visualCrafts,
@@ -132,6 +134,134 @@ class ExploreController extends Controller
             ],
             'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
         ]);
+    }
+
+    /**
+     * @param  Builder<Post>  $query
+     * @return LengthAwarePaginator<int, Post>
+     */
+    private function paginateSemanticOrFallback(
+        Request $request,
+        Builder $query,
+        string $semanticQuery,
+        ?string $customTag,
+        ?string $queryText,
+    ): LengthAwarePaginator {
+        $exactIds = $customTag !== null
+            ? $this->exactCustomTagPostIds(clone $query, $customTag)
+            : [];
+
+        $queryVector = $this->embeddings->embedQuery($semanticQuery);
+
+        if ($queryVector !== null) {
+            $maxCandidates = max(1, (int) config('snitch.embeddings.max_candidates', 500));
+            $candidates = (clone $query)
+                ->with('analysis')
+                ->limit($maxCandidates)
+                ->get();
+
+            $rankedIds = $this->embeddings->rankPostIds($candidates, $queryVector, $exactIds);
+
+            if ($rankedIds !== []) {
+                return $this->paginateByIds($request, $rankedIds);
+            }
+        }
+
+        $fallback = clone $query;
+
+        if ($customTag !== null) {
+            $this->constrainByCustomTag($fallback, $customTag);
+        } elseif ($queryText !== null) {
+            $this->constrainByLikeSearch($fallback, $queryText);
+        }
+
+        return $fallback->paginate(24)->withQueryString();
+    }
+
+    /**
+     * @param  Builder<Post>  $query
+     * @return list<int>
+     */
+    private function exactCustomTagPostIds(Builder $query, string $customTag): array
+    {
+        return (clone $query)
+            ->whereHas('analysis', function (Builder $analysis) use ($customTag): void {
+                $analysis
+                    ->where('status', AnalysisStatus::Completed)
+                    ->whereJsonContains('custom_tags', $customTag);
+            })
+            ->pluck('id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->all();
+    }
+
+    /**
+     * @param  Builder<Post>  $query
+     */
+    private function constrainByCustomTag(Builder $query, string $customTag): void
+    {
+        $query->whereHas('analysis', function (Builder $analysis) use ($customTag): void {
+            $analysis
+                ->where('status', AnalysisStatus::Completed)
+                ->where(function (Builder $inner) use ($customTag): void {
+                    $inner
+                        ->whereJsonContains('custom_tags', $customTag)
+                        ->orWhere('custom_tags', 'like', '%'.$customTag.'%');
+                });
+        });
+    }
+
+    /**
+     * @param  Builder<Post>  $query
+     */
+    private function constrainByLikeSearch(Builder $query, string $queryText): void
+    {
+        $like = '%'.$queryText.'%';
+        $query->where(function (Builder $builder) use ($like): void {
+            $builder
+                ->where('caption', 'like', $like)
+                ->orWhereHas('analysis', function (Builder $analysis) use ($like): void {
+                    $analysis
+                        ->where('hook', 'like', $like)
+                        ->orWhere('concept', 'like', $like)
+                        ->orWhere('idea', 'like', $like)
+                        ->orWhere('visual_summary', 'like', $like)
+                        ->orWhere('topics', 'like', $like)
+                        ->orWhere('custom_tags', 'like', $like);
+                });
+        });
+    }
+
+    /**
+     * @param  list<int>  $rankedIds
+     * @return LengthAwarePaginator<int, Post>
+     */
+    private function paginateByIds(Request $request, array $rankedIds): LengthAwarePaginator
+    {
+        $perPage = 24;
+        $page = max(1, (int) $request->integer('page', 1));
+        $total = count($rankedIds);
+        $slice = array_slice($rankedIds, ($page - 1) * $perPage, $perPage);
+
+        $posts = $slice === []
+            ? collect()
+            : Post::query()
+                ->whereIn('id', $slice)
+                ->with(['trackedAccount', 'analysis.terms', 'winnerInsight'])
+                ->get()
+                ->sortBy(fn (Post $post): int => (int) array_search($post->id, $slice, true))
+                ->values();
+
+        return (new LengthAwarePaginator(
+            $posts,
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ],
+        ))->withQueryString();
     }
 
     /**

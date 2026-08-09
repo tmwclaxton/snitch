@@ -60,8 +60,12 @@ class AnalyzePostJob implements ShouldQueue
         }
 
         try {
-            $analysis->analyzePost($post);
+            $persisted = $analysis->analyzePost($post);
             $scorer->scoreAndPersist($post->fresh('analysis'));
+
+            if ($persisted->status === AnalysisStatus::Completed) {
+                EmbedPostAnalysisJob::dispatch($persisted->id);
+            }
         } catch (Throwable $e) {
             if ($this->isUnavailableException($e)) {
                 $this->markUnavailable($post, $e->getMessage());

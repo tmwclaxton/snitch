@@ -15,6 +15,20 @@ return [
         'timeout' => (int) env('NANOGPT_TIMEOUT', 180),
     ],
 
+    /*
+    | Reel analysis embeddings (NanoGPT /embeddings) power Explore semantic
+    | search for custom_tag clicks and free-text q. Catalogue slug filters stay exact.
+    */
+    'embeddings' => [
+        'enabled' => (bool) env('SNITCH_EMBEDDINGS_ENABLED', true),
+        'model' => env('NANOGPT_EMBEDDING_MODEL', 'text-embedding-3-small'),
+        // 0 keeps the model default size.
+        'dimensions' => (int) env('NANOGPT_EMBEDDING_DIMENSIONS', 0),
+        'min_similarity' => (float) env('SNITCH_EMBEDDING_MIN_SIMILARITY', 0.22),
+        // Cap candidates scored in PHP per Explore request.
+        'max_candidates' => (int) env('SNITCH_EMBEDDING_MAX_CANDIDATES', 500),
+    ],
+
     'firecrawl' => [
         'api_key' => env('FIRECRAWL_API_KEY'),
         'base_url' => rtrim((string) env('FIRECRAWL_BASE_URL', 'https://api.firecrawl.dev/v1'), '/'),

@@ -80,6 +80,53 @@ class NanoGptClient
         return is_array($decoded) ? $decoded : null;
     }
 
+    /**
+     * Create embedding vectors for one or more input strings.
+     *
+     * @param  string|list<string>  $input
+     * @return list<list<float>>
+     */
+    public function embeddings(string|array $input, ?string $model = null, ?int $dimensions = null): array
+    {
+        $model ??= (string) config('snitch.embeddings.model', 'text-embedding-3-small');
+        $dimensions ??= (int) config('snitch.embeddings.dimensions', 0);
+
+        $payload = [
+            'model' => $model,
+            'input' => $input,
+        ];
+
+        if ($dimensions > 0) {
+            $payload['dimensions'] = $dimensions;
+        }
+
+        $response = $this->http()->post('/embeddings', $payload);
+
+        if (! $response->successful()) {
+            throw new RuntimeException('NanoGPT embeddings request failed: '.$response->body());
+        }
+
+        $data = $response->json('data');
+
+        if (! is_array($data)) {
+            throw new RuntimeException('NanoGPT embeddings response missing data.');
+        }
+
+        $vectors = [];
+
+        foreach ($data as $row) {
+            $embedding = is_array($row) ? ($row['embedding'] ?? null) : null;
+
+            if (! is_array($embedding) || $embedding === []) {
+                throw new RuntimeException('NanoGPT embeddings response contained an empty vector.');
+            }
+
+            $vectors[] = array_map(static fn (mixed $value): float => (float) $value, $embedding);
+        }
+
+        return $vectors;
+    }
+
     protected function http(): PendingRequest
     {
         $apiKey = (string) config('snitch.nanogpt.api_key');

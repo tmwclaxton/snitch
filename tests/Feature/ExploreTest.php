@@ -90,6 +90,7 @@ class ExploreTest extends TestCase
                 ->has('terms.topic')
                 ->has('terms.visual_craft')
                 ->where('filters.hook_types', [])
+                ->where('filters.custom_tag', null)
                 ->missing('accounts')
                 ->missing('filters.account')
             );
