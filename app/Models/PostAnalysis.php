@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\AnalysisStatus;
 use Database\Factories\PostAnalysisFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,10 +26,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
     'concept',
     'topics',
     'custom_tags',
+    'embedding',
+    'embedding_model',
+    'embedding_hash',
     'model',
     'error_message',
     'analyzed_at',
 ])]
+#[Hidden(['embedding', 'embedding_model', 'embedding_hash'])]
 class PostAnalysis extends Model
 {
     /** @use HasFactory<PostAnalysisFactory> */
@@ -46,6 +51,7 @@ class PostAnalysis extends Model
             'music' => 'array',
             'topics' => 'array',
             'custom_tags' => 'array',
+            'embedding' => 'array',
             'analyzed_at' => 'datetime',
         ];
     }

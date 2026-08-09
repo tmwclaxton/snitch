@@ -13,6 +13,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { analysisDimensionIcon } from '@/lib/analysisTerms';
 import type { PostMetrics } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
+import { humanizeTagLabel } from '@/lib/posts';
 
 type AnalysisTermOption = {
     id: number;
@@ -53,6 +54,7 @@ const props = defineProps<{
     };
     filters: {
         q: string | null;
+        custom_tag: string | null;
         hook_types: string[];
         topics: string[];
         visual_crafts: string[];
@@ -125,6 +127,7 @@ const frameCount = computed(() => props.posts.data.length);
 const hasActiveFilters = computed(
     () =>
         props.filters.q != null ||
+        props.filters.custom_tag != null ||
         props.filters.hook_types.length > 0 ||
         props.filters.topics.length > 0 ||
         props.filters.visual_crafts.length > 0 ||
@@ -176,6 +179,15 @@ const activeChips = computed(() => {
                 searchDraft.value = '';
                 visitFilters(currentFilters({ q: null }));
             },
+        });
+    }
+
+    if (props.filters.custom_tag) {
+        chips.push({
+            key: 'custom_tag',
+            label: humanizeTagLabel(props.filters.custom_tag),
+            icon: analysisDimensionIcon('custom'),
+            clear: () => visitFilters(currentFilters({ custom_tag: null })),
         });
     }
 
@@ -235,6 +247,7 @@ const activeChips = computed(() => {
 
 function visitFilters(next: {
     q: string | null;
+    custom_tag: string | null;
     hook_types: string[];
     topics: string[];
     visual_crafts: string[];
@@ -244,6 +257,7 @@ function visitFilters(next: {
         exploreIndex.url(),
         {
             q: next.q,
+            custom_tag: next.custom_tag,
             hook_types: next.hook_types.length > 0 ? next.hook_types : undefined,
             topics: next.topics.length > 0 ? next.topics : undefined,
             visual_crafts: next.visual_crafts.length > 0 ? next.visual_crafts : undefined,
@@ -258,6 +272,7 @@ function visitFilters(next: {
 
 function currentFilters(overrides: Partial<{
     q: string | null;
+    custom_tag: string | null;
     hook_types: string[];
     topics: string[];
     visual_crafts: string[];
@@ -265,6 +280,7 @@ function currentFilters(overrides: Partial<{
 }> = {}) {
     return {
         q: props.filters.q,
+        custom_tag: props.filters.custom_tag,
         hook_types: props.filters.hook_types,
         topics: props.filters.topics,
         visual_crafts: props.filters.visual_crafts,
@@ -298,6 +314,7 @@ function clearFilters(): void {
     searchDraft.value = '';
     visitFilters({
         q: null,
+        custom_tag: null,
         hook_types: [],
         topics: [],
         visual_crafts: [],

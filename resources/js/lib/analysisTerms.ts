@@ -114,13 +114,14 @@ export function analysisDimensionIcon(dimension: AnalysisTermDimension | null | 
 }
 
 /**
- * Explore URL with the matching catalogue filter (or free-text `q`) preselected.
- * Explore already accepts `hook_types` / `topics` / `visual_crafts` / `q` query params.
+ * Explore URL with the matching catalogue filter, custom tag, or free-text `q` preselected.
+ * Explore accepts `hook_types` / `topics` / `visual_crafts` / `custom_tag` / `q` query params.
  */
 export function exploreHrefForTerm(input: {
     dimension?: AnalysisTermDimension | null;
     slug?: string | null;
     label?: string | null;
+    searchValue?: string | null;
 }): string | null {
     const dimension = input.dimension?.trim().toLowerCase() ?? '';
     const slug = input.slug?.trim().toLowerCase() ?? '';
@@ -137,7 +138,17 @@ export function exploreHrefForTerm(input: {
         return exploreIndex.url({ query: { visual_crafts: slug } });
     }
 
-    const q = (input.label ?? input.slug ?? '').trim();
+    if (dimension === 'custom') {
+        const customTag = (input.searchValue ?? input.slug ?? input.label ?? '').trim();
+
+        if (customTag === '') {
+            return null;
+        }
+
+        return exploreIndex.url({ query: { custom_tag: customTag } });
+    }
+
+    const q = (input.searchValue ?? input.label ?? input.slug ?? '').trim();
 
     if (q === '') {
         return null;
