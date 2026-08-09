@@ -24,11 +24,10 @@ defineOptions({
             </div>
             <p class="snitch-ink-label">404</p>
             <h1 class="snitch-display relative z-10 mt-2 text-3xl text-snitch-ink">
-                This frame fell off the board.
+                Whoops, the page you wanted is not here.
             </h1>
             <p class="mt-3 text-snitch-ink/80">
-                The page you wanted is not here. Head home or sign in to keep
-                tracking competitors.
+                Head home or sign in to keep tracking competitors.
             </p>
             <div class="mt-8 flex flex-wrap gap-3">
                 <Link :href="home()" class="snitch-btn">
