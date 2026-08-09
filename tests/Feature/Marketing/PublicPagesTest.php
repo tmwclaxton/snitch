@@ -280,6 +280,34 @@ class PublicPagesTest extends TestCase
         );
     }
 
+    public function test_home_has_mobile_poster_hero_separate_from_desktop(): void
+    {
+        $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
+        $css = file_get_contents(resource_path('css/app.css'));
+
+        $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
+        $this->assertNotFalse($css, 'Missing app.css source');
+
+        $this->assertStringContainsString('snitch-hero-mobile', $welcome);
+        $this->assertStringContainsString('md:hidden', $welcome);
+        $this->assertStringContainsString(
+            'class="snitch-hero relative hidden h-dvh w-full overflow-hidden md:block"',
+            $welcome,
+            'Desktop wall hero must stay hidden below md',
+        );
+        $this->assertStringContainsString('snitch-hero-mobile-mascot', $welcome);
+        $this->assertStringContainsString('snitch-hero-mobile-floor', $welcome);
+        $this->assertStringContainsString('snitch-hero-mobile-cta', $welcome);
+        $this->assertMatchesRegularExpression(
+            '/snitch-hero-mobile-cta[\s\S]*?Get started[\s\S]*?Log in/',
+            $welcome,
+            'Mobile poster must lead with Get started then Log in',
+        );
+        $this->assertStringContainsString('.snitch-hero-mobile-wash', $css);
+        $this->assertStringContainsString('.snitch-hero-mobile-floor', $css);
+        $this->assertStringContainsString('snitch-hero-mobile-mascot-bob', $css);
+    }
+
     public function test_hero_backdrop_waits_for_decode_before_reveal(): void
     {
         $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
@@ -289,8 +317,10 @@ class PublicPagesTest extends TestCase
         $this->assertNotFalse($css, 'Missing app.css source');
         $this->assertStringContainsString('heroBackdropReady', $welcome);
         $this->assertStringContainsString('preloadHeroImage', $welcome);
+        $this->assertStringContainsString("matchMedia('(min-width: 768px)')", $welcome);
         $this->assertStringContainsString('snitch-hero-backdrop-placeholder', $welcome);
         $this->assertStringContainsString('class="snitch-hero-backdrop"', $welcome);
+        $this->assertStringContainsString('v-if="desktopHeroArt"', $welcome);
         $this->assertStringContainsString("'is-ready': heroBackdropReady", $welcome);
         $this->assertStringContainsString('.snitch-hero-backdrop.is-ready', $css);
         $this->assertMatchesRegularExpression(
