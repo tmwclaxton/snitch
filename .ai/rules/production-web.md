@@ -16,5 +16,5 @@ Production image must serve via **nginx + php-fpm**, not `php artisan serve`. Th
 ## IPv4 preference
 Docker bridges often lack working IPv6 egress. WorkOS DNS returns A+AAAA; without `/etc/gai.conf` preferring IPv4 (`precedence :ffff:0:0/96  100`), JWKS and refresh-token calls hang ~60s.
 
-## Outbound HTTP
-`Http::globalOptions` forces `CURLOPT_IPRESOLVE_V4` and a short `connect_timeout`. The WorkOS PHP SDK uses its own curl client - register `App\Support\WorkOs\Ipv4CurlRequestClient` via `WorkOS\Client::setRequestClient()` so token refresh cannot hang on IPv6. Container start warms `workos:jwk` via `snitch:warm-workos-jwk`.
+## Image size
+Do not `COPY` host `storage/` into the image (local `inertia-devtools` / logs can be hundreds of MB). Keep a root `.dockerignore` that excludes `.git`, `node_modules`, `vendor`, and `storage/inertia-devtools`. Create empty runtime storage dirs in the Dockerfile instead.

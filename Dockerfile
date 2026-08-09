@@ -89,7 +89,7 @@ RUN printf 'precedence :ffff:0:0/96  100\n' > /etc/gai.conf
 
 RUN apt-get update && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
-        gnupg gosu curl ca-certificates zip unzip git supervisor libcap2-bin \
+        gnupg gosu curl ca-certificates zip unzip supervisor libcap2-bin \
         nginx \
         default-libmysqlclient-dev \
         libicu-dev \
@@ -135,15 +135,17 @@ COPY --from=php_build /app/database ./database
 COPY --from=php_build /app/public ./public
 COPY --from=php_build /app/resources/views ./resources/views
 COPY --from=php_build /app/routes ./routes
-COPY --from=php_build /app/storage ./storage
 COPY --from=php_build /app/vendor ./vendor
 COPY --from=php_build /app/composer.json ./composer.json
 COPY --from=php_build /app/composer.lock ./composer.lock
 
+# Fresh runtime storage only - never bake local logs / inertia-devtools into the image.
 RUN mkdir -p storage/logs \
         storage/framework/cache/data \
         storage/framework/sessions \
         storage/framework/views \
+        storage/app/public \
+        storage/app/private \
         bootstrap/cache \
         /var/log/nginx \
         /var/lib/nginx/body \
