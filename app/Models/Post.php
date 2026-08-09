@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AnalysisStatus;
 use App\Enums\MediaAvailability;
 use App\Enums\Platform;
 use App\Enums\PostType;
@@ -66,6 +67,64 @@ class Post extends Model
     public function scopeMediaAvailable(Builder $query): Builder
     {
         return $query->where('media_availability', MediaAvailability::Available);
+    }
+
+    /**
+     * Reels queued for analysis (synced, not yet completed).
+     *
+     * @param  Builder<Post>  $query
+     * @return Builder<Post>
+     */
+    public function scopeAnalysisQueue(Builder $query): Builder
+    {
+        return $query
+            ->mediaAvailable()
+            ->where(function (Builder $query): void {
+                $query->whereDoesntHave('analysis')
+                    ->orWhereHas('analysis', function (Builder $analysis): void {
+                        $analysis->whereIn('status', [
+                            AnalysisStatus::Pending,
+                            AnalysisStatus::Processing,
+                        ]);
+                    });
+            });
+    }
+
+    /**
+     * Reels whose analysis failed and may need another pass.
+     *
+     * @param  Builder<Post>  $query
+     * @return Builder<Post>
+     */
+    public function scopeAnalysisFailed(Builder $query): Builder
+    {
+        return $query
+            ->mediaAvailable()
+            ->whereHas('analysis', function (Builder $analysis): void {
+                $analysis->where('status', AnalysisStatus::Failed);
+            });
+    }
+
+    /**
+     * Reels still waiting on a completed analysis (queue + failed).
+     *
+     * @param  Builder<Post>  $query
+     * @return Builder<Post>
+     */
+    public function scopeAnalysisBacklog(Builder $query): Builder
+    {
+        return $query
+            ->mediaAvailable()
+            ->where(function (Builder $query): void {
+                $query->whereDoesntHave('analysis')
+                    ->orWhereHas('analysis', function (Builder $analysis): void {
+                        $analysis->whereIn('status', [
+                            AnalysisStatus::Pending,
+                            AnalysisStatus::Processing,
+                            AnalysisStatus::Failed,
+                        ]);
+                    });
+            });
     }
 
     public function markUnavailable(string $reason): void

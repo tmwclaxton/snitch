@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\BacklogController;
 use App\Http\Controllers\BrandProfileController;
 use App\Http\Controllers\CompetitorController;
 use App\Http\Controllers\DashboardController;
@@ -80,6 +81,8 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
 
         Route::get('/feed', [FeedController::class, 'index'])->name('feed.index');
         Route::get('/feed/{post}', [FeedController::class, 'show'])->name('feed.show');
+
+        Route::get('/backlog', [BacklogController::class, 'index'])->name('backlog.index');
 
         Route::get('/explore', [ExploreController::class, 'index'])->name('explore.index');
 

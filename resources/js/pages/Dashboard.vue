@@ -10,6 +10,7 @@ import {
 } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Component } from 'vue';
+import { index as backlog } from '@/actions/App/Http/Controllers/BacklogController';
 import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feed, show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import { index as winners } from '@/actions/App/Http/Controllers/WinnerController';
@@ -125,7 +126,12 @@ const statCards = computed(() => [
     {
         label: 'Backlog',
         value: props.stats.analysis_backlog,
-        href: feed.url(),
+        href:
+            props.stats.analysis_backlog > 0
+                ? backlog.url()
+                : props.stats.analysis_failed > 0
+                  ? backlog.url({ query: { filter: 'failed' } })
+                  : backlog.url(),
         hint:
             props.stats.analysis_failed > 0
                 ? `${props.stats.analysis_failed} failed`
@@ -392,11 +398,11 @@ function accountHref(post: RecentPost): string | null {
                     Pending reels stay on the feed with a quiet status stamp until analysis finishes.
                 </p>
                 <Link
-                    :href="feed.url()"
+                    :href="backlog.url()"
                     class="snitch-btn snitch-btn-ghost mt-4 px-3 py-1.5 text-sm"
                 >
                     <ArrowRight class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
-                    <span class="relative z-10">Review feed</span>
+                    <span class="relative z-10">Open queue</span>
                 </Link>
             </section>
         </div>
