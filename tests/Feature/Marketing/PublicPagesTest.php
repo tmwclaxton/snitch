@@ -62,6 +62,7 @@ class PublicPagesTest extends TestCase
             'about' => 'marketing/About',
             'how-it-works' => 'marketing/HowItWorks',
             'pricing' => 'marketing/Pricing',
+            'agents' => 'marketing/Agents',
             'analytics' => 'marketing/Analytics',
             'contact' => 'marketing/Contact',
             'privacy' => 'marketing/Privacy',
@@ -116,7 +117,7 @@ class PublicPagesTest extends TestCase
 
     public function test_footer_routes_resolve_for_guests(): void
     {
-        foreach (['about', 'how-it-works', 'pricing', 'analytics', 'contact', 'privacy', 'terms', 'cookies', 'blog.index'] as $route) {
+        foreach (['about', 'how-it-works', 'pricing', 'agents', 'analytics', 'contact', 'privacy', 'terms', 'cookies', 'blog.index'] as $route) {
             $this->get(route($route))->assertOk();
         }
     }

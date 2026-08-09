@@ -5,7 +5,7 @@ import { store } from '@/actions/App/Http/Controllers/OnboardingController';
 import BrandProfileForm from '@/components/BrandProfileForm.vue';
 import type { BrandProfileFormData } from '@/components/BrandProfileForm.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
-import { mcp } from '@/routes';
+import { agents } from '@/routes';
 
 defineProps<{
     brand: BrandProfileFormData | null;
@@ -20,7 +20,7 @@ setLayoutProps({ minimal: true });
 
 const step = ref<'mcp' | 'brand'>('mcp');
 const mcpUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/mcp`;
-const tokenHint = 'Create a token from Settings → Billing after you subscribe, or via MCP create_account.';
+const tokenHint = 'Create a token on the Agents page after signup, or via MCP create_account.';
 </script>
 
 <template>
@@ -35,7 +35,7 @@ const tokenHint = 'Create a token from Settings → Billing after you subscribe,
                 </h1>
                 <p class="mt-3 max-w-2xl text-sm text-snitch-ink/75">
                     Snitch works as an MCP data layer for Cursor, Claude, and other agents. Skip if you only want
-                    the website for now - you can connect later from the public MCP page.
+                    the website for now - you can connect later from the Agents page.
                 </p>
 
                 <div class="snitch-scrap mt-6 space-y-3 p-5 text-sm">
@@ -54,7 +54,7 @@ const tokenHint = 'Create a token from Settings → Billing after you subscribe,
     }
   }
 }</pre>
-                    <Link :href="mcp()" class="underline">Full MCP docs</Link>
+                    <Link :href="agents()" class="underline">Full Agents docs</Link>
                 </div>
 
                 <div class="mt-6 flex flex-wrap gap-3">

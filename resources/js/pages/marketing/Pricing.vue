@@ -3,7 +3,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { ArrowRight, Check } from '@lucide/vue';
 import { computed } from 'vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
-import { login, mcp } from '@/routes';
+import { agents, login } from '@/routes';
 import { edit as billing } from '@/routes/billing';
 
 defineOptions({
@@ -59,8 +59,8 @@ function formatMoney(pence: number): string {
                 {{ ctaLabel }}
                 <ArrowRight class="size-4" />
             </Link>
-            <Link :href="mcp()" class="snitch-btn inline-flex items-center gap-2">
-                MCP setup
+            <Link :href="agents()" class="snitch-btn inline-flex items-center gap-2">
+                Agents / MCP
             </Link>
         </div>
     </div>

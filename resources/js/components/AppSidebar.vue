@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Clapperboard, Compass, CreditCard, LayoutGrid, Settings, Store, Trophy, UserRoundSearch, Users } from '@lucide/vue';
+import { Bot, Clapperboard, Compass, CreditCard, LayoutGrid, Settings, Store, Trophy, UserRoundSearch, Users } from '@lucide/vue';
+import { show as agents } from '@/actions/App/Http/Controllers/AgentsController';
 import { edit as brand } from '@/actions/App/Http/Controllers/BrandProfileController';
 import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as explore } from '@/actions/App/Http/Controllers/ExploreController';
@@ -62,6 +63,11 @@ const mainNavItems: NavItem[] = [
         title: 'Find Influencers',
         href: influencers(),
         icon: UserRoundSearch,
+    },
+    {
+        title: 'Agents',
+        href: agents(),
+        icon: Bot,
     },
 ];
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AgentsController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\BacklogController;
 use App\Http\Controllers\BlogController;
@@ -22,7 +23,8 @@ Route::inertia('/', 'Welcome')->name('home');
 Route::inertia('/about', 'marketing/About')->name('about');
 Route::inertia('/how-it-works', 'marketing/HowItWorks')->name('how-it-works');
 Route::inertia('/pricing', 'marketing/Pricing')->name('pricing');
-Route::inertia('/for-agents', 'marketing/Mcp')->name('mcp');
+Route::get('/agents', [AgentsController::class, 'show'])->name('agents');
+Route::permanentRedirect('/for-agents', '/agents')->name('mcp');
 Route::inertia('/privacy', 'marketing/Privacy')->name('privacy');
 Route::inertia('/terms', 'marketing/Terms')->name('terms');
 Route::inertia('/cookies', 'marketing/Cookies')->name('cookies');
@@ -68,6 +70,10 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         ->name('onboarding.autofill');
     Route::get('/onboarding/autofill/{autofillId}', [OnboardingController::class, 'autofillStatus'])
         ->name('onboarding.autofill.status');
+
+    Route::post('/agents/token', [AgentsController::class, 'rotateToken'])
+        ->middleware('throttle:10,1')
+        ->name('agents.token');
 
     Route::middleware([EnsureBrandProfile::class])->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
