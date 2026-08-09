@@ -292,16 +292,10 @@ class PublicPagesTest extends TestCase
 
         $this->assertStringContainsString('snitch-hero-mobile', $welcome);
         $this->assertStringContainsString('md:hidden', $welcome);
-        $this->assertMatchesRegularExpression(
-            '/snitch-hero-mobile[^>]*\bh-dvh\b/',
-            $welcome,
-            'Mobile poster must lock to one dynamic viewport height',
-        );
-        $this->assertMatchesRegularExpression(
-            '/snitch-hero-mobile[^>]*\bmax-h-dvh\b/',
-            $welcome,
-            'Mobile poster must not grow past the viewport',
-        );
+        $this->assertStringContainsString('mobileHeroEl', $welcome);
+        $this->assertStringContainsString('measureVisibleViewportHeight', $welcome);
+        $this->assertStringContainsString('--snitch-mobile-hero-height', $welcome);
+        $this->assertStringContainsString('visualViewport', $welcome);
         $this->assertStringContainsString(
             'class="snitch-hero relative hidden h-dvh w-full overflow-hidden md:block"',
             $welcome,
@@ -323,7 +317,14 @@ class PublicPagesTest extends TestCase
         $this->assertStringContainsString('.snitch-hero-mobile-wash', $css);
         $this->assertStringContainsString('.snitch-hero-mobile-floor', $css);
         $this->assertStringContainsString('snitch-hero-mobile-mascot-bob', $css);
-        $this->assertStringContainsString('max-height: 100dvh', $css);
+        $this->assertStringContainsString(
+            'height: var(--snitch-mobile-hero-height, 100dvh)',
+            $css,
+        );
+        $this->assertStringContainsString(
+            'max-height: var(--snitch-mobile-hero-height, 100dvh)',
+            $css,
+        );
     }
 
     public function test_hero_backdrop_waits_for_decode_before_reveal(): void

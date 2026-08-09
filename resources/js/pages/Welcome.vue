@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import { ArrowRight, LayoutGrid, LogIn, UserPlus } from '@lucide/vue';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { agents, dashboard, login } from '@/routes';
 
@@ -35,6 +35,7 @@ const heroBackdropSources = [
 
 const heroBackdropReady = ref(false);
 const desktopHeroArt = ref(false);
+const mobileHeroEl = ref<HTMLElement | null>(null);
 
 function preloadHeroImage(src: string): Promise<void> {
     return new Promise((resolve) => {
@@ -57,8 +58,24 @@ function preloadHeroImage(src: string): Promise<void> {
     });
 }
 
+/**
+ * Mobile browser chrome makes 100dvh unreliable. Measure the visible viewport
+ * and lock the poster to that pixel height.
+ */
+function measureVisibleViewportHeight(): number {
+    const visualHeight = window.visualViewport?.height;
+    const layoutHeight = window.innerHeight;
+
+    if (typeof visualHeight === 'number' && visualHeight > 0) {
+        return Math.round(Math.min(visualHeight, layoutHeight));
+    }
+
+    return Math.round(layoutHeight);
+}
+
 onMounted(() => {
     const desktopQuery = window.matchMedia('(min-width: 768px)');
+    let lastMobileHeroHeight = 0;
 
     const syncDesktopHero = (): void => {
         if (!desktopQuery.matches) {
@@ -78,8 +95,46 @@ onMounted(() => {
         });
     };
 
+    const syncMobileHeroHeight = (): void => {
+        const el = mobileHeroEl.value;
+
+        if (!el || desktopQuery.matches) {
+            el?.style.removeProperty('--snitch-mobile-hero-height');
+            lastMobileHeroHeight = 0;
+
+            return;
+        }
+
+        const height = measureVisibleViewportHeight();
+
+        if (height <= 0 || Math.abs(height - lastMobileHeroHeight) < 2) {
+            return;
+        }
+
+        lastMobileHeroHeight = height;
+        el.style.setProperty('--snitch-mobile-hero-height', `${height}px`);
+    };
+
     syncDesktopHero();
+    syncMobileHeroHeight();
+
     desktopQuery.addEventListener('change', syncDesktopHero);
+    desktopQuery.addEventListener('change', syncMobileHeroHeight);
+    window.addEventListener('resize', syncMobileHeroHeight);
+    window.addEventListener('orientationchange', syncMobileHeroHeight);
+    window.visualViewport?.addEventListener('resize', syncMobileHeroHeight);
+
+    onUnmounted(() => {
+        desktopQuery.removeEventListener('change', syncDesktopHero);
+        desktopQuery.removeEventListener('change', syncMobileHeroHeight);
+        window.removeEventListener('resize', syncMobileHeroHeight);
+        window.removeEventListener('orientationchange', syncMobileHeroHeight);
+        window.visualViewport?.removeEventListener(
+            'resize',
+            syncMobileHeroHeight,
+        );
+        mobileHeroEl.value?.style.removeProperty('--snitch-mobile-hero-height');
+    });
 });
 
 const platforms = [
@@ -116,7 +171,8 @@ const steps = [
           the visual anchor. Desktop keeps the wall + title-card composition.
         -->
         <section
-            class="snitch-hero-mobile relative h-dvh max-h-dvh w-full overflow-hidden md:hidden"
+            ref="mobileHeroEl"
+            class="snitch-hero-mobile relative w-full overflow-hidden md:hidden"
             aria-label="Snitch"
         >
             <div class="absolute inset-0" aria-hidden="true">

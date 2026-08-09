@@ -1736,15 +1736,15 @@
     }
 
     /*
-     * Mobile landing poster (md:hidden): one locked dvh frame. Copy sits under
-     * the absolute nav; mascot + mustard floor are pinned to the bottom so a
-     * flex-1 stage cannot open a tall empty middle or grow past the viewport.
+     * Mobile landing poster (md:hidden): one locked frame. Copy sits under the
+     * absolute nav; mascot + mustard floor are pinned to the bottom. Height is
+     * JS-measured (--snitch-mobile-hero-height) because mobile browser chrome
+     * makes 100dvh alone unreliable; dvh remains the pre-JS fallback.
      */
     .snitch-hero-mobile {
         background-color: var(--snitch-paper);
-        /* Hard lock: content must never stretch this past the viewport. */
-        height: 100dvh;
-        max-height: 100dvh;
+        height: var(--snitch-mobile-hero-height, 100dvh);
+        max-height: var(--snitch-mobile-hero-height, 100dvh);
         overflow: hidden;
     }
 
@@ -1800,7 +1800,7 @@
         display: flex;
         align-items: flex-end;
         justify-content: center;
-        height: min(52dvh, 24rem);
+        height: min(52%, 24rem);
         pointer-events: none;
         overflow: hidden;
     }
@@ -1863,7 +1863,7 @@
         }
 
         .snitch-hero-mobile-stage {
-            height: min(46dvh, 18.5rem);
+            height: min(46%, 18.5rem);
         }
 
         .snitch-hero-mobile-mascot {
