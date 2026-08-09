@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import StippleBar from '@/components/dashboard/StippleBar.vue';
 
 export interface DailyMetricPoint {
     date: string;
@@ -48,20 +49,31 @@ const plotHeight = chartHeight - padding.top - padding.bottom;
 
 const barWidth = computed(() => plotWidth / Math.max(props.series.length, 1));
 
+const stippleStep = computed(() => (barWidth.value < 14 ? 3.4 : 4.4));
+const stippleRadius = computed(() => (barWidth.value < 14 ? 1.0 : 1.35));
+
 const bars = computed(() =>
-    props.series.map((point, index) => {
-        const height = (point.count / maxCount.value) * plotHeight;
+    props.series.flatMap((point, index) => {
+        if (point.count <= 0) {
+            return [];
+        }
+
+        const rawHeight = (point.count / maxCount.value) * plotHeight;
+        const height = Math.max(rawHeight, 4);
         const x = padding.left + index * barWidth.value + barWidth.value * 0.15;
         const width = barWidth.value * 0.7;
         const y = padding.top + plotHeight - height;
 
-        return {
-            ...point,
-            x,
-            y,
-            width,
-            height,
-        };
+        return [
+            {
+                ...point,
+                index,
+                x,
+                y,
+                width,
+                height,
+            },
+        ];
     }),
 );
 
@@ -145,21 +157,23 @@ const isEmpty = computed(() =>
                     </text>
                 </g>
 
-                <rect
+                <StippleBar
                     v-for="bar in bars"
                     :key="bar.date"
                     :x="bar.x"
                     :y="bar.y"
                     :width="bar.width"
                     :height="bar.height"
-                    rx="2"
-                    :class="['transition-opacity', barClass]"
-                >
-                    <title>
-                        {{ formatDate(bar.date) }}:
-                        {{ formatNumber(bar.count) }} {{ unitLabel }}
-                    </title>
-                </rect>
+                    variant="dots"
+                    grow-from="bottom"
+                    :delay-offset="bar.index * 10"
+                    :step-ms="16"
+                    :step="stippleStep"
+                    :radius="stippleRadius"
+                    :seed="bar.index + 31"
+                    :fill-class="barClass"
+                    :title="`${formatDate(bar.date)}: ${formatNumber(bar.count)} ${unitLabel}`"
+                />
 
                 <text
                     v-for="label in xLabels"
