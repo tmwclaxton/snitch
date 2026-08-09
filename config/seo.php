@@ -68,6 +68,16 @@ return [
             ],
         ],
 
+        'agents' => [
+            'title' => 'Agents and MCP',
+            'description' => 'Connect Cursor, Claude, Codex, or any MCP client to Snitch. Create an agent account, claim it, and use tools for competitors, influencers, and winners.',
+            'json_ld' => 'webpage',
+            'sitemap' => [
+                'changefreq' => 'weekly',
+                'priority' => '0.85',
+            ],
+        ],
+
         'analytics' => [
             'title' => 'Public analytics',
             'description' => 'Aggregate Snitch stats for posts synced, analyses completed, and winners scored. A public dashboard with no personal data.',

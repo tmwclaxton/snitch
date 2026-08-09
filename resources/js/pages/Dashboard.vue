@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import {
     ArrowRight,
+    Bot,
     Clapperboard,
     Hourglass,
     ListChecks,
@@ -10,6 +11,7 @@ import {
 } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Component } from 'vue';
+import { show as agents } from '@/actions/App/Http/Controllers/AgentsController';
 import { index as backlog } from '@/actions/App/Http/Controllers/BacklogController';
 import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feed, show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
@@ -195,6 +197,24 @@ function accountHref(post: RecentPost): string | null {
                     <p class="mt-1 text-xs text-snitch-ink/55">{{ card.hint }}</p>
                 </Link>
             </div>
+
+            <Link
+                :href="agents()"
+                class="snitch-scrap relative mt-4 flex items-start gap-3 p-4 pt-5 transition hover:-translate-y-0.5 sm:max-w-md"
+            >
+                <span class="snitch-tape left-4 -top-2" aria-hidden="true" />
+                <Bot class="mt-0.5 size-4 shrink-0 text-snitch-ink/50" aria-hidden="true" />
+                <div class="min-w-0">
+                    <p class="snitch-ink-label">Agents</p>
+                    <p class="snitch-display mt-0.5 text-lg text-snitch-ink">
+                        Connect your agent
+                    </p>
+                    <p class="mt-1 text-xs text-snitch-ink/60">
+                        MCP setup for Cursor, Claude, Codex, and more.
+                    </p>
+                </div>
+                <ArrowRight class="ml-auto size-4 shrink-0 text-snitch-ink/40" aria-hidden="true" />
+            </Link>
 
             <section class="mt-10">
                 <div class="flex flex-wrap items-end justify-between gap-3">

@@ -3,7 +3,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { ArrowRight, LayoutGrid, LogIn, UserPlus } from '@lucide/vue';
 import { computed, onMounted, ref } from 'vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
-import { dashboard, login } from '@/routes';
+import { agents, dashboard, login } from '@/routes';
 
 defineOptions({
     layout: PublicLayout,
@@ -483,6 +483,24 @@ const steps = [
                         </span>
                     </li>
                 </ul>
+            </div>
+        </section>
+
+        <section class="px-5 pb-20 sm:px-8">
+            <div class="mx-auto max-w-6xl">
+                <p class="snitch-ink-label">Agents</p>
+                <h2 class="snitch-display mt-1 text-3xl text-snitch-ink">
+                    Connect your agent
+                </h2>
+                <p class="mt-3 max-w-3xl text-snitch-ink/80">
+                    Point Cursor, Claude, Codex, or any MCP client at Snitch. Sync competitors, find influencers,
+                    and analyse posts from the tools your agent already uses.
+                </p>
+                <div class="mt-6">
+                    <Link :href="agents()" class="snitch-btn snitch-btn-spot">
+                        <span class="relative z-10">Agents setup</span>
+                    </Link>
+                </div>
             </div>
         </section>
 

@@ -14,7 +14,11 @@ paths:
   - 'config/cashier.php'
   - 'resources/js/pages/billing/**'
   - 'resources/js/pages/marketing/Pricing.vue'
-  - 'resources/js/pages/marketing/Mcp.vue'
+  - 'resources/js/pages/marketing/Agents.vue'
+  - 'resources/js/pages/agents/**'
+  - 'resources/js/components/agents/**'
+  - 'app/Http/Controllers/AgentsController.php'
+  - 'app/Support/McpConnectionGuide.php'
   - 'resources/js/pages/claim/**'
 ---
 
@@ -31,7 +35,7 @@ Ledger rows are per vendor: `apify`, `nanogpt`, `firecrawl` (plus `bonus`/`topup
 
 ## Surfaces
 - Authenticated `/billing` - balance, platform subscribe, credit packs, vendor usage
-- Public `/pricing` and `/for-agents` (MCP connect docs)
+- Public + auth `/agents` (MCP connect docs; auth also mints/rotates Sanctum token). `/for-agents` redirects to `/agents`
 - MCP register `/mcp/register` (create_account); authenticated `/mcp` (Sanctum bearer)
 - Claim `/claim/{token}` then WorkOS login
 
