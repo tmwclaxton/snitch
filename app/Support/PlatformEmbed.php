@@ -102,7 +102,7 @@ class PlatformEmbed
         if ($isVideo) {
             return [
                 'provider' => 'facebook',
-                'src' => 'https://www.facebook.com/plugins/video.php?href='.$encoded.'&show_text=false&width=500',
+                'src' => 'https://www.facebook.com/plugins/video.php?href='.$encoded.'&show_text=false&width=500&height=889',
                 'title' => 'Facebook video',
                 'aspect' => '9/16',
             ];
@@ -110,7 +110,7 @@ class PlatformEmbed
 
         return [
             'provider' => 'facebook',
-            'src' => 'https://www.facebook.com/plugins/post.php?href='.$encoded.'&show_text=true&width=500',
+            'src' => 'https://www.facebook.com/plugins/post.php?href='.$encoded.'&show_text=true&width=500&height=625',
             'title' => 'Facebook post',
             'aspect' => '4/5',
         ];

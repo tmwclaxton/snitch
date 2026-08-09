@@ -105,7 +105,6 @@ function onEmbedError(): void {
             :src="embed!.src"
             :title="embed!.title"
             class="snitch-platform-embed-frame"
-            loading="lazy"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowfullscreen
             referrerpolicy="strict-origin-when-cross-origin"

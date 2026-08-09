@@ -70,4 +70,45 @@ class SafeMarkdownTest extends TestCase
             SafeMarkdown::normalizeListBreaks('• Open on steam • Cut to glaze'),
         );
     }
+
+    public function test_coerces_unnumbered_line_break_steps_into_ordered_list(): void
+    {
+        $html = SafeMarkdown::toHtml("Open on the mess.\nCut to the receipt.\nEnd on the ask.");
+
+        $this->assertNotNull($html);
+        $this->assertStringContainsString('<ol>', $html);
+        $this->assertSame(3, substr_count($html, '<li>'));
+        $this->assertStringContainsString('Open on the mess.', $html);
+        $this->assertStringContainsString('Cut to the receipt.', $html);
+        $this->assertStringContainsString('End on the ask.', $html);
+    }
+
+    public function test_coerces_unnumbered_sentence_steps_on_one_line(): void
+    {
+        $html = SafeMarkdown::toHtml('Open on the mess. Cut to the receipt. End on the ask.');
+
+        $this->assertNotNull($html);
+        $this->assertStringContainsString('<ol>', $html);
+        $this->assertSame(3, substr_count($html, '<li>'));
+    }
+
+    public function test_coerces_unnumbered_paragraphs_into_ordered_list(): void
+    {
+        $html = SafeMarkdown::toHtml("Open on the mess.\n\nCut to the receipt.\n\nEnd on the ask.");
+
+        $this->assertNotNull($html);
+        $this->assertStringContainsString('<ol>', $html);
+        $this->assertSame(3, substr_count($html, '<li>'));
+    }
+
+    public function test_skips_coercion_when_steps_already_numbered(): void
+    {
+        $source = "1. Open on the mess.\n2. Cut to the receipt.";
+
+        $html = SafeMarkdown::toHtml($source);
+
+        $this->assertNotNull($html);
+        $this->assertStringContainsString('<ol>', $html);
+        $this->assertStringNotContainsString('<li>1.', $html);
+    }
 }
