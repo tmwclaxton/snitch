@@ -912,13 +912,16 @@ function syncAccount(account: Account): void {
                                         ? isAccountSyncing(account)
                                             ? 'bg-snitch-spot/10 hover:bg-snitch-ink/[0.03]'
                                             : 'hover:bg-snitch-ink/[0.03]'
-                                        : 'bg-snitch-ink/[0.04] opacity-55',
+                                        : 'bg-snitch-ink/[0.04]',
                                 ]"
                                 :data-platform="account.platform"
                                 :data-syncing="isAccountSyncing(account) ? 'true' : undefined"
                                 :data-over-quota="accountInQuota(account) ? undefined : 'true'"
                             >
-                                <td class="hidden px-2 py-2.5 align-middle sm:table-cell">
+                                <td
+                                    class="hidden px-2 py-2.5 align-middle sm:table-cell"
+                                    :class="accountInQuota(account) ? '' : 'opacity-45'"
+                                >
                                     <Link
                                         :href="competitorShow.url(account.id)"
                                         class="flex items-center gap-1.5 text-inherit no-underline outline-none focus-visible:ring-2 focus-visible:ring-snitch-ink/30"
@@ -935,7 +938,10 @@ function syncAccount(account: Account): void {
                                         </span>
                                     </Link>
                                 </td>
-                                <td class="min-w-0 px-1.5 py-2.5 align-middle sm:px-2">
+                                <td
+                                    class="min-w-0 px-1.5 py-2.5 align-middle sm:px-2"
+                                    :class="accountInQuota(account) ? '' : 'opacity-45'"
+                                >
                                     <Link
                                         :href="competitorShow.url(account.id)"
                                         class="flex min-w-0 items-center gap-2 text-inherit no-underline outline-none focus-visible:ring-2 focus-visible:ring-snitch-ink/30"
@@ -1005,10 +1011,16 @@ function syncAccount(account: Account): void {
                                         </div>
                                     </Link>
                                 </td>
-                                <td class="w-14 px-1.5 py-2.5 align-middle text-right tabular-nums text-snitch-ink/70 sm:px-2 sm:text-left">
+                                <td
+                                    class="w-14 px-1.5 py-2.5 align-middle text-right tabular-nums text-snitch-ink/70 sm:px-2 sm:text-left"
+                                    :class="accountInQuota(account) ? '' : 'opacity-45'"
+                                >
                                     {{ account.posts_count ?? 0 }}
                                 </td>
-                                <td class="hidden px-2 py-2.5 align-middle text-xs md:table-cell">
+                                <td
+                                    class="hidden px-2 py-2.5 align-middle text-xs md:table-cell"
+                                    :class="accountInQuota(account) ? '' : 'opacity-45'"
+                                >
                                     <span
                                         v-if="!accountInQuota(account)"
                                         class="font-medium text-snitch-ink/55"
@@ -1035,7 +1047,10 @@ function syncAccount(account: Account): void {
                                         {{ accountNextSyncLabel(account) }}
                                     </span>
                                 </td>
-                                <td class="hidden px-2 py-2.5 align-middle text-xs text-snitch-ink/55 lg:table-cell">
+                                <td
+                                    class="hidden px-2 py-2.5 align-middle text-xs text-snitch-ink/55 lg:table-cell"
+                                    :class="accountInQuota(account) ? '' : 'opacity-45'"
+                                >
                                     {{
                                         isAccountSyncing(account)
                                             ? 'In progress'
@@ -1047,6 +1062,7 @@ function syncAccount(account: Account): void {
                                         <button
                                             type="button"
                                             class="snitch-btn snitch-btn-spot shrink-0 px-2 py-1 text-xs sm:px-2.5"
+                                            :class="accountInQuota(account) ? '' : 'opacity-45'"
                                             :disabled="
                                                 !accountInQuota(account) || isAccountSyncing(account)
                                             "
