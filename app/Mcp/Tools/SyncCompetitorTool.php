@@ -10,8 +10,10 @@ use Illuminate\JsonSchema\Types\Type;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
+use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
+#[Name('sync_competitor')]
 #[Description('Queue a sync for a tracked account. Apify usage is billed when the job runs.')]
 class SyncCompetitorTool extends Tool
 {

@@ -8,8 +8,10 @@ use Illuminate\JsonSchema\Types\Type;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
+use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
+#[Name('create_account')]
 #[Description('Create a Snitch agent account. Returns an API token and claim URL. No free usage until a human claims the account and subscribes to the platform plan.')]
 class CreateAccountTool extends Tool
 {

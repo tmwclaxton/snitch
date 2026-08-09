@@ -10,8 +10,10 @@ use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
+use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
+#[Name('suggest_competitors')]
 #[Description('Queue AI competitor suggestions (Firecrawl + NanoGPT + Apify; billable).')]
 class SuggestCompetitorsTool extends Tool
 {

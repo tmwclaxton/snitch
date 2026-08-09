@@ -9,8 +9,10 @@ use Illuminate\JsonSchema\Types\Type;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
+use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
+#[Name('billing_status')]
 #[Description('Return credit balance and usage charged by vendor (Apify, NanoGPT, Firecrawl).')]
 class BillingStatusTool extends Tool
 {

@@ -9,8 +9,10 @@ use Illuminate\JsonSchema\Types\Type;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
+use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
+#[Name('list_competitors')]
 #[Description('List tracked competitor accounts.')]
 class ListCompetitorsTool extends Tool
 {

@@ -13,6 +13,8 @@ use Laravel\Mcp\Server\Attributes\Version;
 #[Instructions('Create a Snitch agent account and receive an API token. Humans claim the account at the returned claim URL. No free usage until claimed and subscribed.')]
 class SnitchRegisterServer extends Server
 {
+    public int $defaultPaginationLength = 50;
+
     protected array $tools = [
         CreateAccountTool::class,
     ];
