@@ -8,8 +8,10 @@ use Illuminate\JsonSchema\Types\Type;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
+use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
+#[Name('claim_info')]
 #[Description('Return claim status and claim URL for the current agent account.')]
 class ClaimInfoTool extends Tool
 {

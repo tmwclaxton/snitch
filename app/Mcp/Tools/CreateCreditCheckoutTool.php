@@ -9,8 +9,10 @@ use Illuminate\JsonSchema\Types\Type;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
+use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
+#[Name('create_credit_checkout')]
 #[Description('Create a Stripe Checkout URL to top up usage credits (pack_10, pack_25, pack_50, pack_100).')]
 class CreateCreditCheckoutTool extends Tool
 {

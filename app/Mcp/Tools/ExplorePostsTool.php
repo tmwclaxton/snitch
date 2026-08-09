@@ -11,8 +11,10 @@ use Illuminate\JsonSchema\Types\Type;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
+use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
+#[Name('explore_posts')]
 #[Description('Browse analysed posts and optional analysis terms for Explore.')]
 class ExplorePostsTool extends Tool
 {

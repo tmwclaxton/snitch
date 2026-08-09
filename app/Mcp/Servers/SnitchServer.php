@@ -44,6 +44,8 @@ use Laravel\Mcp\Server\Attributes\Version;
 #[Instructions('Snitch is the social marketing data layer for agents. Authenticate with a Sanctum bearer token from create_account (or the website Agents page). Billable tools require an active platform subscription and usage credits. Prefer sync/analyze/find tools explicitly - nothing is auto-scheduled.')]
 class SnitchServer extends Server
 {
+    public int $defaultPaginationLength = 50;
+
     protected array $tools = [
         WhoamiTool::class,
         ClaimInfoTool::class,

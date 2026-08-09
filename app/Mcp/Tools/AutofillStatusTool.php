@@ -11,8 +11,10 @@ use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
+use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
+#[Name('autofill_status')]
 #[Description('Poll brand website autofill status.')]
 class AutofillStatusTool extends Tool
 {

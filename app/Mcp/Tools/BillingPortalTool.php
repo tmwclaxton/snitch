@@ -8,8 +8,10 @@ use Illuminate\JsonSchema\Types\Type;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
+use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
+#[Name('billing_portal')]
 #[Description('Create a Stripe Customer Portal URL for the authenticated user.')]
 class BillingPortalTool extends Tool
 {
