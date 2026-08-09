@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Clapperboard, Compass, CreditCard, LayoutGrid, Settings, Store, Trophy, Users } from '@lucide/vue';
+import { Clapperboard, Compass, CreditCard, LayoutGrid, Settings, Store, Trophy, UserRoundSearch, Users } from '@lucide/vue';
 import { edit as brand } from '@/actions/App/Http/Controllers/BrandProfileController';
 import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as explore } from '@/actions/App/Http/Controllers/ExploreController';
 import { index as feed } from '@/actions/App/Http/Controllers/FeedController';
+import { index as influencers } from '@/actions/App/Http/Controllers/InfluencerController';
 import { index as winners } from '@/actions/App/Http/Controllers/WinnerController';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -56,6 +57,11 @@ const mainNavItems: NavItem[] = [
         title: 'Explore',
         href: explore(),
         icon: Compass,
+    },
+    {
+        title: 'Find Influencers',
+        href: influencers(),
+        icon: UserRoundSearch,
     },
 ];
 

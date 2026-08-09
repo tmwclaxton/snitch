@@ -19,9 +19,10 @@ return [
     | Plans
     |--------------------------------------------------------------------------
     |
-    | Competitor caps and Stripe Price IDs (recurring GBP). Yearly is 20% off
-    | the monthly total (monthly price_pence * 12 * 0.8). Trial is not a Stripe
-    | product; it reuses Basic competitor_limit while active.
+    | Competitor and influencer caps plus Stripe Price IDs (recurring GBP).
+    | Yearly is 20% off the monthly total (monthly price_pence * 12 * 0.8).
+    | Trial is not a Stripe product; it reuses Basic limits while active.
+    | Influencer slots are separate from competitor slots.
     |
     */
 
@@ -31,6 +32,7 @@ return [
             'price_pence' => 0,
             'yearly_price_pence' => 0,
             'competitor_limit' => 3,
+            'influencer_limit' => 3,
             'stripe_price' => null,
             'stripe_price_yearly' => null,
         ],
@@ -39,6 +41,7 @@ return [
             'price_pence' => 2000,
             'yearly_price_pence' => 19200,
             'competitor_limit' => 10,
+            'influencer_limit' => 10,
             'stripe_price' => env('STRIPE_PRICE_BASIC'),
             'stripe_price_yearly' => env('STRIPE_PRICE_BASIC_YEARLY'),
         ],
@@ -47,6 +50,7 @@ return [
             'price_pence' => 9900,
             'yearly_price_pence' => 95040,
             'competitor_limit' => 50,
+            'influencer_limit' => 50,
             'stripe_price' => env('STRIPE_PRICE_PRO'),
             'stripe_price_yearly' => env('STRIPE_PRICE_PRO_YEARLY'),
         ],

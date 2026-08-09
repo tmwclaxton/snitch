@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\Platform;
+use App\Enums\TrackedAccountKind;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -25,6 +26,7 @@ class TrackedAccountFactory extends Factory
         return [
             'user_id' => User::factory(),
             'platform' => $platform,
+            'kind' => TrackedAccountKind::Competitor,
             'handle' => $handle,
             'url' => $this->profileUrl($platform, $handle),
             'external_id' => (string) fake()->unique()->numerify('##########'),
@@ -39,6 +41,20 @@ class TrackedAccountFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'platform' => $platform,
             'url' => $this->profileUrl($platform, (string) $attributes['handle']),
+        ]);
+    }
+
+    public function influencer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'kind' => TrackedAccountKind::Influencer,
+        ]);
+    }
+
+    public function competitor(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'kind' => TrackedAccountKind::Competitor,
         ]);
     }
 

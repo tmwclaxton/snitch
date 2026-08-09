@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\Platform;
+use App\Enums\TrackedAccountKind;
 use App\Http\Requests\Competitors\ConfirmSuggestionsRequest;
 use App\Http\Requests\Competitors\StoreTrackedAccountRequest;
 use App\Jobs\SuggestCompetitorsJob;
@@ -90,13 +91,16 @@ class CompetitorController extends Controller
         $platform = Platform::from($data['platform'] instanceof Platform ? $data['platform']->value : $data['platform']);
         $user = $request->user();
 
-        $exists = TrackedAccount::query()
+        $existing = TrackedAccount::query()
             ->where('user_id', $user->id)
             ->where('platform', $platform)
             ->where('handle', $handle)
-            ->exists();
+            ->first();
 
-        if (! $exists && ! $this->entitlements->canAddCompetitors($user, 1)) {
+        $needsCompetitorSlot = $existing === null
+            || $existing->kind !== TrackedAccountKind::Competitor;
+
+        if ($needsCompetitorSlot && ! $this->entitlements->canAddCompetitors($user, 1)) {
             return $this->competitorLimitExceededRedirect();
         }
 
@@ -107,6 +111,7 @@ class CompetitorController extends Controller
                 'handle' => $handle,
             ],
             [
+                'kind' => TrackedAccountKind::Competitor,
                 'url' => $this->defaultUrl($platform, $handle),
                 'display_name' => $data['display_name'] ?? $handle,
             ],
@@ -205,6 +210,7 @@ class CompetitorController extends Controller
                     'handle' => $handle,
                 ],
                 [
+                    'kind' => TrackedAccountKind::Competitor,
                     'url' => $this->defaultUrl($platform, $handle),
                     'display_name' => $suggestion['display_name'] ?? $handle,
                     'avatar' => $suggestion['avatar'] ?? null,
@@ -244,7 +250,7 @@ class CompetitorController extends Controller
 
         $trackedAccount->delete();
 
-        return redirect()->route('competitors.index');
+        return redirect()->back(fallback: route('competitors.index'));
     }
 
     public function sync(Request $request, TrackedAccount $trackedAccount): RedirectResponse
@@ -283,6 +289,7 @@ class CompetitorController extends Controller
 
         $accounts = $user
             ->trackedAccounts()
+            ->competitors()
             ->withCount('posts')
             ->orderBy('id')
             ->get()
@@ -374,6 +381,7 @@ class CompetitorController extends Controller
     {
         $existing = TrackedAccount::query()
             ->where('user_id', $userId)
+            ->competitors()
             ->get(['platform', 'handle'])
             ->mapWithKeys(function (TrackedAccount $account): array {
                 $platform = $account->platform instanceof Platform
