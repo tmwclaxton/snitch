@@ -8,6 +8,9 @@ use App\Models\BrandProfile;
 use App\Models\TrackedAccount;
 use App\Services\Analysis\NanoGptClient;
 use App\Services\Apify\Adapters\AbstractPlatformAdapter;
+use App\Services\Apify\Adapters\InstagramAdapter;
+use App\Services\Apify\Adapters\TikTokAdapter;
+use App\Services\Apify\Adapters\YoutubeAdapter;
 use App\Services\Apify\ApifyClient;
 use App\Services\Apify\PlatformAdapterManager;
 use App\Services\Firecrawl\FirecrawlClient;
@@ -43,13 +46,62 @@ class InfluencerDiscoveryService
             throw new RuntimeException('Select at least one platform.');
         }
 
-        $hits = $this->search($brand, $filters, $platforms);
+        $seeds = config('snitch.influencer_find.seeds', []);
+        $useFirecrawl = (bool) ($seeds['firecrawl'] ?? true);
+        $useModel = (bool) ($seeds['model'] ?? true);
+        $useApifySearch = (bool) ($seeds['apify_search'] ?? true);
 
-        if ($hits === []) {
-            throw new RuntimeException('Firecrawl search returned no influencer leads.');
+        $firecrawlProposed = [];
+        $hits = [];
+
+        if ($useFirecrawl) {
+            try {
+                $hits = $this->search($brand, $filters, $platforms);
+            } catch (Throwable $exception) {
+                // Multi-seed: Firecrawl outage must not abort model / Apify seeds.
+                report($exception);
+                $hits = [];
+            }
+
+            if ($hits !== []) {
+                try {
+                    $firecrawlProposed = $this->propose($brand, $filters, $platforms, $hits);
+                } catch (Throwable $exception) {
+                    report($exception);
+                    $firecrawlProposed = $this->candidatesFromSearchHits($hits, $platforms);
+                }
+            }
         }
 
-        $candidates = $this->propose($brand, $filters, $platforms, $hits);
+        $modelSeed = [];
+
+        if ($useModel) {
+            try {
+                $modelSeed = $this->seedFromModel($brand, $filters, $platforms);
+            } catch (Throwable $exception) {
+                report($exception);
+                $modelSeed = [];
+            }
+        }
+
+        $apifySearch = [];
+
+        if ($useApifySearch) {
+            try {
+                $apifySearch = $this->seedFromApifySearch($brand, $filters, $platforms);
+            } catch (Throwable $exception) {
+                report($exception);
+                $apifySearch = [];
+            }
+        }
+
+        $candidates = $this->mergeCandidates($platforms, $firecrawlProposed, $modelSeed, $apifySearch);
+        $candidates = $this->filterCreatorCandidates($candidates);
+
+        if ($candidates === []) {
+            throw new RuntimeException('No influencer leads from Firecrawl, model seed, or Apify search.');
+        }
+
         $verified = $this->verify($candidates, $brand, $filters, $platforms, $hits, $onProgress);
 
         $min = max(1, (int) config('snitch.influencer_find.min_suggestions', 6));
@@ -317,7 +369,291 @@ class InfluencerDiscoveryService
         $seeded = $this->candidatesFromSearchHits($hits, $platforms);
         $normalized = $this->normalizeCandidates($payload, $platforms, $maxCandidates);
 
-        return $this->mergeCandidates($seeded, $normalized, $platforms);
+        foreach ($seeded as &$row) {
+            $row['seed'] = $row['seed'] ?? 'firecrawl';
+        }
+        unset($row);
+
+        foreach ($normalized as &$row) {
+            $row['seed'] = $row['seed'] ?? 'firecrawl';
+        }
+        unset($row);
+
+        return $this->mergeCandidates($platforms, $seeded, $normalized);
+    }
+
+    /**
+     * Knowledge seed from NanoGPT. Always goes through Apify verify - never Keep unverified.
+     *
+     * @param  array{
+     *     platforms: list<string>,
+     *     language: string|null,
+     *     min_followers: int|null,
+     *     max_followers: int|null,
+     *     brief: string
+     * }  $filters
+     * @param  list<string>  $platforms
+     * @return list<array{name: string, platform: string, handle: string, source: string|null, seed?: string, profile_kind?: string, followers?: int|null}>
+     */
+    public function seedFromModel(BrandProfile $brand, array $filters, array $platforms): array
+    {
+        if ((string) config('snitch.nanogpt.api_key') === '') {
+            throw new RuntimeException('NANOGPT_API_KEY is not configured.');
+        }
+
+        $count = max(1, (int) config('snitch.influencer_find.model_seed_count', 12));
+        $ownHandles = $this->normalizedOwnHandles($brand, $platforms);
+        $ownSummary = $ownHandles === []
+            ? 'none'
+            : implode(', ', array_map(
+                fn (string $platform, string $handle): string => "{$platform}:@{$handle}",
+                array_keys($ownHandles),
+                array_values($ownHandles),
+            ));
+
+        $language = trim((string) ($filters['language'] ?? ''));
+        $min = $filters['min_followers'] ?? null;
+        $max = $filters['max_followers'] ?? null;
+        $brief = trim((string) ($filters['brief'] ?? ''));
+        $platformRule = count($platforms) === 1
+            ? 'Only suggest the single allowed platform ('.$platforms[0].').'
+            : 'Mix platforms when the filters allow.';
+
+        $response = $this->nanoGpt->chat([
+            [
+                'role' => 'system',
+                'content' => 'You list real public social creators a brand could partner with from your knowledge. Reply with JSON only: {"influencers":[{"name":"...","platform":"instagram|tiktok|youtube|linkedin|facebook","handle":"...","source":"model-seed"}]}. Prefer real people / creator accounts whose niche matches the brief. Do not invent placeholder handles (no user1, example, testcreator). Prefer handles you are confident are real public accounts. Never suggest brands, retailers, SaaS tools, apps, agencies, media publishers, marketplaces, cosmetics labels, incubators, foundations, or company pages (LinkedIn /in/ OK). Never suggest the brand itself. Fill up to the requested count.',
+            ],
+            [
+                'role' => 'user',
+                'content' => implode("\n", [
+                    "Brand: {$brand->name}",
+                    'Description: '.trim((string) ($brand->description ?? '')),
+                    'Brief: '.($brief !== '' ? $brief : '(none)'),
+                    'Own handles to exclude: '.$ownSummary,
+                    'Allowed platforms: '.implode(', ', $platforms),
+                    $platformRule,
+                    'Preferred language: '.($language !== '' ? $language : 'any'),
+                    'Follower band hint: '.($min !== null || $max !== null
+                        ? (($min !== null ? (string) $min : 'any').'-'.($max !== null ? (string) $max : 'any'))
+                        : 'any'),
+                    "Return up to {$count} distinct creators (one platform+handle each).",
+                ]),
+            ],
+        ], (string) config('snitch.influencer_find.model'), [
+            'temperature' => (float) config('snitch.influencer_find.temperature', 0.3),
+            'max_tokens' => (int) config('snitch.influencer_find.max_tokens', 1600),
+            'response_format' => ['type' => 'json_object'],
+        ]);
+
+        $text = $this->nanoGpt->extractAssistantText($response);
+        $payload = json_decode($this->extractJson($text), true);
+
+        if (! is_array($payload)) {
+            throw new RuntimeException('Model seed returned invalid JSON.');
+        }
+
+        $normalized = $this->normalizeCandidates($payload, $platforms, $count);
+
+        foreach ($normalized as &$row) {
+            $row['source'] = 'model-seed';
+            $row['seed'] = 'model-seed';
+        }
+        unset($row);
+
+        return $normalized;
+    }
+
+    /**
+     * Native Apify platform search seed (Instagram / TikTok / YouTube).
+     *
+     * @param  array{
+     *     platforms: list<string>,
+     *     language: string|null,
+     *     min_followers: int|null,
+     *     max_followers: int|null,
+     *     brief: string
+     * }  $filters
+     * @param  list<string>  $platforms
+     * @return list<array{name: string, platform: string, handle: string, source: string|null, seed?: string, profile_kind?: string, followers?: int|null}>
+     */
+    public function seedFromApifySearch(BrandProfile $brand, array $filters, array $platforms): array
+    {
+        if ((string) config('snitch.apify.token') === '') {
+            throw new RuntimeException('APIFY_TOKEN is not configured.');
+        }
+
+        $limit = max(1, (int) config('snitch.influencer_find.apify_search_limit', 15));
+        $candidates = [];
+        $seen = [];
+
+        foreach ($platforms as $platform) {
+            if (! in_array($platform, ['instagram', 'tiktok', 'youtube'], true)) {
+                continue;
+            }
+
+            $queries = $this->apifySearchQueries($brand, $filters, $platform);
+
+            if ($queries === []) {
+                continue;
+            }
+
+            $adapter = $this->adapters->for($platform);
+            $query = $queries[0];
+            $job = match ($platform) {
+                'instagram' => $adapter instanceof InstagramAdapter
+                    ? $adapter->searchUsersActorJob($query, $limit)
+                    : null,
+                'tiktok' => $adapter instanceof TikTokAdapter
+                    ? $adapter->searchUsersActorJob($query, $limit)
+                    : null,
+                'youtube' => $adapter instanceof YoutubeAdapter
+                    ? $adapter->searchChannelsActorJob($query, $limit)
+                    : null,
+                default => null,
+            };
+
+            if ($job === null) {
+                continue;
+            }
+
+            try {
+                $items = $this->apify->runActor($job['actorId'], $job['input']);
+            } catch (Throwable $exception) {
+                report($exception);
+
+                continue;
+            }
+
+            foreach ($this->candidatesFromApifySearchItems($platform, $items, $limit) as $candidate) {
+                $key = "{$candidate['platform']}:{$candidate['handle']}";
+
+                if (isset($seen[$key])) {
+                    continue;
+                }
+
+                $seen[$key] = true;
+                $candidates[] = $candidate;
+
+                if (count($candidates) >= $limit) {
+                    break 2;
+                }
+            }
+        }
+
+        return array_slice($candidates, 0, $limit);
+    }
+
+    /**
+     * @param  array{
+     *     platforms: list<string>,
+     *     language: string|null,
+     *     min_followers: int|null,
+     *     max_followers: int|null,
+     *     brief: string
+     * }  $filters
+     * @return list<string>
+     */
+    public function apifySearchQueries(BrandProfile $brand, array $filters, string $platform): array
+    {
+        $brief = trim((string) ($filters['brief'] ?? ''));
+        $language = trim((string) ($filters['language'] ?? ''));
+        $langHint = $language !== '' && strcasecmp($language, 'any') !== 0
+            ? " {$language}"
+            : '';
+        $topic = $this->topicFromBriefAndBrand($brief, $brand);
+
+        if ($topic === '') {
+            return [];
+        }
+
+        return match ($platform) {
+            'instagram' => [
+                trim("{$topic} influencer creator{$langHint}"),
+                trim("{$topic} UGC creator{$langHint}"),
+            ],
+            'tiktok' => [
+                trim("{$topic} creator{$langHint}"),
+                trim("{$topic} influencer{$langHint}"),
+            ],
+            'youtube' => [
+                trim("{$topic} Shorts creator{$langHint}"),
+                trim("{$topic} YouTuber{$langHint}"),
+            ],
+            default => [trim("{$topic} creator{$langHint}")],
+        };
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $items
+     * @return list<array{name: string, platform: string, handle: string, source: string|null, seed: string, followers?: int|null}>
+     */
+    public function candidatesFromApifySearchItems(string $platform, array $items, int $limit): array
+    {
+        $candidates = [];
+        $seen = [];
+
+        foreach ($items as $item) {
+            if (! is_array($item) || count($candidates) >= $limit) {
+                break;
+            }
+
+            $handle = null;
+            $name = null;
+
+            if ($platform === 'instagram') {
+                $owner = is_array($item['owner'] ?? null) ? $item['owner'] : $item;
+                $handle = $this->normalizeHandle(
+                    $item['username'] ?? $item['ownerUsername'] ?? $owner['username'] ?? null,
+                    $platform,
+                );
+                $name = (string) ($item['fullName'] ?? $owner['fullName'] ?? $item['ownerFullName'] ?? $handle ?? '');
+            } elseif ($platform === 'tiktok') {
+                $author = is_array($item['authorMeta'] ?? null)
+                    ? $item['authorMeta']
+                    : (is_array($item['author'] ?? null) ? $item['author'] : $item);
+                $handle = $this->normalizeHandle(
+                    $author['name'] ?? $author['uniqueId'] ?? $item['authorName'] ?? $item['uniqueId'] ?? null,
+                    $platform,
+                );
+                $name = (string) ($author['nickName'] ?? $author['nickname'] ?? $handle ?? '');
+            } elseif ($platform === 'youtube') {
+                $about = is_array($item['aboutChannelInfo'] ?? null) ? $item['aboutChannelInfo'] : [];
+                $handle = $this->normalizeHandle(
+                    $item['channelUsername'] ?? $about['channelUsername'] ?? null,
+                    $platform,
+                );
+                $name = (string) ($item['channelName'] ?? $about['channelName'] ?? $handle ?? '');
+            }
+
+            if ($handle === null) {
+                continue;
+            }
+
+            $key = "{$platform}:{$handle}";
+
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $followers = $this->extractFollowers([$item]);
+            $candidate = [
+                'name' => $name !== '' ? $name : $handle,
+                'platform' => $platform,
+                'handle' => $handle,
+                'source' => 'apify-search',
+                'seed' => 'apify-search',
+            ];
+
+            if ($followers !== null) {
+                $candidate['followers'] = $followers;
+            }
+
+            $candidates[] = $candidate;
+        }
+
+        return $candidates;
     }
 
     /**
@@ -354,7 +690,11 @@ class InfluencerDiscoveryService
         $concurrency = max(1, (int) config('snitch.influencer_find.resolve_concurrency', 4));
         $minFollowers = isset($filters['min_followers']) ? (int) $filters['min_followers'] : null;
         $maxFollowers = isset($filters['max_followers']) ? (int) $filters['max_followers'] : null;
-        $ordered = $this->interleaveByPlatform($candidates, $platforms);
+        $ordered = $this->prioritizeCandidatesForVerify(
+            $this->interleaveByPlatform($candidates, $platforms),
+            $minFollowers,
+            $maxFollowers,
+        );
 
         foreach ([true, false] as $enforceSoftCap) {
             $limit = $enforceSoftCap ? $max : max($min, count($suggestions));
@@ -370,6 +710,8 @@ class InfluencerDiscoveryService
                     $softCap,
                     $enforceSoftCap,
                     min($concurrency, $limit - count($suggestions)),
+                    $minFollowers,
+                    $maxFollowers,
                 );
 
                 if ($batch === []) {
@@ -378,6 +720,7 @@ class InfluencerDiscoveryService
 
                 $profiles = $this->resolveVerifyBatch($batch);
                 $added = false;
+                $pending = [];
 
                 foreach ($batch as $batchIndex => $item) {
                     $resolved = $profiles[$batchIndex] ?? null;
@@ -389,7 +732,9 @@ class InfluencerDiscoveryService
                     $platform = $item['candidate']['platform'];
                     $handle = $item['handle'];
                     $profile = $resolved['profile'];
-                    $followers = $resolved['followers'];
+                    $followers = $resolved['followers'] ?? (
+                        isset($item['candidate']['followers']) ? (int) $item['candidate']['followers'] : null
+                    );
                     $resolvedHandle = ltrim((string) ($profile['handle'] ?? $handle), '@');
                     $resolvedKey = "{$platform}:{$resolvedHandle}";
 
@@ -423,25 +768,35 @@ class InfluencerDiscoveryService
                         ? (string) $profile['display_name']
                         : ($item['candidate']['name'] !== '' ? $item['candidate']['name'] : $resolvedHandle);
 
-                    if ($this->looksLikeBrandOrToolHandle($resolvedHandle, $displayName)) {
-                        continue;
-                    }
-
-                    $row = [
+                    $pending[$batchIndex] = [
                         'platform' => $platform,
                         'handle' => $resolvedHandle,
                         'url' => filled($profile['url'] ?? null)
                             ? (string) $profile['url']
                             : $this->defaultUrl(Platform::from($platform), $resolvedHandle),
                         'display_name' => Str::limit($displayName, 80, ''),
+                        'name' => Str::limit($displayName, 80, ''),
                         'avatar' => filled($profile['avatar'] ?? null) ? (string) $profile['avatar'] : null,
                         'source' => $item['candidate']['source'] ?? null,
+                        'seed' => $item['candidate']['seed'] ?? $this->inferSeedLabel($item['candidate']),
                         'followers' => $followers,
                         'language_hint' => filled($filters['language'] ?? null) ? (string) $filters['language'] : null,
                     ];
+                }
+
+                $reject = $this->rejectOrgOrBrandKeys(array_values($pending));
+
+                foreach ($pending as $row) {
+                    $resolvedKey = "{$row['platform']}:{$row['handle']}";
+
+                    if (isset($reject[$resolvedKey])) {
+                        continue;
+                    }
+
+                    unset($row['name']);
 
                     // Prefer known follower counts; keep unknowns for later fill if needed.
-                    if ($followers === null && count($suggestions) >= $min) {
+                    if ($row['followers'] === null && count($suggestions) >= $min) {
                         $deferred[] = $row;
 
                         continue;
@@ -449,7 +804,7 @@ class InfluencerDiscoveryService
 
                     $seen[$resolvedKey] = true;
                     $suggestions[] = $row;
-                    $counts[$platform] = ($counts[$platform] ?? 0) + 1;
+                    $counts[$row['platform']] = ($counts[$row['platform']] ?? 0) + 1;
                     $added = true;
 
                     if (count($suggestions) >= $limit) {
@@ -592,18 +947,124 @@ class InfluencerDiscoveryService
         return $this->nichePhrase($brand);
     }
 
-    private function looksLikeBrandOrToolHandle(string $handle, string $name): bool
+    /**
+     * Drop brand / org / tool accounts via a batched NanoGPT JSON classifier (no regex forest).
+     * Fail soft: bad JSON or API errors keep candidates so verify can still run.
+     *
+     * @param  list<array{name: string, platform: string, handle: string, source?: string|null, seed?: string, profile_kind?: string, followers?: int|null, display_name?: string|null}>  $candidates
+     * @return list<array{name: string, platform: string, handle: string, source?: string|null, seed?: string, profile_kind?: string, followers?: int|null, display_name?: string|null}>
+     */
+    public function filterCreatorCandidates(array $candidates): array
     {
-        $haystack = strtolower($handle.' '.$name);
-
-        if (preg_match('/(app|hq|official|inc|llc|ltd|software|saas|boutique|store|shop|studio)$/i', $handle) === 1) {
-            return true;
+        if ($candidates === []) {
+            return [];
         }
 
-        return (bool) preg_match(
-            '/\b(app|software|saas|platform|agency|boutique|official store|\bstore\b|\bshop\b|fashion brand|create your|dream brand|the simplest way|ugc platform|creator marketplace|foundation|incubator|accelerator|chamber of commerce|nonprofit org|non-profit org|cosmetics|makeup brand|beauty brand|skincare brand|association|coalition|collective|regional chapter|(northeast|northwest|southeast|southwest)\s+(us|usa|united states))\b/i',
-            $haystack,
-        );
+        $reject = $this->rejectOrgOrBrandKeys($candidates);
+
+        if ($reject === []) {
+            return array_values($candidates);
+        }
+
+        return array_values(array_filter(
+            $candidates,
+            fn (array $candidate): bool => ! isset($reject["{$candidate['platform']}:{$candidate['handle']}"]),
+        ));
+    }
+
+    /**
+     * @param  list<array{platform: string, handle: string, name?: string, display_name?: string|null}>  $rows
+     * @return array<string, true>
+     */
+    public function rejectOrgOrBrandKeys(array $rows): array
+    {
+        if ($rows === [] || (string) config('snitch.nanogpt.api_key') === '') {
+            return [];
+        }
+
+        $unique = [];
+
+        foreach ($rows as $row) {
+            $platform = strtolower(trim((string) ($row['platform'] ?? '')));
+            $handle = ltrim(trim((string) ($row['handle'] ?? '')), '@');
+
+            if ($platform === '' || $handle === '') {
+                continue;
+            }
+
+            $key = "{$platform}:{$handle}";
+            $label = trim((string) ($row['display_name'] ?? $row['name'] ?? $handle));
+            $unique[$key] = [
+                'platform' => $platform,
+                'handle' => $handle,
+                'name' => $label !== '' ? $label : $handle,
+            ];
+        }
+
+        if ($unique === []) {
+            return [];
+        }
+
+        $lines = [];
+        $index = 1;
+
+        foreach ($unique as $entry) {
+            $lines[] = $index.'. '.$entry['platform'].' @'.$entry['handle'].' | '.$entry['name'];
+            $index++;
+        }
+
+        try {
+            $payload = $this->nanoGpt->chatJson([
+                [
+                    'role' => 'system',
+                    'content' => 'You classify social accounts for influencer outreach. Reply with JSON only: {"reject":[{"platform":"instagram|tiktok|youtube|linkedin|facebook","handle":"...","reason":"short"}]} . Reject only clear non-person accounts: brands, retailers, SaaS tools/apps, agencies, media publishers, marketplaces, cosmetics labels, incubators, accelerators, VCs, foundations, nonprofits, chambers, regional org chapters, and official company pages. Keep individual people, creators, founders, and UGC accounts even if notable. If unsure, keep (omit from reject). Never invent handles not in the list.',
+                ],
+                [
+                    'role' => 'user',
+                    'content' => implode("\n", [
+                        'Classify these accounts. Return only rejects.',
+                        ...$lines,
+                    ]),
+                ],
+            ], (string) config('snitch.influencer_find.model'), [
+                'temperature' => 0.1,
+                'max_tokens' => 700,
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return [];
+        }
+
+        if (! is_array($payload)) {
+            return [];
+        }
+
+        $rejectRows = $payload['reject'] ?? $payload['rejected'] ?? $payload['junk'] ?? [];
+
+        if (! is_array($rejectRows)) {
+            return [];
+        }
+
+        $reject = [];
+
+        foreach ($rejectRows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $platform = strtolower(trim((string) ($row['platform'] ?? '')));
+            $handle = ltrim(trim((string) ($row['handle'] ?? '')), '@');
+            $key = "{$platform}:{$handle}";
+
+            if ($platform === '' || $handle === '' || ! isset($unique[$key])) {
+                continue;
+            }
+
+            $reject[$key] = true;
+        }
+
+        return $reject;
     }
 
     /**
@@ -780,30 +1241,158 @@ class InfluencerDiscoveryService
     }
 
     /**
-     * @param  list<array{name: string, platform: string, handle: string, source: string|null, profile_kind?: string}>  $seeded
-     * @param  list<array{name: string, platform: string, handle: string, source: string|null, profile_kind?: string}>  $normalized
+     * Merge seed lists: dedupe by platform:handle (prefer known followers), interleave sources, cap resolves.
+     *
      * @param  list<string>  $platforms
-     * @return list<array{name: string, platform: string, handle: string, source: string|null, profile_kind?: string}>
+     * @param  list<array{name: string, platform: string, handle: string, source?: string|null, seed?: string, profile_kind?: string, followers?: int|null}>  ...$sources
+     * @return list<array{name: string, platform: string, handle: string, source: string|null, seed?: string, profile_kind?: string, followers?: int|null}>
      */
-    private function mergeCandidates(array $seeded, array $normalized, array $platforms): array
+    public function mergeCandidates(array $platforms, array ...$sources): array
     {
-        $merged = [];
-        $seen = [];
+        $byKey = [];
 
-        foreach ([...$seeded, ...$normalized] as $candidate) {
-            $key = "{$candidate['platform']}:{$candidate['handle']}";
+        foreach ($sources as $sourceList) {
+            foreach ($sourceList as $candidate) {
+                if (! is_array($candidate)) {
+                    continue;
+                }
 
-            if (isset($seen[$key]) || $this->isJunkFacebookHandle($candidate['platform'], $candidate['handle'])) {
-                continue;
+                $platform = (string) ($candidate['platform'] ?? '');
+                $handle = (string) ($candidate['handle'] ?? '');
+
+                if ($platform === '' || $handle === '' || $this->isJunkFacebookHandle($platform, $handle)) {
+                    continue;
+                }
+
+                $key = "{$platform}:{$handle}";
+                $incoming = [
+                    'name' => (string) ($candidate['name'] ?? $handle),
+                    'platform' => $platform,
+                    'handle' => $handle,
+                    'source' => isset($candidate['source']) && is_string($candidate['source'])
+                        ? $candidate['source']
+                        : null,
+                    'seed' => (string) ($candidate['seed'] ?? $this->inferSeedLabel($candidate)),
+                ];
+
+                if (array_key_exists('followers', $candidate) && $candidate['followers'] !== null) {
+                    $incoming['followers'] = (int) $candidate['followers'];
+                }
+
+                if (isset($candidate['profile_kind'])) {
+                    $incoming['profile_kind'] = $candidate['profile_kind'];
+                }
+
+                if (! isset($byKey[$key])) {
+                    $byKey[$key] = $incoming;
+
+                    continue;
+                }
+
+                $existingHas = array_key_exists('followers', $byKey[$key]);
+                $incomingHas = array_key_exists('followers', $incoming);
+
+                if ($incomingHas && ! $existingHas) {
+                    $byKey[$key] = $incoming;
+                }
+            }
+        }
+
+        $buckets = [
+            'apify-search' => [],
+            'firecrawl' => [],
+            'model-seed' => [],
+        ];
+
+        foreach ($byKey as $candidate) {
+            $seed = (string) ($candidate['seed'] ?? 'firecrawl');
+
+            if (! isset($buckets[$seed])) {
+                $seed = 'firecrawl';
             }
 
-            $seen[$key] = true;
-            $merged[] = $candidate;
+            $buckets[$seed][] = $candidate;
+        }
+
+        // Prefer known-follower rows within each seed bucket.
+        foreach ($buckets as $seed => $rows) {
+            usort($rows, function (array $a, array $b): int {
+                $af = array_key_exists('followers', $a) ? 0 : 1;
+                $bf = array_key_exists('followers', $b) ? 0 : 1;
+
+                return $af <=> $bf;
+            });
+            $buckets[$seed] = $rows;
+        }
+
+        $merged = [];
+        $order = ['apify-search', 'firecrawl', 'model-seed'];
+
+        while (true) {
+            $added = false;
+
+            foreach ($order as $seed) {
+                if ($buckets[$seed] === []) {
+                    continue;
+                }
+
+                $merged[] = array_shift($buckets[$seed]);
+                $added = true;
+            }
+
+            if (! $added) {
+                break;
+            }
         }
 
         $maxResolves = max(1, (int) config('snitch.influencer_find.max_resolves', 28));
 
         return array_slice($this->interleaveByPlatform($merged, $platforms), 0, $maxResolves);
+    }
+
+    /**
+     * @param  array{source?: string|null, seed?: string}  $candidate
+     */
+    private function inferSeedLabel(array $candidate): string
+    {
+        $source = (string) ($candidate['source'] ?? '');
+
+        return match (true) {
+            $source === 'apify-search' || str_starts_with($source, 'apify') => 'apify-search',
+            $source === 'model-seed' => 'model-seed',
+            default => 'firecrawl',
+        };
+    }
+
+    /**
+     * Known in-band follower counts first; unknown next; known out-of-band last (usually skipped).
+     *
+     * @param  list<array{name: string, platform: string, handle: string, source?: string|null, seed?: string, profile_kind?: string, followers?: int|null}>  $candidates
+     * @return list<array{name: string, platform: string, handle: string, source?: string|null, seed?: string, profile_kind?: string, followers?: int|null}>
+     */
+    public function prioritizeCandidatesForVerify(array $candidates, ?int $minFollowers, ?int $maxFollowers): array
+    {
+        $inBand = [];
+        $unknown = [];
+        $outOfBand = [];
+
+        foreach ($candidates as $candidate) {
+            $followers = array_key_exists('followers', $candidate) ? $candidate['followers'] : null;
+
+            if ($followers === null) {
+                $unknown[] = $candidate;
+
+                continue;
+            }
+
+            if ($this->followersInRange((int) $followers, $minFollowers, $maxFollowers)) {
+                $inBand[] = $candidate;
+            } else {
+                $outOfBand[] = $candidate;
+            }
+        }
+
+        return [...$inBand, ...$unknown, ...$outOfBand];
     }
 
     /**
@@ -843,11 +1432,11 @@ class InfluencerDiscoveryService
     }
 
     /**
-     * @param  list<array{name: string, platform: string, handle: string, source?: string|null, profile_kind?: string}|null>  $ordered
+     * @param  list<array{name: string, platform: string, handle: string, source?: string|null, seed?: string, profile_kind?: string, followers?: int|null}|null>  $ordered
      * @param  array<string, true>  $seen
      * @param  array<string, true>  $tracked
      * @param  array<string, string>  $ownHandles
-     * @return list<array{index: int, handle: string, candidate: array{name: string, platform: string, handle: string, source?: string|null, profile_kind?: string}}>
+     * @return list<array{index: int, handle: string, candidate: array{name: string, platform: string, handle: string, source?: string|null, seed?: string, profile_kind?: string, followers?: int|null}}>
      */
     private function takeVerifyBatch(
         array &$ordered,
@@ -859,6 +1448,8 @@ class InfluencerDiscoveryService
         int $softCap,
         bool $enforceSoftCap,
         int $size,
+        ?int $minFollowers = null,
+        ?int $maxFollowers = null,
     ): array {
         $batch = [];
         $batchCounts = $counts;
@@ -900,7 +1491,11 @@ class InfluencerDiscoveryService
                 continue;
             }
 
-            if ($this->looksLikeBrandOrToolHandle($handle, $candidate['name'])) {
+            if (
+                array_key_exists('followers', $candidate)
+                && $candidate['followers'] !== null
+                && ! $this->followersInRange((int) $candidate['followers'], $minFollowers, $maxFollowers)
+            ) {
                 $ordered[$index] = null;
 
                 continue;
@@ -1016,6 +1611,8 @@ class InfluencerDiscoveryService
                 data_get($item, 'owner.edge_followed_by.count'),
                 data_get($item, 'channel.subscriberCount'),
                 data_get($item, 'about.numberOfFollowers'),
+                data_get($item, 'aboutChannelInfo.numberOfSubscribers'),
+                data_get($item, 'aboutChannelInfo.numberOfFollowers'),
                 data_get($item, 'stats.followerCount'),
             ];
 

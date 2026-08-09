@@ -138,11 +138,13 @@ class ProbeInfluencerFindCommand extends Command
         $followers = $row['followers'] ?? 'unknown';
 
         return sprintf(
-            '- %s @%s (%s) followers=%s',
+            '- %s @%s (%s) followers=%s seed=%s source=%s',
             $row['platform'] ?? '?',
             $row['handle'] ?? '?',
             $row['display_name'] ?? '',
             is_scalar($followers) ? (string) $followers : 'unknown',
+            $row['seed'] ?? '?',
+            is_string($row['source'] ?? null) ? Str::limit($row['source'], 40, '') : '?',
         );
     }
 
