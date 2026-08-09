@@ -65,7 +65,7 @@ const mainNavItems: NavItem[] = [
         icon: UserRoundSearch,
     },
     {
-        title: 'Agents',
+        title: 'MCP',
         href: agents(),
         icon: Bot,
     },
