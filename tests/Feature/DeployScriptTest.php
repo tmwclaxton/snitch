@@ -52,6 +52,7 @@ class DeployScriptTest extends TestCase
         $this->assertStringContainsString('ensure_edge_image', $script);
         $this->assertStringContainsString('nginx:1.27-alpine', $script);
         $this->assertStringContainsString('compose up -d --no-deps --pull never', $script);
+        $this->assertStringContainsString('compose rm -f "$active_service"', $script);
         $this->assertStringContainsString('EDGE_IMAGE', $script);
         $this->assertStringContainsString('ensure_edge_image', $script);
         $this->assertStringContainsString('nginx:1.27-alpine', $script);
