@@ -20,6 +20,7 @@ concurrency:
 
 env:
   IMAGE: ghcr.io/tmwclaxton/snitch:latest
+  EDGE_IMAGE: nginx:1.27-alpine
   DEPLOY_HOST: admin.grantgunner.org
   DEPLOY_USER: snitch
   DEPLOY_DIR: /opt/snitch
@@ -200,6 +201,7 @@ jobs:
           # Host → GHCR pulls keep dying on TLS handshake timeouts / hung blobs.
           # Pull on the Actions runner (reliable GHCR path), then stream the image
           # over SSH so the self-hosted host never needs registry egress for deploys.
+          # Also preload edge nginx (compose uses --pull never); host may not have it yet.
           retry_with_backoff() {
             local max_attempts="$1"
             shift
@@ -225,10 +227,11 @@ jobs:
           }
 
           retry_with_backoff 5 docker pull "$IMAGE_SHA"
+          retry_with_backoff 5 docker pull "$EDGE_IMAGE"
 
           transfer_image() {
             # Expand IMAGE_* on the runner before SSH; single quotes would send literals.
-            docker save "$IMAGE_SHA" | gzip -1 | ssh ${{ env.DEPLOY_HOST }} "
+            docker save "$IMAGE_SHA" "$EDGE_IMAGE" | gzip -1 | ssh ${{ env.DEPLOY_HOST }} "
               set -euo pipefail
               gunzip | docker load
               docker tag ${IMAGE_SHA} ${IMAGE_LATEST}
