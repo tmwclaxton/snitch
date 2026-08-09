@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('url');
             $table->timestamp('posted_at')->nullable();
             $table->text('caption')->nullable();
-            $table->string('media_url')->nullable();
+            $table->text('media_url')->nullable();
             $table->json('metrics')->nullable();
             $table->json('raw_payload')->nullable();
             $table->timestamps();
