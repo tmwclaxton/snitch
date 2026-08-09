@@ -292,6 +292,16 @@ class PublicPagesTest extends TestCase
 
         $this->assertStringContainsString('snitch-hero-mobile', $welcome);
         $this->assertStringContainsString('md:hidden', $welcome);
+        $this->assertMatchesRegularExpression(
+            '/snitch-hero-mobile[^>]*\bh-dvh\b/',
+            $welcome,
+            'Mobile poster must lock to one dynamic viewport height',
+        );
+        $this->assertMatchesRegularExpression(
+            '/snitch-hero-mobile[^>]*\bmax-h-dvh\b/',
+            $welcome,
+            'Mobile poster must not grow past the viewport',
+        );
         $this->assertStringContainsString(
             'class="snitch-hero relative hidden h-dvh w-full overflow-hidden md:block"',
             $welcome,
@@ -300,6 +310,11 @@ class PublicPagesTest extends TestCase
         $this->assertStringContainsString('snitch-hero-mobile-mascot', $welcome);
         $this->assertStringContainsString('snitch-hero-mobile-floor', $welcome);
         $this->assertStringContainsString('snitch-hero-mobile-cta', $welcome);
+        $this->assertDoesNotMatchRegularExpression(
+            '/snitch-hero-mobile[\s\S]{0,400}pt-44/',
+            $welcome,
+            'Mobile poster must not use the oversized pt-44 gap under the nav',
+        );
         $this->assertMatchesRegularExpression(
             '/snitch-hero-mobile-cta[\s\S]*?Get started[\s\S]*?Log in/',
             $welcome,
@@ -308,6 +323,7 @@ class PublicPagesTest extends TestCase
         $this->assertStringContainsString('.snitch-hero-mobile-wash', $css);
         $this->assertStringContainsString('.snitch-hero-mobile-floor', $css);
         $this->assertStringContainsString('snitch-hero-mobile-mascot-bob', $css);
+        $this->assertStringContainsString('max-height: 100dvh', $css);
     }
 
     public function test_hero_backdrop_waits_for_decode_before_reveal(): void

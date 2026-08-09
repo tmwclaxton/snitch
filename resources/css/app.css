@@ -1736,11 +1736,16 @@
     }
 
     /*
-     * Mobile landing poster (md:hidden): vertical riso print with a mustard
-     * ink floor and a large mascot anchor. Desktop keeps .snitch-hero wall art.
+     * Mobile landing poster (md:hidden): one locked dvh frame. Copy sits under
+     * the absolute nav; mascot + mustard floor are pinned to the bottom so a
+     * flex-1 stage cannot open a tall empty middle or grow past the viewport.
      */
     .snitch-hero-mobile {
         background-color: var(--snitch-paper);
+        /* Hard lock: content must never stretch this past the viewport. */
+        height: 100dvh;
+        max-height: 100dvh;
+        overflow: hidden;
     }
 
     .snitch-hero-mobile-wash {
@@ -1763,8 +1768,12 @@
     }
 
     .snitch-hero-mobile-copy {
+        /* Clears absolute .snitch-nav-hero (~4.8rem) without the old pt-44 void. */
         position: relative;
         z-index: 2;
+        padding-top: 5.75rem;
+        padding-bottom: 0;
+        max-width: 22rem;
     }
 
     .snitch-hero-mobile-wordmark {
@@ -1784,10 +1793,17 @@
     }
 
     .snitch-hero-mobile-stage {
+        position: absolute;
+        inset-inline: 0;
+        bottom: 0;
         z-index: 1;
         display: flex;
         align-items: flex-end;
         justify-content: center;
+        /* Fill from under the copy block to the poster floor. */
+        height: calc(100% - 19.25rem);
+        min-height: 14rem;
+        pointer-events: none;
         overflow: hidden;
     }
 
@@ -1795,7 +1811,7 @@
         position: absolute;
         inset-inline: -8%;
         bottom: -6%;
-        height: 42%;
+        height: 58%;
         z-index: 0;
         background:
             linear-gradient(
@@ -1823,24 +1839,60 @@
     .snitch-hero-mobile-mascot {
         position: relative;
         z-index: 1;
-        width: min(78vw, 18.5rem);
+        display: flex;
+        height: 96%;
+        width: min(94vw, 26rem);
         margin-inline: auto;
-        margin-bottom: -0.35rem;
-    }
-
-    .snitch-hero-mobile-mascot-frame {
-        width: 100%;
-        aspect-ratio: 1.35 / 1;
+        margin-bottom: -0.15rem;
+        align-items: flex-end;
+        justify-content: center;
     }
 
     .snitch-hero-mobile-mascot-bob {
+        width: 100%;
+        height: 100%;
         animation: snitch-hero-mobile-mascot-bob 5.5s ease-in-out infinite;
         will-change: transform;
     }
 
+    .snitch-hero-mobile-mascot-frame {
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+    }
+
+    .snitch-hero-mobile .snitch-hero-mascot-character {
+        object-fit: cover;
+        object-position: center bottom;
+    }
+
     .snitch-hero-mobile .snitch-hero-mascot-binos {
-        width: 62%;
-        top: 28%;
+        width: 58%;
+        top: 30%;
+    }
+
+    @media (max-height: 700px) {
+        .snitch-hero-mobile-copy {
+            padding-top: 5.1rem;
+        }
+
+        .snitch-hero-mobile-stage {
+            height: calc(100% - 17.5rem);
+            min-height: 11.5rem;
+        }
+
+        .snitch-hero-mobile-mascot {
+            width: min(88vw, 20rem);
+        }
+
+        .snitch-hero-mobile-cta {
+            margin-top: 0.75rem;
+        }
+
+        .snitch-hero-mobile-cta .snitch-btn {
+            min-height: 2.45rem;
+            padding: 0.5rem 1.05rem;
+        }
     }
 
     /*
