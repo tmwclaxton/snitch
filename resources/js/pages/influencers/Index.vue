@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import {
     Check,
     LoaderCircle,
@@ -22,7 +22,6 @@ import PaperSelect from '@/components/PaperSelect.vue';
 import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
-import { edit as billingEdit } from '@/routes/billing';
 import { useToastStore } from '@/stores/toastStore';
 
 type Suggestion = {
@@ -60,12 +59,12 @@ type LatestRun = {
 };
 
 type InfluencerCap = {
-    plan: string;
-    plan_name: string;
-    influencer_limit: number;
-    influencers_used: number;
-    influencers_remaining: number;
-    can_upgrade: boolean;
+    plan?: string;
+    plan_name?: string;
+    influencer_limit?: number | null;
+    influencers_used?: number;
+    influencers_remaining?: number | null;
+    can_upgrade?: boolean;
 };
 
 type Filters = {
@@ -95,7 +94,6 @@ defineOptions({
 });
 
 const toast = useToastStore();
-const page = usePage();
 
 const form = useForm({
     platform: props.filters.platform || props.platforms[0] || 'instagram',
@@ -114,34 +112,6 @@ const decidingKey = ref<string | null>(null);
 const removeDialogOpen = ref(false);
 const accountToRemove = ref<KeptAccount | null>(null);
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
-
-const subscription = computed(
-    () => page.props.subscription as (InfluencerCap & Record<string, unknown>) | null | undefined,
-);
-
-const cap = computed(() => {
-    return (
-        props.influencerCap ??
-        (subscription.value
-            ? {
-                  plan: String(subscription.value.plan ?? ''),
-                  plan_name: String(subscription.value.plan_name ?? ''),
-                  influencer_limit: Number(subscription.value.influencer_limit ?? 0),
-                  influencers_used: Number(subscription.value.influencers_used ?? 0),
-                  influencers_remaining: Number(subscription.value.influencers_remaining ?? 0),
-                  can_upgrade: Boolean(subscription.value.can_upgrade),
-              }
-            : null)
-    );
-});
-
-const atInfluencerCap = computed(() => {
-    if (!cap.value) {
-        return false;
-    }
-
-    return cap.value.influencers_remaining <= 0;
-});
 
 const platformOptions = computed(() =>
     props.platforms.map((platform) => ({
@@ -354,12 +324,6 @@ function clearPoll(): void {
 }
 
 function onKeep(item: Suggestion): void {
-    if (atInfluencerCap.value) {
-        toast.error('Influencer limit reached. Upgrade your plan to keep more creators.');
-
-        return;
-    }
-
     const key = suggestionKey(item);
     decidingKey.value = key;
 
@@ -448,21 +412,6 @@ onUnmounted(() => {
                 </p>
                 <p class="mt-2 text-sm text-snitch-ink/70">Find creators in your space to make brand deals with - ones who will remake or post about your brand on your behalf. Brief the niche, then Keep or Discard each suggestion.</p>
             </header>
-
-            <p
-                v-if="atInfluencerCap"
-                class="snitch-scrap relative mt-6 p-4 text-sm text-snitch-ink/80"
-            >
-                You are at your influencer limit
-                <template v-if="cap">
-                    ({{ cap.influencers_used }}/{{ cap.influencer_limit }} on {{ cap.plan_name }}).
-                </template>
-                You can still search and discard; Keep is blocked until you
-                <Link :href="billingEdit()" class="underline decoration-snitch-spot underline-offset-2">
-                    upgrade
-                </Link>
-                or remove a kept influencer.
-            </p>
 
             <section class="snitch-scrap relative mt-8 p-4 pt-6 sm:p-6 sm:pt-8">
                 <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
@@ -633,7 +582,7 @@ onUnmounted(() => {
                             <button
                                 type="button"
                                 class="snitch-btn snitch-btn-spot px-3 py-1.5 text-sm"
-                                :disabled="decidingKey === suggestionKey(item) || atInfluencerCap"
+                                :disabled="decidingKey === suggestionKey(item)"
                                 @click="onKeep(item)"
                             >
                                 <span class="relative z-10 inline-flex items-center gap-1.5">
@@ -667,7 +616,7 @@ onUnmounted(() => {
             <section v-if="keptAccounts.length" class="mt-12">
                 <h2 class="snitch-display text-2xl text-snitch-ink">Kept influencers</h2>
                 <p class="mt-1.5 text-sm text-snitch-ink/65">
-                    Creators you kept for brand deals and outreach. Uses a separate quota from Competitors.
+                    Creators you kept for brand deals and outreach. Separate from competitor tracking.
                 </p>
 
                 <ul class="mt-6 space-y-3">

@@ -180,13 +180,6 @@ class InfluencerController extends Controller
             return redirect()->route('influencers.index');
         }
 
-        $needsInfluencerSlot = $existing === null
-            || $existing->kind !== TrackedAccountKind::Influencer;
-
-        if ($needsInfluencerSlot && ! $this->entitlements->canAddInfluencers($user, 1)) {
-            return $this->influencerLimitExceededRedirect();
-        }
-
         $account = TrackedAccount::query()->updateOrCreate(
             [
                 'user_id' => $user->id,
@@ -480,16 +473,6 @@ class InfluencerController extends Controller
 
         Cache::put(FindInfluencersJob::cacheKeyFor($userId, $runId), $payload, now()->addHours(2));
         Cache::put(FindInfluencersJob::latestCacheKeyFor($userId), $runId, now()->addHours(24));
-    }
-
-    private function influencerLimitExceededRedirect(): RedirectResponse
-    {
-        Inertia::flash('toast', [
-            'type' => 'error',
-            'message' => __('Influencer limit reached. Upgrade your plan to keep more creators.'),
-        ]);
-
-        return redirect()->route('influencers.index');
     }
 
     private function defaultUrl(Platform $platform, string $handle): string

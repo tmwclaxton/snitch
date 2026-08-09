@@ -39,48 +39,41 @@ class CompetitorController extends Controller
         $this->authorize('view', $trackedAccount);
 
         $user = $request->user();
-        $inQuota = $this->entitlements->isTrackedAccountInQuota($user, $trackedAccount);
 
         $trackedAccount->loadCount([
             'posts' => fn ($query) => $query->reelLike(),
         ]);
-        $trackedAccount->setAttribute('in_quota', $inQuota);
+        $trackedAccount->setAttribute('in_quota', true);
 
-        $posts = collect();
-        $winners = collect();
+        $posts = Post::query()
+            ->where('tracked_account_id', $trackedAccount->id)
+            ->where('user_id', $user->id)
+            ->reelLike()
+            ->with(['trackedAccount', 'analysis', 'winnerInsight'])
+            ->latest('posted_at')
+            ->limit(24)
+            ->get()
+            ->map(function (Post $post): Post {
+                $post->setAttribute(
+                    'embed',
+                    PlatformEmbed::resolve($post->platform, $post->url, compact: true),
+                );
 
-        if ($inQuota) {
-            $posts = Post::query()
-                ->where('tracked_account_id', $trackedAccount->id)
-                ->where('user_id', $user->id)
-                ->reelLike()
-                ->with(['trackedAccount', 'analysis', 'winnerInsight'])
-                ->latest('posted_at')
-                ->limit(24)
-                ->get()
-                ->map(function (Post $post): Post {
-                    $post->setAttribute(
-                        'embed',
-                        PlatformEmbed::resolve($post->platform, $post->url, compact: true),
-                    );
+                return $post;
+            });
 
-                    return $post;
-                });
-
-            $winners = WinnerInsight::query()
-                ->where('user_id', $user->id)
-                ->whereHas('post', fn ($query) => $query->where('tracked_account_id', $trackedAccount->id))
-                ->with(['post.trackedAccount', 'post.analysis'])
-                ->orderByDesc('score')
-                ->limit(8)
-                ->get();
-        }
+        $winners = WinnerInsight::query()
+            ->where('user_id', $user->id)
+            ->whereHas('post', fn ($query) => $query->where('tracked_account_id', $trackedAccount->id))
+            ->with(['post.trackedAccount', 'post.analysis'])
+            ->orderByDesc('score')
+            ->limit(8)
+            ->get();
 
         return Inertia::render('competitors/Show', [
             'account' => $trackedAccount,
             'posts' => $posts,
             'winners' => $winners,
-            'inQuota' => $inQuota,
         ]);
     }
 
@@ -90,19 +83,6 @@ class CompetitorController extends Controller
         $handle = $data['handle'];
         $platform = Platform::from($data['platform'] instanceof Platform ? $data['platform']->value : $data['platform']);
         $user = $request->user();
-
-        $existing = TrackedAccount::query()
-            ->where('user_id', $user->id)
-            ->where('platform', $platform)
-            ->where('handle', $handle)
-            ->first();
-
-        $needsCompetitorSlot = $existing === null
-            || $existing->kind !== TrackedAccountKind::Competitor;
-
-        if ($needsCompetitorSlot && ! $this->entitlements->canAddCompetitors($user, 1)) {
-            return $this->competitorLimitExceededRedirect();
-        }
 
         $account = TrackedAccount::query()->updateOrCreate(
             [
@@ -191,11 +171,6 @@ class CompetitorController extends Controller
     {
         $user = $request->user();
         $suggestions = $request->validated('suggestions');
-        $netNew = $this->countNetNewSuggestions($user->id, $suggestions);
-
-        if (! $this->entitlements->canAddCompetitors($user, $netNew)) {
-            return $this->competitorLimitExceededRedirect();
-        }
 
         $confirmed = [];
 
@@ -257,15 +232,6 @@ class CompetitorController extends Controller
     {
         $this->authorize('update', $trackedAccount);
 
-        if (! $this->entitlements->isTrackedAccountInQuota($request->user(), $trackedAccount)) {
-            Inertia::flash('toast', [
-                'type' => 'error',
-                'message' => __('This competitor is over your plan limit. Remove other accounts or upgrade in Billing to sync again.'),
-            ]);
-
-            return back();
-        }
-
         $trackedAccount->markSyncRunning();
         SyncTrackedAccountJob::dispatch($trackedAccount->id, force: true);
 
@@ -285,7 +251,6 @@ class CompetitorController extends Controller
     private function pageProps(Request $request): array
     {
         $user = $request->user();
-        $inQuotaIds = array_fill_keys($this->entitlements->inQuotaTrackedAccountIds($user), true);
 
         $accounts = $user
             ->trackedAccounts()
@@ -293,13 +258,12 @@ class CompetitorController extends Controller
             ->withCount('posts')
             ->orderBy('id')
             ->get()
-            ->each(function (TrackedAccount $account) use ($inQuotaIds): void {
-                $inQuota = isset($inQuotaIds[$account->id]);
-                $account->setAttribute('in_quota', $inQuota);
-                $account->setAttribute('sync_due', $inQuota && $account->isDueForSync());
+            ->each(function (TrackedAccount $account): void {
+                $account->setAttribute('in_quota', true);
+                $account->setAttribute('sync_due', $account->isDueForSync());
                 $account->setAttribute(
                     'next_sync_at',
-                    $inQuota ? $account->nextSyncAt()?->toIso8601String() : null,
+                    $account->nextSyncAt()?->toIso8601String(),
                 );
             });
 
@@ -362,57 +326,6 @@ class CompetitorController extends Controller
             'suggestError' => is_string($latest['error'] ?? null) ? $latest['error'] : null,
             'competitorCap' => $this->entitlements->summary($request->user()),
         ];
-    }
-
-    private function competitorLimitExceededRedirect(): RedirectResponse
-    {
-        Inertia::flash('toast', [
-            'type' => 'error',
-            'message' => __('You have reached your competitor limit for this plan. Upgrade in Billing to track more.'),
-        ]);
-
-        return redirect()->route('competitors.index');
-    }
-
-    /**
-     * @param  list<array{platform: mixed, handle: string}>  $suggestions
-     */
-    private function countNetNewSuggestions(int $userId, array $suggestions): int
-    {
-        $existing = TrackedAccount::query()
-            ->where('user_id', $userId)
-            ->competitors()
-            ->get(['platform', 'handle'])
-            ->mapWithKeys(function (TrackedAccount $account): array {
-                $platform = $account->platform instanceof Platform
-                    ? $account->platform->value
-                    : (string) $account->platform;
-
-                $key = strtolower($platform).':'.strtolower(ltrim((string) $account->handle, '@'));
-
-                return [$key => true];
-            })
-            ->all();
-
-        $netNew = 0;
-        $seen = [];
-
-        foreach ($suggestions as $suggestion) {
-            $platform = $suggestion['platform'] instanceof Platform
-                ? $suggestion['platform']->value
-                : (string) $suggestion['platform'];
-            $handle = ltrim(strtolower(trim((string) $suggestion['handle'])), '@');
-            $key = strtolower($platform).':'.$handle;
-
-            if (isset($existing[$key]) || isset($seen[$key])) {
-                continue;
-            }
-
-            $seen[$key] = true;
-            $netNew++;
-        }
-
-        return $netNew;
     }
 
     /**

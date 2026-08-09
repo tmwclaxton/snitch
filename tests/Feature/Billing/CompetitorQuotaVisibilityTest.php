@@ -29,14 +29,28 @@ class CompetitorQuotaVisibilityTest extends TestCase
     }
 
     #[Test]
-    public function competitors_index_lists_accounts(): void
+    public function competitors_index_does_not_surface_seat_limit_warnings(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
-        TrackedAccount::factory()->count(2)->for($user)->create();
+        TrackedAccount::factory()->count(3)->for($user)->create();
 
-        $this->actingAs($user)
-            ->get(route('competitors.index'))
-            ->assertOk();
+        $response = $this->actingAs($user)
+            ->get(route('competitors.index'));
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('competitors/Index')
+            ->has('accounts', 3)
+            ->where('competitorCap.competitor_limit', null)
+            ->where('competitorCap.competitors_remaining', null)
+            ->where('competitorCap.over_quota_competitors', 0)
+        );
+
+        $content = $response->getContent() ?: '';
+
+        $this->assertStringNotContainsString('competitor limit', strtolower($content));
+        $this->assertStringNotContainsString('plan limit', strtolower($content));
+        $this->assertStringNotContainsString('over your plan limit', strtolower($content));
     }
 }
