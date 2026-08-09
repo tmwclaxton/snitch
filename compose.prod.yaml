@@ -1,35 +1,63 @@
 # Production stack for Snitch
-# Usage: docker compose -p snitch -f compose.prod.yaml --env-file .env up -d
+# Usage: docker compose -p snitch -f compose.prod.yaml --env-file .env up -d postgres redis edge app_blue
+#
+# HTTP enters via edge:8095 (Cloudflare tunnel). App slots blue/green swap in
+# scripts/deploy-production.sh for zero-downtime deploys.
+
+x-app: &app
+  image: ghcr.io/tmwclaxton/snitch:latest
+  stop_grace_period: 120s
+  env_file: .env
+  environment:
+    WWWUSER: "1337"
+    WWWGROUP: "1000"
+    DB_HOST: postgres
+    REDIS_HOST: redis
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  networks:
+    - snitch
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_started
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:80/up"]
+    interval: 5s
+    retries: 12
+    timeout: 5s
+    start_period: 40s
+  restart: unless-stopped
+  volumes:
+    - snitch-storage:/var/www/html/storage
 
 services:
-  app:
-    image: ghcr.io/tmwclaxton/snitch:latest
-    stop_grace_period: 120s
-    env_file: .env
-    environment:
-      WWWUSER: "1337"
-      WWWGROUP: "1000"
-      DB_HOST: postgres
-      REDIS_HOST: redis
+  edge:
+    image: nginx:1.27-alpine
     ports:
       - "8095:80"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./docker/production/edge/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/production/edge/conf.d/snitch.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./edge/upstream-active.conf:/etc/nginx/conf.d/upstream-active.conf:ro
     networks:
       - snitch
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/up"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/up"]
+      interval: 10s
       retries: 3
       timeout: 5s
-      start_period: 40s
+      start_period: 10s
     restart: unless-stopped
-    volumes:
-      - snitch-storage:/var/www/html/storage
+
+  app_blue:
+    <<: *app
+    container_name: snitch-app-blue
+
+  app_green:
+    <<: *app
+    container_name: snitch-app-green
 
   postgres:
     image: postgres:17

@@ -42,7 +42,22 @@ class DeployScriptTest extends TestCase
         $this->assertStringContainsString('retry_with_backoff "$GHCR_MAX_ATTEMPTS" ghcr_login', $script);
         $this->assertStringContainsString('retry_with_backoff "$GHCR_MAX_ATTEMPTS" pull_app_image', $script);
         $this->assertStringContainsString('SKIP_GHCR_PULL', $script);
-        $this->assertStringContainsString('compose up -d --pull never', $script);
+        $this->assertStringContainsString('zero_downtime_deploy_app', $script);
+        $this->assertStringContainsString('app_blue', $script);
+        $this->assertStringContainsString('app_green', $script);
+        $this->assertStringContainsString('nginx -s reload', $script);
+        $this->assertStringContainsString('upstream-active.conf', $script);
+        $this->assertStringContainsString('stop_app_workers', $script);
+        $this->assertStringContainsString('compose up -d --no-deps --pull never', $script);
+
+        $compose = file_get_contents(base_path('compose.prod.yaml'));
+
+        $this->assertNotFalse($compose);
+        $this->assertStringContainsString('edge:', $compose);
+        $this->assertStringContainsString('app_blue:', $compose);
+        $this->assertStringContainsString('app_green:', $compose);
+        $this->assertStringContainsString('"8095:80"', $compose);
+        $this->assertStringNotContainsString('  app:', $compose);
 
         $workflow = file_get_contents(base_path('.github/workflows/prod_deploy.yml'));
 
@@ -60,6 +75,7 @@ class DeployScriptTest extends TestCase
         $this->assertStringContainsString('docker save', $workflow);
         $this->assertStringContainsString('docker load', $workflow);
         $this->assertStringContainsString('SKIP_GHCR_PULL=1 ./deploy-production.sh', $workflow);
-        $this->assertStringContainsString('Close SSH master connection', $workflow);
+        $this->assertStringContainsString('docker/production/edge/nginx.conf', $workflow);
+        $this->assertStringContainsString('upstream-active.conf.default', $workflow);
     }
 }
