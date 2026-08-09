@@ -257,6 +257,26 @@ class PublicPagesTest extends TestCase
         );
     }
 
+    public function test_hero_backdrop_waits_for_decode_before_reveal(): void
+    {
+        $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
+        $css = file_get_contents(resource_path('css/app.css'));
+
+        $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
+        $this->assertNotFalse($css, 'Missing app.css source');
+        $this->assertStringContainsString('heroBackdropReady', $welcome);
+        $this->assertStringContainsString('preloadHeroImage', $welcome);
+        $this->assertStringContainsString('snitch-hero-backdrop-placeholder', $welcome);
+        $this->assertStringContainsString('class="snitch-hero-backdrop"', $welcome);
+        $this->assertStringContainsString("'is-ready': heroBackdropReady", $welcome);
+        $this->assertStringContainsString('.snitch-hero-backdrop.is-ready', $css);
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-hero-backdrop\s*\{[^}]*filter:\s*blur\(/s',
+            $css,
+            'Hero backdrop must stay blurred until layers are ready',
+        );
+    }
+
     public function test_ghost_ticket_buttons_stroke_follows_clip_not_inset_shadow(): void
     {
         $css = file_get_contents(resource_path('css/app.css'));

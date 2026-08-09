@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import { ArrowRight, LayoutGrid, LogIn, UserPlus } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { dashboard, login } from '@/routes';
 
@@ -23,6 +23,45 @@ const primaryCta = computed(() => {
         href: login(),
         label: 'Get started',
     };
+});
+
+/** Hero wall + marquee layers are large; hide until decoded to avoid progressive paint strips. */
+const heroBackdropSources = [
+    '/images/marketing/hero/bg.jpg',
+    '/images/marketing/hero/platforms-back.png',
+    '/images/marketing/hero/platforms-mid.png',
+    '/images/marketing/hero/platforms-front.png',
+] as const;
+
+const heroBackdropReady = ref(false);
+
+function preloadHeroImage(src: string): Promise<void> {
+    return new Promise((resolve) => {
+        const image = new Image();
+        image.decoding = 'async';
+        image.onload = () => {
+            if (typeof image.decode === 'function') {
+                void image
+                    .decode()
+                    .then(() => resolve())
+                    .catch(() => resolve());
+
+                return;
+            }
+
+            resolve();
+        };
+        image.onerror = () => resolve();
+        image.src = src;
+    });
+}
+
+onMounted(() => {
+    void Promise.all(heroBackdropSources.map((src) => preloadHeroImage(src))).then(
+        () => {
+            heroBackdropReady.value = true;
+        },
+    );
 });
 
 const platforms = [
@@ -59,63 +98,91 @@ const steps = [
             class="snitch-hero relative h-dvh w-full overflow-hidden"
         >
             <div class="absolute inset-0" aria-hidden="true">
-                <div class="snitch-hero-bg">
-                    <img
-                        src="/images/marketing/hero/bg.jpg"
-                        alt=""
-                        class="snitch-hero-bg-img"
-                    />
-                </div>
-
-                <div class="snitch-hero-marquee-stage">
-                    <div
-                        class="snitch-hero-marquee snitch-hero-marquee-slow absolute inset-x-0 top-[2%] bottom-0"
-                    >
-                        <div class="snitch-hero-marquee-track">
-                            <img
-                                src="/images/marketing/hero/platforms-back.png"
-                                alt=""
-                                class="snitch-hero-marquee-frame opacity-[0.72] mix-blend-multiply dark:mix-blend-soft-light dark:opacity-80"
-                            />
-                            <img
-                                src="/images/marketing/hero/platforms-back.png"
-                                alt=""
-                                class="snitch-hero-marquee-frame opacity-[0.72] mix-blend-multiply dark:mix-blend-soft-light dark:opacity-80"
-                            />
-                        </div>
+                <div class="snitch-hero-backdrop-placeholder" />
+                <div
+                    class="snitch-hero-backdrop"
+                    :class="{ 'is-ready': heroBackdropReady }"
+                >
+                    <div class="snitch-hero-bg">
+                        <img
+                            src="/images/marketing/hero/bg.jpg"
+                            alt=""
+                            class="snitch-hero-bg-img"
+                            width="1792"
+                            height="1024"
+                            decoding="async"
+                            fetchpriority="high"
+                        />
                     </div>
 
-                    <div
-                        class="snitch-hero-marquee snitch-hero-marquee-mid absolute inset-0"
-                    >
-                        <div class="snitch-hero-marquee-track">
-                            <img
-                                src="/images/marketing/hero/platforms-mid.png"
-                                alt=""
-                                class="snitch-hero-marquee-frame opacity-[0.88]"
-                            />
-                            <img
-                                src="/images/marketing/hero/platforms-mid.png"
-                                alt=""
-                                class="snitch-hero-marquee-frame opacity-[0.88]"
-                            />
+                    <div class="snitch-hero-marquee-stage">
+                        <div
+                            class="snitch-hero-marquee snitch-hero-marquee-slow absolute inset-x-0 top-[2%] bottom-0"
+                        >
+                            <div class="snitch-hero-marquee-track">
+                                <img
+                                    src="/images/marketing/hero/platforms-back.png"
+                                    alt=""
+                                    class="snitch-hero-marquee-frame opacity-[0.72] mix-blend-multiply dark:mix-blend-soft-light dark:opacity-80"
+                                    width="1792"
+                                    height="1024"
+                                    decoding="async"
+                                />
+                                <img
+                                    src="/images/marketing/hero/platforms-back.png"
+                                    alt=""
+                                    class="snitch-hero-marquee-frame opacity-[0.72] mix-blend-multiply dark:mix-blend-soft-light dark:opacity-80"
+                                    width="1792"
+                                    height="1024"
+                                    decoding="async"
+                                />
+                            </div>
                         </div>
-                    </div>
 
-                    <div
-                        class="snitch-hero-marquee snitch-hero-marquee-fast absolute inset-x-0 top-[-2%] bottom-0"
-                    >
-                        <div class="snitch-hero-marquee-track">
-                            <img
-                                src="/images/marketing/hero/platforms-front.png"
-                                alt=""
-                                class="snitch-hero-marquee-frame opacity-95"
-                            />
-                            <img
-                                src="/images/marketing/hero/platforms-front.png"
-                                alt=""
-                                class="snitch-hero-marquee-frame opacity-95"
-                            />
+                        <div
+                            class="snitch-hero-marquee snitch-hero-marquee-mid absolute inset-0"
+                        >
+                            <div class="snitch-hero-marquee-track">
+                                <img
+                                    src="/images/marketing/hero/platforms-mid.png"
+                                    alt=""
+                                    class="snitch-hero-marquee-frame opacity-[0.88]"
+                                    width="1792"
+                                    height="1024"
+                                    decoding="async"
+                                />
+                                <img
+                                    src="/images/marketing/hero/platforms-mid.png"
+                                    alt=""
+                                    class="snitch-hero-marquee-frame opacity-[0.88]"
+                                    width="1792"
+                                    height="1024"
+                                    decoding="async"
+                                />
+                            </div>
+                        </div>
+
+                        <div
+                            class="snitch-hero-marquee snitch-hero-marquee-fast absolute inset-x-0 top-[-2%] bottom-0"
+                        >
+                            <div class="snitch-hero-marquee-track">
+                                <img
+                                    src="/images/marketing/hero/platforms-front.png"
+                                    alt=""
+                                    class="snitch-hero-marquee-frame opacity-95"
+                                    width="1792"
+                                    height="1024"
+                                    decoding="async"
+                                />
+                                <img
+                                    src="/images/marketing/hero/platforms-front.png"
+                                    alt=""
+                                    class="snitch-hero-marquee-frame opacity-95"
+                                    width="1792"
+                                    height="1024"
+                                    decoding="async"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
