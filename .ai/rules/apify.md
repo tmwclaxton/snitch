@@ -22,3 +22,6 @@ TikTok listRecentPosts sets shouldDownloadVideos=false. hydrateMediaUrls runs a 
 
 ## Platform fetch multipliers replace blanket 3x
 snitch.sync.fetch_multipliers controls over-fetch (instagram 2.5, facebook/linkedin 2, tiktok 1.25, youtube 1). Do not hard-code limit*3 in adapters.
+
+## runActors soft-fails every key, including singles
+`ApifyClient::runActors` returns `[]` for a key on HTTP/connection failure (pool path and the single-job shortcut). Do not let one actor timeout (`ConnectionException`) abort competitor verify or other batch callers.
