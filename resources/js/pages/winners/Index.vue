@@ -212,7 +212,7 @@ onUnmounted(() => {
             <div class="flex flex-wrap items-end justify-between gap-4">
                 <div>
                     <h1 class="snitch-display text-3xl text-snitch-ink sm:text-4xl">
-                        Tear sheet
+                        Winners
                     </h1>
                     <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
                         Preset {{ rule.preset }} · min {{ rule.min_views }} views /

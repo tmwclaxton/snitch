@@ -164,7 +164,7 @@ function paginationLabel(label: string): string {
                 <div class="min-w-0 max-w-xl">
                     <p class="snitch-ink-label">Snitch / Feed</p>
                     <h1 class="snitch-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
-                        Contact sheet
+                        Feed
                     </h1>
                     <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
                         Metrics, hooks, and craft tags at a glance - open a frame for the full dossier.
