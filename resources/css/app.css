@@ -1768,10 +1768,10 @@
     }
 
     .snitch-hero-mobile-copy {
-        /* Clears absolute .snitch-nav-hero with a little air under the bar. */
+        /* Clears absolute .snitch-nav-hero with clear air under the bar. */
         position: relative;
         z-index: 2;
-        padding-top: 7.25rem;
+        padding-top: 9rem;
         padding-bottom: 0;
         max-width: 22rem;
     }
@@ -1859,7 +1859,7 @@
 
     @media (max-height: 700px) {
         .snitch-hero-mobile-copy {
-            padding-top: 6.5rem;
+            padding-top: 7.5rem;
         }
 
         .snitch-hero-mobile-stage {
