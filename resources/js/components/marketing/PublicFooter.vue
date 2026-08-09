@@ -41,7 +41,8 @@ const footerLinks = [
                     <SnitchBrand size="footer" />
                 </Link>
                 <p class="mt-2 text-sm leading-relaxed text-pretty text-snitch-ink/80">
-                    Track competitor posts, learn why they work, and remake the&nbsp;winners.
+                    Track public competitor reels, learn why they work, and remake
+                    the&nbsp;winners.
                 </p>
             </div>
 

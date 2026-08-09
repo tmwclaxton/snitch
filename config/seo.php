@@ -90,7 +90,7 @@ return [
 
         'privacy' => [
             'title' => 'Privacy policy',
-            'description' => 'How Snitch handles account data, public social scraping, AI analysis, and cookies. Read the privacy policy for snitchsocial.net.',
+            'description' => 'How Snitch handles account data, public social scraping, AI analysis, Stripe billing, and cookies. Read the privacy policy for snitchsocial.net.',
             'json_ld' => 'webpage',
             'sitemap' => [
                 'changefreq' => 'yearly',
@@ -100,7 +100,7 @@ return [
 
         'terms' => [
             'title' => 'Terms of use',
-            'description' => 'Terms of use for Snitch: acceptable use, public data tracking, AI analysis disclaimers, and your responsibilities when using the product.',
+            'description' => 'Terms of use for Snitch: plans and trials, acceptable use, public data tracking, AI analysis disclaimers, and your responsibilities when using the product.',
             'json_ld' => 'webpage',
             'sitemap' => [
                 'changefreq' => 'yearly',
