@@ -1259,19 +1259,38 @@
         aspect-ratio: 3 / 4;
     }
 
+    .snitch-platform-embed-fallback {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+    }
+
     .snitch-platform-embed-frame {
         display: block;
         width: 100%;
         height: 100%;
         border: 0;
         background: #000;
+        opacity: 0;
+        transition: opacity 180ms ease;
+    }
+
+    .snitch-platform-embed-frame-ready {
+        opacity: 1;
     }
 
     .snitch-platform-embed-compact .snitch-platform-embed-frame {
         position: absolute;
         inset: 0;
+        z-index: 2;
         width: 100%;
         height: 100%;
+    }
+
+    .snitch-platform-embed-detail .snitch-platform-embed-frame {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
     }
 
     .snitch-platform-embed-fallback-img {
