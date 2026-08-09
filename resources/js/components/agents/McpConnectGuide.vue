@@ -22,10 +22,21 @@ const props = defineProps<{
     tools: string[];
 }>();
 
-const activeId = ref(props.clients[0]?.id ?? 'cursor');
+const options = computed<ClientGuide[]>(() => [
+    ...props.clients,
+    {
+        id: 'general',
+        name: props.general.title,
+        blurb: props.general.blurb,
+        snippet: props.general.snippet,
+        steps: props.general.steps,
+    },
+]);
+
+const activeId = ref(options.value[0]?.id ?? 'cursor');
 
 const activeClient = computed(
-    () => props.clients.find((client) => client.id === activeId.value) ?? props.clients[0],
+    () => options.value.find((client) => client.id === activeId.value) ?? options.value[0],
 );
 
 async function copyText(value: string): Promise<void> {
@@ -67,7 +78,7 @@ async function copyText(value: string): Promise<void> {
 
             <div class="snitch-seg flex flex-wrap gap-1" role="tablist" aria-label="Agent clients">
                 <button
-                    v-for="client in clients"
+                    v-for="client in options"
                     :key="client.id"
                     type="button"
                     role="tab"
@@ -105,19 +116,7 @@ async function copyText(value: string): Promise<void> {
             </div>
         </section>
 
-        <div class="grid gap-6 lg:grid-cols-2">
-            <section class="snitch-scrap relative space-y-3 p-5 pt-6 sm:p-6">
-                <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
-                <h2 class="snitch-display text-2xl text-snitch-ink">{{ general.title }}</h2>
-                <p class="text-sm text-snitch-ink/75">{{ general.blurb }}</p>
-                <ol class="list-decimal space-y-1.5 pl-5 text-sm text-snitch-ink/80">
-                    <li v-for="(step, index) in general.steps" :key="index">
-                        {{ step }}
-                    </li>
-                </ol>
-                <pre class="overflow-x-auto bg-snitch-ink/5 p-3 text-xs text-snitch-ink">{{ general.snippet }}</pre>
-            </section>
-
+        <div class="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
             <section class="snitch-scrap relative space-y-3 p-5 pt-6 sm:p-6">
                 <span class="snitch-tape right-5 -top-2" aria-hidden="true" />
                 <h2 class="snitch-display text-2xl text-snitch-ink">Billing notes</h2>
@@ -128,23 +127,23 @@ async function copyText(value: string): Promise<void> {
                     <li>Usage on the billing page is shown for Apify, NanoGPT, and Firecrawl.</li>
                 </ul>
             </section>
-        </div>
 
-        <section class="snitch-scrap relative space-y-3 p-5 pt-6 sm:p-6">
-            <span class="snitch-tape left-4 -top-2" aria-hidden="true" />
-            <h2 class="snitch-display text-2xl text-snitch-ink">Tool catalogue</h2>
-            <p class="text-sm text-snitch-ink/70">
-                Authenticated tools on the MCP server (plus create_account on register).
-            </p>
-            <ul class="flex flex-wrap gap-2">
-                <li
-                    v-for="tool in tools"
-                    :key="tool"
-                    class="rounded-sm bg-snitch-ink/5 px-2 py-1 font-mono text-xs text-snitch-ink/85"
-                >
-                    {{ tool }}
-                </li>
-            </ul>
-        </section>
+            <section class="snitch-scrap relative space-y-3 p-5 pt-6 sm:p-6">
+                <span class="snitch-tape left-4 -top-2" aria-hidden="true" />
+                <h2 class="snitch-display text-2xl text-snitch-ink">Tool catalogue</h2>
+                <p class="text-sm text-snitch-ink/70">
+                    Authenticated tools on the MCP server (plus create_account on register).
+                </p>
+                <ul class="flex flex-wrap gap-2">
+                    <li
+                        v-for="tool in tools"
+                        :key="tool"
+                        class="rounded-sm bg-snitch-ink/5 px-2 py-1 font-mono text-xs text-snitch-ink/85"
+                    >
+                        {{ tool }}
+                    </li>
+                </ul>
+            </section>
+        </div>
     </div>
 </template>
