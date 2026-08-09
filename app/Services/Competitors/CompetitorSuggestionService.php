@@ -95,7 +95,7 @@ class CompetitorSuggestionService
         $response = $this->nanoGpt->chat([
             [
                 'role' => 'system',
-                'content' => 'You normalize competitor organizations and social handles from web search evidence. Reply with JSON only. Ground every suggestion in the provided search hits (titles, urls, descriptions, or social links). Never invent placeholder handles like *_local, *tips, or slug-derived fakes. Never suggest the brand itself or its own handles. Prefer real public org pages. Omit a platform when unsure. Niche rivals only - not lifestyle, meme, or unrelated accounts. Multiple platforms per org are encouraged when the evidence supports them.',
+                'content' => 'You normalise competitor organisations and social handles from web search evidence. Reply with JSON only. Ground every suggestion in the provided search hits (titles, urls, descriptions, or social links). Never invent placeholder handles like *_local, *tips, or slug-derived fakes. Never suggest the brand itself or its own handles. Prefer real public org pages. Omit a platform when unsure. Niche rivals only - not lifestyle, meme, or unrelated accounts. Multiple platforms per org are encouraged when the evidence supports them.',
             ],
             [
                 'role' => 'user',
@@ -1016,7 +1016,7 @@ Own handles (do not suggest these): {$ownSummary}
 Search evidence (ground every competitor in these hits; prefer orgs/domains/social links found here):
 {$evidence}
 
-Suggest up to {$maxCandidates} distinct niche competitor organizations whose social content is worth tracking.
+Suggest up to {$maxCandidates} distinct niche competitor organisations whose social content is worth tracking.
 Focus on direct rivals and adjacent tools in the same category as the brand.
 Return a fair multi-platform mix when the evidence supports it (instagram, tiktok, youtube, linkedin, facebook).
 Prefer Instagram, TikTok, YouTube Shorts channels, LinkedIn company pages, and LinkedIn creator (/in/) profiles over flooding with Facebook-only rows.
@@ -1042,7 +1042,7 @@ Return JSON shaped as:
 }
 
 Only include platforms from: {$platformList}.
-Return about {$maxCandidates} organizations. Prefer multi-platform rows when real handles exist.
+Return about {$maxCandidates} organisations. Prefer multi-platform rows when real handles exist.
 PROMPT;
     }
 

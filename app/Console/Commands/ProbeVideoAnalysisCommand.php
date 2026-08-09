@@ -23,7 +23,7 @@ class ProbeVideoAnalysisCommand extends Command
         }
 
         $url = (string) $this->argument('url');
-        $this->info("Analyzing {$url}");
+        $this->info("Analysing {$url}");
 
         $lower = strtolower($url);
         if (

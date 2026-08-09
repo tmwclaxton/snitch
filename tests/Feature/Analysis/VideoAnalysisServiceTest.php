@@ -67,8 +67,8 @@ class VideoAnalysisServiceTest extends TestCase
             $encoded = json_encode($payload);
 
             return is_string($encoded)
-                && str_contains($encoded, 'Write every string value in English')
-                && str_contains($encoded, 'Language = English only')
+                && str_contains($encoded, 'Write every string value in English (UK)')
+                && str_contains($encoded, 'Language = English (UK)')
                 && str_contains($encoded, 'hook_type_slugs')
                 && str_contains($encoded, 'Controlled catalogue');
         });

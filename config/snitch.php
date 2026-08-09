@@ -48,7 +48,7 @@ return [
 
     /*
     | Cost-disciplined sync: only import posts from the last N days, with a modest
-    | per-account fetch cap. Analyze jobs also respect this recency window.
+    | per-account fetch cap. Analyse jobs also respect this recency window.
     | min_interval_days skips re-sync when the account was successfully synced
     | recently (scheduled + manual Show sync); failed syncs remain eligible.
     */
