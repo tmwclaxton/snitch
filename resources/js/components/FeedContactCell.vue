@@ -154,7 +154,6 @@ const winnerScore = computed(() => {
                 :post-url="post.url"
                 :platform="post.platform"
                 compact
-                :lazy="false"
             />
         </div>
         <div class="snitch-contact-cell-meta">

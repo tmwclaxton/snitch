@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { acquireEmbedSlot, releaseEmbedSlot } from '@/lib/embedLoadQueue';
 import { platformLabel } from '@/lib/platforms';
 
 export type EmbedConfig = {
@@ -29,13 +30,21 @@ const props = withDefaults(
 );
 
 const root = ref<HTMLElement | null>(null);
-const shouldLoad = ref(!props.lazy);
+const isVisible = ref(!props.lazy);
+const shouldLoad = ref(false);
+const iframeReady = ref(false);
 const embedFailed = ref(false);
 let observer: IntersectionObserver | null = null;
+let slotHeld = false;
+let cancelled = false;
+let loadGeneration = 0;
+let slotTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 const canEmbed = computed(
     () => Boolean(props.embed?.src) && shouldLoad.value && !embedFailed.value,
 );
+
+const showFallback = computed(() => !canEmbed.value || !iframeReady.value);
 
 const isVideoMedia = computed(() => {
     const url = (props.mediaUrl ?? '').split('?')[0]?.toLowerCase() ?? '';
@@ -43,13 +52,76 @@ const isVideoMedia = computed(() => {
     return /\.(mp4|webm|ogg|m4v)$/i.test(url);
 });
 
+function clearSlotTimeout(): void {
+    if (slotTimeoutId === null) {
+        return;
+    }
+
+    clearTimeout(slotTimeoutId);
+    slotTimeoutId = null;
+}
+
+async function requestLoad(generation: number): Promise<void> {
+    if (!props.embed?.src || shouldLoad.value || cancelled) {
+        return;
+    }
+
+    await acquireEmbedSlot();
+
+    if (cancelled || generation !== loadGeneration || !isVisible.value) {
+        releaseEmbedSlot();
+
+        return;
+    }
+
+    slotHeld = true;
+    shouldLoad.value = true;
+
+    // Platforms sometimes never fire load/error; free the queue anyway.
+    clearSlotTimeout();
+    slotTimeoutId = setTimeout(() => {
+        if (generation === loadGeneration) {
+            releaseSlotIfHeld();
+        }
+    }, 10000);
+}
+
+function releaseSlotIfHeld(): void {
+    if (!slotHeld) {
+        return;
+    }
+
+    slotHeld = false;
+    clearSlotTimeout();
+    releaseEmbedSlot();
+}
+
+function onIframeSettled(): void {
+    iframeReady.value = true;
+    releaseSlotIfHeld();
+}
+
+function onEmbedError(): void {
+    embedFailed.value = true;
+    iframeReady.value = false;
+    releaseSlotIfHeld();
+}
+
 function startObserving(): void {
-    if (!props.lazy || shouldLoad.value || !root.value) {
+    if (!props.lazy) {
+        isVisible.value = true;
+        void requestLoad(loadGeneration);
+
+        return;
+    }
+
+    if (isVisible.value || !root.value) {
         return;
     }
 
     if (typeof IntersectionObserver === 'undefined') {
-        shouldLoad.value = true;
+        isVisible.value = true;
+        void requestLoad(loadGeneration);
 
         return;
     }
@@ -57,15 +129,30 @@ function startObserving(): void {
     observer = new IntersectionObserver(
         (entries) => {
             if (entries.some((entry) => entry.isIntersecting)) {
-                shouldLoad.value = true;
+                isVisible.value = true;
                 observer?.disconnect();
                 observer = null;
+                void requestLoad(loadGeneration);
             }
         },
-        { rootMargin: '200px 0px' },
+        { rootMargin: '120px 0px' },
     );
 
     observer.observe(root.value);
+}
+
+function resetForEmbedChange(): void {
+    cancelled = true;
+    loadGeneration += 1;
+    cancelled = false;
+    observer?.disconnect();
+    observer = null;
+    releaseSlotIfHeld();
+    clearSlotTimeout();
+    isVisible.value = !props.lazy;
+    shouldLoad.value = false;
+    iframeReady.value = false;
+    embedFailed.value = false;
 }
 
 onMounted(() => {
@@ -73,24 +160,28 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+    cancelled = true;
     observer?.disconnect();
     observer = null;
+    releaseSlotIfHeld();
+    clearSlotTimeout();
 });
 
 watch(
     () => props.embed?.src,
     () => {
-        embedFailed.value = false;
-        shouldLoad.value = !props.lazy;
-        observer?.disconnect();
-        observer = null;
+        resetForEmbedChange();
         startObserving();
     },
 );
 
-function onEmbedError(): void {
-    embedFailed.value = true;
-}
+watch(
+    () => props.lazy,
+    () => {
+        resetForEmbedChange();
+        startObserving();
+    },
+);
 </script>
 
 <template>
@@ -100,18 +191,11 @@ function onEmbedError(): void {
         :class="compact ? 'snitch-platform-embed-compact' : 'snitch-platform-embed-detail'"
         :style="embed && !embedFailed ? { aspectRatio: embed.aspect } : undefined"
     >
-        <iframe
-            v-if="canEmbed"
-            :src="embed!.src"
-            :title="embed!.title"
-            class="snitch-platform-embed-frame"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen
-            referrerpolicy="strict-origin-when-cross-origin"
-            @error="onEmbedError"
-        />
-
-        <template v-else>
+        <div
+            v-if="showFallback"
+            class="snitch-platform-embed-fallback"
+            aria-hidden="true"
+        >
             <video
                 v-if="mediaUrl && isVideoMedia"
                 :src="mediaUrl"
@@ -125,6 +209,7 @@ function onEmbedError(): void {
                 :src="mediaUrl"
                 alt=""
                 class="snitch-platform-embed-fallback-img"
+                loading="lazy"
             />
             <div
                 v-else
@@ -137,7 +222,21 @@ function onEmbedError(): void {
                     {{ embedFailed ? 'Embed unavailable' : 'No preview' }}
                 </p>
             </div>
-        </template>
+        </div>
+
+        <iframe
+            v-if="canEmbed"
+            :src="embed!.src"
+            :title="embed!.title"
+            class="snitch-platform-embed-frame"
+            :class="{ 'snitch-platform-embed-frame-ready': iframeReady }"
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+            referrerpolicy="strict-origin-when-cross-origin"
+            @load="onIframeSettled"
+            @error="onEmbedError"
+        />
 
         <a
             v-if="postUrl && (embedFailed || !embed)"
