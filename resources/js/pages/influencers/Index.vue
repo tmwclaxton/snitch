@@ -163,6 +163,19 @@ const totalCount = computed(() => localSuggestions.value.length);
 
 const searchLocked = computed(() => searching.value || !props.canSearch);
 
+const thinFailedHint = computed(() => {
+    const status = props.latestRun?.status;
+    const min = 6;
+
+    return (
+        status === 'failed' &&
+        localSuggestions.value.length > 0 &&
+        localSuggestions.value.length < min &&
+        props.canSearch &&
+        !searching.value
+    );
+});
+
 const languageOptions = [
     { value: 'English', label: 'English' },
     { value: 'Spanish', label: 'Spanish' },
@@ -548,7 +561,10 @@ onUnmounted(() => {
                         </button>
                     </div>
 
-                    <p v-if="searchLocked && !searching" class="text-xs text-snitch-ink/55">
+                    <p v-if="thinFailedHint" class="text-xs text-snitch-ink/55">
+                        Last search found fewer than 6 - you can keep reviewing or search again.
+                    </p>
+                    <p v-else-if="searchLocked && !searching" class="text-xs text-snitch-ink/55">
                         Finish Keep / Discard on every suggestion before starting another search.
                     </p>
                     <p v-if="searchMessage" class="text-sm text-snitch-ink/70">

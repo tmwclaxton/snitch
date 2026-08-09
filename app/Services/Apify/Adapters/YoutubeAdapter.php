@@ -32,6 +32,34 @@ class YoutubeAdapter extends AbstractPlatformAdapter
         ];
     }
 
+    /**
+     * YouTube search seed: query returns videos/channels; callers extract unique channel handles.
+     *
+     * @return array{actorId: string, input: array<string, mixed>}
+     */
+    public function searchChannelsActorJob(string $query, int $limit): array
+    {
+        return [
+            'actorId' => $this->actorId(),
+            'input' => $this->searchChannelsActorInput($query, $limit),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function searchChannelsActorInput(string $query, int $limit): array
+    {
+        return [
+            'searchQueries' => [$query],
+            // Prefer Shorts-active creators; still extract channel metadata from each hit.
+            'maxResults' => 0,
+            'maxResultsShorts' => max(1, $limit),
+            'maxResultStreams' => 0,
+            'sortingOrder' => 'relevance',
+        ];
+    }
+
     protected function mapProfile(array $item, string $handle): ?array
     {
         $about = is_array($item['aboutChannelInfo'] ?? null) ? $item['aboutChannelInfo'] : [];

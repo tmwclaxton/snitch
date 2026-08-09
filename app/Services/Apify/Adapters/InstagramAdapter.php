@@ -29,6 +29,71 @@ class InstagramAdapter extends AbstractPlatformAdapter
         ];
     }
 
+    /**
+     * Influencer / competitor verify needs bio + followersCount; posts payloads rarely include them.
+     *
+     * @return array{handle: string, actorId: string, input: array<string, mixed>}
+     */
+    public function resolveActorJob(string $handleOrUrl): array
+    {
+        $handle = $this->normalizeHandle($handleOrUrl);
+
+        return [
+            'handle' => $handle,
+            'actorId' => $this->actorId(),
+            'input' => [
+                'directUrls' => [$this->profileUrl($handle)],
+                'resultsType' => 'details',
+                'resultsLimit' => 1,
+            ],
+        ];
+    }
+
+    /**
+     * Native Instagram user search for influencer discovery seeds.
+     *
+     * @return array{actorId: string, input: array<string, mixed>}
+     */
+    public function searchUsersActorJob(string $query, int $limit): array
+    {
+        return [
+            'actorId' => $this->actorId(),
+            'input' => $this->searchUsersActorInput($query, $limit),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function searchUsersActorInput(string $query, int $limit): array
+    {
+        return [
+            'search' => $query,
+            'searchType' => 'user',
+            'searchLimit' => max(1, $limit),
+            'resultsType' => 'details',
+            'resultsLimit' => 1,
+        ];
+    }
+
+    /**
+     * Enrich known profile URLs with details (followers / bio).
+     *
+     * @param  list<string>  $profileUrls
+     * @return array{actorId: string, input: array<string, mixed>}
+     */
+    public function profileDetailsActorJob(array $profileUrls): array
+    {
+        return [
+            'actorId' => $this->actorId(),
+            'input' => [
+                'directUrls' => array_values($profileUrls),
+                'resultsType' => 'details',
+                'resultsLimit' => 1,
+            ],
+        ];
+    }
+
     protected function mapProfile(array $item, string $handle): ?array
     {
         $owner = is_array($item['owner'] ?? null) ? $item['owner'] : $item;
@@ -50,8 +115,8 @@ class InstagramAdapter extends AbstractPlatformAdapter
             'handle' => ltrim($resolvedHandle, '@'),
             'url' => $this->profileUrl(ltrim($resolvedHandle, '@')),
             'external_id' => $externalId !== null ? (string) $externalId : null,
-            'avatar' => $owner['profilePicUrl'] ?? $item['ownerProfilePicUrl'] ?? null,
-            'display_name' => $item['ownerFullName'] ?? $owner['fullName'] ?? $resolvedHandle,
+            'avatar' => $owner['profilePicUrl'] ?? $item['ownerProfilePicUrl'] ?? $item['profilePicUrl'] ?? null,
+            'display_name' => $item['ownerFullName'] ?? $owner['fullName'] ?? $item['fullName'] ?? $resolvedHandle,
         ];
     }
 

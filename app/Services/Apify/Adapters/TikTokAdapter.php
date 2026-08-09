@@ -29,6 +29,34 @@ class TikTokAdapter extends AbstractPlatformAdapter
         ];
     }
 
+    /**
+     * Native TikTok user search for influencer discovery seeds.
+     *
+     * @return array{actorId: string, input: array<string, mixed>}
+     */
+    public function searchUsersActorJob(string $query, int $limit): array
+    {
+        return [
+            'actorId' => $this->actorId(),
+            'input' => $this->searchUsersActorInput($query, $limit),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function searchUsersActorInput(string $query, int $limit): array
+    {
+        return [
+            'searchQueries' => [$query],
+            'searchSection' => '/user',
+            'maxProfilesPerQuery' => max(1, $limit),
+            'resultsPerPage' => 1,
+            'shouldDownloadVideos' => false,
+            'scrapeAdditionalAuthorMeta' => true,
+        ];
+    }
+
     protected function mapProfile(array $item, string $handle): ?array
     {
         $author = is_array($item['authorMeta'] ?? null) ? $item['authorMeta'] : (is_array($item['author'] ?? null) ? $item['author'] : null);

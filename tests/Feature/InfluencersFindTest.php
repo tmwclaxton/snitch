@@ -403,4 +403,56 @@ class InfluencersFindTest extends TestCase
             ->assertJsonPath('suggestions.0.handle', 'partial')
             ->assertJsonPath('review_complete', false);
     }
+
+    public function test_failed_run_with_undecided_partials_allows_new_search(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $runId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+
+        Cache::put(FindInfluencersJob::cacheKeyFor($user->id, $runId), [
+            'status' => 'failed',
+            'filters' => [
+                'platform' => 'instagram',
+                'language' => 'English',
+                'min_followers' => 1000,
+                'max_followers' => 15000,
+                'brief' => 'UK grants creators',
+            ],
+            'brief' => 'UK grants creators',
+            'suggestions' => [
+                [
+                    'platform' => 'instagram',
+                    'handle' => 'thinpartial',
+                    'url' => 'https://www.instagram.com/thinpartial/',
+                    'display_name' => 'Thin Partial',
+                    'avatar' => null,
+                    'followers' => 4200,
+                ],
+            ],
+            'decisions' => [],
+            'error' => 'Only 1 verified influencer profiles found (need at least 6).',
+        ], now()->addHours(2));
+        Cache::put(FindInfluencersJob::latestCacheKeyFor($user->id), $runId, now()->addHours(2));
+
+        $this->actingAs($user)
+            ->get(route('influencers.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('canSearch', true)
+                ->where('latestRun.status', 'failed')
+            );
+
+        $this->actingAs($user)
+            ->postJson(route('influencers.search'), [
+                'platform' => 'instagram',
+                'language' => 'English',
+                'min_followers' => 1000,
+                'max_followers' => 15000,
+                'brief' => 'Retry UK grants Instagram creators search.',
+            ])
+            ->assertAccepted();
+    }
 }
