@@ -43,6 +43,7 @@ class BillingController extends Controller
             'creditPacks' => $packs,
             'platform' => [
                 'fee_pence' => (int) config('billing.platform_fee_pence', 1900),
+                'bonus_pence' => (int) config('billing.subscription_bonus_pence', 3000),
                 'has_checkout' => filled(config('billing.platform_stripe_price')),
             ],
         ]);

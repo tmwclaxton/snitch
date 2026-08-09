@@ -140,6 +140,7 @@ async function copyText(value: string): Promise<void> {
                 <ul class="list-disc space-y-2 pl-5 text-sm text-snitch-ink/80">
                     <li>Agent-created accounts start with £0 usage until claimed.</li>
                     <li>Claiming in the browser grants £5 once.</li>
+                    <li>The £19/mo platform plan includes £30 usage credits each billing period.</li>
                     <li>Billable tools need an active platform plan plus credit balance.</li>
                     <li>Usage on the billing page is shown for Apify, NanoGPT, and Firecrawl.</li>
                 </ul>
