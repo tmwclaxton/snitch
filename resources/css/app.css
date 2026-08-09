@@ -1800,9 +1800,7 @@
         display: flex;
         align-items: flex-end;
         justify-content: center;
-        /* Fill from under the copy block to the poster floor. */
-        height: calc(100% - 19.25rem);
-        min-height: 14rem;
+        height: min(46dvh, 21rem);
         pointer-events: none;
         overflow: hidden;
     }
@@ -1811,7 +1809,7 @@
         position: absolute;
         inset-inline: -8%;
         bottom: -6%;
-        height: 58%;
+        height: 55%;
         z-index: 0;
         background:
             linear-gradient(
@@ -1839,36 +1837,24 @@
     .snitch-hero-mobile-mascot {
         position: relative;
         z-index: 1;
-        display: flex;
-        height: 96%;
-        width: min(94vw, 26rem);
+        width: min(74vw, 17rem);
         margin-inline: auto;
-        margin-bottom: -0.15rem;
-        align-items: flex-end;
-        justify-content: center;
+        margin-bottom: -0.2rem;
     }
 
     .snitch-hero-mobile-mascot-bob {
-        width: 100%;
-        height: 100%;
         animation: snitch-hero-mobile-mascot-bob 5.5s ease-in-out infinite;
         will-change: transform;
     }
 
     .snitch-hero-mobile-mascot-frame {
         width: 100%;
-        height: 100%;
-        max-height: 100%;
-    }
-
-    .snitch-hero-mobile .snitch-hero-mascot-character {
-        object-fit: cover;
-        object-position: center bottom;
+        aspect-ratio: 1.35 / 1;
     }
 
     .snitch-hero-mobile .snitch-hero-mascot-binos {
-        width: 58%;
-        top: 30%;
+        width: 62%;
+        top: 28%;
     }
 
     @media (max-height: 700px) {
@@ -1877,12 +1863,11 @@
         }
 
         .snitch-hero-mobile-stage {
-            height: calc(100% - 17.5rem);
-            min-height: 11.5rem;
+            height: min(40dvh, 16.5rem);
         }
 
         .snitch-hero-mobile-mascot {
-            width: min(88vw, 20rem);
+            width: min(64vw, 14rem);
         }
 
         .snitch-hero-mobile-cta {
