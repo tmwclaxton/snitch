@@ -1638,6 +1638,52 @@
         background-color: var(--snitch-paper);
     }
 
+    /*
+     * Soft wash while the multi-MB backdrop layers decode. Avoids progressive
+     * PNG/JPEG strips painting in chunk by chunk.
+     */
+    .snitch-hero-backdrop-placeholder {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background:
+            radial-gradient(
+                120% 80% at 70% 35%,
+                color-mix(in oklab, var(--snitch-fog) 70%, transparent) 0%,
+                transparent 55%
+            ),
+            linear-gradient(
+                160deg,
+                color-mix(in oklab, var(--snitch-spot) 18%, var(--snitch-paper))
+                    0%,
+                var(--snitch-paper) 48%,
+                color-mix(in oklab, var(--snitch-fog) 55%, var(--snitch-paper))
+                    100%
+            );
+    }
+
+    .snitch-hero-backdrop {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        opacity: 0;
+        filter: blur(18px);
+        transform: scale(1.04);
+        transform-origin: center top;
+        transition:
+            opacity 0.55s ease,
+            filter 0.55s ease,
+            transform 0.55s ease;
+        will-change: opacity, filter, transform;
+    }
+
+    .snitch-hero-backdrop.is-ready {
+        opacity: 1;
+        filter: none;
+        transform: none;
+        will-change: auto;
+    }
+
     .snitch-hero-bg {
         position: absolute;
         inset: 0;
@@ -2306,9 +2352,15 @@
     .snitch-btn,
     .snitch-hero-marquee-track,
     .snitch-hero-mascot-peek,
-    .snitch-hero-mascot-binos {
+    .snitch-hero-mascot-binos,
+    .snitch-hero-backdrop {
         animation: none !important;
         transition: none !important;
+    }
+
+    .snitch-hero-backdrop {
+        filter: none;
+        transform: none;
     }
 
     .snitch-hero-marquee-track {
