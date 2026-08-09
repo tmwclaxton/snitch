@@ -125,7 +125,7 @@ const steps = [
             </div>
 
             <div
-                class="relative z-10 flex min-h-0 flex-1 flex-col px-5 pb-3 pt-28"
+                class="relative z-10 flex min-h-0 flex-1 flex-col px-5 pb-3 pt-44"
             >
                 <div class="snitch-hero-mobile-copy min-w-0 shrink-0">
                     <p
