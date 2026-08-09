@@ -7,17 +7,21 @@ use App\Jobs\SyncTrackedAccountJob;
 use App\Models\BrandProfile;
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Services\Billing\UsageBillingService;
+use App\Services\Billing\VendorUsageCharger;
 use App\Services\Competitors\CompetitorSuggestionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\WithPlatformBilling;
 use Tests\TestCase;
 
 class CompetitorsSuggestTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPlatformBilling;
 
     public function test_guest_cannot_start_suggest(): void
     {
@@ -195,7 +199,14 @@ class CompetitorsSuggestTest extends TestCase
                     ],
                 ],
             ]),
-            'https://api.apify.test/v2/acts/*' => Http::response([
+            'https://api.apify.test/v2/acts/*/runs*' => Http::response([
+                'data' => [
+                    'id' => 'run_1',
+                    'defaultDatasetId' => 'dataset_1',
+                    'usageTotalUsd' => 0.01,
+                ],
+            ]),
+            'https://api.apify.test/v2/datasets/dataset_1/items*' => Http::response([
                 [
                     'ownerUsername' => 'rivalbakery1',
                     'ownerId' => '99',
@@ -205,9 +216,17 @@ class CompetitorsSuggestTest extends TestCase
                     'url' => 'https://www.instagram.com/p/ABC123/',
                 ],
             ]),
+            'https://api.apify.test/v2/actor-runs/run_1' => Http::response([
+                'data' => [
+                    'id' => 'run_1',
+                    'defaultDatasetId' => 'dataset_1',
+                    'usageTotalUsd' => 0.01,
+                ],
+            ]),
         ]);
 
         $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
         BrandProfile::factory()->for($user)->create([
             'name' => 'Loaf Local',
             'description' => 'Neighborhood bakery',
@@ -224,7 +243,11 @@ class CompetitorsSuggestTest extends TestCase
         Cache::put(SuggestCompetitorsJob::activeCacheKeyFor($user->id), $suggestId, now()->addMinutes(15));
 
         (new SuggestCompetitorsJob($user->id, $suggestId))
-            ->handle(app(CompetitorSuggestionService::class));
+            ->handle(
+                app(CompetitorSuggestionService::class),
+                app(VendorUsageCharger::class),
+                app(UsageBillingService::class),
+            );
 
         $payload = Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId));
 
@@ -373,7 +396,14 @@ class CompetitorsSuggestTest extends TestCase
                     ],
                 ],
             ]),
-            'https://api.apify.test/v2/acts/*' => Http::response([
+            'https://api.apify.test/v2/acts/*/runs*' => Http::response([
+                'data' => [
+                    'id' => 'run_1',
+                    'defaultDatasetId' => 'dataset_1',
+                    'usageTotalUsd' => 0.01,
+                ],
+            ]),
+            'https://api.apify.test/v2/datasets/dataset_1/items*' => Http::response([
                 [
                     'ownerUsername' => 'onlyone',
                     'ownerId' => '1',
@@ -382,9 +412,17 @@ class CompetitorsSuggestTest extends TestCase
                     'url' => 'https://www.instagram.com/p/ABC/',
                 ],
             ]),
+            'https://api.apify.test/v2/actor-runs/run_1' => Http::response([
+                'data' => [
+                    'id' => 'run_1',
+                    'defaultDatasetId' => 'dataset_1',
+                    'usageTotalUsd' => 0.01,
+                ],
+            ]),
         ]);
 
         $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
         BrandProfile::factory()->for($user)->create([
             'name' => 'Loaf Local',
             'description' => 'Neighborhood bakery',
@@ -401,7 +439,11 @@ class CompetitorsSuggestTest extends TestCase
         Cache::put(SuggestCompetitorsJob::activeCacheKeyFor($user->id), $suggestId, now()->addMinutes(15));
 
         (new SuggestCompetitorsJob($user->id, $suggestId))
-            ->handle(app(CompetitorSuggestionService::class));
+            ->handle(
+                app(CompetitorSuggestionService::class),
+                app(VendorUsageCharger::class),
+                app(UsageBillingService::class),
+            );
 
         $payload = Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId));
 

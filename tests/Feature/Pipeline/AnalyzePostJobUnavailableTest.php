@@ -11,16 +11,20 @@ use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Analysis\VideoAnalysisService;
+use App\Services\Billing\UsageBillingService;
+use App\Services\Billing\VendorUsageCharger;
 use App\Services\Winners\WinnerScorer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Mockery;
 use RuntimeException;
+use Tests\Concerns\WithPlatformBilling;
 use Tests\TestCase;
 
 class AnalyzePostJobUnavailableTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPlatformBilling;
 
     public function test_marks_post_unavailable_when_media_returns_404(): void
     {
@@ -29,6 +33,7 @@ class AnalyzePostJobUnavailableTest extends TestCase
         ]);
 
         $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
         $account = TrackedAccount::factory()->for($user)->create();
         $post = Post::factory()->forAccount($account)->create([
             'type' => PostType::Reel,
@@ -43,6 +48,8 @@ class AnalyzePostJobUnavailableTest extends TestCase
         (new AnalyzePostJob($post->id))->handle(
             app(VideoAnalysisService::class),
             app(WinnerScorer::class),
+            app(VendorUsageCharger::class),
+            app(UsageBillingService::class),
         );
 
         $post->refresh();
@@ -71,6 +78,8 @@ class AnalyzePostJobUnavailableTest extends TestCase
         (new AnalyzePostJob($post->id))->handle(
             app(VideoAnalysisService::class),
             app(WinnerScorer::class),
+            app(VendorUsageCharger::class),
+            app(UsageBillingService::class),
         );
 
         $this->assertSame(MediaAvailability::Unavailable, $post->fresh()->media_availability);
@@ -79,6 +88,7 @@ class AnalyzePostJobUnavailableTest extends TestCase
     public function test_fails_analysis_for_youtube_page_media_without_calling_nanogpt(): void
     {
         $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
         $account = TrackedAccount::factory()->for($user)->create([
             'platform' => Platform::Youtube,
         ]);
@@ -97,6 +107,8 @@ class AnalyzePostJobUnavailableTest extends TestCase
         (new AnalyzePostJob($post->id))->handle(
             app(VideoAnalysisService::class),
             app(WinnerScorer::class),
+            app(VendorUsageCharger::class),
+            app(UsageBillingService::class),
         );
 
         $post->refresh();
@@ -112,6 +124,7 @@ class AnalyzePostJobUnavailableTest extends TestCase
         ]);
 
         $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
         $account = TrackedAccount::factory()->for($user)->create();
         $post = Post::factory()->forAccount($account)->create([
             'type' => PostType::Reel,
@@ -132,6 +145,8 @@ class AnalyzePostJobUnavailableTest extends TestCase
         (new AnalyzePostJob($post->id))->handle(
             app(VideoAnalysisService::class),
             $scorer,
+            app(VendorUsageCharger::class),
+            app(UsageBillingService::class),
         );
 
         $this->assertSame(MediaAvailability::Available, $post->fresh()->media_availability);
