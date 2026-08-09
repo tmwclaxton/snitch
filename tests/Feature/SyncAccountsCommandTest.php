@@ -19,7 +19,9 @@ class SyncAccountsCommandTest extends TestCase
 
         config(['snitch.sync.min_interval_days' => 7]);
 
-        $user = User::factory()->create();
+        // Trial grants Basic competitor limits so four accounts stay in-quota and
+        // this test can assert weekly due/skip behavior rather than over-quota skips.
+        $user = User::factory()->onTrial()->create();
 
         $dueNeverSynced = TrackedAccount::factory()->for($user)->create([
             'last_synced_at' => null,
@@ -42,7 +44,7 @@ class SyncAccountsCommandTest extends TestCase
         ]);
 
         $this->artisan('snitch:sync-accounts')
-            ->expectsOutputToContain('Enqueued 3 account sync jobs (1 skipped; synced recently).')
+            ->expectsOutputToContain('Enqueued 3 account sync jobs (1 skipped recently; 0 over quota).')
             ->assertSuccessful();
 
         Queue::assertPushed(SyncTrackedAccountJob::class, 3);
