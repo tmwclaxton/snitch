@@ -1722,6 +1722,114 @@
     }
 
     /*
+     * Mobile landing poster (md:hidden): vertical riso print with a mustard
+     * ink floor and a large mascot anchor. Desktop keeps .snitch-hero wall art.
+     */
+    .snitch-hero-mobile {
+        background-color: var(--snitch-paper);
+    }
+
+    .snitch-hero-mobile-wash {
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(
+                95% 70% at 50% 18%,
+                color-mix(in oklab, var(--snitch-spot) 42%, transparent) 0%,
+                transparent 58%
+            ),
+            linear-gradient(
+                180deg,
+                color-mix(in oklab, var(--snitch-fog) 55%, var(--snitch-paper))
+                    0%,
+                var(--snitch-paper) 42%,
+                color-mix(in oklab, var(--snitch-spot) 22%, var(--snitch-paper))
+                    100%
+            );
+    }
+
+    .snitch-hero-mobile-copy {
+        position: relative;
+        z-index: 2;
+    }
+
+    .snitch-hero-mobile-wordmark {
+        filter: drop-shadow(
+            0 1px 0 color-mix(in oklab, var(--snitch-lift) 55%, transparent)
+        );
+    }
+
+    .snitch-hero-mobile-cta .snitch-btn {
+        min-height: 2.85rem;
+        min-width: 0;
+        width: 100%;
+        padding: 0.72rem 1.25rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        letter-spacing: 0.025em;
+    }
+
+    .snitch-hero-mobile-stage {
+        z-index: 1;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .snitch-hero-mobile-floor {
+        position: absolute;
+        inset-inline: -8%;
+        bottom: -6%;
+        height: 42%;
+        z-index: 0;
+        background:
+            linear-gradient(
+                180deg,
+                transparent 0%,
+                color-mix(in oklab, var(--snitch-spot) 55%, transparent) 28%,
+                var(--snitch-spot) 100%
+            );
+        clip-path: polygon(
+            0% 18%,
+            8% 8%,
+            22% 14%,
+            38% 6%,
+            55% 12%,
+            72% 4%,
+            88% 11%,
+            100% 7%,
+            100% 100%,
+            0% 100%
+        );
+        opacity: 0.92;
+        transform: rotate(-1.2deg);
+    }
+
+    .snitch-hero-mobile-mascot {
+        position: relative;
+        z-index: 1;
+        width: min(78vw, 18.5rem);
+        margin-inline: auto;
+        margin-bottom: -0.35rem;
+    }
+
+    .snitch-hero-mobile-mascot-frame {
+        width: 100%;
+        aspect-ratio: 1.35 / 1;
+    }
+
+    .snitch-hero-mobile-mascot-bob {
+        animation: snitch-hero-mobile-mascot-bob 5.5s ease-in-out infinite;
+        will-change: transform;
+    }
+
+    .snitch-hero-mobile .snitch-hero-mascot-binos {
+        width: 62%;
+        top: 28%;
+    }
+
+    /*
      * Soft wash while the multi-MB backdrop layers decode. Avoids progressive
      * PNG/JPEG strips painting in chunk by chunk.
      */
@@ -2427,6 +2535,16 @@
     }
 }
 
+@keyframes snitch-hero-mobile-mascot-bob {
+    0%,
+    100% {
+        transform: translateY(0) rotate(-1.5deg);
+    }
+    50% {
+        transform: translateY(-0.45rem) rotate(1deg);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .snitch-grain,
     .snitch-tape,
@@ -2436,6 +2554,7 @@
     .snitch-hero-marquee-track,
     .snitch-hero-mascot-peek,
     .snitch-hero-mascot-binos,
+    .snitch-hero-mobile-mascot-bob,
     .snitch-hero-backdrop {
         animation: none !important;
         transition: none !important;
@@ -2454,6 +2573,11 @@
     .snitch-hero-mascot-peek {
         will-change: auto;
         transform: rotate(8deg) translateY(38%);
+    }
+
+    .snitch-hero-mobile-mascot-bob {
+        will-change: auto;
+        transform: none;
     }
 
     .snitch-hero-mascot-binos {

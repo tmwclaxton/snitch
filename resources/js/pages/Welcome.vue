@@ -34,6 +34,7 @@ const heroBackdropSources = [
 ] as const;
 
 const heroBackdropReady = ref(false);
+const desktopHeroArt = ref(false);
 
 function preloadHeroImage(src: string): Promise<void> {
     return new Promise((resolve) => {
@@ -57,11 +58,28 @@ function preloadHeroImage(src: string): Promise<void> {
 }
 
 onMounted(() => {
-    void Promise.all(heroBackdropSources.map((src) => preloadHeroImage(src))).then(
-        () => {
+    const desktopQuery = window.matchMedia('(min-width: 768px)');
+
+    const syncDesktopHero = (): void => {
+        if (!desktopQuery.matches) {
+            return;
+        }
+
+        desktopHeroArt.value = true;
+
+        if (heroBackdropReady.value) {
+            return;
+        }
+
+        void Promise.all(
+            heroBackdropSources.map((src) => preloadHeroImage(src)),
+        ).then(() => {
             heroBackdropReady.value = true;
-        },
-    );
+        });
+    };
+
+    syncDesktopHero();
+    desktopQuery.addEventListener('change', syncDesktopHero);
 });
 
 const platforms = [
@@ -93,13 +111,117 @@ const steps = [
 
 <template>
     <div>
+        <!--
+          Mobile poster hero (below md): vertical riso print with mascot as
+          the visual anchor. Desktop keeps the wall + title-card composition.
+        -->
+        <section
+            class="snitch-hero-mobile relative flex h-dvh w-full flex-col overflow-hidden md:hidden"
+            aria-label="Snitch"
+        >
+            <div class="absolute inset-0" aria-hidden="true">
+                <div class="snitch-hero-mobile-wash" />
+                <div class="snitch-grain z-[1] opacity-30" />
+            </div>
+
+            <div
+                class="relative z-10 flex min-h-0 flex-1 flex-col px-5 pb-3 pt-[5.75rem]"
+            >
+                <div class="snitch-hero-mobile-copy min-w-0 shrink-0">
+                    <p
+                        class="snitch-display snitch-hero-mobile-wordmark relative text-[clamp(3.6rem,18vw,5.25rem)] leading-[0.8] tracking-[-0.04em] text-snitch-ink"
+                    >
+                        <span
+                            class="snitch-hero-wordmark-misreg pointer-events-none absolute inset-0 select-none"
+                            aria-hidden="true"
+                        >Snitch</span>
+                        <span class="relative">Snitch</span>
+                    </p>
+                    <h1
+                        class="snitch-display mt-3 max-w-[16rem] text-[1.2rem] leading-[1.25] tracking-[-0.012em] text-pretty text-snitch-ink"
+                    >
+                        See what competitors post. Remake what wins.
+                    </h1>
+                    <div
+                        class="snitch-hero-mobile-cta mt-5 flex flex-col items-stretch gap-2.5"
+                    >
+                        <Link
+                            v-if="isAuthenticated"
+                            :href="dashboard()"
+                            class="snitch-btn snitch-btn-spot w-full justify-center"
+                        >
+                            <span class="relative z-10 inline-flex items-center gap-2">
+                                <LayoutGrid class="size-3.5 shrink-0" aria-hidden="true" />
+                                Open dashboard
+                            </span>
+                        </Link>
+                        <template v-else>
+                            <Link
+                                :href="login()"
+                                class="snitch-btn snitch-btn-spot w-full justify-center"
+                            >
+                                <span class="relative z-10 inline-flex items-center gap-2">
+                                    <UserPlus class="size-3.5 shrink-0" aria-hidden="true" />
+                                    Get started
+                                </span>
+                            </Link>
+                            <Link
+                                :href="login()"
+                                class="snitch-btn w-full justify-center"
+                            >
+                                <span class="relative z-10 inline-flex items-center gap-2">
+                                    <LogIn class="size-3.5 shrink-0" aria-hidden="true" />
+                                    Log in
+                                </span>
+                            </Link>
+                        </template>
+                    </div>
+                </div>
+
+                <div
+                    class="snitch-hero-mobile-stage relative mt-4 min-h-0 flex-1"
+                    aria-hidden="true"
+                >
+                    <div class="snitch-hero-mobile-floor" />
+                    <div class="snitch-hero-mobile-mascot">
+                        <div class="snitch-hero-mobile-mascot-bob origin-bottom">
+                            <div
+                                class="snitch-hero-mobile-mascot-frame relative mx-auto select-none overflow-hidden"
+                            >
+                                <img
+                                    src="/images/marketing/hero/mascot-character.png"
+                                    alt=""
+                                    draggable="false"
+                                    class="snitch-hero-mascot-character absolute inset-0 h-full w-full object-contain object-bottom"
+                                    width="280"
+                                    height="200"
+                                    decoding="async"
+                                    fetchpriority="high"
+                                />
+                                <img
+                                    src="/images/marketing/hero/mascot-binos.png"
+                                    alt=""
+                                    draggable="false"
+                                    class="snitch-hero-mascot-binos absolute left-1/2"
+                                    width="196"
+                                    height="130"
+                                    decoding="async"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Nav overlays this section (absolute snitch-nav-hero); together = one dvh. -->
         <section
-            class="snitch-hero relative h-dvh w-full overflow-hidden"
+            class="snitch-hero relative hidden h-dvh w-full overflow-hidden md:block"
         >
             <div class="absolute inset-0" aria-hidden="true">
                 <div class="snitch-hero-backdrop-placeholder" />
                 <div
+                    v-if="desktopHeroArt"
                     class="snitch-hero-backdrop"
                     :class="{ 'is-ready': heroBackdropReady }"
                 >
@@ -198,7 +320,7 @@ const steps = [
                 <div class="relative min-w-0 max-w-md sm:max-w-lg">
                     <!-- Peek mascot sits outside the yellow drop-shadow filter. -->
                     <div
-                        class="snitch-hero-mascot pointer-events-none absolute right-4 hidden md:block lg:right-7"
+                        class="snitch-hero-mascot pointer-events-none absolute right-4 lg:right-7"
                         aria-hidden="true"
                     >
                         <div class="snitch-hero-mascot-peek origin-bottom">
