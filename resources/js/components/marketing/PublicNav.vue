@@ -14,6 +14,7 @@ import {
     logout,
     pricing,
 } from '@/routes';
+import { index as blog } from '@/routes/blog';
 
 withDefaults(
     defineProps<{
@@ -33,6 +34,7 @@ const overHero = computed(
 const links = [
     { label: 'How it works', href: howItWorks() },
     { label: 'Pricing', href: pricing() },
+    { label: 'Blog', href: blog() },
     { label: 'Analytics', href: analytics() },
     { label: 'About', href: about() },
     { label: 'Contact', href: contact() },

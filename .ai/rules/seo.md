@@ -22,6 +22,7 @@ Public SEO copy and indexability live in `config/seo.php`. `App\Support\Seo::for
 - Absolute canonical / OG image URLs must use `config('app.url')` (www in production), not `window.location.origin`.
 - Only routes listed under `seo.pages` are `index, follow`. Auth app surfaces, onboarding, and 404 are `noindex, nofollow`.
 - Unmatched 404s skip the `web` middleware group; `bootstrap/app.php` must share `seo` (and shell props) before rendering `errors/NotFound`.
-- Sitemap entries come from `Seo::sitemapEntries()`; never list disallowed app paths.
+- Sitemap entries come from `Seo::sitemapEntries()` (static `seo.pages` plus published `Blog` posts); never list disallowed app paths.
+- `blog.show` SEO is resolved dynamically from the route-bound `Blog` (title, excerpt, hero image, Article JSON-LD), not from `seo.pages`.
 - `public/robots.txt` Sitemap line must stay absolute: `https://www.snitchsocial.net/sitemap.xml`.
 - In `SeoHead.vue`, never put a raw `<script>` inside the Vue template (Vue ignores side-effect tags and Vite fails). Render JSON-LD with `<component :is="'script'" type="application/ld+json" v-text="...">`.

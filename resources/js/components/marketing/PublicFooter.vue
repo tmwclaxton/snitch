@@ -12,11 +12,13 @@ import {
     privacy,
     terms,
 } from '@/routes';
+import { index as blog } from '@/routes/blog';
 
 const footerLinks = [
     { label: 'About', href: about() },
     { label: 'How it works', href: howItWorks() },
     { label: 'Pricing', href: pricing() },
+    { label: 'Blog', href: blog() },
     { label: 'Analytics', href: analytics() },
     { label: 'Contact', href: contact() },
     { label: 'Privacy', href: privacy() },

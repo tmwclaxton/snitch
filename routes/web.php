@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\BacklogController;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\BrandProfileController;
 use App\Http\Controllers\CompetitorController;
 use App\Http\Controllers\DashboardController;
@@ -26,6 +27,9 @@ Route::inertia('/cookies', 'marketing/Cookies')->name('cookies');
 
 Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
 Route::get('/analytics.json', [AnalyticsController::class, 'json'])->name('analytics.json');
+
+Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
+Route::get('/blog/{blog:slug}', [BlogController::class, 'show'])->name('blog.show');
 
 Route::get('/contact', [ContactController::class, 'create'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])

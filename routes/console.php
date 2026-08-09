@@ -24,3 +24,8 @@ Schedule::call(function (): void {
             }
         });
 })->dailyAt('06:30')->name('snitch-score-winners');
+
+// Weekly AI blog draft (default status from config/blog.php). Spot-check then blog:publish.
+Schedule::command('blog:generate --length=long')
+    ->weeklyOn(1, '9:00')
+    ->appendOutputTo(storage_path('logs/blog-generate.log'));
