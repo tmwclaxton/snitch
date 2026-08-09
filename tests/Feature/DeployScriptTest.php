@@ -52,6 +52,9 @@ class DeployScriptTest extends TestCase
         $this->assertStringContainsString('ensure_edge_image', $script);
         $this->assertStringContainsString('nginx:1.27-alpine', $script);
         $this->assertStringContainsString('compose up -d --no-deps --pull never', $script);
+        $this->assertStringContainsString('EDGE_IMAGE', $script);
+        $this->assertStringContainsString('ensure_edge_image', $script);
+        $this->assertStringContainsString('nginx:1.27-alpine', $script);
 
         $edgeConf = file_get_contents(base_path('docker/production/edge/conf.d/snitch.conf'));
         $this->assertNotFalse($edgeConf);
@@ -64,6 +67,7 @@ class DeployScriptTest extends TestCase
         $this->assertStringContainsString('app_blue:', $compose);
         $this->assertStringContainsString('app_green:', $compose);
         $this->assertStringContainsString('"8095:80"', $compose);
+        $this->assertStringContainsString('nginx:1.27-alpine', $compose);
         $this->assertStringNotContainsString('  app:', $compose);
 
         $workflow = file_get_contents(base_path('.github/workflows/prod_deploy.yml'));
@@ -84,5 +88,8 @@ class DeployScriptTest extends TestCase
         $this->assertStringContainsString('SKIP_GHCR_PULL=1 ./deploy-production.sh', $workflow);
         $this->assertStringContainsString('docker/production/edge/nginx.conf', $workflow);
         $this->assertStringContainsString('upstream-active.conf.default', $workflow);
+        $this->assertStringContainsString('EDGE_IMAGE: nginx:1.27-alpine', $workflow);
+        $this->assertStringContainsString('docker pull "$EDGE_IMAGE"', $workflow);
+        $this->assertStringContainsString('docker save "$IMAGE_SHA" "$EDGE_IMAGE"', $workflow);
     }
 }

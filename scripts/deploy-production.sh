@@ -5,12 +5,16 @@ COMPOSE_PROJECT="${COMPOSE_PROJECT:-snitch}"
 COMPOSE_FILE="${COMPOSE_FILE:-compose.prod.yaml}"
 ENV_FILE="${ENV_FILE:-.env}"
 APP_IMAGE="${APP_IMAGE:-ghcr.io/tmwclaxton/snitch:latest}"
+EDGE_IMAGE="${EDGE_IMAGE:-nginx:1.27-alpine}"
 # Host → GHCR egress is flaky (TLS handshake timeouts / hung blob downloads).
-# CI should load the image over SSH from the Actions runner and set SKIP_GHCR_PULL=1.
+# CI should load the app image over SSH from the Actions runner and set SKIP_GHCR_PULL=1.
 # Keep timed registry pull as a manual / fallback path.
+# Edge nginx is a public Docker Hub image; CI also preloads it, but ensure_edge_image
+# pulls it here if the host is missing it (first blue/green cutover or pruned images).
 SKIP_GHCR_PULL="${SKIP_GHCR_PULL:-0}"
 PULL_TIMEOUT_SECONDS="${PULL_TIMEOUT_SECONDS:-240}"
 GHCR_MAX_ATTEMPTS="${GHCR_MAX_ATTEMPTS:-8}"
+EDGE_PULL_MAX_ATTEMPTS="${EDGE_PULL_MAX_ATTEMPTS:-4}"
 DEPLOY_LOCK_FILE="${DEPLOY_LOCK_FILE:-/tmp/snitch-production-deploy.lock}"
 DEPLOY_SLOT_FILE="${DEPLOY_SLOT_FILE:-.deploy-slot}"
 EDGE_DIR="${EDGE_DIR:-edge}"
@@ -75,6 +79,16 @@ ensure_edge_upstream_file() {
     if [ ! -f "$EDGE_UPSTREAM_FILE" ]; then
         cp "$EDGE_UPSTREAM_DEFAULT" "$EDGE_UPSTREAM_FILE"
     fi
+}
+
+ensure_edge_image() {
+    if docker image inspect "$EDGE_IMAGE" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    echo "Edge image ${EDGE_IMAGE} missing locally; pulling..."
+    prefer_ipv4_egress || true
+    retry_with_backoff "$EDGE_PULL_MAX_ATTEMPTS" docker pull "$EDGE_IMAGE"
 }
 
 write_upstream_for_slot() {
@@ -324,6 +338,8 @@ else
     echo "Pulling app image (${APP_IMAGE})..."
     retry_with_backoff "$GHCR_MAX_ATTEMPTS" pull_app_image
 fi
+
+ensure_edge_image
 
 zero_downtime_deploy_app
 
