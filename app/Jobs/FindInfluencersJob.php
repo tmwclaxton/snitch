@@ -2,8 +2,13 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\InsufficientInfluencerSuggestionsException;
+use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Models\BrandProfile;
+use App\Models\User;
+use App\Services\Billing\UsageBillingService;
+use App\Services\Billing\VendorUsageCharger;
 use App\Services\Influencers\InfluencerDiscoveryService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -37,8 +42,11 @@ class FindInfluencersJob implements ShouldQueue
         public array $filters,
     ) {}
 
-    public function handle(InfluencerDiscoveryService $discovery): void
-    {
+    public function handle(
+        InfluencerDiscoveryService $discovery,
+        VendorUsageCharger $charger,
+        UsageBillingService $billing,
+    ): void {
         $existing = $this->payload();
 
         $this->putStatus([
@@ -49,6 +57,27 @@ class FindInfluencersJob implements ShouldQueue
             'decisions' => is_array($existing['decisions'] ?? null) ? $existing['decisions'] : [],
             'error' => null,
         ]);
+
+        $user = User::query()->find($this->userId);
+
+        if ($user === null) {
+            throw new \RuntimeException('User not found.');
+        }
+
+        try {
+            $charger->assertCanRun($user);
+        } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $e) {
+            $this->putStatus([
+                'status' => 'failed',
+                'filters' => $this->filters,
+                'brief' => $this->filters['brief'] ?? '',
+                'suggestions' => [],
+                'decisions' => [],
+                'error' => $e->getMessage(),
+            ]);
+
+            return;
+        }
 
         $brand = BrandProfile::query()
             ->where('user_id', $this->userId)
@@ -71,6 +100,7 @@ class FindInfluencersJob implements ShouldQueue
                 ]);
             });
         } catch (InsufficientInfluencerSuggestionsException $exception) {
+            $this->chargeInfluencerFindVendors($user, $charger, $billing);
             $current = $this->payload();
             $this->putStatus([
                 'status' => 'failed',
@@ -84,6 +114,8 @@ class FindInfluencersJob implements ShouldQueue
             return;
         }
 
+        $this->chargeInfluencerFindVendors($user, $charger, $billing);
+
         $current = $this->payload();
 
         $this->putStatus([
@@ -94,6 +126,33 @@ class FindInfluencersJob implements ShouldQueue
             'decisions' => is_array($current['decisions'] ?? null) ? $current['decisions'] : [],
             'error' => null,
         ]);
+    }
+
+    private function chargeInfluencerFindVendors(
+        User $user,
+        VendorUsageCharger $charger,
+        UsageBillingService $billing,
+    ): void {
+        $searchLimit = (int) config('snitch.influencer_find.search_limit', 12);
+        $charger->chargeFirecrawl(
+            user: $user,
+            action: 'influencers.find',
+            cogsUsd: $billing->estimateFirecrawlSearchUsd($searchLimit) * 3,
+            meta: ['run_id' => $this->runId, 'kind' => 'search'],
+            idempotencyKey: 'influencers.find.firecrawl:'.$this->runId,
+        );
+        $charger->chargeNanoGpt(
+            user: $user,
+            action: 'influencers.find',
+            cogsUsd: $billing->estimateNanoGptChatUsd(
+                null,
+                null,
+                (string) config('snitch.influencer_find.model'),
+            ),
+            meta: ['run_id' => $this->runId, 'kind' => 'propose'],
+            idempotencyKey: 'influencers.find.nanogpt:'.$this->runId,
+        );
+        $charger->chargePulledApifyRuns($user, 'influencers.find');
     }
 
     public function failed(?Throwable $exception): void

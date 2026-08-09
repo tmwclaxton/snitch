@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Listeners\HandleStripeWebhook;
 use App\Mail\PostalTransport;
 use App\Support\ClientIp;
 use App\Support\WorkOs\Ipv4CurlRequestClient;
@@ -10,12 +11,14 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Cashier\Events\WebhookReceived;
 use WorkOS\Client as WorkOsClient;
 
 class AppServiceProvider extends ServiceProvider
@@ -39,6 +42,8 @@ class AppServiceProvider extends ServiceProvider
         $this->configureUrlGenerator();
         $this->configureRateLimiting();
         $this->registerPostalMailer();
+
+        Event::listen(WebhookReceived::class, HandleStripeWebhook::class);
     }
 
     /**
@@ -143,6 +148,14 @@ class AppServiceProvider extends ServiceProvider
     protected function configureRateLimiting(): void
     {
         RateLimiter::for('contact', function (Request $request) {
+            return Limit::perMinute(10)->by(ClientIp::from($request));
+        });
+
+        RateLimiter::for('mcp', function (Request $request) {
+            return Limit::perMinute(120)->by($request->user()?->id ?: ClientIp::from($request));
+        });
+
+        RateLimiter::for('mcp-register', function (Request $request) {
             return Limit::perMinute(10)->by(ClientIp::from($request));
         });
     }

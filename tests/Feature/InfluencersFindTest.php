@@ -7,7 +7,6 @@ use App\Jobs\SyncTrackedAccountJob;
 use App\Models\BrandProfile;
 use App\Models\TrackedAccount;
 use App\Models\User;
-use App\Services\Billing\PlanEntitlementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
@@ -262,17 +261,13 @@ class InfluencersFindTest extends TestCase
         $this->assertSame('discarded', $payload['decisions']['tiktok:skipme'] ?? null);
     }
 
-    public function test_keep_blocked_at_influencer_quota(): void
+    public function test_keep_allows_many_influencers_without_seat_caps(): void
     {
         Queue::fake();
 
-        // EnsureBrandProfile starts a trial (Basic limit) on the keep request.
-        $user = User::factory()->onTrial()->create();
+        $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
-
-        $limit = app(PlanEntitlementService::class)->influencerLimit($user);
-        TrackedAccount::factory()->count($limit)->influencer()->for($user)->create();
-        // Competitor overfill must not block influencer Keep.
+        TrackedAccount::factory()->count(12)->influencer()->for($user)->create();
         TrackedAccount::factory()->count(5)->competitor()->for($user)->create();
 
         $runId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
@@ -311,63 +306,9 @@ class InfluencersFindTest extends TestCase
             ])
             ->assertRedirect(route('influencers.index'));
 
-        $this->assertDatabaseMissing('tracked_accounts', [
-            'user_id' => $user->id,
-            'handle' => 'overflow',
-        ]);
-
-        $payload = Cache::get(FindInfluencersJob::cacheKeyFor($user->id, $runId));
-        $this->assertArrayNotHasKey('youtube:overflow', $payload['decisions'] ?? []);
-    }
-
-    public function test_keep_ignores_competitor_quota(): void
-    {
-        Queue::fake();
-
-        $user = User::factory()->onTrial()->create();
-        BrandProfile::factory()->for($user)->create();
-
-        $competitorLimit = app(PlanEntitlementService::class)->competitorLimit($user);
-        TrackedAccount::factory()->count($competitorLimit)->competitor()->for($user)->create();
-
-        $runId = '12121212-1212-4121-8121-121212121212';
-
-        Cache::put(FindInfluencersJob::cacheKeyFor($user->id, $runId), [
-            'status' => 'completed',
-            'filters' => [
-                'platforms' => ['instagram'],
-                'language' => 'English',
-                'min_followers' => null,
-                'max_followers' => null,
-                'brief' => 'Find creators',
-            ],
-            'brief' => 'Find creators',
-            'suggestions' => [
-                [
-                    'platform' => 'instagram',
-                    'handle' => 'partnercreator',
-                    'url' => 'https://www.instagram.com/partnercreator/',
-                    'display_name' => 'Partner Creator',
-                    'avatar' => null,
-                    'followers' => 18000,
-                ],
-            ],
-            'decisions' => [],
-            'error' => null,
-        ], now()->addHours(2));
-        Cache::put(FindInfluencersJob::latestCacheKeyFor($user->id), $runId, now()->addHours(2));
-
-        $this->actingAs($user)
-            ->post(route('influencers.keep'), [
-                'platform' => 'instagram',
-                'handle' => 'partnercreator',
-                'run_id' => $runId,
-            ])
-            ->assertRedirect(route('influencers.index'));
-
         $this->assertDatabaseHas('tracked_accounts', [
             'user_id' => $user->id,
-            'handle' => 'partnercreator',
+            'handle' => 'overflow',
             'kind' => 'influencer',
         ]);
     }

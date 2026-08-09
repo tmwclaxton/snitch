@@ -3,61 +3,35 @@
 return [
 
     /*
-    |--------------------------------------------------------------------------
-    | App trial (no card)
-    |--------------------------------------------------------------------------
-    |
-    | New users get Basic entitlements until trial_ends_at without a Stripe
-    | subscription. After expiry with no active plan they fall back to Free.
-    |
+    | Seat-based Free/Basic/Pro plans are retired. Hybrid billing lives in
+    | config/billing.php (platform fee + prepaid usage credits).
     */
 
-    'trial_days' => (int) env('SNITCH_TRIAL_DAYS', 7),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Plans
-    |--------------------------------------------------------------------------
-    |
-    | Competitor and influencer caps plus Stripe Price IDs (recurring GBP).
-    | Yearly is 20% off the monthly total (monthly price_pence * 12 * 0.8).
-    | Trial is not a Stripe product; it reuses Basic limits while active.
-    | Influencer slots are separate from competitor slots.
-    |
-    */
+    'trial_days' => 0,
 
     'plans' => [
-        'free' => [
-            'name' => 'Free',
+        'none' => [
+            'name' => 'No plan',
             'price_pence' => 0,
             'yearly_price_pence' => 0,
-            'competitor_limit' => 3,
-            'influencer_limit' => 3,
+            'competitor_limit' => null,
+            'influencer_limit' => null,
             'stripe_price' => null,
             'stripe_price_yearly' => null,
         ],
-        'basic' => [
-            'name' => 'Basic',
-            'price_pence' => 2000,
-            'yearly_price_pence' => 19200,
-            'competitor_limit' => 10,
-            'influencer_limit' => 10,
-            'stripe_price' => env('STRIPE_PRICE_BASIC'),
-            'stripe_price_yearly' => env('STRIPE_PRICE_BASIC_YEARLY'),
-        ],
-        'pro' => [
-            'name' => 'Pro',
-            'price_pence' => 9900,
-            'yearly_price_pence' => 95040,
-            'competitor_limit' => 50,
-            'influencer_limit' => 50,
-            'stripe_price' => env('STRIPE_PRICE_PRO'),
-            'stripe_price_yearly' => env('STRIPE_PRICE_PRO_YEARLY'),
+        'platform' => [
+            'name' => 'Platform',
+            'price_pence' => (int) env('SNITCH_PLATFORM_FEE_PENCE', 1900),
+            'yearly_price_pence' => 0,
+            'competitor_limit' => null,
+            'influencer_limit' => null,
+            'stripe_price' => env('STRIPE_PRICE_PLATFORM'),
+            'stripe_price_yearly' => null,
         ],
     ],
 
-    'subscription_type' => 'default',
+    'subscription_type' => env('SNITCH_SUBSCRIPTION_TYPE', 'default'),
 
-    'yearly_discount_percent' => 20,
+    'yearly_discount_percent' => 0,
 
 ];

@@ -14,28 +14,32 @@ use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Apify\ApifyClient;
 use App\Services\Apify\PlatformAdapterManager;
-use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\VendorUsageCharger;
 use App\Services\SnitchAnalyticsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Mockery;
+use Tests\Concerns\WithPlatformBilling;
 use Tests\TestCase;
 
 class SyncTrackedAccountJobTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPlatformBilling;
 
     public function test_sync_imports_recent_reels_skips_old_and_enqueues_analysis(): void
     {
         Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
 
         $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
         $account = TrackedAccount::factory()->for($user)->create([
             'platform' => Platform::Facebook,
             'handle' => 'rivalbakery',
         ]);
 
         $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
         $client->shouldReceive('runActor')->andReturn([
             [
                 'pageName' => 'Rival Bakery',
@@ -85,7 +89,7 @@ class SyncTrackedAccountJobTest extends TestCase
             'snitch.sync.posts_limit' => 12,
         ]);
 
-        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(PlanEntitlementService::class));
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(VendorUsageCharger::class));
 
         $account->refresh();
         $this->assertSame('success', $account->last_sync_status);
@@ -107,6 +111,7 @@ class SyncTrackedAccountJobTest extends TestCase
         Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
 
         $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
         $account = TrackedAccount::factory()->for($user)->create([
             'platform' => Platform::Facebook,
             'handle' => 'rivalbakery',
@@ -124,6 +129,7 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
 
         $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
         $client->shouldReceive('runActor')->andReturn([
             [
                 'pageName' => 'Rival Bakery',
@@ -139,7 +145,7 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
         $this->app->instance(ApifyClient::class, $client);
 
-        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(PlanEntitlementService::class));
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(VendorUsageCharger::class));
 
         Queue::assertPushed(AnalyzePostJob::class, fn (AnalyzePostJob $job) => $job->postId === $existing->id);
 
@@ -149,7 +155,7 @@ class SyncTrackedAccountJobTest extends TestCase
 
         try {
             // Force bypasses the weekly min-interval skip after a successful sync.
-            (new SyncTrackedAccountJob($account->id, force: true))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(PlanEntitlementService::class));
+            (new SyncTrackedAccountJob($account->id, force: true))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(VendorUsageCharger::class));
             $this->fail('Expected sync to throw');
         } catch (\RuntimeException $e) {
             $this->assertSame('Apify down', $e->getMessage());
@@ -165,6 +171,7 @@ class SyncTrackedAccountJobTest extends TestCase
         Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
 
         $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
         $account = TrackedAccount::factory()->for($user)->create([
             'platform' => Platform::Facebook,
             'handle' => 'rivalbakery',
@@ -180,7 +187,7 @@ class SyncTrackedAccountJobTest extends TestCase
             (new SyncTrackedAccountJob($account->id, force: true))->handle(
                 app(PlatformAdapterManager::class),
                 app(SnitchAnalyticsService::class),
-                app(PlanEntitlementService::class),
+                app(VendorUsageCharger::class),
             );
             $this->fail('Expected sync to throw');
         } catch (\RuntimeException) {
@@ -200,6 +207,7 @@ class SyncTrackedAccountJobTest extends TestCase
         config(['snitch.sync.min_interval_days' => 7]);
 
         $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
         $account = TrackedAccount::factory()->for($user)->create([
             'platform' => Platform::Facebook,
             'handle' => 'rivalbakery',
@@ -208,10 +216,11 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
 
         $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
         $client->shouldNotReceive('runActor');
         $this->app->instance(ApifyClient::class, $client);
 
-        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(PlanEntitlementService::class));
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(VendorUsageCharger::class));
 
         Queue::assertNothingPushed();
         $this->assertSame(0, Post::query()->count());
@@ -229,6 +238,7 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
 
         $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
         $account = TrackedAccount::factory()->for($user)->create([
             'platform' => Platform::Facebook,
             'handle' => 'rivalbakery',
@@ -237,6 +247,7 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
 
         $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
         $client->shouldReceive('runActor')->andReturn([
             [
                 'pageName' => 'Rival Bakery',
@@ -252,7 +263,7 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
         $this->app->instance(ApifyClient::class, $client);
 
-        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(PlanEntitlementService::class));
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(VendorUsageCharger::class));
 
         $account->refresh();
         $this->assertSame('success', $account->last_sync_status);
@@ -270,6 +281,7 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
 
         $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
         $account = TrackedAccount::factory()->for($user)->create([
             'platform' => Platform::Facebook,
             'handle' => 'rivalbakery',
@@ -278,6 +290,7 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
 
         $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
         $client->shouldReceive('runActor')->andReturn([
             [
                 'pageName' => 'Rival Bakery',
@@ -293,7 +306,7 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
         $this->app->instance(ApifyClient::class, $client);
 
-        (new SyncTrackedAccountJob($account->id, force: true))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(PlanEntitlementService::class));
+        (new SyncTrackedAccountJob($account->id, force: true))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(VendorUsageCharger::class));
 
         $this->assertSame(1, Post::query()->count());
         $account->refresh();
@@ -305,6 +318,7 @@ class SyncTrackedAccountJobTest extends TestCase
         Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
 
         $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
         $account = TrackedAccount::factory()->for($user)->create([
             'platform' => Platform::Facebook,
             'handle' => 'rivalbakery',
@@ -316,6 +330,7 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
 
         $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
         $client->shouldReceive('runActor')->once()->andReturn([
             [
                 'pageName' => 'Rival Bakery',
@@ -336,7 +351,7 @@ class SyncTrackedAccountJobTest extends TestCase
             'snitch.sync.posts_limit' => 12,
         ]);
 
-        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(PlanEntitlementService::class));
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(VendorUsageCharger::class));
 
         $this->assertSame(1, Post::query()->count());
         $this->assertSame('page_1', $account->fresh()?->external_id);
@@ -347,6 +362,7 @@ class SyncTrackedAccountJobTest extends TestCase
         Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
 
         $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
         $account = TrackedAccount::factory()->for($user)->create([
             'platform' => Platform::Facebook,
             'handle' => 'rivalbakery',
@@ -367,6 +383,7 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
 
         $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
         $client->shouldReceive('runActor')->once()->andReturn([
             [
                 'pageName' => 'Rival Bakery',
@@ -383,7 +400,7 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
         $this->app->instance(ApifyClient::class, $client);
 
-        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(PlanEntitlementService::class));
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(VendorUsageCharger::class));
 
         $existing->refresh();
         $this->assertSame(1, $existing->metrics['likes'] ?? null);
@@ -397,6 +414,7 @@ class SyncTrackedAccountJobTest extends TestCase
         Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
 
         $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
         $account = TrackedAccount::factory()->for($user)->create([
             'platform' => Platform::TikTok,
             'handle' => 'rivalbakery',
@@ -414,6 +432,7 @@ class SyncTrackedAccountJobTest extends TestCase
         ]);
 
         $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
         $client->shouldReceive('runActor')
             ->once()
             ->withArgs(function (string $actorId, array $input): bool {
@@ -469,7 +488,7 @@ class SyncTrackedAccountJobTest extends TestCase
             'snitch.sync.posts_limit' => 12,
         ]);
 
-        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(PlanEntitlementService::class));
+        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(VendorUsageCharger::class));
 
         $this->assertSame(2, Post::query()->count());
         $new = Post::query()->where('external_id', 'new_tt')->first();
