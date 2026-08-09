@@ -12,6 +12,12 @@ on:
       - ".agents/**"
       - ".ai/**"
 
+# Overlapping main pushes previously pulled GHCR in parallel on the VPS and
+# amplified TLS handshake timeouts. Queue deploys instead of cancelling.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
 env:
   IMAGE: ghcr.io/tmwclaxton/snitch:latest
   DEPLOY_HOST: admin.grantgunner.org
@@ -154,5 +160,5 @@ jobs:
             set -e
             cd ${{ env.DEPLOY_DIR }}
             chmod +x deploy-production.sh
-            GHCR_TOKEN='${{ secrets.GITHUB_TOKEN }}' GHCR_ACTOR='${{ github.actor }}' ./deploy-production.sh
+            GHCR_TOKEN='${{ secrets.GITHUB_TOKEN }}' GHCR_ACTOR='${{ github.actor }}' APP_IMAGE='${{ env.IMAGE }}' ./deploy-production.sh
           "
