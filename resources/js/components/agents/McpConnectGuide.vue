@@ -39,24 +39,24 @@ async function copyText(value: string): Promise<void> {
 
 <template>
     <div class="space-y-6">
-        <section class="snitch-scrap relative space-y-3 p-5 pt-6">
+        <section class="snitch-scrap relative space-y-3 p-5 pt-6 sm:p-6">
             <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
             <h2 class="snitch-display text-2xl text-snitch-ink">Endpoints</h2>
-            <ul class="space-y-2 text-sm text-snitch-ink/80">
-                <li class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <ul class="grid gap-4 text-sm text-snitch-ink/80 sm:grid-cols-2">
+                <li class="min-w-0 space-y-1">
                     <span class="snitch-ink-label">Register</span>
-                    <code class="break-all">{{ registerUrl }}</code>
-                    <span>- create_account (no auth)</span>
+                    <code class="block break-all">{{ registerUrl }}</code>
+                    <span class="text-snitch-ink/65">create_account (no auth)</span>
                 </li>
-                <li class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <li class="min-w-0 space-y-1">
                     <span class="snitch-ink-label">API</span>
-                    <code class="break-all">{{ mcpUrl }}</code>
-                    <span>- bearer token required</span>
+                    <code class="block break-all">{{ mcpUrl }}</code>
+                    <span class="text-snitch-ink/65">bearer token required</span>
                 </li>
             </ul>
         </section>
 
-        <section class="snitch-scrap relative space-y-4 p-5 pt-6">
+        <section class="snitch-scrap relative space-y-4 p-5 pt-6 sm:p-6">
             <span class="snitch-tape right-4 -top-2" aria-hidden="true" />
             <div>
                 <h2 class="snitch-display text-2xl text-snitch-ink">Connect your agent</h2>
@@ -80,15 +80,20 @@ async function copyText(value: string): Promise<void> {
                 </button>
             </div>
 
-            <div v-if="activeClient" class="space-y-3">
-                <p class="text-sm text-snitch-ink/75">{{ activeClient.blurb }}</p>
-                <ol class="list-decimal space-y-1.5 pl-5 text-sm text-snitch-ink/80">
-                    <li v-for="(step, index) in activeClient.steps" :key="index">
-                        {{ step }}
-                    </li>
-                </ol>
-                <div class="relative">
-                    <pre class="overflow-x-auto bg-snitch-ink/5 p-3 text-xs text-snitch-ink">{{ activeClient.snippet }}</pre>
+            <div
+                v-if="activeClient"
+                class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start lg:gap-8"
+            >
+                <div class="space-y-3">
+                    <p class="text-sm text-snitch-ink/75">{{ activeClient.blurb }}</p>
+                    <ol class="list-decimal space-y-1.5 pl-5 text-sm text-snitch-ink/80">
+                        <li v-for="(step, index) in activeClient.steps" :key="index">
+                            {{ step }}
+                        </li>
+                    </ol>
+                </div>
+                <div class="relative min-w-0">
+                    <pre class="overflow-x-auto bg-snitch-ink/5 p-3 text-xs text-snitch-ink lg:min-h-48">{{ activeClient.snippet }}</pre>
                     <button
                         type="button"
                         class="snitch-btn snitch-btn-ghost absolute top-2 right-2 px-2 py-1 text-xs"
@@ -100,30 +105,32 @@ async function copyText(value: string): Promise<void> {
             </div>
         </section>
 
-        <section class="snitch-scrap relative space-y-3 p-5 pt-6">
-            <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
-            <h2 class="snitch-display text-2xl text-snitch-ink">{{ general.title }}</h2>
-            <p class="text-sm text-snitch-ink/75">{{ general.blurb }}</p>
-            <ol class="list-decimal space-y-1.5 pl-5 text-sm text-snitch-ink/80">
-                <li v-for="(step, index) in general.steps" :key="index">
-                    {{ step }}
-                </li>
-            </ol>
-            <pre class="overflow-x-auto bg-snitch-ink/5 p-3 text-xs text-snitch-ink">{{ general.snippet }}</pre>
-        </section>
+        <div class="grid gap-6 lg:grid-cols-2">
+            <section class="snitch-scrap relative space-y-3 p-5 pt-6 sm:p-6">
+                <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
+                <h2 class="snitch-display text-2xl text-snitch-ink">{{ general.title }}</h2>
+                <p class="text-sm text-snitch-ink/75">{{ general.blurb }}</p>
+                <ol class="list-decimal space-y-1.5 pl-5 text-sm text-snitch-ink/80">
+                    <li v-for="(step, index) in general.steps" :key="index">
+                        {{ step }}
+                    </li>
+                </ol>
+                <pre class="overflow-x-auto bg-snitch-ink/5 p-3 text-xs text-snitch-ink">{{ general.snippet }}</pre>
+            </section>
 
-        <section class="snitch-scrap relative space-y-3 p-5 pt-6">
-            <span class="snitch-tape right-5 -top-2" aria-hidden="true" />
-            <h2 class="snitch-display text-2xl text-snitch-ink">Billing notes</h2>
-            <ul class="list-disc space-y-2 pl-5 text-sm text-snitch-ink/80">
-                <li>Agent-created accounts start with £0 usage until claimed.</li>
-                <li>Claiming in the browser grants £5 once.</li>
-                <li>Billable tools need an active platform plan plus credit balance.</li>
-                <li>Usage on the billing page is shown for Apify, NanoGPT, and Firecrawl.</li>
-            </ul>
-        </section>
+            <section class="snitch-scrap relative space-y-3 p-5 pt-6 sm:p-6">
+                <span class="snitch-tape right-5 -top-2" aria-hidden="true" />
+                <h2 class="snitch-display text-2xl text-snitch-ink">Billing notes</h2>
+                <ul class="list-disc space-y-2 pl-5 text-sm text-snitch-ink/80">
+                    <li>Agent-created accounts start with £0 usage until claimed.</li>
+                    <li>Claiming in the browser grants £5 once.</li>
+                    <li>Billable tools need an active platform plan plus credit balance.</li>
+                    <li>Usage on the billing page is shown for Apify, NanoGPT, and Firecrawl.</li>
+                </ul>
+            </section>
+        </div>
 
-        <section class="snitch-scrap relative space-y-3 p-5 pt-6">
+        <section class="snitch-scrap relative space-y-3 p-5 pt-6 sm:p-6">
             <span class="snitch-tape left-4 -top-2" aria-hidden="true" />
             <h2 class="snitch-display text-2xl text-snitch-ink">Tool catalogue</h2>
             <p class="text-sm text-snitch-ink/70">
