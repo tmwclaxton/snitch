@@ -288,7 +288,7 @@ const steps = [
                     Competitor social media intelligence.
                 </h2>
                 <p class="mt-4 max-w-3xl text-base leading-relaxed text-snitch-ink/80">
-                    Built for local brands, creators, and agencies who need inspiration - not mindless doom-scrolling.
+                    Built for local brands, creators, and agencies who need inspiration. Not mindless doom-scrolling.
                 </p>
             </div>
         </section>
