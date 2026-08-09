@@ -30,6 +30,21 @@ class SeoTest extends TestCase
         $response->assertSee('"@type":"WebSite"', false);
         $response->assertSee('name="robots"', false);
         $response->assertSee('content="index, follow"', false);
+        $response->assertSee('property="og:image"', false);
+        $response->assertSee($appUrl.'/images/marketing/og.jpg', false);
+    }
+
+    public function test_og_preview_image_uses_cartoon_mascot_asset(): void
+    {
+        $path = public_path('images/marketing/og.jpg');
+
+        $this->assertFileExists($path);
+        $this->assertSame('/images/marketing/og.jpg', config('seo.default_image'));
+
+        $size = getimagesize($path);
+        $this->assertIsArray($size);
+        $this->assertSame(1200, $size[0]);
+        $this->assertSame(630, $size[1]);
     }
 
     public function test_public_pages_expose_unique_descriptions_from_config(): void
