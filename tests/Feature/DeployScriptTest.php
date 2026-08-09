@@ -37,11 +37,17 @@ class DeployScriptTest extends TestCase
         $this->assertStringContainsString('timeout "${PULL_TIMEOUT_SECONDS}"', $script);
         $this->assertStringContainsString('retry_with_backoff "$GHCR_MAX_ATTEMPTS" ghcr_login', $script);
         $this->assertStringContainsString('retry_with_backoff "$GHCR_MAX_ATTEMPTS" pull_app_image', $script);
+        $this->assertStringContainsString('SKIP_GHCR_PULL', $script);
+        $this->assertStringContainsString('compose up -d --pull never', $script);
 
         $workflow = file_get_contents(base_path('.github/workflows/prod_deploy.yml'));
 
         $this->assertNotFalse($workflow);
         $this->assertStringContainsString('retry_with_backoff 5 scp', $workflow);
         $this->assertStringContainsString('retry_with_backoff 4 ssh', $workflow);
+        $this->assertStringContainsString('Transfer image to server', $workflow);
+        $this->assertStringContainsString('docker save', $workflow);
+        $this->assertStringContainsString('docker load', $workflow);
+        $this->assertStringContainsString('SKIP_GHCR_PULL=1 ./deploy-production.sh', $workflow);
     }
 }
