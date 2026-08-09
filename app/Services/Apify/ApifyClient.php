@@ -7,6 +7,7 @@ use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
+use Throwable;
 
 class ApifyClient
 {
@@ -42,7 +43,8 @@ class ApifyClient
 
             try {
                 return [$key => $this->runActor($job['actorId'], $job['input'])];
-            } catch (RuntimeException) {
+            } catch (Throwable) {
+                // Match the pool path: connection timeouts / HTTP failures skip this key.
                 return [$key => []];
             }
         }

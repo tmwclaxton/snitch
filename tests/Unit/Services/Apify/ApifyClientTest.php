@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services\Apify;
 
 use App\Services\Apify\ApifyClient;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -36,5 +37,27 @@ class ApifyClientTest extends TestCase
 
             return $hasBearer && ! array_key_exists('token', $params);
         });
+    }
+
+    public function test_run_actors_soft_fails_single_connection_exception(): void
+    {
+        config([
+            'snitch.apify.token' => 'secret-apify-token',
+            'snitch.apify.base_url' => 'https://api.apify.test/v2',
+        ]);
+
+        Http::preventStrayRequests();
+        Http::fake(function () {
+            throw new ConnectionException('cURL error 28: SSL connection timeout');
+        });
+
+        $items = app(ApifyClient::class)->runActors([
+            'fb' => [
+                'actorId' => 'apify/facebook-posts-scraper',
+                'input' => ['startUrls' => [['url' => 'https://facebook.com/demo']]],
+            ],
+        ]);
+
+        $this->assertSame(['fb' => []], $items);
     }
 }
