@@ -47,14 +47,16 @@ function formatDate(date: string): string {
 <template>
     <div class="px-5 py-14 sm:px-8 sm:py-20">
         <div class="mx-auto max-w-6xl">
-            <header class="max-w-2xl">
+            <header>
                 <p class="snitch-ink-label">Blog</p>
                 <h1
-                    class="snitch-display relative z-10 mt-2 text-4xl text-snitch-ink sm:text-5xl"
+                    class="snitch-display relative z-10 mt-2 text-pretty text-4xl text-snitch-ink sm:text-5xl"
                 >
                     Competitor social notes worth keeping.
                 </h1>
-                <p class="mt-4 text-base leading-relaxed text-snitch-ink/80">
+                <p
+                    class="mt-4 max-w-2xl text-base leading-relaxed text-snitch-ink/80"
+                >
                     Hooks, remakes, and tracking workflows for brands and
                     agencies who watch rivals across TikTok, Instagram, YouTube,
                     and more.
