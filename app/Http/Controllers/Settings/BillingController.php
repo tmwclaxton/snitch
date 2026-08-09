@@ -39,6 +39,7 @@ class BillingController extends Controller
         return Inertia::render('billing/Index', [
             'subscription' => $this->entitlements->summary($user),
             'usage' => $this->usage->summary($user),
+            'spendSeries' => $this->usage->dailySpendSeries($user, 30),
             'creditPacks' => $packs,
             'platform' => [
                 'fee_pence' => (int) config('billing.platform_fee_pence', 1900),

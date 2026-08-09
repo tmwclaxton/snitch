@@ -60,6 +60,19 @@ class StippleChartContractTest extends TestCase
     }
 
     #[Test]
+    public function billing_vendor_spend_chart_uses_stacked_dot_stipple_bars(): void
+    {
+        $source = file_get_contents(base_path('resources/js/components/billing/VendorSpendStackedChart.vue'));
+
+        $this->assertIsString($source);
+        $this->assertStringContainsString('<StippleBar', $source);
+        $this->assertStringContainsString('variant="dots"', $source);
+        $this->assertStringContainsString('fill-snitch-spot', $source);
+        $this->assertStringContainsString('fill-snitch-teal', $source);
+        $this->assertStringNotContainsString('<rect', $source);
+    }
+
+    #[Test]
     public function analytics_page_platform_mix_uses_stipple_track(): void
     {
         $source = file_get_contents(base_path('resources/js/pages/marketing/Analytics.vue'));

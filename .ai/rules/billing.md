@@ -34,7 +34,7 @@ Agent MCP `create_account` starts at £0. Claiming/confirming (WorkOS bind or we
 Ledger rows are per vendor: `apify`, `nanogpt`, `firecrawl` (plus `bonus`/`topup`). Apify prefers exact `usageTotalUsd` from run API; NanoGPT/Firecrawl use catalog estimates. Billing page and MCP `billing_status` show spend by those three vendors.
 
 ## Surfaces
-- Authenticated `/billing` - balance, platform subscribe, credit packs, vendor usage
+- Authenticated `/billing` - balance, platform subscribe, credit packs, vendor usage, and a stacked stipple chart of daily Apify/NanoGPT/Firecrawl spend (`UsageBillingService::dailySpendSeries`)
 - Public + auth `/agents` (MCP connect docs; auth also mints/rotates Sanctum token). `/for-agents` redirects to `/agents`
 - MCP register `/mcp/register` (create_account); authenticated `/mcp` (Sanctum bearer)
 - Claim `/claim/{token}` then WorkOS login
