@@ -133,7 +133,7 @@ class ProbeE2eCommand extends Command
         }
 
         $post = $posts->first();
-        $this->info("Synced {$posts->count()} reel-like post(s); analyzing post {$post->id}");
+        $this->info("Synced {$posts->count()} reel-like post(s); analysing post {$post->id}");
 
         if ($post->youtubeMediaIsPageUrl()) {
             $this->warn('KNOWN GAP: YouTube Shorts sync imported a page URL, not a downloadable MP4.');

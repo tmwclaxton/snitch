@@ -41,11 +41,11 @@ class VideoAnalysisService
                 [
                     'role' => 'system',
                     'content' => <<<'SYSTEM'
-You analyze short-form social videos for creators who will remake the craft, not quote the script.
+You analyse short-form social videos for creators who will remake the craft, not quote the script.
 Return ONLY valid JSON matching the schema.
-Write every string value in English (US), including concept, idea, topics, how_to_copy, visual_summary, cta, and labels.
+Write every string value in English (UK), including concept, idea, topics, how_to_copy, visual_summary, cta, and labels.
 Do not use Chinese or other non-English prose. Spoken-word quotes in hook may keep the original language, but all explanation stays English.
-Prioritize reusable craft concepts and engagement mechanics.
+Prioritise reusable craft concepts and engagement mechanics.
 Never dump or paraphrase long stretches of spoken script or caption.
 Never invent music or SFX that are not audible in the media.
 Reject vague filler ("engaging", "relatable vibe", "great energy") - name the mechanic.
@@ -179,11 +179,11 @@ SYSTEM,
         $catalogueBlock = $this->catalogue->promptBlock();
 
         return <<<PROMPT
-Analyze this {$mediaKind} short-form social post. Focus on craft concepts a creator can reuse.
+Analyse this {$mediaKind} short-form social post. Focus on craft concepts a creator can reuse.
 {$captionLine}
 
 Rules:
-- Language = English only for all JSON string values (concept, idea, topics, how_to_copy, visual_summary, cta, sfx labels, custom_tags). No Chinese or mixed-language prose.
+- Language = English (UK) only for all JSON string values (concept, idea, topics, how_to_copy, visual_summary, cta, sfx labels, custom_tags). No Chinese or mixed-language prose.
 - Core concept = the reusable game/pattern in one crisp sentence (not a caption summary).
 - Why it engages = name the mechanism (curiosity gap, proof, contrast, status, humor beat, etc.).
 - Hook = scroll-stop device + timing; quote spoken words only if the quote IS the device.

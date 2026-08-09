@@ -380,7 +380,7 @@ function accountHref(post: RecentPost): string | null {
                 <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
                 <p class="flex items-center gap-2 snitch-ink-label">
                     <ListChecks class="size-3.5 shrink-0" aria-hidden="true" />
-                    Analyze queue
+                    Analyse queue
                 </p>
                 <p class="snitch-display mt-2 text-xl text-snitch-ink">
                     {{ stats.analysis_backlog }} waiting

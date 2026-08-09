@@ -16,7 +16,7 @@ const steps: Array<{ title: string; body: string; icon: Component }> = [
         body: 'Connect your brand context, then add competitor handles on TikTok, Instagram, YouTube Shorts, Facebook, and LinkedIn. Snitch syncs recent public reels into one feed.',
     },
     {
-        title: 'Analyze',
+        title: 'Analyse',
         icon: Sparkles,
         body: 'Video and reel posts get full-video analysis: the opening hook, visual summary, SFX, music cues, and the core idea - annotated on the frame like stickers on a scrap.',
     },
@@ -35,7 +35,7 @@ const steps: Array<{ title: string; body: string; icon: Component }> = [
                 <h1
                     class="snitch-display text-4xl text-snitch-ink sm:text-5xl"
                 >
-                    Track. Analyze. Remake the winners.
+                    Track. Analyse. Remake the winners.
                 </h1>
                 <p class="mt-4 max-w-2xl text-snitch-ink/80">
                     Three steps from empty account to a scrapbook of posts worth

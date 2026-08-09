@@ -80,7 +80,7 @@ const steps = [
     },
     {
         stamp: '02',
-        title: 'Analyze',
+        title: 'Analyse',
         copy: 'Full-video analysis surfaces the hook, visuals, SFX, and the idea behind each post.',
     },
     {

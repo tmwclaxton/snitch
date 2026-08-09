@@ -58,7 +58,7 @@ class ProbeAnalysisMatrixCommand extends Command
                 continue;
             }
 
-            $this->info("[{$platform->value}] Analyzing {$url}");
+            $this->info("[{$platform->value}] Analysing {$url}");
 
             try {
                 $result = $service->analyzeUrl($url, 'video');
