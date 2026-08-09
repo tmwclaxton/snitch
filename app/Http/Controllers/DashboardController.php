@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Models\WinnerInsight;
+use App\Services\Billing\PlanEntitlementService;
 use App\Services\Dashboard\DashboardActivityBuilder;
 use App\Support\PlatformEmbed;
 use Illuminate\Http\Request;
@@ -12,21 +13,39 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, DashboardActivityBuilder $activity): Response
-    {
+    public function __invoke(
+        Request $request,
+        DashboardActivityBuilder $activity,
+        PlanEntitlementService $entitlements,
+    ): Response {
         $user = $request->user();
+        $inQuotaIds = $entitlements->inQuotaTrackedAccountIds($user);
 
         $trackedCount = $user->trackedAccounts()->count();
-        $lastSyncedAt = $user->trackedAccounts()->max('last_synced_at');
+        $lastSyncedAt = $inQuotaIds === []
+            ? null
+            : $user->trackedAccounts()->whereIn('id', $inQuotaIds)->max('last_synced_at');
 
-        $postsBase = fn () => Post::query()
-            ->where('user_id', $user->id)
-            ->reelLike();
+        $postsBase = function () use ($user, $entitlements) {
+            $query = Post::query()
+                ->where('user_id', $user->id)
+                ->reelLike();
+
+            return $entitlements->constrainPostsToInQuotaAccounts($query, $user);
+        };
 
         $postsCount = $postsBase()->count();
 
         $winnersCount = WinnerInsight::query()
             ->where('user_id', $user->id)
+            ->when(
+                $inQuotaIds === [],
+                fn ($query) => $query->whereRaw('0 = 1'),
+                fn ($query) => $query->whereHas(
+                    'post',
+                    fn ($post) => $post->whereIn('tracked_account_id', $inQuotaIds),
+                ),
+            )
             ->count();
 
         $analysisBacklog = $postsBase()->analysisQueue()->count();
@@ -49,6 +68,14 @@ class DashboardController extends Controller
 
         $topWinners = WinnerInsight::query()
             ->where('user_id', $user->id)
+            ->when(
+                $inQuotaIds === [],
+                fn ($query) => $query->whereRaw('0 = 1'),
+                fn ($query) => $query->whereHas(
+                    'post',
+                    fn ($post) => $post->whereIn('tracked_account_id', $inQuotaIds),
+                ),
+            )
             ->with(['post.trackedAccount', 'post.analysis'])
             ->orderByDesc('score')
             ->limit(4)

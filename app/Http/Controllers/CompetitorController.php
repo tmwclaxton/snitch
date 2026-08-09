@@ -37,39 +37,49 @@ class CompetitorController extends Controller
     {
         $this->authorize('view', $trackedAccount);
 
+        $user = $request->user();
+        $inQuota = $this->entitlements->isTrackedAccountInQuota($user, $trackedAccount);
+
         $trackedAccount->loadCount([
             'posts' => fn ($query) => $query->reelLike(),
         ]);
+        $trackedAccount->setAttribute('in_quota', $inQuota);
 
-        $posts = Post::query()
-            ->where('tracked_account_id', $trackedAccount->id)
-            ->where('user_id', $request->user()->id)
-            ->reelLike()
-            ->with(['trackedAccount', 'analysis', 'winnerInsight'])
-            ->latest('posted_at')
-            ->limit(24)
-            ->get()
-            ->map(function (Post $post): Post {
-                $post->setAttribute(
-                    'embed',
-                    PlatformEmbed::resolve($post->platform, $post->url, compact: true),
-                );
+        $posts = collect();
+        $winners = collect();
 
-                return $post;
-            });
+        if ($inQuota) {
+            $posts = Post::query()
+                ->where('tracked_account_id', $trackedAccount->id)
+                ->where('user_id', $user->id)
+                ->reelLike()
+                ->with(['trackedAccount', 'analysis', 'winnerInsight'])
+                ->latest('posted_at')
+                ->limit(24)
+                ->get()
+                ->map(function (Post $post): Post {
+                    $post->setAttribute(
+                        'embed',
+                        PlatformEmbed::resolve($post->platform, $post->url, compact: true),
+                    );
 
-        $winners = WinnerInsight::query()
-            ->where('user_id', $request->user()->id)
-            ->whereHas('post', fn ($query) => $query->where('tracked_account_id', $trackedAccount->id))
-            ->with(['post.trackedAccount', 'post.analysis'])
-            ->orderByDesc('score')
-            ->limit(8)
-            ->get();
+                    return $post;
+                });
+
+            $winners = WinnerInsight::query()
+                ->where('user_id', $user->id)
+                ->whereHas('post', fn ($query) => $query->where('tracked_account_id', $trackedAccount->id))
+                ->with(['post.trackedAccount', 'post.analysis'])
+                ->orderByDesc('score')
+                ->limit(8)
+                ->get();
+        }
 
         return Inertia::render('competitors/Show', [
             'account' => $trackedAccount,
             'posts' => $posts,
             'winners' => $winners,
+            'inQuota' => $inQuota,
         ]);
     }
 
@@ -241,6 +251,15 @@ class CompetitorController extends Controller
     {
         $this->authorize('update', $trackedAccount);
 
+        if (! $this->entitlements->isTrackedAccountInQuota($request->user(), $trackedAccount)) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => __('This competitor is over your plan limit. Remove other accounts or upgrade in Billing to sync again.'),
+            ]);
+
+            return back();
+        }
+
         $trackedAccount->markSyncRunning();
         SyncTrackedAccountJob::dispatch($trackedAccount->id, force: true);
 
@@ -259,16 +278,21 @@ class CompetitorController extends Controller
      */
     private function pageProps(Request $request): array
     {
-        $accounts = $request->user()
+        $user = $request->user();
+        $inQuotaIds = array_fill_keys($this->entitlements->inQuotaTrackedAccountIds($user), true);
+
+        $accounts = $user
             ->trackedAccounts()
             ->withCount('posts')
-            ->latest()
+            ->orderBy('id')
             ->get()
-            ->each(function (TrackedAccount $account): void {
-                $account->setAttribute('sync_due', $account->isDueForSync());
+            ->each(function (TrackedAccount $account) use ($inQuotaIds): void {
+                $inQuota = isset($inQuotaIds[$account->id]);
+                $account->setAttribute('in_quota', $inQuota);
+                $account->setAttribute('sync_due', $inQuota && $account->isDueForSync());
                 $account->setAttribute(
                     'next_sync_at',
-                    $account->nextSyncAt()?->toIso8601String(),
+                    $inQuota ? $account->nextSyncAt()?->toIso8601String() : null,
                 );
             });
 

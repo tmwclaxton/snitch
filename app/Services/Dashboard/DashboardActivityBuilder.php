@@ -5,6 +5,7 @@ namespace App\Services\Dashboard;
 use App\Enums\Platform;
 use App\Models\Post;
 use App\Models\User;
+use App\Services\Billing\PlanEntitlementService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -13,6 +14,8 @@ class DashboardActivityBuilder
     public const HEATMAP_WEEKS = 16;
 
     public const WEEKLY_WEEKS = 12;
+
+    public function __construct(private PlanEntitlementService $entitlements) {}
 
     /**
      * @return array{
@@ -29,12 +32,15 @@ class DashboardActivityBuilder
         $heatmapStart = $this->sundayOnOrBefore($heatmapEnd)->subWeeks(self::HEATMAP_WEEKS - 1);
         $weeklyStart = $this->sundayOnOrBefore($heatmapEnd)->subWeeks(self::WEEKLY_WEEKS - 1);
 
-        $posts = Post::query()
+        $postsQuery = Post::query()
             ->where('user_id', $user->id)
             ->reelLike()
             ->where('posted_at', '>=', $heatmapStart)
-            ->whereNotNull('posted_at')
-            ->get(['posted_at', 'platform']);
+            ->whereNotNull('posted_at');
+
+        $this->entitlements->constrainPostsToInQuotaAccounts($postsQuery, $user);
+
+        $posts = $postsQuery->get(['posted_at', 'platform', 'tracked_account_id']);
 
         $dailyCounts = $this->dailyCounts($posts);
         $heatmap = $this->buildHeatmap($heatmapStart, $heatmapEnd, $dailyCounts);

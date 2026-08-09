@@ -8,6 +8,7 @@ use App\Enums\PostType;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Services\Apify\PlatformAdapterManager;
+use App\Services\Billing\PlanEntitlementService;
 use App\Services\SnitchAnalyticsService;
 use App\Support\SafeExceptionMessage;
 use Carbon\CarbonImmutable;
@@ -27,11 +28,25 @@ class SyncTrackedAccountJob implements ShouldQueue
         public bool $force = false,
     ) {}
 
-    public function handle(PlatformAdapterManager $adapters, SnitchAnalyticsService $analytics): void
-    {
-        $account = TrackedAccount::query()->find($this->trackedAccountId);
+    public function handle(
+        PlatformAdapterManager $adapters,
+        SnitchAnalyticsService $analytics,
+        PlanEntitlementService $entitlements,
+    ): void {
+        $account = TrackedAccount::query()->with('user')->find($this->trackedAccountId);
 
         if ($account === null) {
+            return;
+        }
+
+        $owner = $account->user;
+
+        if ($owner === null || ! $entitlements->isTrackedAccountInQuota($owner, $account)) {
+            Log::info('SyncTrackedAccountJob skipped; account over competitor quota', [
+                'tracked_account_id' => $this->trackedAccountId,
+                'user_id' => $account->user_id,
+            ]);
+
             return;
         }
 

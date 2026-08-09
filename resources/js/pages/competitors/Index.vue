@@ -40,6 +40,7 @@ type Account = {
     last_sync_status?: string | null;
     sync_due?: boolean;
     next_sync_at?: string | null;
+    in_quota?: boolean;
 };
 
 type Suggestion = {
@@ -69,6 +70,7 @@ type CompetitorCap = {
     competitor_limit: number;
     competitors_used: number;
     competitors_remaining: number;
+    over_quota_competitors?: number;
     on_trial: boolean;
     can_upgrade: boolean;
 };
@@ -112,6 +114,12 @@ const nearCompetitorCap = computed(() => {
 
     return cap.value.competitors_remaining <= 2;
 });
+
+const overQuotaCount = computed(() => cap.value?.over_quota_competitors ?? 0);
+
+function accountInQuota(account: Account): boolean {
+    return account.in_quota !== false;
+}
 
 const selected = ref<Record<string, boolean>>({});
 const localSuggestions = ref<Suggestion[]>([]);
@@ -537,10 +545,22 @@ function syncAccount(account: Account): void {
 
         <div class="relative z-10 mx-auto w-full min-w-0 max-w-6xl">
             <div
-                v-if="atCompetitorCap || nearCompetitorCap"
+                v-if="overQuotaCount > 0 || atCompetitorCap || nearCompetitorCap"
                 class="mb-5 border border-snitch-ink/15 bg-snitch-spot/20 px-4 py-3 text-sm text-snitch-ink"
             >
-                <template v-if="atCompetitorCap">
+                <template v-if="overQuotaCount > 0">
+                    {{ overQuotaCount }}
+                    {{ overQuotaCount === 1 ? 'competitor is' : 'competitors are' }}
+                    over your plan limit and grayed out - their reels stay hidden until you remove others or
+                    <Link
+                        :href="billingEdit()"
+                        class="font-medium underline decoration-snitch-ink/40 underline-offset-2"
+                    >
+                        upgrade in Billing
+                    </Link>.
+                    You can still remove over-limit accounts.
+                </template>
+                <template v-else-if="atCompetitorCap">
                     You are at your competitor limit
                     <span v-if="cap">
                         ({{ cap.competitors_used }} / {{ cap.competitor_limit }}).
@@ -579,7 +599,11 @@ function syncAccount(account: Account): void {
                         v-if="cap"
                         class="mt-2 text-xs uppercase tracking-[0.14em] text-snitch-ink/55"
                     >
-                        {{ cap.competitors_used }} / {{ cap.competitor_limit }}
+                        {{ Math.min(cap.competitors_used, cap.competitor_limit) }} / {{ cap.competitor_limit }}
+                        active
+                        <span v-if="overQuotaCount > 0">
+                            · {{ overQuotaCount }} over limit
+                        </span>
                         on {{ cap.plan_name }}
                         <span v-if="cap.on_trial">(trial)</span>
                     </p>
@@ -882,10 +906,17 @@ function syncAccount(account: Account): void {
                             <tr
                                 v-for="account in accounts"
                                 :key="account.id"
-                                class="border-b border-snitch-ink/10 last:border-0 hover:bg-snitch-ink/[0.03]"
-                                :class="isAccountSyncing(account) ? 'bg-snitch-spot/10' : ''"
+                                class="border-b border-snitch-ink/10 last:border-0"
+                                :class="[
+                                    accountInQuota(account)
+                                        ? isAccountSyncing(account)
+                                            ? 'bg-snitch-spot/10 hover:bg-snitch-ink/[0.03]'
+                                            : 'hover:bg-snitch-ink/[0.03]'
+                                        : 'bg-snitch-ink/[0.04] opacity-55',
+                                ]"
                                 :data-platform="account.platform"
                                 :data-syncing="isAccountSyncing(account) ? 'true' : undefined"
+                                :data-over-quota="accountInQuota(account) ? undefined : 'true'"
                             >
                                 <td class="hidden px-2 py-2.5 align-middle sm:table-cell">
                                     <Link
@@ -943,7 +974,13 @@ function syncAccount(account: Account): void {
                                                 </span>
                                             </p>
                                             <p
-                                                v-if="isAccountSyncing(account)"
+                                                v-if="!accountInQuota(account)"
+                                                class="mt-0.5 text-xs font-medium text-snitch-ink/70"
+                                            >
+                                                Over plan limit - reels hidden
+                                            </p>
+                                            <p
+                                                v-else-if="isAccountSyncing(account)"
                                                 class="mt-0.5 text-xs font-medium text-snitch-ink"
                                                 aria-live="polite"
                                             >
@@ -973,6 +1010,13 @@ function syncAccount(account: Account): void {
                                 </td>
                                 <td class="hidden px-2 py-2.5 align-middle text-xs md:table-cell">
                                     <span
+                                        v-if="!accountInQuota(account)"
+                                        class="font-medium text-snitch-ink/55"
+                                    >
+                                        Paused
+                                    </span>
+                                    <span
+                                        v-else
                                         class="font-medium"
                                         :class="
                                             isAccountSyncing(account)
@@ -1003,16 +1047,22 @@ function syncAccount(account: Account): void {
                                         <button
                                             type="button"
                                             class="snitch-btn snitch-btn-spot shrink-0 px-2 py-1 text-xs sm:px-2.5"
-                                            :disabled="isAccountSyncing(account)"
+                                            :disabled="
+                                                !accountInQuota(account) || isAccountSyncing(account)
+                                            "
                                             :title="
-                                                isAccountSyncing(account)
-                                                    ? `Sync running for @${account.handle}`
-                                                    : `Sync @${account.handle}`
+                                                !accountInQuota(account)
+                                                    ? `@${account.handle} is over your plan limit`
+                                                    : isAccountSyncing(account)
+                                                      ? `Sync running for @${account.handle}`
+                                                      : `Sync @${account.handle}`
                                             "
                                             :aria-label="
-                                                isAccountSyncing(account)
-                                                    ? `Sync running for @${account.handle}`
-                                                    : `Sync @${account.handle}`
+                                                !accountInQuota(account)
+                                                    ? `@${account.handle} is over your plan limit`
+                                                    : isAccountSyncing(account)
+                                                      ? `Sync running for @${account.handle}`
+                                                      : `Sync @${account.handle}`
                                             "
                                             @click="syncAccount(account)"
                                         >

@@ -10,6 +10,7 @@ use App\Models\AnalysisTerm;
 use App\Models\Post;
 use App\Services\Analysis\AnalysisEmbeddingService;
 use App\Services\Analysis\AnalysisTermCatalogue;
+use App\Services\Billing\PlanEntitlementService;
 use App\Support\PlatformEmbed;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ class ExploreController extends Controller
     public function __construct(
         private AnalysisTermCatalogue $catalogue,
         private AnalysisEmbeddingService $embeddings,
+        private PlanEntitlementService $entitlements,
     ) {}
 
     public function index(Request $request): Response
@@ -46,6 +48,8 @@ class ExploreController extends Controller
             })
             ->with(['trackedAccount', 'analysis.terms', 'winnerInsight'])
             ->latest('posted_at');
+
+        $this->entitlements->constrainPostsToInQuotaAccounts($query, $user);
 
         if ($platform !== null && in_array($platform, array_column(Platform::cases(), 'value'), true)) {
             $query->where('platform', $platform);
@@ -95,7 +99,7 @@ class ExploreController extends Controller
         });
 
         $sections = $this->catalogue->sectionByKey();
-        $termCounts = $this->termUsageCounts($user->id);
+        $termCounts = $this->termUsageCounts($user->id, $this->entitlements->inQuotaTrackedAccountIds($user));
         $terms = AnalysisTerm::query()
             ->orderBy('dimension')
             ->orderBy('label')
@@ -267,10 +271,15 @@ class ExploreController extends Controller
     /**
      * How often each catalogue term appears on the user's completed reel-like analyses.
      *
+     * @param  list<int>  $inQuotaAccountIds
      * @return array<int, int>
      */
-    private function termUsageCounts(int $userId): array
+    private function termUsageCounts(int $userId, array $inQuotaAccountIds): array
     {
+        if ($inQuotaAccountIds === []) {
+            return [];
+        }
+
         return AnalysisTerm::query()
             ->select([
                 'analysis_terms.id',
@@ -280,6 +289,7 @@ class ExploreController extends Controller
             ->join('post_analyses', 'post_analyses.id', '=', 'analysis_term_post_analysis.post_analysis_id')
             ->join('posts', 'posts.id', '=', 'post_analyses.post_id')
             ->where('posts.user_id', $userId)
+            ->whereIn('posts.tracked_account_id', $inQuotaAccountIds)
             ->whereIn('posts.type', PostType::analyzableValues())
             ->where('post_analyses.status', AnalysisStatus::Completed)
             ->groupBy('analysis_terms.id')

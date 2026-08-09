@@ -21,6 +21,7 @@ import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { PostMetrics } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
+import { edit as billingEdit } from '@/routes/billing';
 
 type Account = {
     id: number;
@@ -33,6 +34,7 @@ type Account = {
     last_synced_at: string | null;
     last_sync_status?: string | null;
     last_sync_error?: string | null;
+    in_quota?: boolean;
 };
 
 type Post = {
@@ -68,6 +70,7 @@ const props = defineProps<{
             analysis?: { hook: string | null; concept?: string | null } | null;
         };
     }>;
+    inQuota?: boolean;
 }>();
 
 defineOptions({
@@ -105,6 +108,10 @@ const syncErrorLabel = computed(() => {
 });
 
 const removeDialogOpen = ref(false);
+
+const inQuota = computed(
+    () => props.inQuota ?? props.account.in_quota !== false,
+);
 
 function clearSyncPoll(): void {
     if (syncPollTimer !== null) {
@@ -146,7 +153,7 @@ onUnmounted(() => {
 });
 
 function syncNow(): void {
-    if (isSyncing.value) {
+    if (!inQuota.value || isSyncing.value) {
         return;
     }
 
@@ -195,12 +202,20 @@ function askRemove(): void {
                     <button
                         type="button"
                         class="snitch-btn snitch-btn-spot px-3 py-1.5 text-sm"
-                        :disabled="isSyncing"
-                        :title="isSyncing ? `Sync running for @${account.handle}` : undefined"
+                        :disabled="!inQuota || isSyncing"
+                        :title="
+                            !inQuota
+                                ? `@${account.handle} is over your plan limit`
+                                : isSyncing
+                                  ? `Sync running for @${account.handle}`
+                                  : undefined
+                        "
                         :aria-label="
-                            isSyncing
-                                ? `Sync running for @${account.handle}`
-                                : `Sync @${account.handle}`
+                            !inQuota
+                                ? `@${account.handle} is over your plan limit`
+                                : isSyncing
+                                  ? `Sync running for @${account.handle}`
+                                  : `Sync @${account.handle}`
                         "
                         @click="syncNow"
                     >
@@ -230,7 +245,25 @@ function askRemove(): void {
                 </div>
             </div>
 
-            <header class="mt-5 border-b border-snitch-ink/10 pb-6">
+            <div
+                v-if="!inQuota"
+                class="mt-5 border border-snitch-ink/15 bg-snitch-ink/[0.04] px-4 py-3 text-sm text-snitch-ink/80"
+                data-over-quota="true"
+            >
+                This competitor is over your plan limit, so reels stay hidden. Remove other accounts or
+                <Link
+                    :href="billingEdit()"
+                    class="font-medium underline decoration-snitch-ink/40 underline-offset-2"
+                >
+                    upgrade in Billing
+                </Link>
+                to restore them. You can still remove this account.
+            </div>
+
+            <header
+                class="mt-5 border-b border-snitch-ink/10 pb-6"
+                :class="!inQuota ? 'opacity-60' : ''"
+            >
                 <div class="flex min-w-0 items-center gap-4 sm:gap-5">
                     <img
                         v-if="account.avatar"
@@ -340,13 +373,21 @@ function askRemove(): void {
                         aria-hidden="true"
                     />
                     <p class="snitch-display mt-3 text-xl">
-                        {{ isSyncing ? 'Syncing reels…' : 'No reels yet' }}
+                        {{
+                            !inQuota
+                                ? 'Reels hidden'
+                                : isSyncing
+                                  ? 'Syncing reels…'
+                                  : 'No reels yet'
+                        }}
                     </p>
                     <p class="mt-2 text-sm text-snitch-ink/65">
                         {{
-                            isSyncing
-                                ? 'Hang tight - new posts will land here when the sync finishes.'
-                                : 'Sync this account to pull recent short-form posts.'
+                            !inQuota
+                                ? 'Over plan limit - remove other competitors or upgrade to see reels again.'
+                                : isSyncing
+                                  ? 'Hang tight - new posts will land here when the sync finishes.'
+                                  : 'Sync this account to pull recent short-form posts.'
                         }}
                     </p>
                 </div>

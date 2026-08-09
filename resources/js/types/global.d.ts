@@ -19,6 +19,7 @@ export type SubscriptionSummary = {
     competitor_limit: number;
     competitors_used: number;
     competitors_remaining: number;
+    over_quota_competitors?: number;
     on_trial: boolean;
     trial_ends_at: string | null;
     subscribed: boolean;

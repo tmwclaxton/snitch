@@ -6,6 +6,7 @@ use App\Enums\Platform;
 use App\Enums\PostType;
 use App\Models\Post;
 use App\Services\Analysis\AnalysisTermCatalogue;
+use App\Services\Billing\PlanEntitlementService;
 use App\Support\PlatformEmbed;
 use App\Support\SafeMarkdown;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ class FeedController extends Controller
 {
     public function __construct(
         private AnalysisTermCatalogue $catalogue,
+        private PlanEntitlementService $entitlements,
     ) {}
 
     public function index(Request $request): Response
@@ -23,12 +25,15 @@ class FeedController extends Controller
         $this->authorize('viewAny', Post::class);
 
         $user = $request->user();
+        $inQuotaIds = $this->entitlements->inQuotaTrackedAccountIds($user);
 
         $query = Post::query()
             ->where('user_id', $user->id)
             ->reelLike()
             ->with(['trackedAccount', 'analysis.terms', 'winnerInsight'])
             ->latest('posted_at');
+
+        $this->entitlements->constrainPostsToInQuotaAccounts($query, $user);
 
         if ($request->filled('platform')) {
             $query->where('platform', $request->string('platform')->toString());
@@ -42,7 +47,8 @@ class FeedController extends Controller
         }
 
         if ($request->filled('account')) {
-            $query->where('tracked_account_id', $request->integer('account'));
+            $accountId = $request->integer('account');
+            $query->where('tracked_account_id', in_array($accountId, $inQuotaIds, true) ? $accountId : -1);
         }
 
         $posts = $query->paginate(24)->withQueryString();
@@ -71,7 +77,10 @@ class FeedController extends Controller
             ],
             'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
             'types' => collect(PostType::analyzable())->map(fn (PostType $t) => $t->value)->values(),
-            'accounts' => $user->trackedAccounts()->orderBy('handle')->get(['id', 'handle', 'platform', 'display_name', 'avatar']),
+            'accounts' => $user->trackedAccounts()
+                ->whereIn('id', $inQuotaIds === [] ? [-1] : $inQuotaIds)
+                ->orderBy('handle')
+                ->get(['id', 'handle', 'platform', 'display_name', 'avatar']),
         ]);
     }
 
