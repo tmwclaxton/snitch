@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { ArrowRight, Check } from '@lucide/vue';
+import { ArrowRight, Bot, Check } from '@lucide/vue';
 import { computed } from 'vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { agents, login } from '@/routes';
@@ -25,44 +25,82 @@ function formatMoney(pence: number): string {
 </script>
 
 <template>
-    <div class="snitch-doc mx-auto max-w-4xl px-4 py-16">
-        <p class="snitch-ink-label">Pricing</p>
-        <h1 class="font-display mb-3 text-4xl">Platform + usage</h1>
-        <p class="mb-10 max-w-2xl text-[var(--snitch-ink)]/75">
-            A simple monthly platform fee, then prepaid credits for Apify syncs, NanoGPT analysis, and Firecrawl
-            discovery. No competitor seat caps - you pay for the work you run.
-        </p>
+    <div>
+        <div class="px-5 py-14 sm:px-8 sm:py-20">
+            <div class="mx-auto max-w-6xl">
+                <h1 class="snitch-display text-4xl text-snitch-ink sm:text-5xl">
+                    Platform + usage
+                </h1>
+                <p class="mt-4 max-w-2xl text-snitch-ink/80">
+                    A simple monthly platform fee, then prepaid credits for Apify syncs, NanoGPT analysis, and
+                    Firecrawl discovery. No competitor seat caps - you pay for the work you run.
+                </p>
 
-        <div class="mb-10 grid gap-4 md:grid-cols-2">
-            <section class="snitch-scrap space-y-3 p-6">
-                <p class="snitch-ink-label">Platform</p>
-                <p class="font-display text-4xl">{{ formatMoney(1900) }}<span class="text-lg">/mo</span></p>
-                <ul class="space-y-2 text-sm">
-                    <li class="flex gap-2"><Check class="mt-0.5 size-4 shrink-0" /> Unlimited tracked accounts</li>
-                    <li class="flex gap-2"><Check class="mt-0.5 size-4 shrink-0" /> MCP + web app access</li>
-                    <li class="flex gap-2"><Check class="mt-0.5 size-4 shrink-0" /> {{ formatMoney(3000) }} usage credits every billing period</li>
-                    <li class="flex gap-2"><Check class="mt-0.5 size-4 shrink-0" /> Feed, Explore, Winners</li>
-                </ul>
-            </section>
-            <section class="snitch-scrap space-y-3 p-6">
-                <p class="snitch-ink-label">Usage credits</p>
-                <p class="font-display text-4xl">Pay as you go</p>
-                <ul class="space-y-2 text-sm">
-                    <li class="flex gap-2"><Check class="mt-0.5 size-4 shrink-0" /> Top up £10 / £25 / £50 / £100 when you need more</li>
-                    <li class="flex gap-2"><Check class="mt-0.5 size-4 shrink-0" /> £5 once when you claim your account</li>
-                    <li class="flex gap-2"><Check class="mt-0.5 size-4 shrink-0" /> Usage split by Apify, NanoGPT, and Firecrawl</li>
-                </ul>
-            </section>
-        </div>
+                <div class="snitch-contact-reveal mt-12 grid gap-6 md:grid-cols-2">
+                    <section class="snitch-scrap relative space-y-4 p-6 pt-8">
+                        <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
+                        <p class="snitch-ink-label">Platform</p>
+                        <p class="snitch-display text-4xl text-snitch-ink">
+                            {{ formatMoney(1900) }}<span class="text-lg">/mo</span>
+                        </p>
+                        <ul class="relative z-10 space-y-2 text-sm text-snitch-ink/80">
+                            <li class="flex gap-2">
+                                <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
+                                Unlimited tracked accounts
+                            </li>
+                            <li class="flex gap-2">
+                                <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
+                                MCP + web app access
+                            </li>
+                            <li class="flex gap-2">
+                                <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
+                                {{ formatMoney(3000) }} usage credits every billing period
+                            </li>
+                            <li class="flex gap-2">
+                                <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
+                                Feed, Explore, Winners
+                            </li>
+                        </ul>
+                    </section>
 
-        <div class="flex flex-wrap gap-3">
-            <Link :href="ctaHref" class="snitch-btn inline-flex items-center gap-2">
-                {{ ctaLabel }}
-                <ArrowRight class="size-4" />
-            </Link>
-            <Link :href="agents()" class="snitch-btn inline-flex items-center gap-2">
-                Agents / MCP
-            </Link>
+                    <section class="snitch-scrap relative space-y-4 p-6 pt-8">
+                        <span class="snitch-tape right-4 -top-2" aria-hidden="true" />
+                        <p class="snitch-ink-label">Usage credits</p>
+                        <p class="snitch-display text-4xl text-snitch-ink">
+                            Pay as you go
+                        </p>
+                        <ul class="relative z-10 space-y-2 text-sm text-snitch-ink/80">
+                            <li class="flex gap-2">
+                                <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
+                                Top up £10 / £25 / £50 / £100 when you need more
+                            </li>
+                            <li class="flex gap-2">
+                                <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
+                                £5 once when you claim your account
+                            </li>
+                            <li class="flex gap-2">
+                                <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
+                                Usage split by Apify, NanoGPT, and Firecrawl
+                            </li>
+                        </ul>
+                    </section>
+                </div>
+
+                <div class="mt-12 flex flex-wrap gap-3">
+                    <Link :href="ctaHref" class="snitch-btn snitch-btn-spot">
+                        <span class="relative z-10 inline-flex items-center gap-2">
+                            <ArrowRight class="size-3.5 shrink-0" aria-hidden="true" />
+                            {{ ctaLabel }}
+                        </span>
+                    </Link>
+                    <Link :href="agents()" class="snitch-btn">
+                        <span class="relative z-10 inline-flex items-center gap-2">
+                            <Bot class="size-3.5 shrink-0" aria-hidden="true" />
+                            Agents / MCP
+                        </span>
+                    </Link>
+                </div>
+            </div>
         </div>
     </div>
 </template>
