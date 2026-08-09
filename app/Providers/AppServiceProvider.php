@@ -4,16 +4,19 @@ namespace App\Providers;
 
 use App\Mail\PostalTransport;
 use App\Support\ClientIp;
+use App\Support\WorkOs\Ipv4CurlRequestClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use WorkOS\Client as WorkOsClient;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,9 +34,32 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureHttpClient();
+        $this->configureWorkOsClient();
         $this->configureUrlGenerator();
         $this->configureRateLimiting();
         $this->registerPostalMailer();
+    }
+
+    /**
+     * Prefer IPv4 and bound connect time so dual-stack DNS cannot stall workers.
+     */
+    protected function configureHttpClient(): void
+    {
+        Http::globalOptions([
+            'connect_timeout' => 3,
+            'curl' => [
+                \CURLOPT_IPRESOLVE => \CURL_IPRESOLVE_V4,
+            ],
+        ]);
+    }
+
+    /**
+     * WorkOS SDK uses its own curl client (not Laravel HTTP) for token refresh.
+     */
+    protected function configureWorkOsClient(): void
+    {
+        WorkOsClient::setRequestClient(new Ipv4CurlRequestClient);
     }
 
     protected function registerPostalMailer(): void

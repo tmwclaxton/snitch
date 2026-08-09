@@ -15,6 +15,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | config/snitch.php | .ai/rules/config.md |
 | app/Mail/**, app/Http/Controllers/Marketing/ContactController.php, app/Http/Requests/Marketing/**, resources/js/pages/marketing/Contact.vue, config/mail.php, config/services.php | .ai/rules/mail.md |
 | deploy/**, compose.prod.yaml, .github/workflows/prod_deploy.yml, scripts/deploy-production.sh | .ai/rules/production-url.md |
+| Dockerfile, docker/production/**, app/Console/Commands/WarmWorkOsJwkCommand.php, app/Support/WorkOs/**, app/Providers/AppServiceProvider.php, compose.prod.yaml | .ai/rules/production-web.md |
 | app/Jobs/** | .ai/rules/jobs.md |
 | app/Services/Winners/**, app/Jobs/ScoreWinnersJob.php, app/Http/Controllers/WinnerController.php | .ai/rules/winners.md |
 | app/Models/Post.php | .ai/rules/models.md |
