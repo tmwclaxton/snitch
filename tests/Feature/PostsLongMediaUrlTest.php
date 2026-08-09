@@ -11,6 +11,7 @@ use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Apify\ApifyClient;
 use App\Services\Apify\PlatformAdapterManager;
+use App\Services\Billing\PlanEntitlementService;
 use App\Services\SnitchAnalyticsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -63,6 +64,7 @@ class PostsLongMediaUrlTest extends TestCase
         (new SyncTrackedAccountJob($account->id))->handle(
             app(PlatformAdapterManager::class),
             app(SnitchAnalyticsService::class),
+            app(PlanEntitlementService::class),
         );
 
         $account->refresh();
