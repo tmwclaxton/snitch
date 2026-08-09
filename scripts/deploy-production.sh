@@ -16,6 +16,7 @@ DEPLOY_SLOT_FILE="${DEPLOY_SLOT_FILE:-.deploy-slot}"
 EDGE_DIR="${EDGE_DIR:-edge}"
 EDGE_UPSTREAM_FILE="${EDGE_UPSTREAM_FILE:-${EDGE_DIR}/upstream-active.conf}"
 EDGE_UPSTREAM_DEFAULT="${EDGE_UPSTREAM_DEFAULT:-docker/production/edge/upstream-active.conf.default}"
+EDGE_IMAGE="${EDGE_IMAGE:-nginx:1.27-alpine}"
 HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-180}"
 
 compose() {
@@ -144,6 +145,21 @@ migrate_and_seed() {
         || true
 }
 
+ensure_edge_image() {
+    if docker image inspect "$EDGE_IMAGE" >/dev/null 2>&1; then
+        echo "Edge image ${EDGE_IMAGE} already present."
+        return 0
+    fi
+
+    echo "Pulling edge image (${EDGE_IMAGE})..."
+    retry_with_backoff 5 docker pull "$EDGE_IMAGE"
+}
+
+start_edge_proxy() {
+    ensure_edge_image
+    compose up -d --no-deps --pull never --force-recreate edge
+}
+
 retire_legacy_single_app_container() {
     if [ -n "$(compose ps -q app 2>/dev/null || true)" ]; then
         echo "Retiring legacy compose app service (one-time cutover)..."
@@ -183,13 +199,13 @@ zero_downtime_deploy_app() {
         wait_for_container_healthy "$(compose ps -q "$active_service")"
         migrate_and_seed "$active_service"
         write_upstream_for_slot "$active_slot"
-        compose up -d --no-deps --pull never edge
+        start_edge_proxy
         write_deploy_slot "$active_slot"
         echo "Bootstrap complete. Live slot: ${active_slot}"
         return 0
     fi
 
-    compose up -d --no-deps --pull never edge
+    start_edge_proxy
 
     stop_app_workers "$active_service"
 
