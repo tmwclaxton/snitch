@@ -48,6 +48,9 @@ class DeployScriptTest extends TestCase
         $this->assertStringContainsString('nginx -s reload', $script);
         $this->assertStringContainsString('upstream-active.conf', $script);
         $this->assertStringContainsString('stop_app_workers', $script);
+        $this->assertStringContainsString('start_edge_proxy', $script);
+        $this->assertStringContainsString('ensure_edge_image', $script);
+        $this->assertStringContainsString('nginx:1.27-alpine', $script);
         $this->assertStringContainsString('compose up -d --no-deps --pull never', $script);
 
         $compose = file_get_contents(base_path('compose.prod.yaml'));
