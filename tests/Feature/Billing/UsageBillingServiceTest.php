@@ -24,6 +24,7 @@ class UsageBillingServiceTest extends TestCase
         config([
             'billing.platform_stripe_price' => 'price_platform_test',
             'billing.claim_bonus_pence' => 500,
+            'billing.subscription_bonus_pence' => 3000,
             'billing.price_multiplier' => 1.4,
             'billing.usd_to_gbp' => 1.0,
         ]);
@@ -47,6 +48,17 @@ class UsageBillingServiceTest extends TestCase
         $this->billing->creditClaimBonus($user);
 
         $this->assertSame(500, $this->billing->balancePence($user));
+    }
+
+    public function test_subscription_bonus_is_idempotent_per_invoice(): void
+    {
+        $user = User::factory()->create();
+
+        $this->billing->creditSubscriptionBonus($user, 'subscription_bonus:invoice:in_test_1');
+        $this->billing->creditSubscriptionBonus($user, 'subscription_bonus:invoice:in_test_1');
+        $this->billing->creditSubscriptionBonus($user, 'subscription_bonus:invoice:in_test_2');
+
+        $this->assertSame(6000, $this->billing->balancePence($user));
     }
 
     public function test_charge_requires_platform_subscription(): void

@@ -43,7 +43,8 @@ class BillingCheckoutTest extends TestCase
                 ->has('platform')
                 ->where('subscription.subscribed', false)
                 ->where('usage.balance_pence', 0)
-                ->where('platform.fee_pence', 1900));
+                ->where('platform.fee_pence', 1900)
+                ->where('platform.bonus_pence', 3000));
     }
 
     public function test_checkout_redirects_when_platform_price_missing(): void

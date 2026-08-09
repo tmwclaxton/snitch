@@ -57,7 +57,7 @@ defineProps<{
         points: SpendPoint[];
     };
     creditPacks: CreditPack[];
-    platform: { fee_pence: number; has_checkout: boolean };
+    platform: { fee_pence: number; bonus_pence: number; has_checkout: boolean };
 }>();
 
 defineOptions({
@@ -149,7 +149,8 @@ const vendorAccent: Record<string, string> = {
                 <p class="text-sm text-snitch-ink/70">
                     Platform plan:
                     <strong>{{ subscription.subscribed ? 'Active' : 'Not subscribed' }}</strong>
-                    · {{ formatMoney(platform.fee_pence) }}/mo
+                    · {{ formatMoney(platform.fee_pence) }}/mo includes
+                    {{ formatMoney(platform.bonus_pence) }} usage each billing period
                 </p>
                 <div class="flex flex-wrap gap-3">
                     <Form

@@ -40,6 +40,7 @@ function formatMoney(pence: number): string {
                 <ul class="space-y-2 text-sm">
                     <li class="flex gap-2"><Check class="mt-0.5 size-4 shrink-0" /> Unlimited tracked accounts</li>
                     <li class="flex gap-2"><Check class="mt-0.5 size-4 shrink-0" /> MCP + web app access</li>
+                    <li class="flex gap-2"><Check class="mt-0.5 size-4 shrink-0" /> {{ formatMoney(3000) }} usage credits every billing period</li>
                     <li class="flex gap-2"><Check class="mt-0.5 size-4 shrink-0" /> Feed, Explore, Winners</li>
                 </ul>
             </section>
@@ -47,9 +48,9 @@ function formatMoney(pence: number): string {
                 <p class="snitch-ink-label">Usage credits</p>
                 <p class="font-display text-4xl">Pay as you go</p>
                 <ul class="space-y-2 text-sm">
-                    <li class="flex gap-2"><Check class="mt-0.5 size-4 shrink-0" /> Top up £10 / £25 / £50 / £100</li>
+                    <li class="flex gap-2"><Check class="mt-0.5 size-4 shrink-0" /> Top up £10 / £25 / £50 / £100 when you need more</li>
                     <li class="flex gap-2"><Check class="mt-0.5 size-4 shrink-0" /> £5 once when you claim your account</li>
-                    <li class="flex gap-2"><Check class="mt-0.5 size-4 shrink-0" /> Usage split by Apify, NanoGPT, Firecrawl</li>
+                    <li class="flex gap-2"><Check class="mt-0.5 size-4 shrink-0" /> Usage split by Apify, NanoGPT, and Firecrawl</li>
                 </ul>
             </section>
         </div>

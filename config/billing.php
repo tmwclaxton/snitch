@@ -13,6 +13,12 @@ return [
     'subscription_type' => env('SNITCH_SUBSCRIPTION_TYPE', 'default'),
 
     /*
+    | Usage credits granted when a platform subscription invoice is paid
+    | (first subscribe + each renewal). Idempotent per Stripe invoice id.
+    */
+    'subscription_bonus_pence' => (int) env('SNITCH_SUBSCRIPTION_BONUS_PENCE', 3000),
+
+    /*
     | Claim/confirm bonus (GBP pence). Agents / unclaimed MCP accounts get £0.
     */
     'claim_bonus_pence' => (int) env('SNITCH_CLAIM_BONUS_PENCE', 500),

@@ -126,6 +126,36 @@ class UsageBillingService
         );
     }
 
+    /**
+     * Grant platform subscription usage credits (idempotent per Stripe invoice).
+     *
+     * @param  array<string, mixed>  $meta
+     */
+    public function creditSubscriptionBonus(
+        User $user,
+        string $idempotencyKey,
+        array $meta = [],
+    ): ?CreditLedgerEntry {
+        $bonus = max(0, (int) config('billing.subscription_bonus_pence', 3000));
+
+        if ($bonus <= 0) {
+            return null;
+        }
+
+        return $this->writeEntry(
+            user: $user,
+            action: 'subscription_bonus',
+            vendor: BillingVendor::Bonus,
+            amountPence: $bonus,
+            cogsUsd: null,
+            multiplier: null,
+            meta: $meta,
+            idempotencyKey: $idempotencyKey,
+            requirePlatform: false,
+            requireCredits: false,
+        );
+    }
+
     public function estimatePence(string $action, BillingVendor|string $vendor, ?float $cogsUsd = null): int
     {
         $vendorEnum = $vendor instanceof BillingVendor ? $vendor : BillingVendor::from($vendor);

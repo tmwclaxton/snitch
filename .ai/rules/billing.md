@@ -28,7 +28,7 @@ paths:
 Platform fee (£19/mo via `STRIPE_PRICE_PLATFORM`) plus prepaid usage credits (packs in `config/billing.php`). Seat caps for competitors/influencers are retired - money is the limit. Internal price uses vendor COGS × `price_multiplier` (default 1.4); never show markup/COGS/"40%" in UI or MCP copy - only charged GBP amounts.
 
 ## Credits
-Agent MCP `create_account` starts at £0. Claiming/confirming (WorkOS bind or web signup) grants `claim_bonus_pence` (£5) once (`idempotency_key` `claim_bonus:{user_id}`). Billable jobs require active platform subscription + positive credit balance.
+Agent MCP `create_account` starts at £0. Claiming/confirming (WorkOS bind or web signup) grants `claim_bonus_pence` (£5) once (`idempotency_key` `claim_bonus:{user_id}`). Each paid platform subscription invoice grants `subscription_bonus_pence` (£30) once per invoice (`idempotency_key` `subscription_bonus:invoice:{invoice_id}`) via Stripe `invoice.paid`. Billable jobs require active platform subscription + positive credit balance.
 
 ## Vendors
 Ledger rows are per vendor: `apify`, `nanogpt`, `firecrawl` (plus `bonus`/`topup`). Apify prefers exact `usageTotalUsd` from run API; NanoGPT/Firecrawl use catalog estimates. Billing page and MCP `billing_status` show spend by those three vendors.
