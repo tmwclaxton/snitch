@@ -155,7 +155,7 @@ function accountHref(post: RecentPost): string | null {
         <div class="snitch-grain" aria-hidden="true" />
 
         <div class="relative z-10 mx-auto max-w-6xl">
-            <header class="flex items-end justify-between gap-6 border-b border-snitch-ink/10 pb-5">
+            <header class="flex items-center justify-between gap-6 border-b border-snitch-ink/10 pb-5">
                 <div class="min-w-0">
                     <h1 class="snitch-display relative text-3xl text-snitch-ink sm:text-4xl">
                         <span
@@ -171,20 +171,19 @@ function accountHref(post: RecentPost): string | null {
 
                 <Link
                     :href="agents()"
-                    class="snitch-scrap relative hidden max-w-xs shrink-0 items-start gap-3 p-4 pt-5 transition hover:-translate-y-0.5 md:flex"
+                    class="snitch-scrap relative hidden max-w-[15.5rem] shrink-0 items-center gap-2 px-3 py-2.5 transition hover:-translate-y-0.5 md:flex"
                 >
-                    <span class="snitch-tape left-4 -top-2" aria-hidden="true" />
-                    <Bot class="mt-0.5 size-4 shrink-0 text-snitch-ink/50" aria-hidden="true" />
+                    <Bot class="size-3.5 shrink-0 text-snitch-ink/50" aria-hidden="true" />
                     <div class="min-w-0">
-                        <p class="snitch-ink-label">Agents</p>
-                        <p class="snitch-display mt-0.5 text-lg text-snitch-ink">
+                        <p class="snitch-ink-label leading-none">Agents</p>
+                        <p class="snitch-display mt-0.5 text-sm leading-tight text-snitch-ink">
                             Connect your agent
                         </p>
-                        <p class="mt-1 text-xs text-snitch-ink/60">
-                            MCP setup for Cursor, Claude, Codex, and more.
+                        <p class="mt-0.5 text-[0.65rem] leading-snug text-snitch-ink/55">
+                            Cursor, Claude, Codex, and more.
                         </p>
                     </div>
-                    <ArrowRight class="ml-auto size-4 shrink-0 text-snitch-ink/40" aria-hidden="true" />
+                    <ArrowRight class="size-3.5 shrink-0 text-snitch-ink/40" aria-hidden="true" />
                 </Link>
             </header>
 
