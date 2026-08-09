@@ -157,11 +157,12 @@ COPY docker/workers/ /etc/supervisor/conf.d/workers/
 COPY docker/production/web.conf /etc/supervisor/conf.d/workers/web.conf
 COPY docker/production/nginx.conf /etc/nginx/sites-enabled/snitch.conf
 COPY docker/production/php-fpm.conf /usr/local/etc/php-fpm.d/zz-snitch.conf
-COPY docker/8.5/supervisord.conf /etc/supervisor/supervisord-workers.conf
+COPY docker/production/supervisord.conf /etc/supervisor/supervisord-workers.conf
 COPY docker/production/start-container /usr/local/bin/start-container
 RUN chmod +x /usr/local/bin/start-container \
     && (mv /usr/local/etc/php-fpm.d/www.conf /usr/local/etc/php-fpm.d/www.conf.disabled 2>/dev/null || true) \
-    && sed -i 's|^pid .*|pid /run/nginx.pid;|' /etc/nginx/nginx.conf
+    && sed -i 's|^pid .*|pid /run/nginx.pid;|' /etc/nginx/nginx.conf \
+    && sed -i 's|^user .*|user sail;|' /etc/nginx/nginx.conf
 
 EXPOSE 80
 
