@@ -21,6 +21,30 @@ class PublicPagesTest extends TestCase
             );
     }
 
+    public function test_surface_clips_grain_so_it_does_not_expand_scroll(): void
+    {
+        $css = file_get_contents(resource_path('css/app.css'));
+        $layout = file_get_contents(resource_path('js/layouts/PublicLayout.vue'));
+
+        $this->assertNotFalse($css, 'Missing app.css source');
+        $this->assertNotFalse($layout, 'Missing PublicLayout.vue source');
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-surface\s*\{[^}]*overflow:\s*clip/s',
+            $css,
+            'snitch-surface must clip both axes to avoid a nested mobile scrollport',
+        );
+        $this->assertMatchesRegularExpression(
+            '/@keyframes snitch-grain-drift\s*\{[^}]*background-position:/s',
+            $css,
+            'Grain drift must use background-position, not transform (transform expands scrollHeight)',
+        );
+        $this->assertStringNotContainsString(
+            'overflow-x-clip',
+            $layout,
+            'PublicLayout should rely on .snitch-surface overflow:clip, not overflow-x-clip alone',
+        );
+    }
+
     public function test_platform_logo_assets_exist(): void
     {
         foreach (['tiktok', 'instagram', 'facebook', 'linkedin'] as $slug) {

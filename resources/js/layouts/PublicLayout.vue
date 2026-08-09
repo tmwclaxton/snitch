@@ -14,7 +14,7 @@ withDefaults(
 </script>
 
 <template>
-    <div class="snitch-surface relative min-h-screen w-full overflow-x-clip">
+    <div class="snitch-surface relative min-h-screen w-full">
         <SeoHead />
         <div class="snitch-grain" aria-hidden="true" />
         <div class="relative z-10 flex min-h-screen w-full flex-col">

@@ -262,6 +262,9 @@
     .snitch-surface {
         position: relative;
         isolation: isolate;
+        /* Clip both axes: overflow-x alone can force overflow-y to auto and
+           create a nested scrollport; grain transforms must not expand page height. */
+        overflow: clip;
         background-color: var(--snitch-paper);
         color: var(--snitch-ink);
         font-family: var(--font-sans);
@@ -293,6 +296,7 @@
     .snitch-app-shell {
         position: relative;
         isolation: isolate;
+        overflow: clip;
         min-height: 100%;
         background-color: var(--snitch-paper);
         color: var(--snitch-ink);
@@ -330,6 +334,7 @@
         background-image: var(--snitch-grain);
         background-size: 140px 140px;
         mix-blend-mode: var(--snitch-print-blend);
+        /* background-position drift avoids transform overflow expanding scrollHeight. */
         animation: snitch-grain-drift 16s steps(8) infinite;
     }
 
@@ -2510,19 +2515,19 @@
 
 @keyframes snitch-grain-drift {
     0% {
-        transform: translate(0, 0);
+        background-position: 0 0;
     }
     25% {
-        transform: translate(-1%, 1%);
+        background-position: -2px 2px;
     }
     50% {
-        transform: translate(1%, -1%);
+        background-position: 2px -2px;
     }
     75% {
-        transform: translate(-0.5%, -0.5%);
+        background-position: -1px -1px;
     }
     100% {
-        transform: translate(0, 0);
+        background-position: 0 0;
     }
 }
 
