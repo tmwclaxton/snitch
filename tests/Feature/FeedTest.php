@@ -167,7 +167,7 @@ class FeedTest extends TestCase
                 ->where('post.analysis.how_to_copy', 'Open on the mess. Cut to the receipt. End on the ask.')
                 ->where(
                     'post.analysis.how_to_copy_html',
-                    "<ol>\n<li>Open on the mess.</li>\n<li>Cut to the receipt.</li>\n<li>End on the ask.</li>\n</ol>\n",
+                    "<ol>\n<li>Open on the mess.</li>\n<li>Cut to the receipt.</li>\n<li>End on the ask.</li>\n</ol>",
                 )
                 ->where('post.analysis.topics.1', 'proof')
                 ->where('post.tracked_account.id', $account->id)
