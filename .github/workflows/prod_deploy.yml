@@ -179,8 +179,14 @@ jobs:
           }
 
           copy_deploy_files() {
+            ssh ${{ env.DEPLOY_HOST }} "mkdir -p ${{ env.DEPLOY_DIR }}/docker/production/edge/conf.d ${{ env.DEPLOY_DIR }}/edge"
             scp compose.prod.yaml scripts/deploy-production.sh \
               ${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/
+            scp docker/production/edge/nginx.conf \
+              docker/production/edge/upstream-active.conf.default \
+              ${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/docker/production/edge/
+            scp docker/production/edge/conf.d/snitch.conf \
+              ${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/docker/production/edge/conf.d/
           }
 
           retry_with_backoff 5 copy_deploy_files
