@@ -50,18 +50,18 @@ async function copyToken(): Promise<void> {
         <Head title="Agents" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="relative z-10 mx-auto max-w-3xl">
+        <div class="relative z-10 mx-auto max-w-6xl">
             <header class="border-b border-snitch-ink/10 pb-5">
                 <p class="snitch-ink-label">Agents</p>
                 <h1 class="snitch-display mt-1 text-3xl text-snitch-ink sm:text-4xl">
                     Connect your agent
                 </h1>
-                <p class="mt-1.5 max-w-xl text-sm text-snitch-ink/65 sm:text-base">
+                <p class="mt-1.5 max-w-2xl text-sm text-snitch-ink/65 sm:text-base">
                     Mint a Sanctum API token, paste the MCP config into Cursor, Claude, Codex, or any HTTP MCP client.
                 </p>
             </header>
 
-            <section class="snitch-scrap relative mt-6 space-y-4 p-5 pt-6">
+            <section class="snitch-scrap relative mt-6 space-y-4 p-5 pt-6 sm:p-6 lg:max-w-2xl">
                 <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
                 <div class="flex items-start gap-3">
                     <KeyRound class="mt-0.5 size-4 shrink-0 text-snitch-ink/50" aria-hidden="true" />
