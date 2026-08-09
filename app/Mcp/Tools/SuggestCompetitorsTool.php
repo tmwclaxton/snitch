@@ -6,6 +6,7 @@ use App\Jobs\SuggestCompetitorsJob;
 use App\Mcp\Support\McpAuth;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -29,11 +30,20 @@ class SuggestCompetitorsTool extends Tool
         }
 
         $suggestId = (string) Str::uuid();
+
+        Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
+            'status' => 'queued',
+            'suggestions' => null,
+            'error' => null,
+        ], now()->addHours(2));
+        Cache::put(SuggestCompetitorsJob::latestCacheKeyFor($user->id), $suggestId, now()->addHours(2));
+
         SuggestCompetitorsJob::dispatch($user->id, $suggestId);
 
         return Response::json([
             'suggest_id' => $suggestId,
-            'status_url_hint' => 'Poll via HTTP GET /competitors/suggest/{suggestId} or re-check cache from the app.',
+            'queued' => true,
+            'note' => 'Poll suggest_competitors_status with this suggest_id.',
         ]);
     }
 

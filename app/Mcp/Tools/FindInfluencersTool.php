@@ -6,6 +6,7 @@ use App\Jobs\FindInfluencersJob;
 use App\Mcp\Support\McpAuth;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -37,13 +38,25 @@ class FindInfluencersTool extends Tool
         ]);
 
         $runId = (string) Str::uuid();
-        FindInfluencersJob::dispatch($user->id, $runId, [
+        $filters = [
             'platforms' => [$data['platform']],
             'language' => $data['language'] ?? null,
             'min_followers' => $data['min_followers'] ?? null,
             'max_followers' => $data['max_followers'] ?? null,
             'brief' => $data['brief'],
-        ]);
+        ];
+
+        Cache::put(FindInfluencersJob::cacheKeyFor($user->id, $runId), [
+            'status' => 'queued',
+            'filters' => $filters,
+            'brief' => $data['brief'],
+            'suggestions' => [],
+            'decisions' => [],
+            'error' => null,
+        ], now()->addHours(2));
+        Cache::put(FindInfluencersJob::latestCacheKeyFor($user->id), $runId, now()->addHours(24));
+
+        FindInfluencersJob::dispatch($user->id, $runId, $filters);
 
         return Response::json(['run_id' => $runId, 'queued' => true]);
     }
