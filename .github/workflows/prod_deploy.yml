@@ -12,6 +12,12 @@ on:
       - ".agents/**"
       - ".ai/**"
 
+# Overlapping main pushes previously pulled / transferred in parallel on the VPS
+# and amplified TLS / Access SSH failures. Queue deploys instead of cancelling.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
 env:
   IMAGE: ghcr.io/tmwclaxton/snitch:latest
   DEPLOY_HOST: admin.grantgunner.org
@@ -77,24 +83,34 @@ jobs:
 
       - name: Configure SSH
         run: |
+          set -euo pipefail
           mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          cat >> ~/.ssh/config << EOF
+          CLOUDFLARED_BIN="$(command -v cloudflared)"
+          # Absolute cloudflared path + IPv4 + ControlMaster: Access SSH flaps often show up as
+          # "banner exchange" / "UNKNOWN port 65535" on every fresh ProxyCommand handshake.
+          cat > ~/.ssh/config << EOF
           Host ${{ env.DEPLOY_HOST }}
             User ${{ env.DEPLOY_USER }}
             IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
             StrictHostKeyChecking no
+            AddressFamily inet
             ServerAliveInterval 15
             ServerAliveCountMax 120
-            ConnectTimeout 30
-            ProxyCommand cloudflared access ssh --hostname %h --service-token-id ${CF_ACCESS_CLIENT_ID} --service-token-secret ${CF_ACCESS_CLIENT_SECRET}
+            ConnectTimeout 45
+            ConnectionAttempts 3
+            ControlMaster auto
+            ControlPath ~/.ssh/cm-%r@%h:%p
+            ControlPersist 10m
+            ProxyCommand ${CLOUDFLARED_BIN} access ssh --hostname %h --service-token-id ${CF_ACCESS_CLIENT_ID} --service-token-secret ${CF_ACCESS_CLIENT_SECRET}
           EOF
 
-      - name: Copy deploy files to server
+      - name: Open SSH master connection
         run: |
           set -euo pipefail
-          # SSH/SCP through Cloudflare Access can flap; backoff beyond a fixed 5s sleep.
+          # One successful Access handshake is reused by later scp/ssh steps.
           retry_with_backoff() {
             local max_attempts="$1"
             shift
@@ -119,13 +135,106 @@ jobs:
             done
           }
 
-          retry_with_backoff 5 scp compose.prod.yaml ${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/compose.prod.yaml
-          retry_with_backoff 5 scp scripts/deploy-production.sh ${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/deploy-production.sh
+          open_master() {
+            ssh -O check ${{ env.DEPLOY_HOST }} 2>/dev/null && return 0
+            ssh -o ControlMaster=yes -o ControlPersist=10m -Nf ${{ env.DEPLOY_HOST }}
+            ssh -O check ${{ env.DEPLOY_HOST }}
+          }
+
+          retry_with_backoff 8 open_master
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Copy deploy files to server
+        run: |
+          set -euo pipefail
+          # Prefer the multiplexed master socket; one scp avoids a second handshake.
+          retry_with_backoff() {
+            local max_attempts="$1"
+            shift
+            local attempt=1
+            local delay=5
+
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                echo "Command failed after ${max_attempts} attempts: $*" >&2
+                return 1
+              fi
+              echo "Attempt ${attempt}/${max_attempts} failed; retrying in ${delay}s..."
+              sleep "$delay"
+              delay=$((delay * 2))
+              if [ "$delay" -gt 60 ]; then
+                delay=60
+              fi
+              attempt=$((attempt + 1))
+            done
+          }
+
+          copy_deploy_files() {
+            scp compose.prod.yaml scripts/deploy-production.sh \
+              ${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/
+          }
+
+          retry_with_backoff 5 copy_deploy_files
+
+      - name: Transfer image to server
+        env:
+          IMAGE_SHA: ghcr.io/tmwclaxton/snitch:sha-${{ github.sha }}
+          IMAGE_LATEST: ghcr.io/tmwclaxton/snitch:latest
+        run: |
+          set -euo pipefail
+          # Host → GHCR pulls keep dying on TLS handshake timeouts / hung blobs.
+          # Pull on the Actions runner (reliable GHCR path), then stream the image
+          # over SSH so the self-hosted host never needs registry egress for deploys.
+          retry_with_backoff() {
+            local max_attempts="$1"
+            shift
+            local attempt=1
+            local delay=5
+
+            while [ "$attempt" -le "$max_attempts" ]; do
+              if "$@"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                echo "Command failed after ${max_attempts} attempts: $*" >&2
+                return 1
+              fi
+              echo "Attempt ${attempt}/${max_attempts} failed; retrying in ${delay}s..."
+              sleep "$delay"
+              delay=$((delay * 2))
+              if [ "$delay" -gt 60 ]; then
+                delay=60
+              fi
+              attempt=$((attempt + 1))
+            done
+          }
+
+          retry_with_backoff 5 docker pull "$IMAGE_SHA"
+
+          transfer_image() {
+            # Expand IMAGE_* on the runner before SSH; single quotes would send literals.
+            docker save "$IMAGE_SHA" | gzip -1 | ssh ${{ env.DEPLOY_HOST }} "
+              set -euo pipefail
+              gunzip | docker load
+              docker tag ${IMAGE_SHA} ${IMAGE_LATEST}
+            "
+          }
+
+          retry_with_backoff 4 transfer_image
 
       - name: Deploy to server
         run: |
           set -euo pipefail
-          # Outer retries cover SSH transport flaps; deploy-production.sh retries GHCR login/pull.
+          # Outer retries cover SSH transport flaps. Image is already on the host.
           retry_with_backoff() {
             local max_attempts="$1"
             shift
@@ -154,5 +263,9 @@ jobs:
             set -e
             cd ${{ env.DEPLOY_DIR }}
             chmod +x deploy-production.sh
-            GHCR_TOKEN='${{ secrets.GITHUB_TOKEN }}' GHCR_ACTOR='${{ github.actor }}' ./deploy-production.sh
+            SKIP_GHCR_PULL=1 ./deploy-production.sh
           "
+
+      - name: Close SSH master connection
+        if: always()
+        run: ssh -O exit ${{ env.DEPLOY_HOST }} || true
