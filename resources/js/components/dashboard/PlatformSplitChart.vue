@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import PlatformStippleTrack from '@/components/PlatformStippleTrack.vue';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 
 export type PlatformBucket = {
@@ -18,6 +19,20 @@ const maxCount = computed(() =>
 const total = computed(() =>
     props.platforms.reduce((sum, row) => sum + row.count, 0),
 );
+
+const peakIndex = computed(() => {
+    let peak = 0;
+    let peakCount = -1;
+
+    props.platforms.forEach((row, index) => {
+        if (row.count > peakCount) {
+            peakCount = row.count;
+            peak = index;
+        }
+    });
+
+    return peak;
+});
 </script>
 
 <template>
@@ -31,7 +46,7 @@ const total = computed(() =>
 
         <ul v-if="platforms.length" class="mt-3 space-y-2.5">
             <li
-                v-for="row in platforms"
+                v-for="(row, index) in platforms"
                 :key="row.platform"
                 class="grid grid-cols-[7.25rem_minmax(0,1fr)_2rem] items-center gap-2"
             >
@@ -45,12 +60,14 @@ const total = computed(() =>
                     >
                     <span class="truncate">{{ platformLabel(row.platform) }}</span>
                 </span>
-                <div class="snitch-platform-bar-track" aria-hidden="true">
-                    <div
-                        class="snitch-platform-bar-fill"
-                        :style="{ width: `${(row.count / maxCount) * 100}%` }"
-                    />
-                </div>
+                <PlatformStippleTrack
+                    :count="row.count"
+                    :max-count="maxCount"
+                    :is-peak="index === peakIndex && row.count > 0"
+                    :seed="index + 21"
+                    :delay-offset="index * 32"
+                    :title="`${platformLabel(row.platform)}: ${row.count}`"
+                />
                 <span class="text-right text-xs tabular-nums text-snitch-ink/70">
                     {{ row.count }}
                 </span>

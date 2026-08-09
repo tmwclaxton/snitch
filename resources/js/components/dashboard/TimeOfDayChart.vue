@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import StippleBar from '@/components/dashboard/StippleBar.vue';
 
 export type TimeOfDayBucket = {
     hour: number;
@@ -33,25 +34,43 @@ const total = computed(() =>
     props.hours.reduce((sum, row) => sum + row.count, 0),
 );
 
+const leftPad = 28;
 const chartHeight = 100;
+const plotTop = 8;
 const barGap = 3;
-const chartWidth = 360;
+const plotWidth = 360;
+const chartWidth = leftPad + plotWidth;
 const barWidth = computed(() => {
     const n = Math.max(props.hours.length, 1);
 
-    return (chartWidth - barGap * (n - 1)) / n;
+    return (plotWidth - barGap * (n - 1)) / n;
+});
+
+const yTicks = computed(() => {
+    const max = maxCount.value;
+    const values =
+        max <= 1 ? [0, 1] : max <= 3 ? [0, max] : [0, Math.round(max / 2), max];
+
+    return values.map((value) => ({
+        value,
+        y: plotTop + (1 - value / max) * (chartHeight - plotTop),
+    }));
 });
 
 function barHeight(count: number): number {
-    return (count / maxCount.value) * (chartHeight - 8);
+    return (count / maxCount.value) * (chartHeight - plotTop);
+}
+
+function drawnHeight(count: number): number {
+    return Math.max(barHeight(count), count > 0 ? 4 : 0);
 }
 
 function barX(index: number): number {
-    return index * (barWidth.value + barGap);
+    return leftPad + index * (barWidth.value + barGap);
 }
 
 function barY(count: number): number {
-    return chartHeight - barHeight(count);
+    return chartHeight - drawnHeight(count);
 }
 
 function showLabel(hour: number): boolean {
@@ -74,32 +93,49 @@ function showLabel(hour: number): boolean {
             role="img"
             :aria-label="`Competitor posts by hour, ${total} over 12 weeks`"
         >
-            <line
-                :x1="0"
-                :y1="chartHeight"
-                :x2="chartWidth"
-                :y2="chartHeight"
-                class="stroke-snitch-ink/15"
-                stroke-width="1"
-            />
+            <g v-for="tick in yTicks" :key="`y-${tick.value}`">
+                <line
+                    :x1="leftPad"
+                    :x2="chartWidth"
+                    :y1="tick.y"
+                    :y2="tick.y"
+                    class="stroke-snitch-ink/15"
+                    stroke-width="1"
+                />
+                <text
+                    :x="leftPad - 6"
+                    :y="tick.y + 3"
+                    text-anchor="end"
+                    class="fill-snitch-ink/45"
+                    style="font-size: 9px"
+                >
+                    {{ tick.value }}
+                </text>
+            </g>
             <g
                 v-for="(row, index) in hours"
                 :key="row.hour"
             >
-                <rect
+                <StippleBar
+                    v-if="row.count > 0"
                     :x="barX(index)"
                     :y="barY(row.count)"
                     :width="barWidth"
-                    :height="Math.max(barHeight(row.count), row.count > 0 ? 3 : 0)"
-                    :class="
-                        index === peakIndex && row.count > 0
+                    :height="drawnHeight(row.count)"
+                    variant="dots"
+                    grow-from="bottom"
+                    :delay-offset="index * 12"
+                    :step-ms="18"
+                    :step="3.1"
+                    :radius="0.95"
+                    :seed="row.hour + 11"
+                    :fill-class="
+                        index === peakIndex
                             ? 'fill-snitch-spot'
                             : 'fill-snitch-ink/70'
                     "
-                    rx="1"
-                >
-                    <title>{{ row.label }}: {{ row.count }}</title>
-                </rect>
+                    :title="`${row.label}: ${row.count}`"
+                />
                 <text
                     v-if="showLabel(row.hour)"
                     :x="barX(index) + barWidth / 2"

@@ -13,6 +13,7 @@ import {
 import { computed, ref, watch } from 'vue';
 import AnalysisTermChip from '@/components/AnalysisTermChip.vue';
 import DailyMetricChart from '@/components/analytics/DailyMetricChart.vue';
+import PlatformStippleTrack from '@/components/PlatformStippleTrack.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { analysisDimensionIcon } from '@/lib/analysisTerms';
 import { platformIconSrc } from '@/lib/platforms';
@@ -116,6 +117,20 @@ const canIncreaseDays = computed(
 const platformMax = computed(() =>
     Math.max(1, ...props.analytics.platforms.map((row) => row.count)),
 );
+
+const platformPeakIndex = computed(() => {
+    let peak = 0;
+    let peakCount = -1;
+
+    props.analytics.platforms.forEach((row, index) => {
+        if (row.count > peakCount) {
+            peakCount = row.count;
+            peak = index;
+        }
+    });
+
+    return peak;
+});
 
 const termGroups = computed(() => [
     {
@@ -426,7 +441,7 @@ function commitDaysInput(): void {
                         class="mt-4 space-y-2.5"
                     >
                         <li
-                            v-for="row in analytics.platforms"
+                            v-for="(row, index) in analytics.platforms"
                             :key="row.platform"
                             class="grid grid-cols-[7.5rem_minmax(0,1fr)_3rem] items-center gap-2"
                         >
@@ -440,17 +455,14 @@ function commitDaysInput(): void {
                                 >
                                 <span class="truncate">{{ row.label }}</span>
                             </span>
-                            <div
-                                class="h-2 overflow-hidden bg-snitch-ink/10"
-                                aria-hidden="true"
-                            >
-                                <div
-                                    class="h-full bg-snitch-ink/70"
-                                    :style="{
-                                        width: `${(row.count / platformMax) * 100}%`,
-                                    }"
-                                />
-                            </div>
+                            <PlatformStippleTrack
+                                :count="row.count"
+                                :max-count="platformMax"
+                                :is-peak="index === platformPeakIndex && row.count > 0"
+                                :seed="index + 41"
+                                :delay-offset="index * 32"
+                                :title="`${row.label}: ${formatNumber(row.count)}`"
+                            />
                             <span
                                 class="text-right text-xs tabular-nums text-snitch-ink/70"
                             >
