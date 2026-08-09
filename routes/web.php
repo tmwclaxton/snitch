@@ -8,6 +8,7 @@ use App\Http\Controllers\CompetitorController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExploreController;
 use App\Http\Controllers\FeedController;
+use App\Http\Controllers\InfluencerController;
 use App\Http\Controllers\Marketing\ContactController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\Settings\WinnerRuleController;
@@ -82,6 +83,18 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::get('/competitors/{trackedAccount}', [CompetitorController::class, 'show'])->name('competitors.show');
         Route::delete('/competitors/{trackedAccount}', [CompetitorController::class, 'destroy'])->name('competitors.destroy');
         Route::post('/competitors/{trackedAccount}/sync', [CompetitorController::class, 'sync'])->name('competitors.sync');
+
+        Route::get('/influencers', [InfluencerController::class, 'index'])->name('influencers.index');
+        Route::post('/influencers/brief', [InfluencerController::class, 'generateBrief'])
+            ->middleware('throttle:10,1')
+            ->name('influencers.brief');
+        Route::post('/influencers/search', [InfluencerController::class, 'search'])
+            ->middleware('throttle:10,1')
+            ->name('influencers.search');
+        Route::get('/influencers/search/{runId}', [InfluencerController::class, 'searchStatus'])
+            ->name('influencers.search.status');
+        Route::post('/influencers/keep', [InfluencerController::class, 'keep'])->name('influencers.keep');
+        Route::post('/influencers/discard', [InfluencerController::class, 'discard'])->name('influencers.discard');
 
         Route::get('/feed', [FeedController::class, 'index'])->name('feed.index');
         Route::get('/feed/{post}', [FeedController::class, 'show'])->name('feed.show');

@@ -30,6 +30,7 @@ class BillingController extends Controller
                 'price_pence' => (int) $plan['price_pence'],
                 'yearly_price_pence' => (int) ($plan['yearly_price_pence'] ?? 0),
                 'competitor_limit' => (int) $plan['competitor_limit'],
+                'influencer_limit' => (int) ($plan['influencer_limit'] ?? $plan['competitor_limit']),
                 'has_checkout_month' => in_array($key, ['basic', 'pro'], true)
                     && filled($plan['stripe_price'] ?? null),
                 'has_checkout_year' => in_array($key, ['basic', 'pro'], true)

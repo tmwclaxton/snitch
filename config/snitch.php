@@ -60,6 +60,23 @@ return [
         'platforms' => ['instagram', 'tiktok', 'youtube', 'linkedin', 'facebook'],
     ],
 
+    'influencer_find' => [
+        'model' => env('SNITCH_INFLUENCER_FIND_MODEL', 'deepseek/deepseek-v4-flash'),
+        'max_tokens' => (int) env('SNITCH_INFLUENCER_FIND_MAX_TOKENS', 1600),
+        'temperature' => (float) env('SNITCH_INFLUENCER_FIND_TEMPERATURE', 0.3),
+        'brief_max_tokens' => (int) env('SNITCH_INFLUENCER_FIND_BRIEF_MAX_TOKENS', 280),
+        'brief_temperature' => (float) env('SNITCH_INFLUENCER_FIND_BRIEF_TEMPERATURE', 0.4),
+        'max_candidates' => (int) env('SNITCH_INFLUENCER_FIND_MAX_CANDIDATES', 20),
+        'max_resolves' => (int) env('SNITCH_INFLUENCER_FIND_MAX_RESOLVES', 40),
+        'max_suggestions' => (int) env('SNITCH_INFLUENCER_FIND_MAX_SUGGESTIONS', 10),
+        'min_suggestions' => (int) env('SNITCH_INFLUENCER_FIND_MIN_SUGGESTIONS', 6),
+        'search_limit' => (int) env('SNITCH_INFLUENCER_FIND_SEARCH_LIMIT', 12),
+        'resolve_concurrency' => (int) env('SNITCH_INFLUENCER_FIND_RESOLVE_CONCURRENCY', 4),
+        'max_per_platform' => (int) env('SNITCH_INFLUENCER_FIND_MAX_PER_PLATFORM', 5),
+        'platforms' => ['instagram', 'tiktok', 'youtube', 'linkedin', 'facebook'],
+        'default_platform' => 'instagram',
+    ],
+
     /*
     | Cost-disciplined sync: only import posts from the last N days, with a modest
     | per-account fetch cap. Analyse jobs also respect this recency window.

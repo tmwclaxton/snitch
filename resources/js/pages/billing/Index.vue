@@ -14,6 +14,7 @@ type PlanCard = {
     price_pence: number;
     yearly_price_pence: number;
     competitor_limit: number;
+    influencer_limit: number;
     has_checkout_month: boolean;
     has_checkout_year: boolean;
 };
@@ -24,6 +25,9 @@ type SubscriptionSummary = {
     competitor_limit: number;
     competitors_used: number;
     competitors_remaining: number;
+    influencer_limit: number;
+    influencers_used: number;
+    influencers_remaining: number;
     on_trial: boolean;
     trial_ends_at: string | null;
     subscribed: boolean;
@@ -243,6 +247,11 @@ function billingIntervalLabel(): string | null {
                             {{ subscription.competitors_used }} /
                             {{ subscription.competitor_limit }}
                         </p>
+                        <p class="mt-1 text-sm text-snitch-ink/70">
+                            Influencers:
+                            {{ subscription.influencers_used }} /
+                            {{ subscription.influencer_limit }}
+                        </p>
                         <p
                             v-if="trialLabel()"
                             class="mt-1 text-sm text-snitch-ink/65"
@@ -337,7 +346,8 @@ function billingIntervalLabel(): string | null {
                             {{ yearlyNote(plan) }}
                         </p>
                         <p class="mt-2 text-sm text-snitch-ink/70">
-                            {{ plan.competitor_limit }} competitors
+                            {{ plan.competitor_limit }} competitors ·
+                            {{ plan.influencer_limit }} influencers
                         </p>
 
                         <p

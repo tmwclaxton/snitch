@@ -2,6 +2,7 @@
 
 namespace App\Services\Billing;
 
+use App\Enums\TrackedAccountKind;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
@@ -37,14 +38,31 @@ class PlanEntitlementService
         return (int) config("subscriptions.plans.{$plan}.competitor_limit", 3);
     }
 
+    public function influencerLimit(User $user): int
+    {
+        $plan = $this->plan($user);
+
+        return (int) config("subscriptions.plans.{$plan}.influencer_limit", 3);
+    }
+
     public function competitorsUsed(User $user): int
     {
-        return $user->trackedAccounts()->count();
+        return $user->trackedAccounts()->competitors()->count();
+    }
+
+    public function influencersUsed(User $user): int
+    {
+        return $user->trackedAccounts()->influencers()->count();
     }
 
     public function competitorsRemaining(User $user): int
     {
         return max(0, $this->competitorLimit($user) - $this->competitorsUsed($user));
+    }
+
+    public function influencersRemaining(User $user): int
+    {
+        return max(0, $this->influencerLimit($user) - $this->influencersUsed($user));
     }
 
     public function canAddCompetitors(User $user, int $additional = 1): bool
@@ -56,25 +74,26 @@ class PlanEntitlementService
         return $this->competitorsRemaining($user) >= $additional;
     }
 
+    public function canAddInfluencers(User $user, int $additional = 1): bool
+    {
+        if ($additional <= 0) {
+            return true;
+        }
+
+        return $this->influencersRemaining($user) >= $additional;
+    }
+
     /**
-     * Oldest tracked accounts keep plan slots; newer excess rows stay listed but are over-quota.
+     * Oldest accounts of each kind keep that kind's plan slots.
      *
      * @return list<int>
      */
     public function inQuotaTrackedAccountIds(User $user): array
     {
-        $limit = $this->competitorLimit($user);
-
-        if ($limit <= 0) {
-            return [];
-        }
-
-        return $user->trackedAccounts()
-            ->orderBy('id')
-            ->limit($limit)
-            ->pluck('id')
-            ->map(fn (mixed $id): int => (int) $id)
-            ->all();
+        return array_values(array_unique([
+            ...$this->inQuotaIdsForKind($user, TrackedAccountKind::Competitor, $this->competitorLimit($user)),
+            ...$this->inQuotaIdsForKind($user, TrackedAccountKind::Influencer, $this->influencerLimit($user)),
+        ]));
     }
 
     public function isTrackedAccountInQuota(User $user, TrackedAccount|int $account): bool
@@ -114,6 +133,10 @@ class PlanEntitlementService
      *     competitors_used: int,
      *     competitors_remaining: int,
      *     over_quota_competitors: int,
+     *     influencer_limit: int,
+     *     influencers_used: int,
+     *     influencers_remaining: int,
+     *     over_quota_influencers: int,
      *     on_trial: bool,
      *     trial_ends_at: string|null,
      *     subscribed: bool,
@@ -124,8 +147,10 @@ class PlanEntitlementService
     public function summary(User $user): array
     {
         $plan = $this->plan($user);
-        $limit = $this->competitorLimit($user);
-        $used = $this->competitorsUsed($user);
+        $competitorLimit = $this->competitorLimit($user);
+        $competitorsUsed = $this->competitorsUsed($user);
+        $influencerLimit = $this->influencerLimit($user);
+        $influencersUsed = $this->influencersUsed($user);
         $priceId = $this->subscribedStripePriceId($user);
         $subscribed = $priceId !== null;
         $onTrial = $this->onTrial($user);
@@ -133,10 +158,14 @@ class PlanEntitlementService
         return [
             'plan' => $plan,
             'plan_name' => (string) config("subscriptions.plans.{$plan}.name", ucfirst($plan)),
-            'competitor_limit' => $limit,
-            'competitors_used' => $used,
-            'competitors_remaining' => max(0, $limit - $used),
-            'over_quota_competitors' => max(0, $used - $limit),
+            'competitor_limit' => $competitorLimit,
+            'competitors_used' => $competitorsUsed,
+            'competitors_remaining' => max(0, $competitorLimit - $competitorsUsed),
+            'over_quota_competitors' => max(0, $competitorsUsed - $competitorLimit),
+            'influencer_limit' => $influencerLimit,
+            'influencers_used' => $influencersUsed,
+            'influencers_remaining' => max(0, $influencerLimit - $influencersUsed),
+            'over_quota_influencers' => max(0, $influencersUsed - $influencerLimit),
             'on_trial' => $onTrial,
             'trial_ends_at' => $user->trial_ends_at?->toIso8601String(),
             'subscribed' => $subscribed,
@@ -202,6 +231,24 @@ class PlanEntitlementService
         }
 
         return null;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function inQuotaIdsForKind(User $user, TrackedAccountKind $kind, int $limit): array
+    {
+        if ($limit <= 0) {
+            return [];
+        }
+
+        return $user->trackedAccounts()
+            ->where('kind', $kind)
+            ->orderBy('id')
+            ->limit($limit)
+            ->pluck('id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->all();
     }
 
     private function subscribedPlan(User $user): ?string
