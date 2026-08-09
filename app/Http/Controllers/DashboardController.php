@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\AnalysisStatus;
-use App\Enums\MediaAvailability;
 use App\Models\Post;
 use App\Models\WinnerInsight;
 use App\Services\Dashboard\DashboardActivityBuilder;
@@ -31,24 +29,9 @@ class DashboardController extends Controller
             ->where('user_id', $user->id)
             ->count();
 
-        $analysisBacklog = $postsBase()
-            ->where('media_availability', MediaAvailability::Available)
-            ->where(function ($query): void {
-                $query->whereDoesntHave('analysis')
-                    ->orWhereHas('analysis', function ($analysis): void {
-                        $analysis->whereIn('status', [
-                            AnalysisStatus::Pending,
-                            AnalysisStatus::Processing,
-                        ]);
-                    });
-            })
-            ->count();
+        $analysisBacklog = $postsBase()->analysisQueue()->count();
 
-        $analysisFailed = $postsBase()
-            ->whereHas('analysis', function ($analysis): void {
-                $analysis->where('status', AnalysisStatus::Failed);
-            })
-            ->count();
+        $analysisFailed = $postsBase()->analysisFailed()->count();
 
         $recentPosts = $postsBase()
             ->with(['trackedAccount', 'analysis', 'winnerInsight'])
