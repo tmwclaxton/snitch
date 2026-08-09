@@ -137,7 +137,8 @@ class PublicPagesTest extends TestCase
         $this->assertNotFalse($about);
 
         $this->assertStringNotContainsString('seats', strtolower($pricing));
-        $this->assertStringContainsString('Explore filters', $pricing);
+        $this->assertStringContainsString('Usage credits', $pricing);
+        $this->assertStringContainsString('Unlimited tracked accounts', $pricing);
         $this->assertStringContainsString('Stripe', $privacy);
         $this->assertStringContainsString('Stripe', $terms);
         $this->assertStringContainsString('YouTube Shorts', $how);

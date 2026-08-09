@@ -4,16 +4,20 @@ namespace Tests\Feature;
 
 use App\Jobs\AutofillBrandFromWebsiteJob;
 use App\Models\User;
+use App\Services\Billing\UsageBillingService;
+use App\Services\Billing\VendorUsageCharger;
 use App\Services\Onboarding\BrandWebsiteAutofillService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Tests\Concerns\WithPlatformBilling;
 use Tests\TestCase;
 
 class OnboardingAutofillTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPlatformBilling;
 
     public function test_guest_cannot_start_autofill(): void
     {
@@ -142,6 +146,7 @@ class OnboardingAutofillTest extends TestCase
         ]);
 
         $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
         $autofillId = '22222222-2222-4222-8222-222222222222';
 
         Cache::put(AutofillBrandFromWebsiteJob::cacheKeyFor($user->id, $autofillId), [
@@ -152,7 +157,11 @@ class OnboardingAutofillTest extends TestCase
         ], now()->addMinutes(15));
 
         (new AutofillBrandFromWebsiteJob($user->id, $autofillId, 'https://loaf.example'))
-            ->handle(app(BrandWebsiteAutofillService::class));
+            ->handle(
+                app(BrandWebsiteAutofillService::class),
+                app(VendorUsageCharger::class),
+                app(UsageBillingService::class),
+            );
 
         $payload = Cache::get(AutofillBrandFromWebsiteJob::cacheKeyFor($user->id, $autofillId));
 
