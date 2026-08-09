@@ -25,7 +25,21 @@ class UserFactory extends Factory
             'workos_id' => 'fake-'.Str::random(10),
             'remember_token' => Str::random(10),
             'avatar' => '',
+            'created_via' => 'web',
+            'claim_token' => null,
+            'claimed_at' => now(),
         ];
+    }
+
+    public function unclaimedAgent(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'workos_id' => null,
+            'created_via' => 'mcp',
+            'claim_token' => Str::random(48),
+            'claimed_at' => null,
+            'email_verified_at' => null,
+        ]);
     }
 
     /**

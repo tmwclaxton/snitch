@@ -14,20 +14,38 @@ class ApifyClientTest extends TestCase
         config([
             'snitch.apify.token' => 'secret-apify-token',
             'snitch.apify.base_url' => 'https://api.apify.test/v2',
+            'snitch.apify.timeout' => 30,
         ]);
 
         Http::preventStrayRequests();
         Http::fake([
-            'https://api.apify.test/v2/acts/*' => Http::response([
+            'https://api.apify.test/v2/acts/*/runs*' => Http::response([
+                'data' => [
+                    'id' => 'run_1',
+                    'defaultDatasetId' => 'dataset_1',
+                    'usageTotalUsd' => 0.02,
+                ],
+            ]),
+            'https://api.apify.test/v2/datasets/dataset_1/items*' => Http::response([
                 ['id' => '1'],
+            ]),
+            'https://api.apify.test/v2/actor-runs/run_1' => Http::response([
+                'data' => [
+                    'id' => 'run_1',
+                    'defaultDatasetId' => 'dataset_1',
+                    'usageTotalUsd' => 0.02,
+                ],
             ]),
         ]);
 
-        $items = app(ApifyClient::class)->runActor('apify/instagram-scraper', [
+        $client = app(ApifyClient::class);
+        $items = $client->runActor('apify/instagram-scraper', [
             'username' => ['demo'],
         ]);
 
         $this->assertSame([['id' => '1']], $items);
+        $costs = $client->pullRunCosts();
+        $this->assertSame(0.02, $costs[0]['usageTotalUsd'] ?? null);
 
         Http::assertSent(function ($request): bool {
             $hasBearer = $request->hasHeader('Authorization')

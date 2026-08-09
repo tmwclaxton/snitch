@@ -5,10 +5,12 @@ namespace App\Jobs;
 use App\Enums\AnalysisStatus;
 use App\Enums\MediaAvailability;
 use App\Enums\PostType;
+use App\Exceptions\InsufficientCreditsException;
+use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Services\Apify\PlatformAdapterManager;
-use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\VendorUsageCharger;
 use App\Services\SnitchAnalyticsService;
 use App\Support\SafeExceptionMessage;
 use Carbon\CarbonImmutable;
@@ -31,7 +33,7 @@ class SyncTrackedAccountJob implements ShouldQueue
     public function handle(
         PlatformAdapterManager $adapters,
         SnitchAnalyticsService $analytics,
-        PlanEntitlementService $entitlements,
+        VendorUsageCharger $charger,
     ): void {
         $account = TrackedAccount::query()->with('user')->find($this->trackedAccountId);
 
@@ -41,12 +43,7 @@ class SyncTrackedAccountJob implements ShouldQueue
 
         $owner = $account->user;
 
-        if ($owner === null || ! $entitlements->isTrackedAccountInQuota($owner, $account)) {
-            Log::info('SyncTrackedAccountJob skipped; account over competitor quota', [
-                'tracked_account_id' => $this->trackedAccountId,
-                'user_id' => $account->user_id,
-            ]);
-
+        if ($owner === null) {
             return;
         }
 
@@ -54,6 +51,23 @@ class SyncTrackedAccountJob implements ShouldQueue
             Log::info('SyncTrackedAccountJob skipped; synced recently', [
                 'tracked_account_id' => $this->trackedAccountId,
                 'last_synced_at' => $account->last_synced_at?->toIso8601String(),
+            ]);
+
+            return;
+        }
+
+        try {
+            $charger->assertCanRun($owner);
+        } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $e) {
+            $account->fill([
+                'last_sync_status' => 'failed',
+                'last_sync_error' => $e->getMessage(),
+            ])->save();
+
+            Log::info('SyncTrackedAccountJob skipped; billing gate', [
+                'tracked_account_id' => $this->trackedAccountId,
+                'user_id' => $account->user_id,
+                'error' => $e->getMessage(),
             ]);
 
             return;
@@ -155,6 +169,8 @@ class SyncTrackedAccountJob implements ShouldQueue
 
                 $this->dispatchAnalysisIfNeeded($post->fresh('analysis'));
             }
+
+            $charger->chargePulledApifyRuns($owner, 'sync.account');
 
             $account->fill([
                 'last_synced_at' => now(),

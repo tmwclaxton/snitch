@@ -2,6 +2,11 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\InsufficientCreditsException;
+use App\Exceptions\PlatformSubscriptionRequiredException;
+use App\Models\User;
+use App\Services\Billing\UsageBillingService;
+use App\Services\Billing\VendorUsageCharger;
 use App\Services\Onboarding\BrandWebsiteAutofillService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -26,8 +31,11 @@ class AutofillBrandFromWebsiteJob implements ShouldQueue
         public string $website,
     ) {}
 
-    public function handle(BrandWebsiteAutofillService $autofill): void
-    {
+    public function handle(
+        BrandWebsiteAutofillService $autofill,
+        VendorUsageCharger $charger,
+        UsageBillingService $billing,
+    ): void {
         $this->putStatus([
             'status' => 'processing',
             'website' => $this->website,
@@ -35,7 +43,45 @@ class AutofillBrandFromWebsiteJob implements ShouldQueue
             'error' => null,
         ]);
 
+        $user = User::query()->find($this->userId);
+
+        if ($user === null) {
+            throw new \RuntimeException('User not found.');
+        }
+
+        try {
+            $charger->assertCanRun($user);
+        } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $e) {
+            $this->putStatus([
+                'status' => 'failed',
+                'website' => $this->website,
+                'fields' => null,
+                'error' => $e->getMessage(),
+            ]);
+
+            return;
+        }
+
         $fields = $autofill->extract($this->website);
+
+        $charger->chargeFirecrawl(
+            user: $user,
+            action: 'brand.autofill',
+            cogsUsd: $billing->estimateFirecrawlScrapeUsd(),
+            meta: ['autofill_id' => $this->autofillId, 'kind' => 'scrape'],
+            idempotencyKey: 'brand.autofill.firecrawl:'.$this->autofillId,
+        );
+        $charger->chargeNanoGpt(
+            user: $user,
+            action: 'brand.autofill',
+            cogsUsd: $billing->estimateNanoGptChatUsd(
+                null,
+                null,
+                (string) config('snitch.brand_autofill.model'),
+            ),
+            meta: ['autofill_id' => $this->autofillId, 'kind' => 'extract'],
+            idempotencyKey: 'brand.autofill.nanogpt:'.$this->autofillId,
+        );
 
         $this->putStatus([
             'status' => 'completed',

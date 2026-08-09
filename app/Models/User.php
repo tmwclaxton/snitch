@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -12,18 +11,17 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Cashier\Billable;
+use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'workos_id', 'avatar'])]
-#[Hidden(['workos_id', 'remember_token'])]
+#[Fillable(['name', 'email', 'workos_id', 'avatar', 'created_via', 'claim_token', 'claimed_at'])]
+#[Hidden(['workos_id', 'remember_token', 'claim_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use Billable, HasFactory, Notifiable;
+    use Billable, HasApiTokens, HasFactory, Notifiable;
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, mixed>
+     * @return array<string, string>
      */
     protected function casts(): array
     {
@@ -31,7 +29,13 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'trial_ends_at' => 'datetime',
+            'claimed_at' => 'datetime',
         ];
+    }
+
+    public function isClaimed(): bool
+    {
+        return $this->claimed_at !== null && filled($this->workos_id);
     }
 
     /**
@@ -72,5 +76,21 @@ class User extends Authenticatable
     public function winnerInsights(): HasMany
     {
         return $this->hasMany(WinnerInsight::class);
+    }
+
+    /**
+     * @return HasOne<CreditBalance, $this>
+     */
+    public function creditBalance(): HasOne
+    {
+        return $this->hasOne(CreditBalance::class);
+    }
+
+    /**
+     * @return HasMany<CreditLedgerEntry, $this>
+     */
+    public function creditLedgerEntries(): HasMany
+    {
+        return $this->hasMany(CreditLedgerEntry::class);
     }
 }

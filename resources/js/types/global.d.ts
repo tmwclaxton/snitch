@@ -16,14 +16,22 @@ declare module 'vite/client' {
 export type SubscriptionSummary = {
     plan: string;
     plan_name: string;
-    competitor_limit: number;
+    competitor_limit: number | null;
     competitors_used: number;
-    competitors_remaining: number;
+    competitors_remaining: number | null;
     over_quota_competitors?: number;
+    influencer_limit?: number | null;
+    influencers_used?: number;
+    influencers_remaining?: number | null;
+    over_quota_influencers?: number;
     on_trial: boolean;
     trial_ends_at: string | null;
     subscribed: boolean;
+    billing_interval?: string | null;
     can_upgrade: boolean;
+    balance_pence?: number;
+    platform_fee_pence?: number;
+    usage?: Record<string, unknown>;
 } | null;
 
 export type SeoProps = {

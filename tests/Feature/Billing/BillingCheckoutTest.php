@@ -3,7 +3,6 @@
 namespace Tests\Feature\Billing;
 
 use App\Models\User;
-use App\Services\Billing\PlanEntitlementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Cashier\Checkout;
@@ -20,17 +19,15 @@ class BillingCheckoutTest extends TestCase
         parent::setUp();
 
         config([
-            'subscriptions.plans.basic.stripe_price' => 'price_basic_test',
-            'subscriptions.plans.pro.stripe_price' => 'price_pro_test',
-            'subscriptions.plans.basic.stripe_price_yearly' => 'price_basic_yearly_test',
-            'subscriptions.plans.pro.stripe_price_yearly' => 'price_pro_yearly_test',
+            'billing.platform_stripe_price' => 'price_platform_test',
+            'billing.credit_packs.pack_10.stripe_price' => 'price_credits_10_test',
             'cashier.webhook.secret' => null,
         ]);
     }
 
     public function test_billing_page_is_displayed(): void
     {
-        $user = User::factory()->onTrial()->create();
+        $user = User::factory()->create();
 
         $this->actingAs($user)
             ->get(route('billing.edit'))
@@ -38,39 +35,28 @@ class BillingCheckoutTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('billing/Index')
                 ->has('subscription')
-                ->has('plans')
-                ->where('subscription.plan', 'basic')
-                ->where('subscription.on_trial', true)
+                ->has('usage')
+                ->has('creditPacks')
+                ->has('platform')
                 ->where('subscription.subscribed', false)
-                ->where('subscription.billing_interval', null)
-                ->where('yearlyDiscountPercent', 20)
-                ->where('plans.1.has_checkout_month', true)
-                ->where('plans.1.has_checkout_year', true));
+                ->where('usage.balance_pence', 0)
+                ->where('platform.fee_pence', 1900));
     }
 
-    public function test_checkout_redirects_when_price_missing(): void
+    public function test_checkout_redirects_when_platform_price_missing(): void
     {
-        config(['subscriptions.plans.basic.stripe_price' => null]);
+        config(['billing.platform_stripe_price' => null]);
 
-        $user = User::factory()->onTrial()->create();
+        $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->post(route('billing.checkout'), ['plan' => 'basic', 'interval' => 'month'])
+            ->post(route('billing.checkout'), ['product' => 'platform'])
             ->assertRedirect(route('billing.edit'));
     }
 
-    public function test_checkout_requires_interval(): void
+    public function test_platform_checkout_uses_inertia_location(): void
     {
-        $user = User::factory()->onTrial()->create();
-
-        $this->actingAs($user)
-            ->post(route('billing.checkout'), ['plan' => 'basic'])
-            ->assertSessionHasErrors('interval');
-    }
-
-    public function test_checkout_uses_inertia_location_for_stripe_session(): void
-    {
-        $user = User::factory()->onTrial()->create();
+        $user = User::factory()->create();
 
         $session = (object) ['url' => 'https://checkout.stripe.com/c/pay/cs_test_123'];
         $checkout = Mockery::mock(Checkout::class);
@@ -80,115 +66,12 @@ class BillingCheckoutTest extends TestCase
         $builder->shouldReceive('checkout')->once()->andReturn($checkout);
 
         $user = Mockery::mock($user)->makePartial();
-        $user->shouldReceive('subscribed')->with('default')->andReturn(false);
-        $user->shouldReceive('newSubscription')
-            ->once()
-            ->with('default', 'price_basic_test')
-            ->andReturn($builder);
+        $user->shouldReceive('subscribed')->andReturn(false);
+        $user->shouldReceive('newSubscription')->once()->andReturn($builder);
+        $this->actingAs($user);
 
-        $this->actingAs($user)
-            ->post(route('billing.checkout'), ['plan' => 'basic', 'interval' => 'month'], [
-                'X-Inertia' => 'true',
-            ])
-            ->assertStatus(409)
-            ->assertHeader('X-Inertia-Location', 'https://checkout.stripe.com/c/pay/cs_test_123');
-    }
+        $response = $this->post(route('billing.checkout'), ['product' => 'platform']);
 
-    public function test_yearly_checkout_uses_yearly_price(): void
-    {
-        $user = User::factory()->onTrial()->create();
-
-        $session = (object) ['url' => 'https://checkout.stripe.com/c/pay/cs_test_yearly'];
-        $checkout = Mockery::mock(Checkout::class);
-        $checkout->shouldReceive('asStripeCheckoutSession')->once()->andReturn($session);
-
-        $builder = Mockery::mock(SubscriptionBuilder::class);
-        $builder->shouldReceive('checkout')->once()->andReturn($checkout);
-
-        $user = Mockery::mock($user)->makePartial();
-        $user->shouldReceive('subscribed')->with('default')->andReturn(false);
-        $user->shouldReceive('newSubscription')
-            ->once()
-            ->with('default', 'price_basic_yearly_test')
-            ->andReturn($builder);
-
-        $this->actingAs($user)
-            ->post(route('billing.checkout'), ['plan' => 'basic', 'interval' => 'year'], [
-                'X-Inertia' => 'true',
-            ])
-            ->assertStatus(409)
-            ->assertHeader('X-Inertia-Location', 'https://checkout.stripe.com/c/pay/cs_test_yearly');
-    }
-
-    public function test_pro_checkout_uses_inertia_location(): void
-    {
-        $user = User::factory()->onTrial()->create();
-
-        $session = (object) ['url' => 'https://checkout.stripe.com/c/pay/cs_test_pro'];
-        $checkout = Mockery::mock(Checkout::class);
-        $checkout->shouldReceive('asStripeCheckoutSession')->once()->andReturn($session);
-
-        $builder = Mockery::mock(SubscriptionBuilder::class);
-        $builder->shouldReceive('checkout')->once()->andReturn($checkout);
-
-        $user = Mockery::mock($user)->makePartial();
-        $user->shouldReceive('subscribed')->with('default')->andReturn(false);
-        $user->shouldReceive('newSubscription')
-            ->once()
-            ->with('default', 'price_pro_test')
-            ->andReturn($builder);
-
-        $this->actingAs($user)
-            ->post(route('billing.checkout'), ['plan' => 'pro', 'interval' => 'month'], [
-                'X-Inertia' => 'true',
-            ])
-            ->assertStatus(409)
-            ->assertHeader('X-Inertia-Location', 'https://checkout.stripe.com/c/pay/cs_test_pro');
-    }
-
-    public function test_webhook_subscription_created_grants_basic_limit(): void
-    {
-        $user = User::factory()->freePlan()->create([
-            'stripe_id' => 'cus_billing_test',
-        ]);
-
-        $payload = [
-            'id' => 'evt_test_subscription_created',
-            'type' => 'customer.subscription.created',
-            'data' => [
-                'object' => [
-                    'id' => 'sub_billing_basic',
-                    'customer' => 'cus_billing_test',
-                    'status' => 'active',
-                    'trial_end' => null,
-                    'metadata' => [
-                        'type' => 'default',
-                        'name' => 'default',
-                    ],
-                    'items' => [
-                        'data' => [
-                            [
-                                'id' => 'si_billing_basic',
-                                'quantity' => 1,
-                                'price' => [
-                                    'id' => 'price_basic_test',
-                                    'product' => 'prod_basic_test',
-                                ],
-                            ],
-                        ],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->postJson('/stripe/webhook', $payload)
-            ->assertOk();
-
-        $user->refresh();
-
-        $this->assertTrue($user->subscribed('default'));
-        $this->assertSame('basic', app(PlanEntitlementService::class)->plan($user));
-        $this->assertSame(10, app(PlanEntitlementService::class)->competitorLimit($user));
-        $this->assertNull($user->trial_ends_at);
+        $response->assertRedirect('https://checkout.stripe.com/c/pay/cs_test_123');
     }
 }

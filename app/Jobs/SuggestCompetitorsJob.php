@@ -3,7 +3,12 @@
 namespace App\Jobs;
 
 use App\Exceptions\InsufficientCompetitorSuggestionsException;
+use App\Exceptions\InsufficientCreditsException;
+use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Models\BrandProfile;
+use App\Models\User;
+use App\Services\Billing\UsageBillingService;
+use App\Services\Billing\VendorUsageCharger;
 use App\Services\Competitors\CompetitorSuggestionService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -27,13 +32,34 @@ class SuggestCompetitorsJob implements ShouldQueue
         public string $suggestId,
     ) {}
 
-    public function handle(CompetitorSuggestionService $suggestions): void
-    {
+    public function handle(
+        CompetitorSuggestionService $suggestions,
+        VendorUsageCharger $charger,
+        UsageBillingService $billing,
+    ): void {
         $this->putStatus([
             'status' => 'processing',
             'suggestions' => null,
             'error' => null,
         ]);
+
+        $user = User::query()->find($this->userId);
+
+        if ($user === null) {
+            throw new \RuntimeException('User not found.');
+        }
+
+        try {
+            $charger->assertCanRun($user);
+        } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $e) {
+            $this->putStatus([
+                'status' => 'failed',
+                'suggestions' => null,
+                'error' => $e->getMessage(),
+            ]);
+
+            return;
+        }
 
         $brand = BrandProfile::query()
             ->where('user_id', $this->userId)
@@ -52,6 +78,7 @@ class SuggestCompetitorsJob implements ShouldQueue
                 ]);
             });
         } catch (InsufficientCompetitorSuggestionsException $exception) {
+            $this->chargeCompetitorSuggestVendors($user, $charger, $billing);
             $this->putStatus([
                 'status' => 'failed',
                 'suggestions' => $exception->suggestions !== [] ? $exception->suggestions : null,
@@ -61,11 +88,40 @@ class SuggestCompetitorsJob implements ShouldQueue
             return;
         }
 
+        $this->chargeCompetitorSuggestVendors($user, $charger, $billing);
+
         $this->putStatus([
             'status' => 'completed',
             'suggestions' => $rows,
             'error' => null,
         ]);
+    }
+
+    private function chargeCompetitorSuggestVendors(
+        User $user,
+        VendorUsageCharger $charger,
+        UsageBillingService $billing,
+    ): void {
+        $searchLimit = (int) config('snitch.competitor_suggest.search_limit', 8);
+        $charger->chargeFirecrawl(
+            user: $user,
+            action: 'competitors.suggest',
+            cogsUsd: $billing->estimateFirecrawlSearchUsd($searchLimit) * 3,
+            meta: ['suggest_id' => $this->suggestId, 'kind' => 'search'],
+            idempotencyKey: 'competitors.suggest.firecrawl:'.$this->suggestId,
+        );
+        $charger->chargeNanoGpt(
+            user: $user,
+            action: 'competitors.suggest',
+            cogsUsd: $billing->estimateNanoGptChatUsd(
+                null,
+                null,
+                (string) config('snitch.competitor_suggest.model'),
+            ),
+            meta: ['suggest_id' => $this->suggestId, 'kind' => 'propose'],
+            idempotencyKey: 'competitors.suggest.nanogpt:'.$this->suggestId,
+        );
+        $charger->chargePulledApifyRuns($user, 'competitors.suggest');
     }
 
     public function failed(?Throwable $exception): void

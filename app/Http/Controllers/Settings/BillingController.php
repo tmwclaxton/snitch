@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\UsageBillingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -15,89 +17,51 @@ use Throwable;
 
 class BillingController extends Controller
 {
-    public function __construct(private PlanEntitlementService $entitlements) {}
+    public function __construct(
+        private PlanEntitlementService $entitlements,
+        private UsageBillingService $usage,
+    ) {}
 
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $this->entitlements->ensureTrialStarted($user);
-        $user->refresh();
-
-        $plans = collect(config('subscriptions.plans', []))
-            ->map(fn (array $plan, string $key): array => [
+        $packs = collect(config('billing.credit_packs', []))
+            ->map(fn (array $pack, string $key): array => [
                 'key' => $key,
-                'name' => $plan['name'],
-                'price_pence' => (int) $plan['price_pence'],
-                'yearly_price_pence' => (int) ($plan['yearly_price_pence'] ?? 0),
-                'competitor_limit' => (int) $plan['competitor_limit'],
-                'influencer_limit' => (int) ($plan['influencer_limit'] ?? $plan['competitor_limit']),
-                'has_checkout_month' => in_array($key, ['basic', 'pro'], true)
-                    && filled($plan['stripe_price'] ?? null),
-                'has_checkout_year' => in_array($key, ['basic', 'pro'], true)
-                    && filled($plan['stripe_price_yearly'] ?? null),
+                'name' => $pack['name'],
+                'credits_pence' => (int) $pack['credits_pence'],
+                'price_pence' => (int) $pack['price_pence'],
+                'has_checkout' => filled($pack['stripe_price'] ?? null),
             ])
             ->values()
             ->all();
 
         return Inertia::render('billing/Index', [
             'subscription' => $this->entitlements->summary($user),
-            'plans' => $plans,
-            'yearlyDiscountPercent' => (int) config('subscriptions.yearly_discount_percent', 20),
+            'usage' => $this->usage->summary($user),
+            'creditPacks' => $packs,
+            'platform' => [
+                'fee_pence' => (int) config('billing.platform_fee_pence', 1900),
+                'has_checkout' => filled(config('billing.platform_stripe_price')),
+            ],
         ]);
     }
 
     public function checkout(Request $request): SymfonyResponse|RedirectResponse
     {
         $data = $request->validate([
-            'plan' => ['required', 'string', Rule::in(['basic', 'pro'])],
-            'interval' => ['required', 'string', Rule::in(['month', 'year'])],
+            'product' => ['required', 'string', Rule::in(['platform', 'credits'])],
+            'pack' => ['nullable', 'string', Rule::in(array_keys(config('billing.credit_packs', [])))],
         ]);
 
         $user = $request->user();
-        $priceId = $this->entitlements->stripePriceIdForPlan($data['plan'], $data['interval']);
-
-        if ($priceId === null) {
-            Inertia::flash('toast', [
-                'type' => 'error',
-                'message' => __('Billing is not configured for that plan yet.'),
-            ]);
-
-            return redirect()->route('billing.edit');
-        }
-
-        $type = (string) config('subscriptions.subscription_type', 'default');
 
         try {
-            if ($user->subscribed($type)) {
-                $user->subscription($type)?->swapAndInvoice($priceId);
-
-                Inertia::flash('toast', [
-                    'type' => 'success',
-                    'message' => __('Plan updated.'),
-                ]);
-
-                return redirect()->route('billing.edit');
+            if ($data['product'] === 'platform') {
+                return $this->checkoutPlatform($user);
             }
 
-            $checkout = $user->newSubscription($type, $priceId)
-                ->checkout([
-                    'success_url' => route('billing.edit').'?checkout=success',
-                    'cancel_url' => route('billing.edit').'?checkout=cancelled',
-                ]);
-
-            $url = $this->checkoutUrl($checkout);
-
-            if ($url === null) {
-                Inertia::flash('toast', [
-                    'type' => 'error',
-                    'message' => __('Could not start Stripe Checkout. Try again in a moment.'),
-                ]);
-
-                return redirect()->route('billing.edit');
-            }
-
-            // Inertia forms need an external Location response, not a plain 302.
-            return Inertia::location($url);
+            return $this->checkoutCredits($user, (string) ($data['pack'] ?? ''));
         } catch (Throwable $e) {
             report($e);
 
@@ -117,13 +81,105 @@ class BillingController extends Controller
         if (! $user->hasStripeId()) {
             Inertia::flash('toast', [
                 'type' => 'info',
-                'message' => __('No Stripe customer yet. Subscribe to a plan first.'),
+                'message' => __('No Stripe customer yet. Subscribe to the platform plan first.'),
             ]);
 
             return redirect()->route('billing.edit');
         }
 
         return Inertia::location($user->billingPortalUrl(route('billing.edit')));
+    }
+
+    private function checkoutPlatform(User $user): SymfonyResponse|RedirectResponse
+    {
+        $priceId = $this->entitlements->platformStripePriceId();
+
+        if ($priceId === null) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => __('Billing is not configured for the platform plan yet.'),
+            ]);
+
+            return redirect()->route('billing.edit');
+        }
+
+        $type = (string) config('billing.subscription_type', 'default');
+
+        if ($user->subscribed($type)) {
+            Inertia::flash('toast', [
+                'type' => 'info',
+                'message' => __('You already have an active platform plan.'),
+            ]);
+
+            return redirect()->route('billing.edit');
+        }
+
+        $checkout = $user->newSubscription($type, $priceId)
+            ->checkout([
+                'success_url' => route('billing.edit').'?checkout=success',
+                'cancel_url' => route('billing.edit').'?checkout=cancelled',
+            ]);
+
+        $url = $this->checkoutUrl($checkout);
+
+        if ($url === null) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => __('Could not start Stripe Checkout. Try again in a moment.'),
+            ]);
+
+            return redirect()->route('billing.edit');
+        }
+
+        return Inertia::location($url);
+    }
+
+    private function checkoutCredits(User $user, string $packKey): SymfonyResponse|RedirectResponse
+    {
+        if ($packKey === '') {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => __('Choose a credit pack.'),
+            ]);
+
+            return redirect()->route('billing.edit');
+        }
+
+        $priceId = $this->entitlements->creditPackStripePriceId($packKey);
+        $creditsPence = (int) config("billing.credit_packs.{$packKey}.credits_pence", 0);
+
+        if ($priceId === null || $creditsPence <= 0) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => __('That credit pack is not configured yet.'),
+            ]);
+
+            return redirect()->route('billing.edit');
+        }
+
+        $checkout = $user->checkout([$priceId], [
+            'success_url' => route('billing.edit').'?checkout=credits_success',
+            'cancel_url' => route('billing.edit').'?checkout=cancelled',
+            'metadata' => [
+                'snitch_product' => 'credits',
+                'credit_pack' => $packKey,
+                'credits_pence' => (string) $creditsPence,
+                'user_id' => (string) $user->id,
+            ],
+        ]);
+
+        $url = $this->checkoutUrl($checkout);
+
+        if ($url === null) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => __('Could not start Stripe Checkout. Try again in a moment.'),
+            ]);
+
+            return redirect()->route('billing.edit');
+        }
+
+        return Inertia::location($url);
     }
 
     private function checkoutUrl(mixed $checkout): ?string

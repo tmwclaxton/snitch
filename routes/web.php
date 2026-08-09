@@ -22,6 +22,7 @@ Route::inertia('/', 'Welcome')->name('home');
 Route::inertia('/about', 'marketing/About')->name('about');
 Route::inertia('/how-it-works', 'marketing/HowItWorks')->name('how-it-works');
 Route::inertia('/pricing', 'marketing/Pricing')->name('pricing');
+Route::inertia('/for-agents', 'marketing/Mcp')->name('mcp');
 Route::inertia('/privacy', 'marketing/Privacy')->name('privacy');
 Route::inertia('/terms', 'marketing/Terms')->name('terms');
 Route::inertia('/cookies', 'marketing/Cookies')->name('cookies');

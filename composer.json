@@ -13,6 +13,8 @@
         "inertiajs/inertia-laravel": "^3.0",
         "laravel/cashier": "^16.7",
         "laravel/framework": "^13.7",
+        "laravel/mcp": "^0.9.2",
+        "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
         "laravel/workos": "^0.6.0"

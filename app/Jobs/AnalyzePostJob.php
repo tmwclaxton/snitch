@@ -4,9 +4,13 @@ namespace App\Jobs;
 
 use App\Enums\AnalysisStatus;
 use App\Enums\MediaAvailability;
+use App\Exceptions\InsufficientCreditsException;
+use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Models\Post;
 use App\Models\PostAnalysis;
 use App\Services\Analysis\VideoAnalysisService;
+use App\Services\Billing\UsageBillingService;
+use App\Services\Billing\VendorUsageCharger;
 use App\Services\Winners\WinnerScorer;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -22,9 +26,13 @@ class AnalyzePostJob implements ShouldQueue
 
     public function __construct(public int $postId) {}
 
-    public function handle(VideoAnalysisService $analysis, WinnerScorer $scorer): void
-    {
-        $post = Post::query()->with('analysis')->find($this->postId);
+    public function handle(
+        VideoAnalysisService $analysis,
+        WinnerScorer $scorer,
+        VendorUsageCharger $charger,
+        UsageBillingService $billing,
+    ): void {
+        $post = Post::query()->with(['analysis', 'user'])->find($this->postId);
 
         if ($post === null) {
             return;
@@ -40,6 +48,20 @@ class AnalyzePostJob implements ShouldQueue
 
         $recencyDays = max(1, (int) config('snitch.sync.recency_days', 30));
         if ($post->posted_at !== null && $post->posted_at->lt(now()->subDays($recencyDays))) {
+            return;
+        }
+
+        $owner = $post->user;
+
+        if ($owner === null) {
+            return;
+        }
+
+        try {
+            $charger->assertCanRun($owner);
+        } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $e) {
+            $this->markAnalysisFailed($post, $e->getMessage());
+
             return;
         }
 
@@ -61,6 +83,21 @@ class AnalyzePostJob implements ShouldQueue
 
         try {
             $persisted = $analysis->analyzePost($post);
+
+            $cogs = $billing->estimateNanoGptChatUsd(
+                inputTokens: null,
+                outputTokens: null,
+                model: (string) config('snitch.video_analysis.model'),
+                floorKey: 'video_analysis',
+            );
+            $charger->chargeNanoGpt(
+                user: $owner,
+                action: 'analyze.post',
+                cogsUsd: $cogs,
+                meta: ['post_id' => $post->id],
+                idempotencyKey: 'analyze.post:'.$post->id.':'.$persisted->id,
+            );
+
             $scorer->scoreAndPersist($post->fresh('analysis'));
 
             if ($persisted->status === AnalysisStatus::Completed) {
