@@ -2,7 +2,10 @@
 
 namespace App\Services\Billing;
 
+use App\Models\Post;
+use App\Models\TrackedAccount;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 
 class PlanEntitlementService
 {
@@ -53,6 +56,51 @@ class PlanEntitlementService
         return $this->competitorsRemaining($user) >= $additional;
     }
 
+    /**
+     * Oldest tracked accounts keep plan slots; newer excess rows stay listed but are over-quota.
+     *
+     * @return list<int>
+     */
+    public function inQuotaTrackedAccountIds(User $user): array
+    {
+        $limit = $this->competitorLimit($user);
+
+        if ($limit <= 0) {
+            return [];
+        }
+
+        return $user->trackedAccounts()
+            ->orderBy('id')
+            ->limit($limit)
+            ->pluck('id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->all();
+    }
+
+    public function isTrackedAccountInQuota(User $user, TrackedAccount|int $account): bool
+    {
+        $accountId = $account instanceof TrackedAccount ? (int) $account->id : $account;
+
+        return in_array($accountId, $this->inQuotaTrackedAccountIds($user), true);
+    }
+
+    /**
+     * Hide posts from over-quota tracked accounts on product surfaces.
+     *
+     * @param  Builder<Post>  $query
+     * @return Builder<Post>
+     */
+    public function constrainPostsToInQuotaAccounts(Builder $query, User $user): Builder
+    {
+        $ids = $this->inQuotaTrackedAccountIds($user);
+
+        if ($ids === []) {
+            return $query->whereRaw('0 = 1');
+        }
+
+        return $query->whereIn('tracked_account_id', $ids);
+    }
+
     public function onTrial(User $user): bool
     {
         return $this->subscribedPlan($user) === null && $user->onGenericTrial();
@@ -65,6 +113,7 @@ class PlanEntitlementService
      *     competitor_limit: int,
      *     competitors_used: int,
      *     competitors_remaining: int,
+     *     over_quota_competitors: int,
      *     on_trial: bool,
      *     trial_ends_at: string|null,
      *     subscribed: bool,
@@ -87,6 +136,7 @@ class PlanEntitlementService
             'competitor_limit' => $limit,
             'competitors_used' => $used,
             'competitors_remaining' => max(0, $limit - $used),
+            'over_quota_competitors' => max(0, $used - $limit),
             'on_trial' => $onTrial,
             'trial_ends_at' => $user->trial_ends_at?->toIso8601String(),
             'subscribed' => $subscribed,

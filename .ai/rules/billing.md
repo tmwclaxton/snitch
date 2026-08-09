@@ -18,6 +18,9 @@ Trial is app-level via `users.trial_ends_at` (Cashier generic trial), not a card
 ## Enforcement
 Resolve limits with `PlanEntitlementService`. Gate new tracked accounts in `TrackedAccountPolicy::create` and hard-check net-new creates in `CompetitorController::store` / `confirmSuggestions`. Existing handles may update without consuming a slot.
 
+## Over-quota competitors
+When a user has more tracked accounts than `competitor_limit` (e.g. grandfathered rows from before billing), the oldest accounts by `id` keep in-quota slots (`inQuotaTrackedAccountIds`). Excess accounts stay listed and removable, but are grayed out (`in_quota: false`), cannot sync, and their posts are excluded from feed / explore / winners / backlog / dashboard. Competitor show returns empty posts/winners for over-quota accounts. `PostPolicy::view` also blocks deep links to those reels. Do not auto-delete over-quota rows.
+
 ## Surfaces
 Public marketing page: `/pricing`. Authenticated billing UI: `/billing` (sidebar account links, above Settings - not nested under Settings nav). Old `/settings/billing` redirects to `/billing`.
 

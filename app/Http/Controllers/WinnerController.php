@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\ScoreWinnersJob;
 use App\Models\WinnerInsight;
+use App\Services\Billing\PlanEntitlementService;
 use App\Services\Winners\WinnerScorer;
 use App\Support\PlatformEmbed;
 use App\Support\SafeMarkdown;
@@ -15,13 +16,25 @@ use Inertia\Response;
 
 class WinnerController extends Controller
 {
+    public function __construct(private PlanEntitlementService $entitlements) {}
+
     public function index(Request $request, WinnerScorer $scorer): Response
     {
         $user = $request->user();
         $rule = $scorer->ruleFor($user);
+        $inQuotaIds = $this->entitlements->inQuotaTrackedAccountIds($user);
 
         $winners = WinnerInsight::query()
             ->where('user_id', $user->id)
+            ->whereHas('post', function ($query) use ($inQuotaIds): void {
+                if ($inQuotaIds === []) {
+                    $query->whereRaw('0 = 1');
+
+                    return;
+                }
+
+                $query->whereIn('tracked_account_id', $inQuotaIds);
+            })
             ->with(['post.trackedAccount', 'post.analysis'])
             ->orderByDesc('score')
             ->get()
