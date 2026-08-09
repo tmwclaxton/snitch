@@ -23,7 +23,7 @@ const footerSections = [
         links: [
             { label: 'How it works', href: howItWorks() },
             { label: 'Pricing', href: pricing() },
-            { label: 'Agents', href: agents() },
+            { label: 'MCP', href: agents() },
             { label: 'Blog', href: blog() },
             { label: 'Analytics', href: analytics() },
         ],
