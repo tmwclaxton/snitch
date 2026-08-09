@@ -285,11 +285,10 @@ const steps = [
                 <h2
                     class="snitch-display max-w-5xl text-pretty text-3xl text-snitch-ink sm:text-4xl"
                 >
-                    Competitor social intelligence with a soft print brain.
+                    Competitor social media intelligence.
                 </h2>
                 <p class="mt-4 max-w-3xl text-base leading-relaxed text-snitch-ink/80">
-                    Built for local brands, creators, and agencies who need the
-                    signal - not another purple dashboard.
+                    Built for local brands, creators, and agencies who need inspiration - not mindless doom-scrolling.
                 </p>
             </div>
         </section>
