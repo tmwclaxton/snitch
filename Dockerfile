@@ -66,7 +66,7 @@ RUN php artisan wayfinder:generate --with-form --no-interaction
 RUN npm run build \
     && npm prune --omit=dev
 
-FROM php:8.5-cli-bookworm AS production
+FROM php:8.5-fpm-bookworm AS production
 
 LABEL maintainer="Snitch"
 
@@ -77,16 +77,20 @@ WORKDIR /var/www/html
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Europe/London
-ENV SUPERVISOR_PHP_COMMAND="/usr/local/bin/php -d variables_order=EGPCS /var/www/html/artisan serve --host=0.0.0.0 --port=80"
 ENV SUPERVISOR_PHP_USER="sail"
 ENV WWWUSER=${WWWUSER}
 ENV WWWGROUP=${WWWGROUP}
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
+# Prefer IPv4 when DNS returns A+AAAA. Broken IPv6 egress makes WorkOS JWKS /
+# token refresh hang (~60s) and stalls every authenticated request.
+RUN printf 'precedence :ffff:0:0/96  100\n' > /etc/gai.conf
+
 RUN apt-get update && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
         gnupg gosu curl ca-certificates zip unzip git supervisor libcap2-bin \
+        nginx \
         default-libmysqlclient-dev \
         libicu-dev \
         libpq-dev \
@@ -102,8 +106,6 @@ RUN apt-get update && apt-get upgrade -y \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && rm -rf /tmp/pear \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
     && apt-get purge -y \
         default-libmysqlclient-dev \
         libicu-dev \
@@ -118,7 +120,8 @@ RUN apt-get update && apt-get upgrade -y \
         libzip4 \
     && apt-get autoremove -y \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+    && rm -f /etc/nginx/sites-enabled/default
 
 RUN userdel -r www-data 2>/dev/null || true
 RUN groupadd --force -g $WWWGROUP sail || true
@@ -132,7 +135,6 @@ COPY --from=php_build /app/database ./database
 COPY --from=php_build /app/public ./public
 COPY --from=php_build /app/resources/views ./resources/views
 COPY --from=php_build /app/routes ./routes
-COPY --from=php_build /app/node_modules ./node_modules
 COPY --from=php_build /app/storage ./storage
 COPY --from=php_build /app/vendor ./vendor
 COPY --from=php_build /app/composer.json ./composer.json
@@ -143,13 +145,21 @@ RUN mkdir -p storage/logs \
         storage/framework/sessions \
         storage/framework/views \
         bootstrap/cache \
+        /var/log/nginx \
+        /var/lib/nginx/body \
     && chown -R sail:sail storage bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+    && chmod -R 775 storage bootstrap/cache \
+    && chown -R sail:sail /var/lib/nginx /var/log/nginx
 
 COPY docker/workers/ /etc/supervisor/conf.d/workers/
+COPY docker/production/web.conf /etc/supervisor/conf.d/workers/web.conf
+COPY docker/production/nginx.conf /etc/nginx/sites-enabled/snitch.conf
+COPY docker/production/php-fpm.conf /usr/local/etc/php-fpm.d/zz-snitch.conf
 COPY docker/8.5/supervisord.conf /etc/supervisor/supervisord-workers.conf
-COPY docker/8.5/start-container /usr/local/bin/start-container
-RUN chmod +x /usr/local/bin/start-container
+COPY docker/production/start-container /usr/local/bin/start-container
+RUN chmod +x /usr/local/bin/start-container \
+    && (mv /usr/local/etc/php-fpm.d/www.conf /usr/local/etc/php-fpm.d/www.conf.disabled 2>/dev/null || true) \
+    && sed -i 's|^pid .*|pid /run/nginx.pid;|' /etc/nginx/nginx.conf
 
 EXPOSE 80
 
