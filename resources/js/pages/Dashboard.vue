@@ -155,17 +155,37 @@ function accountHref(post: RecentPost): string | null {
         <div class="snitch-grain" aria-hidden="true" />
 
         <div class="relative z-10 mx-auto max-w-6xl">
-            <header class="border-b border-snitch-ink/10 pb-5">
-                <h1 class="snitch-display relative text-3xl text-snitch-ink sm:text-4xl">
-                    <span
-                        class="pointer-events-none absolute inset-0 translate-x-[2px] translate-y-[1px] text-snitch-spot opacity-55 mix-blend-multiply select-none dark:mix-blend-plus-lighter dark:opacity-70"
-                        aria-hidden="true"
-                    >Snitch</span>
-                    <span class="relative">Snitch</span>
-                </h1>
-                <p class="mt-1.5 max-w-lg text-sm text-snitch-ink/65 sm:text-base">
-                    Counts, cadence, and winners - what rivals posted and what to remake.
-                </p>
+            <header class="flex items-end justify-between gap-6 border-b border-snitch-ink/10 pb-5">
+                <div class="min-w-0">
+                    <h1 class="snitch-display relative text-3xl text-snitch-ink sm:text-4xl">
+                        <span
+                            class="pointer-events-none absolute inset-0 translate-x-[2px] translate-y-[1px] text-snitch-spot opacity-55 mix-blend-multiply select-none dark:mix-blend-plus-lighter dark:opacity-70"
+                            aria-hidden="true"
+                        >Snitch</span>
+                        <span class="relative">Snitch</span>
+                    </h1>
+                    <p class="mt-1.5 max-w-lg text-sm text-snitch-ink/65 sm:text-base">
+                        Counts, cadence, and winners - what rivals posted and what to remake.
+                    </p>
+                </div>
+
+                <Link
+                    :href="agents()"
+                    class="snitch-scrap relative hidden max-w-xs shrink-0 items-start gap-3 p-4 pt-5 transition hover:-translate-y-0.5 md:flex"
+                >
+                    <span class="snitch-tape left-4 -top-2" aria-hidden="true" />
+                    <Bot class="mt-0.5 size-4 shrink-0 text-snitch-ink/50" aria-hidden="true" />
+                    <div class="min-w-0">
+                        <p class="snitch-ink-label">Agents</p>
+                        <p class="snitch-display mt-0.5 text-lg text-snitch-ink">
+                            Connect your agent
+                        </p>
+                        <p class="mt-1 text-xs text-snitch-ink/60">
+                            MCP setup for Cursor, Claude, Codex, and more.
+                        </p>
+                    </div>
+                    <ArrowRight class="ml-auto size-4 shrink-0 text-snitch-ink/40" aria-hidden="true" />
+                </Link>
             </header>
 
             <div class="snitch-contact-reveal mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -197,24 +217,6 @@ function accountHref(post: RecentPost): string | null {
                     <p class="mt-1 text-xs text-snitch-ink/55">{{ card.hint }}</p>
                 </Link>
             </div>
-
-            <Link
-                :href="agents()"
-                class="snitch-scrap relative mt-4 flex items-start gap-3 p-4 pt-5 transition hover:-translate-y-0.5 sm:max-w-md"
-            >
-                <span class="snitch-tape left-4 -top-2" aria-hidden="true" />
-                <Bot class="mt-0.5 size-4 shrink-0 text-snitch-ink/50" aria-hidden="true" />
-                <div class="min-w-0">
-                    <p class="snitch-ink-label">Agents</p>
-                    <p class="snitch-display mt-0.5 text-lg text-snitch-ink">
-                        Connect your agent
-                    </p>
-                    <p class="mt-1 text-xs text-snitch-ink/60">
-                        MCP setup for Cursor, Claude, Codex, and more.
-                    </p>
-                </div>
-                <ArrowRight class="ml-auto size-4 shrink-0 text-snitch-ink/40" aria-hidden="true" />
-            </Link>
 
             <section class="mt-10">
                 <div class="flex flex-wrap items-end justify-between gap-3">
