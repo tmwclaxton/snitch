@@ -12,6 +12,7 @@ import {
 } from '@lucide/vue';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import {
+    batchSync,
     confirmSuggestions,
     dismissSuggestions,
     show as competitorShow,
@@ -100,11 +101,14 @@ const competitorsUsed = computed(() => {
 });
 
 const selected = ref<Record<string, boolean>>({});
+const selectedAccountIds = ref<Record<number, boolean>>({});
 const localSuggestions = ref<Suggestion[]>([]);
 const suggesting = ref(false);
 const suggestMessage = ref(props.suggestError ?? '');
 const removeDialogOpen = ref(false);
 const accountToRemove = ref<Account | null>(null);
+const accountsToRemove = ref<Account[]>([]);
+const batchWorking = ref(false);
 const syncingIds = ref<Record<number, boolean>>({});
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let syncPollTimer: ReturnType<typeof setInterval> | null = null;
@@ -167,8 +171,18 @@ watch(
 
 watch(
     () => props.accounts,
-    () => {
+    (accounts) => {
         syncSuggestionsFromProps(localSuggestions.value);
+
+        const nextSelected: Record<number, boolean> = {};
+
+        for (const account of accounts) {
+            if (selectedAccountIds.value[account.id]) {
+                nextSelected[account.id] = true;
+            }
+        }
+
+        selectedAccountIds.value = nextSelected;
     },
     { deep: true },
 );
@@ -187,10 +201,26 @@ const selectedSuggestions = computed(() =>
     localSuggestions.value.filter((item) => selected.value[`${item.platform}:${item.handle}`]),
 );
 
-const allSelected = computed(
+const allSuggestionsSelected = computed(
     () =>
         localSuggestions.value.length > 0 &&
         localSuggestions.value.every((item) => selected.value[`${item.platform}:${item.handle}`]),
+);
+
+const selectedAccounts = computed(() =>
+    props.accounts.filter((account) => !!selectedAccountIds.value[account.id]),
+);
+
+const allAccountsSelected = computed(
+    () =>
+        props.accounts.length > 0 &&
+        props.accounts.every((account) => !!selectedAccountIds.value[account.id]),
+);
+
+const showSuggestActionBar = computed(() => selectedSuggestions.value.length > 0);
+const showAccountActionBar = computed(() => selectedAccounts.value.length > 0);
+const showAnyActionBar = computed(
+    () => showSuggestActionBar.value || showAccountActionBar.value,
 );
 
 function suggestionKey(item: Suggestion): string {
@@ -202,7 +232,7 @@ function toggle(item: Suggestion): void {
     selected.value[key] = !selected.value[key];
 }
 
-function selectAll(): void {
+function selectAllSuggestions(): void {
     const next: Record<string, boolean> = {};
 
     for (const item of localSuggestions.value) {
@@ -212,15 +242,55 @@ function selectAll(): void {
     selected.value = next;
 }
 
-function clearSelection(): void {
+function clearSuggestionSelection(): void {
     selected.value = {};
 }
 
-function toggleSelectAll(): void {
-    if (allSelected.value) {
-        clearSelection();
+function toggleSelectAllSuggestions(): void {
+    if (allSuggestionsSelected.value) {
+        clearSuggestionSelection();
     } else {
-        selectAll();
+        selectAllSuggestions();
+    }
+}
+
+function toggleAccount(account: Account): void {
+    selectedAccountIds.value = {
+        ...selectedAccountIds.value,
+        [account.id]: !selectedAccountIds.value[account.id],
+    };
+}
+
+function selectAllAccounts(): void {
+    const next: Record<number, boolean> = {};
+
+    for (const account of props.accounts) {
+        next[account.id] = true;
+    }
+
+    selectedAccountIds.value = next;
+}
+
+function clearAccountSelection(): void {
+    selectedAccountIds.value = {};
+}
+
+function toggleSelectAllAccounts(): void {
+    if (allAccountsSelected.value) {
+        clearAccountSelection();
+    } else {
+        selectAllAccounts();
+    }
+}
+
+function clearAllSelections(): void {
+    clearSuggestionSelection();
+    clearAccountSelection();
+}
+
+function onSelectionKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && showAnyActionBar.value) {
+        clearAllSelections();
     }
 }
 
@@ -266,8 +336,10 @@ watch(hasRunningSync, () => {
 }, { immediate: true });
 
 onMounted(() => {
+    window.addEventListener('keydown', onSelectionKeydown);
+
     if (localSuggestions.value.length > 0 && Object.keys(selected.value).length === 0) {
-        selectAll();
+        selectAllSuggestions();
         suggestMessage.value =
             suggestMessage.value || `Found ${localSuggestions.value.length} competitors.`;
     }
@@ -288,6 +360,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    window.removeEventListener('keydown', onSelectionKeydown);
+    clearAllSelections();
     clearPoll();
     clearSyncPoll();
 });
@@ -355,7 +429,7 @@ async function pollSuggestions(id: string, attempt = 0): Promise<void> {
         if (localSuggestions.value.length === 0) {
             toast.error('No verified competitor accounts found. Try again later.');
         } else {
-            selectAll();
+            selectAllSuggestions();
             toast.success('Competitor picks ready.');
         }
 
@@ -372,7 +446,7 @@ async function pollSuggestions(id: string, attempt = 0): Promise<void> {
         toast.error(payload.error || 'Could not suggest competitors.');
 
         if (localSuggestions.value.length > 0) {
-            selectAll();
+            selectAllSuggestions();
         }
 
         return;
@@ -454,13 +528,101 @@ function submitConfirm(): void {
         });
 }
 
-function dismiss(): void {
-    router.post(dismissSuggestions.url(), {}, { preserveScroll: true });
+function dismissSelectedSuggestions(): void {
+    const dismissed = selectedSuggestions.value;
+
+    if (dismissed.length === 0) {
+        return;
+    }
+
+    const dismissedKeys = new Set(dismissed.map((item) => suggestionKey(item).toLowerCase()));
+
+    router.post(
+        dismissSuggestions.url(),
+        {
+            suggestions: dismissed.map((item) => ({
+                platform: item.platform,
+                handle: item.handle,
+            })),
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                localSuggestions.value = localSuggestions.value.filter(
+                    (item) => !dismissedKeys.has(suggestionKey(item).toLowerCase()),
+                );
+                clearSuggestionSelection();
+                suggestMessage.value =
+                    localSuggestions.value.length > 0
+                        ? `${localSuggestions.value.length} suggestions left.`
+                        : '';
+            },
+        },
+    );
 }
 
 function askRemove(account: Account): void {
     accountToRemove.value = account;
+    accountsToRemove.value = [];
     removeDialogOpen.value = true;
+}
+
+function askRemoveSelectedAccounts(): void {
+    if (selectedAccounts.value.length === 0) {
+        return;
+    }
+
+    accountToRemove.value = null;
+    accountsToRemove.value = [...selectedAccounts.value];
+    removeDialogOpen.value = true;
+}
+
+function onAccountsRemoved(): void {
+    clearAccountSelection();
+}
+
+function syncSelectedAccounts(): void {
+    if (batchWorking.value || !canRunBillable.value || selectedAccounts.value.length === 0) {
+        return;
+    }
+
+    const ids = selectedAccounts.value
+        .filter((account) => !isAccountSyncing(account))
+        .map((account) => account.id);
+
+    if (ids.length === 0) {
+        return;
+    }
+
+    batchWorking.value = true;
+    const nextSyncing = { ...syncingIds.value };
+
+    for (const id of ids) {
+        nextSyncing[id] = true;
+    }
+
+    syncingIds.value = nextSyncing;
+
+    router.post(
+        batchSync.url(),
+        { ids },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                batchWorking.value = false;
+                const cleared = { ...syncingIds.value };
+
+                for (const id of ids) {
+                    delete cleared[id];
+                }
+
+                syncingIds.value = cleared;
+            },
+            onSuccess: () => {
+                clearAccountSelection();
+            },
+        },
+    );
 }
 
 function accountSyncStatusLabel(account: Account): string {
@@ -523,10 +685,21 @@ function syncButtonTitle(account: Account): string {
 
     return `Sync @${account.handle}`;
 }
+
+const syncSelectedTitle = computed(() => {
+    if (!canRunBillable.value) {
+        return `Balance must be more than ${minRunBalancePence.value}p to sync. Subscribe or top up on Billing.`;
+    }
+
+    return `Sync ${selectedAccounts.value.length} selected`;
+});
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full min-w-0 px-5 py-6 sm:px-8 sm:py-8">
+    <div
+        class="snitch-app-shell relative min-h-full min-w-0 px-5 py-6 sm:px-8 sm:py-8"
+        :class="showAnyActionBar ? 'pb-28 sm:pb-32' : ''"
+    >
         <Head title="Competitors" />
         <div class="snitch-grain" aria-hidden="true" />
 
@@ -659,33 +832,14 @@ function syncButtonTitle(account: Account): string {
                 </div>
             </form>
 
-            <section v-if="localSuggestions.length" class="mt-10">
-                <div class="flex flex-wrap items-end justify-between gap-3">
-                    <div>
-                        <h2 class="snitch-display text-2xl text-snitch-ink">
-                            Suggested rivals
-                        </h2>
-                        <p class="mt-1.5 text-sm text-snitch-ink/65">
-                            Pending suggestions (including from an agent) are not tracked yet. Select accounts, then confirm. Reload keeps this table until you dismiss or re-run.
-                        </p>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <button
-                            type="button"
-                            class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
-                            @click="toggleSelectAll"
-                        >
-                            {{ allSelected ? 'Clear selection' : 'Select all' }}
-                        </button>
-                        <button
-                            type="button"
-                            class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
-                            @click="dismiss"
-                        >
-                            <X class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
-                            <span class="relative z-10">Dismiss</span>
-                        </button>
-                    </div>
+            <section v-if="localSuggestions.length" class="mt-10" aria-labelledby="suggested-rivals-heading">
+                <div>
+                    <h2 id="suggested-rivals-heading" class="snitch-display text-2xl text-snitch-ink">
+                        Suggested rivals
+                    </h2>
+                    <p class="mt-1.5 text-sm text-snitch-ink/65">
+                        Pending suggestions (including from an agent) are not tracked yet. Select rows to confirm or dismiss. Reload keeps this table until you clear it or re-run.
+                    </p>
                 </div>
 
                 <div class="snitch-scrap relative mt-6 p-3 pt-5 pb-6 sm:p-4 sm:pt-6 sm:pb-7">
@@ -698,9 +852,9 @@ function syncButtonTitle(account: Account): string {
                                         <input
                                             type="checkbox"
                                             class="size-4 accent-[var(--snitch-spot)]"
-                                            :checked="allSelected"
-                                            :aria-label="allSelected ? 'Clear selection' : 'Select all'"
-                                            @change="toggleSelectAll"
+                                            :checked="allSuggestionsSelected"
+                                            :aria-label="allSuggestionsSelected ? 'Clear suggested selection' : 'Select all suggested rivals'"
+                                            @change="toggleSelectAllSuggestions"
                                         />
                                     </th>
                                     <th class="hidden w-[7.5rem] px-2 py-2 sm:table-cell">
@@ -789,18 +943,6 @@ function syncButtonTitle(account: Account): string {
                         </table>
                     </div>
                 </div>
-
-                <button
-                    type="button"
-                    class="snitch-btn snitch-btn-spot mt-6 w-full sm:w-auto"
-                    :disabled="selectedSuggestions.length === 0 || confirmForm.processing"
-                    @click="submitConfirm"
-                >
-                    <span class="relative z-10 inline-flex items-center gap-2">
-                        <Check class="size-3.5 shrink-0" aria-hidden="true" />
-                        Confirm {{ selectedSuggestions.length }} competitors
-                    </span>
-                </button>
             </section>
 
             <div
@@ -812,6 +954,15 @@ function syncButtonTitle(account: Account): string {
                     <table class="w-full border-collapse text-left text-sm">
                         <thead>
                             <tr class="border-b border-snitch-ink/15">
+                                <th class="w-10 px-1.5 py-2 sm:px-2">
+                                    <input
+                                        type="checkbox"
+                                        class="size-4 accent-[var(--snitch-spot)]"
+                                        :checked="allAccountsSelected"
+                                        :aria-label="allAccountsSelected ? 'Clear tracked selection' : 'Select all tracked competitors'"
+                                        @change="toggleSelectAllAccounts"
+                                    />
+                                </th>
                                 <th class="hidden w-[7.5rem] px-2 py-2 sm:table-cell">
                                     <span class="snitch-ink-label">Platform</span>
                                 </th>
@@ -840,14 +991,26 @@ function syncButtonTitle(account: Account): string {
                                 v-for="account in accounts"
                                 :key="account.id"
                                 class="border-b border-snitch-ink/10 last:border-0"
-                                :class="
-                                    isAccountSyncing(account)
-                                        ? 'bg-snitch-spot/10 hover:bg-snitch-ink/[0.03]'
-                                        : 'hover:bg-snitch-ink/[0.03]'
-                                "
+                                :class="[
+                                    selectedAccountIds[account.id]
+                                        ? 'bg-snitch-spot/15'
+                                        : isAccountSyncing(account)
+                                          ? 'bg-snitch-spot/10'
+                                          : '',
+                                    'hover:bg-snitch-ink/[0.03]',
+                                ]"
                                 :data-platform="account.platform"
                                 :data-syncing="isAccountSyncing(account) ? 'true' : undefined"
                             >
+                                <td class="px-1.5 py-2.5 align-middle sm:px-2" @click.stop>
+                                    <input
+                                        type="checkbox"
+                                        class="size-4 accent-[var(--snitch-spot)]"
+                                        :checked="!!selectedAccountIds[account.id]"
+                                        :aria-label="`Select @${account.handle}`"
+                                        @change="toggleAccount(account)"
+                                    />
+                                </td>
                                 <td class="hidden px-2 py-2.5 align-middle sm:table-cell">
                                     <Link
                                         :href="competitorShow.url(account.id)"
@@ -1002,9 +1165,126 @@ function syncButtonTitle(account: Account): string {
             </div>
         </div>
 
+        <div
+            v-if="showAnyActionBar"
+            class="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2.5 px-4 pb-4 sm:pb-5"
+        >
+            <div
+                v-if="showSuggestActionBar"
+                class="snitch-scrap pointer-events-auto relative w-full max-w-3xl px-3 py-3 pt-4 sm:px-4"
+                role="toolbar"
+                aria-label="Suggested rivals actions"
+            >
+                <span class="snitch-tape left-4 -top-2 scale-90" aria-hidden="true" />
+                <div class="relative z-10 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                    <p class="text-sm text-snitch-ink/70">
+                        <span class="font-medium text-snitch-ink">{{ selectedSuggestions.length }}</span>
+                        suggested
+                        {{ selectedSuggestions.length === 1 ? 'rival' : 'rivals' }}
+                    </p>
+                    <div class="flex flex-wrap items-center gap-1.5 sm:justify-end">
+                        <button
+                            type="button"
+                            class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
+                            @click="toggleSelectAllSuggestions"
+                        >
+                            {{ allSuggestionsSelected ? 'Clear' : 'Select all' }}
+                        </button>
+                        <button
+                            type="button"
+                            class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
+                            :disabled="confirmForm.processing"
+                            @click="dismissSelectedSuggestions"
+                        >
+                            <X class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                            <span class="relative z-10">Dismiss</span>
+                        </button>
+                        <button
+                            type="button"
+                            class="snitch-btn snitch-btn-spot px-2.5 py-1.5 text-xs sm:text-sm"
+                            :disabled="confirmForm.processing"
+                            @click="submitConfirm"
+                        >
+                            <span class="relative z-10 inline-flex items-center gap-1.5">
+                                <LoaderCircle
+                                    v-if="confirmForm.processing"
+                                    class="size-3.5 shrink-0 animate-spin"
+                                    aria-hidden="true"
+                                />
+                                <Check
+                                    v-else
+                                    class="size-3.5 shrink-0"
+                                    aria-hidden="true"
+                                />
+                                Confirm {{ selectedSuggestions.length }}
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                v-if="showAccountActionBar"
+                class="snitch-scrap pointer-events-auto relative w-full max-w-3xl px-3 py-3 pt-4 sm:px-4"
+                role="toolbar"
+                aria-label="Tracked competitors actions"
+            >
+                <span class="snitch-tape left-4 -top-2 scale-90" aria-hidden="true" />
+                <div class="relative z-10 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                    <p class="text-sm text-snitch-ink/70">
+                        <span class="font-medium text-snitch-ink">{{ selectedAccounts.length }}</span>
+                        tracked
+                        {{ selectedAccounts.length === 1 ? 'competitor' : 'competitors' }}
+                    </p>
+                    <div class="flex flex-wrap items-center gap-1.5 sm:justify-end">
+                        <button
+                            type="button"
+                            class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
+                            @click="toggleSelectAllAccounts"
+                        >
+                            {{ allAccountsSelected ? 'Clear' : 'Select all' }}
+                        </button>
+                        <button
+                            type="button"
+                            class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
+                            :disabled="batchWorking"
+                            @click="askRemoveSelectedAccounts"
+                        >
+                            <Trash2 class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                            <span class="relative z-10">Remove</span>
+                        </button>
+                        <button
+                            type="button"
+                            class="snitch-btn snitch-btn-spot px-2.5 py-1.5 text-xs sm:text-sm"
+                            :disabled="batchWorking || !canRunBillable"
+                            :title="syncSelectedTitle"
+                            :aria-label="syncSelectedTitle"
+                            @click="syncSelectedAccounts"
+                        >
+                            <span class="relative z-10 inline-flex items-center gap-1.5">
+                                <LoaderCircle
+                                    v-if="batchWorking"
+                                    class="size-3.5 shrink-0 animate-spin"
+                                    aria-hidden="true"
+                                />
+                                <RefreshCw
+                                    v-else
+                                    class="size-3.5 shrink-0"
+                                    aria-hidden="true"
+                                />
+                                Sync {{ selectedAccounts.length }}
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <RemoveCompetitorModal
             v-model:open="removeDialogOpen"
             :account="accountToRemove"
+            :accounts="accountsToRemove"
+            @removed="onAccountsRemoved"
         />
     </div>
 </template>

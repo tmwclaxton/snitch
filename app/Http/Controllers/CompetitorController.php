@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Enums\Platform;
 use App\Enums\TrackedAccountKind;
 use App\Exceptions\InsufficientCreditsException;
+use App\Http\Requests\Competitors\BatchDestroyCompetitorsRequest;
+use App\Http\Requests\Competitors\BatchSyncCompetitorsRequest;
 use App\Http\Requests\Competitors\ConfirmSuggestionsRequest;
+use App\Http\Requests\Competitors\DismissSuggestionsRequest;
 use App\Http\Requests\Competitors\StoreTrackedAccountRequest;
 use App\Jobs\SuggestCompetitorsJob;
 use App\Jobs\SyncTrackedAccountJob;
@@ -205,11 +208,15 @@ class CompetitorController extends Controller
         return redirect()->route('competitors.index');
     }
 
-    public function dismissSuggestions(Request $request): RedirectResponse
+    public function dismissSuggestions(DismissSuggestionsRequest $request): RedirectResponse
     {
-        $this->authorize('create', TrackedAccount::class);
+        $suggestions = $request->validated('suggestions');
 
-        SuggestCompetitorsJob::clearLatest($request->user()->id);
+        if (is_array($suggestions) && $suggestions !== []) {
+            SuggestCompetitorsJob::pruneLatestSuggestions($request->user()->id, $suggestions);
+        } else {
+            SuggestCompetitorsJob::clearLatest($request->user()->id);
+        }
 
         return redirect()->route('competitors.index');
     }
@@ -221,6 +228,30 @@ class CompetitorController extends Controller
         $trackedAccount->delete();
 
         return redirect()->back(fallback: route('competitors.index'));
+    }
+
+    public function batchDestroy(BatchDestroyCompetitorsRequest $request): RedirectResponse
+    {
+        $ids = $request->validated('ids');
+        $user = $request->user();
+
+        $accounts = TrackedAccount::query()
+            ->where('user_id', $user->id)
+            ->competitors()
+            ->whereIn('id', $ids)
+            ->get();
+
+        foreach ($accounts as $account) {
+            $this->authorize('delete', $account);
+            $account->delete();
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Removed :count competitors.', ['count' => $accounts->count()]),
+        ]);
+
+        return redirect()->route('competitors.index');
     }
 
     public function sync(Request $request, TrackedAccount $trackedAccount): RedirectResponse
@@ -245,6 +276,44 @@ class CompetitorController extends Controller
             'type' => 'info',
             'message' => __('Sync running for @:handle. This page updates when it finishes.', [
                 'handle' => $trackedAccount->handle,
+            ]),
+        ]);
+
+        return back();
+    }
+
+    public function batchSync(BatchSyncCompetitorsRequest $request): RedirectResponse
+    {
+        $ids = $request->validated('ids');
+        $user = $request->user();
+
+        try {
+            $this->billing->assertCanRun($user);
+        } catch (InsufficientCreditsException $exception) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => $exception->getMessage(),
+            ]);
+
+            return back();
+        }
+
+        $accounts = TrackedAccount::query()
+            ->where('user_id', $user->id)
+            ->competitors()
+            ->whereIn('id', $ids)
+            ->get();
+
+        foreach ($accounts as $account) {
+            $this->authorize('update', $account);
+            $account->markSyncRunning();
+            SyncTrackedAccountJob::dispatch($account->id, force: true);
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'info',
+            'message' => __('Sync running for :count competitors. This page updates when they finish.', [
+                'count' => $accounts->count(),
             ]),
         ]);
 

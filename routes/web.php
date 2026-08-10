@@ -87,6 +87,8 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
             ->name('competitors.suggest.status');
         Route::post('/competitors/confirm-suggestions', [CompetitorController::class, 'confirmSuggestions'])->name('competitors.confirm-suggestions');
         Route::post('/competitors/dismiss-suggestions', [CompetitorController::class, 'dismissSuggestions'])->name('competitors.dismiss-suggestions');
+        Route::post('/competitors/batch-sync', [CompetitorController::class, 'batchSync'])->name('competitors.batch-sync');
+        Route::post('/competitors/batch-destroy', [CompetitorController::class, 'batchDestroy'])->name('competitors.batch-destroy');
         Route::get('/competitors/{trackedAccount}', [CompetitorController::class, 'show'])->name('competitors.show');
         Route::delete('/competitors/{trackedAccount}', [CompetitorController::class, 'destroy'])->name('competitors.destroy');
         Route::post('/competitors/{trackedAccount}/sync', [CompetitorController::class, 'sync'])->name('competitors.sync');

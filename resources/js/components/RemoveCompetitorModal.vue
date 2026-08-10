@@ -2,7 +2,7 @@
 import { router } from '@inertiajs/vue3';
 import { LoaderCircle, Trash2, X } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import { destroy } from '@/actions/App/Http/Controllers/CompetitorController';
+import { batchDestroy, destroy } from '@/actions/App/Http/Controllers/CompetitorController';
 import {
     Dialog,
     DialogClose,
@@ -13,24 +13,44 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 
+type RemovableAccount = {
+    id: number;
+    handle: string;
+    display_name: string | null;
+};
+
 const props = defineProps<{
     open: boolean;
-    account: {
-        id: number;
-        handle: string;
-        display_name: string | null;
-    } | null;
+    account?: RemovableAccount | null;
+    accounts?: RemovableAccount[];
 }>();
 
 const emit = defineEmits<{
     'update:open': [value: boolean];
+    removed: [];
 }>();
 
 const processing = ref(false);
 
-const displayName = computed(
-    () => props.account?.display_name || props.account?.handle || 'this competitor',
-);
+const targets = computed(() => {
+    if (props.accounts && props.accounts.length > 0) {
+        return props.accounts;
+    }
+
+    return props.account ? [props.account] : [];
+});
+
+const isBatch = computed(() => targets.value.length > 1);
+
+const displayName = computed(() => {
+    const first = targets.value[0];
+
+    if (!first) {
+        return 'this competitor';
+    }
+
+    return first.display_name || first.handle || 'this competitor';
+});
 
 function setOpen(value: boolean): void {
     if (!value) {
@@ -41,19 +61,42 @@ function setOpen(value: boolean): void {
 }
 
 function confirmRemove(): void {
-    if (!props.account || processing.value) {
+    if (targets.value.length === 0 || processing.value) {
         return;
     }
 
     processing.value = true;
 
-    router.delete(destroy.url(props.account.id), {
-        onFinish: () => {
-            processing.value = false;
-        },
-        onSuccess: () => {
-            setOpen(false);
-        },
+    const onFinish = (): void => {
+        processing.value = false;
+    };
+
+    const onSuccess = (): void => {
+        emit('removed');
+        setOpen(false);
+    };
+
+    if (isBatch.value || (props.accounts && props.accounts.length > 0)) {
+        router.post(
+            batchDestroy.url(),
+            { ids: targets.value.map((item) => item.id) },
+            { onFinish, onSuccess },
+        );
+
+        return;
+    }
+
+    const single = targets.value[0];
+
+    if (!single) {
+        processing.value = false;
+
+        return;
+    }
+
+    router.delete(destroy.url(single.id), {
+        onFinish,
+        onSuccess,
     });
 }
 </script>
@@ -70,15 +113,27 @@ function confirmRemove(): void {
                 <DialogHeader class="relative z-10 space-y-3 text-left">
                     <DialogTitle class="snitch-display flex items-center gap-2 text-xl text-snitch-ink">
                         <Trash2 class="size-5 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                        Remove this competitor?
+                        <template v-if="isBatch">
+                            Remove {{ targets.length }} competitors?
+                        </template>
+                        <template v-else>
+                            Remove this competitor?
+                        </template>
                     </DialogTitle>
                     <DialogDescription class="text-sm text-snitch-ink/65">
-                        Stop tracking
-                        <span class="font-medium text-snitch-ink">{{ displayName }}</span>
-                        <template v-if="account">
-                            (<span class="snitch-annotation text-base">@{{ account.handle }}</span>).
+                        <template v-if="isBatch">
+                            Stop tracking these
+                            <span class="font-medium text-snitch-ink">{{ targets.length }}</span>
+                            accounts. Their posts leave your feed. You can add them again later.
                         </template>
-                        Their posts leave your feed. You can add them again later.
+                        <template v-else>
+                            Stop tracking
+                            <span class="font-medium text-snitch-ink">{{ displayName }}</span>
+                            <template v-if="targets[0]">
+                                (<span class="snitch-annotation text-base">@{{ targets[0].handle }}</span>).
+                            </template>
+                            Their posts leave your feed. You can add them again later.
+                        </template>
                     </DialogDescription>
                 </DialogHeader>
 
@@ -93,7 +148,7 @@ function confirmRemove(): void {
                     <button
                         type="button"
                         class="snitch-btn"
-                        :disabled="!account || processing"
+                        :disabled="targets.length === 0 || processing"
                         data-test="confirm-remove-competitor-button"
                         @click="confirmRemove"
                     >
@@ -108,7 +163,7 @@ function confirmRemove(): void {
                             aria-hidden="true"
                         />
                         <span class="relative z-10">
-                            {{ processing ? 'Removing…' : 'Remove' }}
+                            {{ processing ? 'Removing…' : (isBatch ? `Remove ${targets.length}` : 'Remove') }}
                         </span>
                     </button>
                 </DialogFooter>
