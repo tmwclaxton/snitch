@@ -109,6 +109,9 @@ return [
         'model' => env('SNITCH_VIDEO_ANALYSIS_MODEL', 'qwen3.7-flash'),
         'max_tokens' => (int) env('SNITCH_VIDEO_ANALYSIS_MAX_TOKENS', 1800),
         'temperature' => (float) env('SNITCH_VIDEO_ANALYSIS_TEMPERATURE', 0.2),
+        // NanoGPT rejects request bodies over ~4.4MB when media is inlined as base64.
+        'max_inline_data_uri_bytes' => (int) env('SNITCH_VIDEO_ANALYSIS_MAX_INLINE_DATA_URI_BYTES', 4_200_000),
+        'ffmpeg_binary' => env('SNITCH_FFMPEG_BINARY', 'ffmpeg'),
         'success' => [
             'min_hook_chars' => 12,
             'min_hook_window_end_seconds' => 3.0,
