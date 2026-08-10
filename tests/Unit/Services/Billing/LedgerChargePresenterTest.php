@@ -74,6 +74,11 @@ class LedgerChargePresenterTest extends TestCase
                 [],
                 'Welcome credits',
             ],
+            'indexed analysis' => [
+                'embed.analysis',
+                ['post_analysis_id' => 3, 'post_id' => 9],
+                'Indexed post analysis',
+            ],
         ];
     }
 
@@ -88,6 +93,20 @@ class LedgerChargePresenterTest extends TestCase
         $this->assertSame([
             'type' => 'post',
             'id' => 12,
+            'label' => 'View post',
+        ], $link);
+    }
+
+    public function test_embed_analysis_links_via_post_id(): void
+    {
+        $link = $this->presenter->link('embed.analysis', [
+            'post_analysis_id' => 3,
+            'post_id' => 9,
+        ]);
+
+        $this->assertSame([
+            'type' => 'post',
+            'id' => 9,
             'label' => 'View post',
         ], $link);
     }

@@ -5,6 +5,7 @@ namespace App\Services\Billing;
 use App\Enums\Platform;
 use App\Enums\PostType;
 use App\Enums\TrackedAccountKind;
+use App\Models\PostAnalysis;
 
 class LedgerChargePresenter
 {
@@ -61,7 +62,7 @@ class LedgerChargePresenter
      */
     public function link(string $action, array $meta): ?array
     {
-        $postId = $this->positiveInt($meta['post_id'] ?? null);
+        $postId = $this->resolvePostId($meta);
         if ($postId !== null) {
             return [
                 'type' => 'post',
@@ -186,6 +187,28 @@ class LedgerChargePresenter
         );
 
         return trim(implode(' ', array_filter($words)));
+    }
+
+    /**
+     * Prefer meta.post_id; legacy embed.analysis rows only stored post_analysis_id.
+     *
+     * @param  array<string, mixed>  $meta
+     */
+    private function resolvePostId(array $meta): ?int
+    {
+        $postId = $this->positiveInt($meta['post_id'] ?? null);
+        if ($postId !== null) {
+            return $postId;
+        }
+
+        $analysisId = $this->positiveInt($meta['post_analysis_id'] ?? null);
+        if ($analysisId === null) {
+            return null;
+        }
+
+        $resolved = PostAnalysis::query()->whereKey($analysisId)->value('post_id');
+
+        return $this->positiveInt($resolved);
     }
 
     private function positiveInt(mixed $value): ?int

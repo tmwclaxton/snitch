@@ -3,6 +3,10 @@
 namespace Tests\Feature\Billing;
 
 use App\Enums\BillingVendor;
+use App\Enums\PostType;
+use App\Models\Post;
+use App\Models\PostAnalysis;
+use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Billing\UsageBillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -280,6 +284,37 @@ class BillingChargesTest extends TestCase
                 ->where('charges.data.0.description', 'Analyzed post')
                 ->where('charges.data.0.link', null)
                 ->where('charges.data.0.action', 'analyze.post'));
+    }
+
+    public function test_legacy_embed_analysis_links_via_post_analysis_id(): void
+    {
+        $user = User::factory()->create();
+        $this->subscribe($user);
+        $this->billing->creditFromTopUp($user, 1000, 'topup:legacy-embed');
+
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+        ]);
+        $analysis = PostAnalysis::factory()->for($post)->create();
+
+        $this->billing->charge(
+            $user,
+            'embed.analysis',
+            BillingVendor::NanoGpt,
+            0.00005,
+            ['post_analysis_id' => $analysis->id],
+        );
+
+        $this->actingAs($user)
+            ->get(route('billing.charges'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('charges.data.0.description', 'Indexed post analysis')
+                ->where('charges.data.0.action', 'embed.analysis')
+                ->where('charges.data.0.link.type', 'post')
+                ->where('charges.data.0.link.id', $post->id)
+                ->where('charges.data.0.link.label', 'View post'));
     }
 
     public function test_invalid_charge_filters_are_rejected(): void
