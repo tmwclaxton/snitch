@@ -41,7 +41,7 @@ use Laravel\Mcp\Server\Attributes\Version;
 
 #[Name('Snitch')]
 #[Version('1.0.0')]
-#[Instructions('Snitch is the social marketing data layer for agents. Authenticate with a Sanctum bearer token from create_account (or the website Agents page). Billable tools require an active platform subscription and usage credits. Prefer sync/analyze/find tools explicitly - nothing is auto-scheduled.')]
+#[Instructions('Snitch is the social marketing data layer for agents. Authenticate with a Sanctum bearer token from create_account (or the website Agents page). Billable tools need a credit balance above 20p - subscribe for monthly plan value or top up credits. Prefer sync/analyze/find tools explicitly - nothing is auto-scheduled.')]
 class SnitchServer extends Server
 {
     public int $defaultPaginationLength = 50;

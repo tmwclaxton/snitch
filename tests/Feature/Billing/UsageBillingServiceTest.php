@@ -4,7 +4,6 @@ namespace Tests\Feature\Billing;
 
 use App\Enums\BillingVendor;
 use App\Exceptions\InsufficientCreditsException;
-use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Models\User;
 use App\Services\Billing\UsageBillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,6 +26,7 @@ class UsageBillingServiceTest extends TestCase
             'billing.subscription_bonus_pence' => 3000,
             'billing.price_multiplier' => 1.4,
             'billing.usd_to_gbp' => 1.0,
+            'billing.min_run_balance_pence' => 20,
         ]);
 
         $this->billing = app(UsageBillingService::class);
@@ -61,14 +61,16 @@ class UsageBillingServiceTest extends TestCase
         $this->assertSame(6000, $this->billing->balancePence($user));
     }
 
-    public function test_charge_requires_platform_subscription(): void
+    public function test_charge_works_without_subscription_when_balance_above_floor(): void
     {
         $user = User::factory()->create();
         $this->billing->creditFromTopUp($user, 1000, 'topup:test');
 
-        $this->expectException(PlatformSubscriptionRequiredException::class);
+        $entry = $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.04);
 
-        $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.04);
+        $this->assertLessThan(0, $entry->amount_pence);
+        $this->assertSame(BillingVendor::NanoGpt, $entry->vendor);
+        $this->assertSame(1000 + $entry->amount_pence, $this->billing->balancePence($user));
     }
 
     public function test_charge_deducts_credits_when_subscribed(): void
@@ -84,10 +86,35 @@ class UsageBillingServiceTest extends TestCase
         $this->assertSame(1000 + $entry->amount_pence, $this->billing->balancePence($user));
     }
 
-    public function test_insufficient_credits_throws(): void
+    public function test_assert_can_run_rejects_balance_at_or_below_20p(): void
     {
         $user = User::factory()->create();
-        $this->subscribe($user);
+        $this->billing->creditFromTopUp($user, 20, 'topup:floor');
+
+        try {
+            $this->billing->assertCanRun($user);
+            $this->fail('Expected InsufficientCreditsException');
+        } catch (InsufficientCreditsException $exception) {
+            $this->assertSame(20, $exception->balancePence);
+            $this->assertStringContainsString('more than 20p', $exception->getMessage());
+            $this->assertStringContainsString('Subscribe', $exception->getMessage());
+            $this->assertStringContainsString('top up', $exception->getMessage());
+        }
+    }
+
+    public function test_assert_can_run_allows_balance_above_20p(): void
+    {
+        $user = User::factory()->create();
+        $this->billing->creditFromTopUp($user, 21, 'topup:above-floor');
+
+        $this->billing->assertCanRun($user);
+
+        $this->assertSame(21, $this->billing->balancePence($user));
+    }
+
+    public function test_insufficient_credits_throws_when_balance_is_zero(): void
+    {
+        $user = User::factory()->create();
 
         $this->expectException(InsufficientCreditsException::class);
 

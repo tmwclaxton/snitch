@@ -24,6 +24,13 @@ return [
     'claim_bonus_pence' => (int) env('SNITCH_CLAIM_BONUS_PENCE', 500),
 
     /*
+    | Billable runs require balance strictly greater than this (GBP pence).
+    | At or below: ask the user to subscribe for plan value or top up credits.
+    | Platform subscription is not required to run when balance clears this floor.
+    */
+    'min_run_balance_pence' => (int) env('SNITCH_MIN_RUN_BALANCE_PENCE', 20),
+
+    /*
     | Internal price multiplier on vendor COGS. Never surface this to users.
     */
     'price_multiplier' => (float) env('SNITCH_BILLING_PRICE_MULTIPLIER', 1.4),

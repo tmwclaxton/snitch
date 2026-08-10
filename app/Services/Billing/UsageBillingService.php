@@ -27,18 +27,25 @@ class UsageBillingService
         return $subscription !== null && $subscription->valid();
     }
 
+    public function minRunBalancePence(): int
+    {
+        return max(0, (int) config('billing.min_run_balance_pence', 20));
+    }
+
     public function assertCanRun(User $user, int $estimatedPence = 1): void
     {
-        if (! $this->hasPlatformSubscription($user)) {
-            throw new PlatformSubscriptionRequiredException;
-        }
-
         $balance = $this->balancePence($user);
+        $minExclusive = $this->minRunBalancePence();
+        $required = max($minExclusive + 1, max(1, $estimatedPence));
 
-        if ($balance < max(1, $estimatedPence)) {
+        if ($balance <= $minExclusive || $balance < max(1, $estimatedPence)) {
             throw new InsufficientCreditsException(
-                requiredPence: max(1, $estimatedPence),
+                requiredPence: $required,
                 balancePence: $balance,
+                message: sprintf(
+                    'Your balance must be more than %dp to run this. Subscribe to the platform plan for monthly credit value, or top up on the Billing page.',
+                    $minExclusive,
+                ),
             );
         }
     }
@@ -76,7 +83,7 @@ class UsageBillingService
             multiplier: $multiplier,
             meta: $meta,
             idempotencyKey: $idempotencyKey,
-            requirePlatform: true,
+            requirePlatform: false,
             requireCredits: true,
         );
     }
@@ -417,6 +424,7 @@ class UsageBillingService
                 throw new InsufficientCreditsException(
                     requiredPence: abs($amountPence),
                     balancePence: (int) $balance->balance_pence,
+                    message: 'Not enough credits for this charge. Subscribe to the platform plan for monthly credit value, or top up on the Billing page.',
                 );
             }
 

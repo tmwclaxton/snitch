@@ -114,8 +114,8 @@ const vendorAccent: Record<string, string> = {
                         Billing
                     </h1>
                     <p class="mt-1.5 max-w-2xl text-sm text-snitch-ink/65 sm:text-base">
-                        Platform access plus prepaid usage. Sync, analysis, and discovery draw from your credit
-                        balance.
+                        Keep more than 20p of usage credit to run sync, analysis, and discovery. Subscribe for
+                        monthly plan value, or top up packs anytime.
                     </p>
                 </div>
                 <Link

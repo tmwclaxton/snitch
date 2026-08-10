@@ -33,7 +33,7 @@ class CreateAccountTool extends Tool
             'api_token' => $created['plain_text_token'],
             'claim_url' => $created['claim_url'],
             'mcp_url' => url('/mcp'),
-            'note' => 'Use Authorization: Bearer <api_token> against /mcp. Subscribe and top up credits before billable tools. Claim grants £5 once.',
+            'note' => 'Use Authorization: Bearer <api_token> against /mcp. Billable tools need a balance above 20p - subscribe for plan value or top up. Claim grants £5 once.',
         ]);
     }
 
