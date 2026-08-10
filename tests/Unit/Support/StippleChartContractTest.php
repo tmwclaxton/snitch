@@ -8,15 +8,17 @@ use Tests\TestCase;
 class StippleChartContractTest extends TestCase
 {
     #[Test]
-    public function stipple_helper_exports_dot_and_hex_builders(): void
+    public function stipple_helper_exports_dot_hex_and_logo_builders(): void
     {
         $source = file_get_contents(base_path('resources/js/lib/stipple.ts'));
 
         $this->assertIsString($source);
         $this->assertStringContainsString('export function buildStippleMarks', $source);
+        $this->assertStringContainsString('export function buildLogoMarks', $source);
         $this->assertStringContainsString("variant === 'hexes'", $source);
         $this->assertStringContainsString('buildDotMarks', $source);
         $this->assertStringContainsString('buildHexMarks', $source);
+        $this->assertStringContainsString("kind: 'logo'", $source);
     }
 
     #[Test]
@@ -60,23 +62,30 @@ class StippleChartContractTest extends TestCase
     }
 
     #[Test]
-    public function billing_vendor_spend_chart_uses_stacked_dot_stipple_bars(): void
+    public function billing_vendor_spend_chart_uses_dense_logo_lattice_bars(): void
     {
         $source = file_get_contents(base_path('resources/js/components/billing/VendorSpendStackedChart.vue'));
+        $bar = file_get_contents(base_path('resources/js/components/dashboard/StippleBar.vue'));
         $vendors = file_get_contents(base_path('resources/js/lib/vendors.ts'));
 
         $this->assertIsString($source);
+        $this->assertIsString($bar);
         $this->assertIsString($vendors);
         $this->assertStringContainsString('<StippleBar', $source);
-        $this->assertStringContainsString('variant="dots"', $source);
+        $this->assertStringContainsString(':image-src="segment.iconSrc"', $source);
+        $this->assertStringContainsString('logoSize', $source);
+        $this->assertStringContainsString('logoStep', $source);
         $this->assertStringContainsString(':animate="false"', $source);
         $this->assertStringContainsString('snitch-vendor-legend-mark', $source);
         $this->assertStringContainsString('vendorIconSrc', $source);
+        $this->assertStringNotContainsString('variant="dots"', $source);
+        $this->assertStringNotContainsString('VENDOR_CHART_FILL', $source);
         $this->assertStringNotContainsString('VENDOR_CHART_SWATCH', $source);
         $this->assertStringNotContainsString('swatchClass', $source);
+        $this->assertStringContainsString('imageSrc', $bar);
+        $this->assertStringContainsString('buildLogoMarks', $bar);
+        $this->assertStringContainsString('snitch-vendor-chart-logo', $bar);
         $this->assertStringContainsString("nanogpt: 'fill-snitch-stipple-spot'", $vendors);
-        $this->assertStringContainsString("tikhub: 'fill-snitch-ink/40'", $vendors);
-        $this->assertStringContainsString("firecrawl: 'fill-snitch-teal'", $vendors);
         $this->assertStringNotContainsString('VENDOR_CHART_SWATCH', $vendors);
         $this->assertStringNotContainsString('<rect', $source);
     }

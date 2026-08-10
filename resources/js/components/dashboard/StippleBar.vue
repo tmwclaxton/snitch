@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { buildStippleMarks } from '@/lib/stipple';
+import { computed, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
+import { buildLogoMarks, buildStippleMarks } from '@/lib/stipple';
 import type { StippleMark, StippleVariant } from '@/lib/stipple';
 
 export type StippleGrowFrom = 'bottom' | 'left';
@@ -17,6 +17,8 @@ const props = withDefaults(
         radius?: number;
         seed?: number;
         title?: string;
+        /** When set, fill the bar with a dense lattice of this image (vendor logos). */
+        imageSrc?: string;
         /** Reveal marks one at a time from the bar origin on mount. */
         animate?: boolean;
         growFrom?: StippleGrowFrom;
@@ -29,6 +31,7 @@ const props = withDefaults(
         variant: 'dots',
         fillClass: 'fill-snitch-ink/70',
         seed: 0,
+        imageSrc: undefined,
         animate: true,
         growFrom: 'bottom',
         delayOffset: 0,
@@ -38,6 +41,7 @@ const props = withDefaults(
 
 const visibleCount = ref(0);
 const timers: number[] = [];
+const clipId = `snitch-stipple-clip-${useId().replace(/:/g, '')}`;
 
 const prefersReducedMotion = (): boolean => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
@@ -47,17 +51,27 @@ const prefersReducedMotion = (): boolean => {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 };
 
-const marks = computed(() => {
-    const built = buildStippleMarks({
-        x: props.x,
-        y: props.y,
-        width: props.width,
-        height: props.height,
-        variant: props.variant,
-        step: props.step,
-        radius: props.radius,
-        seed: props.seed,
-    });
+const marks = computed((): StippleMark[] => {
+    const built = props.imageSrc
+        ? buildLogoMarks({
+              x: props.x,
+              y: props.y,
+              width: props.width,
+              height: props.height,
+              size: props.radius,
+              step: props.step,
+              seed: props.seed,
+          })
+        : buildStippleMarks({
+              x: props.x,
+              y: props.y,
+              width: props.width,
+              height: props.height,
+              variant: props.variant,
+              step: props.step,
+              radius: props.radius,
+              seed: props.seed,
+          });
 
     if (!props.animate || built.length <= 1) {
         return built;
@@ -79,7 +93,7 @@ function compareMarks(a: StippleMark, b: StippleMark, growFrom: StippleGrowFrom)
 }
 
 function markAnchor(mark: StippleMark): { x: number; y: number } {
-    if (mark.kind === 'circle') {
+    if (mark.kind === 'circle' || mark.kind === 'logo') {
         return { x: mark.cx, y: mark.cy };
     }
 
@@ -145,6 +159,7 @@ watch(
             props.step,
             props.radius,
             props.variant,
+            props.imageSrc,
             props.delayOffset,
             props.stepMs,
             marks.value.length,
@@ -160,21 +175,39 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <g class="snitch-stipple-bar" :class="fillClass">
+    <g class="snitch-stipple-bar" :class="imageSrc ? undefined : fillClass">
         <title v-if="title">{{ title }}</title>
-        <template v-for="(mark, index) in marks" :key="index">
-            <circle
-                v-if="mark.kind === 'circle' && index < visibleCount"
-                class="snitch-stipple-mark is-popping"
-                :cx="mark.cx"
-                :cy="mark.cy"
-                :r="mark.r"
-            />
-            <polygon
-                v-else-if="mark.kind === 'hex' && index < visibleCount"
-                class="snitch-stipple-mark is-popping"
-                :points="mark.points"
-            />
-        </template>
+        <defs v-if="imageSrc">
+            <clipPath :id="clipId">
+                <rect :x="x" :y="y" :width="width" :height="height" />
+            </clipPath>
+        </defs>
+        <g :clip-path="imageSrc ? `url(#${clipId})` : undefined">
+            <template v-for="(mark, index) in marks" :key="index">
+                <image
+                    v-if="mark.kind === 'logo' && imageSrc && index < visibleCount"
+                    class="snitch-vendor-chart-logo snitch-stipple-mark is-popping"
+                    :href="imageSrc"
+                    :x="mark.cx - mark.size / 2"
+                    :y="mark.cy - mark.size / 2"
+                    :width="mark.size"
+                    :height="mark.size"
+                    :transform="`rotate(${mark.rotate} ${mark.cx} ${mark.cy})`"
+                    preserveAspectRatio="xMidYMid meet"
+                />
+                <circle
+                    v-else-if="mark.kind === 'circle' && index < visibleCount"
+                    class="snitch-stipple-mark is-popping"
+                    :cx="mark.cx"
+                    :cy="mark.cy"
+                    :r="mark.r"
+                />
+                <polygon
+                    v-else-if="mark.kind === 'hex' && index < visibleCount"
+                    class="snitch-stipple-mark is-popping"
+                    :points="mark.points"
+                />
+            </template>
+        </g>
     </g>
 </template>

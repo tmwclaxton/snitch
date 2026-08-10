@@ -4,7 +4,6 @@ import StippleBar from '@/components/dashboard/StippleBar.vue';
 import { formatPenceAsGbp } from '@/lib/money';
 import {
     SPEND_VENDORS,
-    VENDOR_CHART_FILL,
     vendorIconSrc,
     vendorLabel,
 } from '@/lib/vendors';
@@ -25,11 +24,11 @@ export type SpendPoint = {
 const vendors: Array<{
     key: SpendVendorKey;
     label: string;
-    fillClass: string;
+    iconSrc: string;
 }> = SPEND_VENDORS.map((key) => ({
     key,
     label: vendorLabel(key),
-    fillClass: VENDOR_CHART_FILL[key],
+    iconSrc: vendorIconSrc(key),
 }));
 
 const props = withDefaults(
@@ -99,8 +98,19 @@ const barWidth = computed(() => {
     return (plotWidth.value - barGap * (n - 1)) / n;
 });
 
-const stippleStep = computed(() => (barWidth.value < 12 ? 3.2 : 3.8));
-const stippleRadius = computed(() => (barWidth.value < 12 ? 0.95 : 1.15));
+/** Dense mini-logo lattice; size scales with bar width so day grain still packs many marks. */
+const logoSize = computed(() => {
+    if (barWidth.value < 12) {
+        return 5.8;
+    }
+
+    if (barWidth.value < 22) {
+        return 7.2;
+    }
+
+    return 8.6;
+});
+const logoStep = computed(() => logoSize.value * 1.1);
 
 const yTicks = computed(() => {
     const max = maxTotal.value;
@@ -124,7 +134,7 @@ type Segment = {
     y: number;
     width: number;
     height: number;
-    fillClass: string;
+    iconSrc: string;
     title: string;
     seed: number;
 };
@@ -161,7 +171,7 @@ const segments = computed((): Segment[] => {
                 y: cursorY,
                 width: barWidth.value,
                 height,
-                fillClass: vendor.fillClass,
+                iconSrc: vendor.iconSrc,
                 title: `${point.label}: ${vendor.label} ${formatPence(pence)}`,
                 seed: index * 10 + vendorIndex + 1,
             });
@@ -264,12 +274,11 @@ const xLabels = computed(() => {
                 :y="segment.y"
                 :width="segment.width"
                 :height="segment.height"
-                variant="dots"
+                :image-src="segment.iconSrc"
                 :animate="false"
                 :seed="segment.seed"
-                :step="stippleStep"
-                :radius="stippleRadius"
-                :fill-class="segment.fillClass"
+                :step="logoStep"
+                :radius="logoSize"
                 :title="segment.title"
             />
 

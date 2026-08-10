@@ -621,6 +621,12 @@
         filter: none;
     }
 
+    /* Dense mini vendor marks inside stacked spend bars (not colour stipple dots) */
+    .snitch-vendor-chart-logo {
+        opacity: 0.9;
+        pointer-events: none;
+    }
+
     /*
      * Shared image shell: reserves space (aspect / size) so lazy loads and
      * broken CDN avatars do not collapse list rows or feed cells.

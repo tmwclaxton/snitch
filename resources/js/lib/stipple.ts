@@ -12,7 +12,16 @@ export type StippleHex = {
     points: string;
 };
 
-export type StippleMark = StippleCircle | StippleHex;
+export type StippleLogo = {
+    kind: 'logo';
+    cx: number;
+    cy: number;
+    size: number;
+    /** Degrees; small print wobble for risograph feel. */
+    rotate: number;
+};
+
+export type StippleMark = StippleCircle | StippleHex | StippleLogo;
 
 export type StippleOptions = {
     x: number;
@@ -24,6 +33,19 @@ export type StippleOptions = {
     step?: number;
     /** Dot / hex radius in SVG units. */
     radius?: number;
+    /** Deterministic jitter seed (same inputs → same marks). */
+    seed?: number;
+};
+
+export type LogoStippleOptions = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    /** Logo edge length in SVG units. */
+    size?: number;
+    /** Lattice spacing in SVG units. */
+    step?: number;
     /** Deterministic jitter seed (same inputs → same marks). */
     seed?: number;
 };
@@ -57,6 +79,74 @@ export function buildStippleMarks(options: StippleOptions): StippleMark[] {
     const step = options.step ?? 3.6;
 
     return buildDotMarks(x, y, width, height, radius, step, seed);
+}
+
+/**
+ * Dense lattice of mini logo placements for vendor-identity bar fills
+ * (billing spend chart). Same height encoding as stipple dots; marks are logos.
+ */
+export function buildLogoMarks(options: LogoStippleOptions): StippleLogo[] {
+    const { x, y, width, height, seed = 0 } = options;
+
+    if (width <= 0 || height <= 0) {
+        return [];
+    }
+
+    const size = options.size ?? Math.min(8.5, Math.max(5.5, width * 0.55));
+    const step = options.step ?? size * 1.12;
+    const half = size / 2;
+    const inset = half * 0.2;
+    const left = x + inset;
+    const right = x + width - inset;
+    const top = y + inset;
+    const bottom = y + height - inset;
+    const marks: StippleLogo[] = [];
+
+    if (right <= left || bottom <= top) {
+        return [
+            {
+                kind: 'logo',
+                cx: x + width / 2,
+                cy: y + height / 2,
+                size: Math.min(size, width, height),
+                rotate: jitter(seed, 0, 0, 5) * 6,
+            },
+        ];
+    }
+
+    let row = 0;
+
+    for (let cy = top + step / 2; cy <= bottom; cy += step, row += 1) {
+        const rowOffset = row % 2 === 0 ? 0 : step / 2;
+        let col = 0;
+
+        for (let cx = left + step / 2 + rowOffset; cx <= right; cx += step, col += 1) {
+            const jx = jitter(seed, row, col, 1) * half * 0.22;
+            const jy = jitter(seed, row, col, 2) * half * 0.22;
+            const px = clamp(cx + jx, left, right);
+            const py = clamp(cy + jy, top, bottom);
+
+            marks.push({
+                kind: 'logo',
+                cx: px,
+                cy: py,
+                size,
+                rotate: jitter(seed, row, col, 5) * 8,
+            });
+        }
+    }
+
+    return marks.length > 0
+        ? marks
+        : [
+              {
+                  kind: 'logo',
+                  cx: x + width / 2,
+                  cy: y + height / 2,
+                  size: Math.min(size, width, height),
+                  rotate: jitter(seed, 0, 0, 5) * 6,
+              },
+          ];
 }
 
 function buildDotMarks(
