@@ -32,7 +32,8 @@ return [
     /*
     | Explore mix: quality-biased shuffle so the catalogue rotates among strong
     | reels instead of always leading with the same top score, without surfacing
-    | weak junk on page one. Seed buckets keep pagination stable for a few hours.
+    | weak junk on page one. Bare /explore mints a new seed each visit; any query
+    | reuses explore_seed or falls back to the hour bucket for stable filters/pages.
     */
     'explore' => [
         'mix_enabled' => filter_var(env('SNITCH_EXPLORE_MIX_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
@@ -41,7 +42,8 @@ return [
         // Higher = greedier toward top scores within the strong set.
         'weight_exponent' => (float) env('SNITCH_EXPLORE_WEIGHT_EXPONENT', 1.5),
         // 0 = near-pure score order; 1 = more rotation among strong peers.
-        'jitter' => (float) env('SNITCH_EXPLORE_JITTER', 0.55),
+        'jitter' => (float) env('SNITCH_EXPLORE_JITTER', 0.65),
+        // Used when the request has query params but no explore_seed.
         'seed_bucket_hours' => (int) env('SNITCH_EXPLORE_SEED_BUCKET_HOURS', 6),
         'max_candidates' => (int) env('SNITCH_EXPLORE_MAX_CANDIDATES', 500),
     ],

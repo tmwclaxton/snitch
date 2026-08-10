@@ -71,7 +71,13 @@ class ExploreController extends Controller
 
         $semanticQuery = $customTag ?? $queryText;
         $posts = null;
-        $mixSeed = $this->exploreMix->seedFor((int) $user->id);
+        // Bare /explore: new seed every reload. Any query (filters, page, seed):
+        // reuse explore_seed when present, otherwise the 6h bucket seed.
+        $mixSeed = $this->exploreMix->resolveSeed(
+            $request->query('explore_seed'),
+            (int) $user->id,
+            hasQueryParams: count($request->query()) > 0,
+        );
 
         if ($semanticQuery !== null) {
             $posts = $this->paginateSemanticOrFallback(
@@ -134,6 +140,7 @@ class ExploreController extends Controller
                 'topics' => $topics,
                 'visual_crafts' => $visualCrafts,
                 'platform' => $platform,
+                'explore_seed' => $mixSeed,
             ],
             'terms' => [
                 'hook_type' => $terms->get('hook_type', []),
@@ -164,10 +171,12 @@ class ExploreController extends Controller
         $rankedIds = $this->exploreMix->mix($scored, $mixSeed);
 
         if ($rankedIds === []) {
-            return $query->paginate(24)->withQueryString();
+            return $query->paginate(24)->appends(
+                array_merge($request->query(), ['explore_seed' => $mixSeed]),
+            );
         }
 
-        return $this->paginateByIds($request, $rankedIds);
+        return $this->paginateByIds($request, $rankedIds, $mixSeed);
     }
 
     /**
@@ -200,7 +209,7 @@ class ExploreController extends Controller
             if ($scored !== []) {
                 $rankedIds = $this->exploreMix->mixSemantic($scored, $exactIds, $mixSeed);
 
-                return $this->paginateByIds($request, $rankedIds);
+                return $this->paginateByIds($request, $rankedIds, $mixSeed);
             }
         }
 
@@ -273,7 +282,7 @@ class ExploreController extends Controller
      * @param  list<int>  $rankedIds
      * @return LengthAwarePaginator<int, Post>
      */
-    private function paginateByIds(Request $request, array $rankedIds): LengthAwarePaginator
+    private function paginateByIds(Request $request, array $rankedIds, int $mixSeed): LengthAwarePaginator
     {
         $perPage = 24;
         $page = max(1, (int) $request->integer('page', 1));
@@ -289,6 +298,8 @@ class ExploreController extends Controller
                 ->sortBy(fn (Post $post): int => (int) array_search($post->id, $slice, true))
                 ->values();
 
+        $query = array_merge($request->query(), ['explore_seed' => $mixSeed]);
+
         return (new LengthAwarePaginator(
             $posts,
             $total,
@@ -296,9 +307,9 @@ class ExploreController extends Controller
             $page,
             [
                 'path' => $request->url(),
-                'query' => $request->query(),
+                'query' => $query,
             ],
-        ))->withQueryString();
+        ))->appends($query);
     }
 
     /**

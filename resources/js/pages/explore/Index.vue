@@ -60,6 +60,7 @@ const props = defineProps<{
         topics: string[];
         visual_crafts: string[];
         platform: string | null;
+        explore_seed: number;
     };
     terms: {
         hook_type: AnalysisTermOption[];
@@ -253,6 +254,7 @@ function visitFilters(next: {
     topics: string[];
     visual_crafts: string[];
     platform: string | null;
+    explore_seed: number;
 }): void {
     router.get(
         exploreIndex.url(),
@@ -263,6 +265,7 @@ function visitFilters(next: {
             topics: next.topics.length > 0 ? next.topics : undefined,
             visual_crafts: next.visual_crafts.length > 0 ? next.visual_crafts : undefined,
             platform: next.platform,
+            explore_seed: next.explore_seed,
         },
         {
             preserveState: true,
@@ -278,6 +281,7 @@ function currentFilters(overrides: Partial<{
     topics: string[];
     visual_crafts: string[];
     platform: string | null;
+    explore_seed: number;
 }> = {}) {
     return {
         q: props.filters.q,
@@ -286,6 +290,7 @@ function currentFilters(overrides: Partial<{
         topics: props.filters.topics,
         visual_crafts: props.filters.visual_crafts,
         platform: props.filters.platform,
+        explore_seed: props.filters.explore_seed,
         ...overrides,
     };
 }
@@ -320,6 +325,7 @@ function clearFilters(): void {
         topics: [],
         visual_crafts: [],
         platform: null,
+        explore_seed: props.filters.explore_seed,
     });
 }
 

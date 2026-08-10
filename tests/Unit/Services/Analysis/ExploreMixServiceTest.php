@@ -74,6 +74,28 @@ class ExploreMixServiceTest extends TestCase
     }
 
     #[Test]
+    public function mix_is_stable_for_the_same_seed(): void
+    {
+        config([
+            'snitch.explore.mix_enabled' => true,
+            'snitch.explore.min_quality_ratio' => 0.2,
+            'snitch.explore.weight_exponent' => 1.4,
+            'snitch.explore.jitter' => 0.7,
+        ]);
+
+        $mix = new ExploreMixService;
+        $scores = [
+            1 => 95.0,
+            2 => 90.0,
+            3 => 85.0,
+            4 => 80.0,
+            5 => 20.0,
+        ];
+
+        $this->assertSame($mix->mix($scores, seed: 12345), $mix->mix($scores, seed: 12345));
+    }
+
+    #[Test]
     public function mix_semantic_pins_exact_matches_ahead_of_related(): void
     {
         config([
@@ -94,6 +116,47 @@ class ExploreMixServiceTest extends TestCase
         $this->assertSame(1, $ordered[0]);
         $this->assertContains(2, $ordered);
         $this->assertContains(3, $ordered);
+    }
+
+    #[Test]
+    public function resolve_seed_reuses_explicit_query_value(): void
+    {
+        $mix = new ExploreMixService;
+
+        $this->assertSame(42, $mix->resolveSeed('42', userId: 9, hasQueryParams: true));
+        $this->assertSame(42, $mix->resolveSeed(42, userId: 9, hasQueryParams: false));
+    }
+
+    #[Test]
+    public function resolve_seed_mints_fresh_seed_on_bare_visit(): void
+    {
+        $mix = new ExploreMixService;
+
+        $a = $mix->resolveSeed(null, userId: 9, hasQueryParams: false, entropy: 100);
+        $b = $mix->resolveSeed(null, userId: 9, hasQueryParams: false, entropy: 101);
+        $again = $mix->resolveSeed(null, userId: 9, hasQueryParams: false, entropy: 100);
+
+        $this->assertNotSame($a, $b);
+        $this->assertSame($a, $again);
+        $this->assertSame($a, $mix->freshSeed(9, 100));
+        $this->assertNotSame($a, $mix->seedFor(9, 1_700_000_000));
+    }
+
+    #[Test]
+    public function resolve_seed_uses_bucket_when_query_present_without_seed(): void
+    {
+        config(['snitch.explore.seed_bucket_hours' => 6]);
+
+        $mix = new ExploreMixService;
+        $t0 = 1_700_000_000;
+
+        $bucket = $mix->resolveSeed(null, userId: 9, hasQueryParams: true, now: $t0);
+        $same = $mix->resolveSeed(null, userId: 9, hasQueryParams: true, now: $t0 + 60);
+        $later = $mix->resolveSeed(null, userId: 9, hasQueryParams: true, now: $t0 + (6 * 3600) + 1);
+
+        $this->assertSame($mix->seedFor(9, $t0), $bucket);
+        $this->assertSame($bucket, $same);
+        $this->assertNotSame($bucket, $later);
     }
 
     #[Test]
