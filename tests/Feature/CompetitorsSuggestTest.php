@@ -461,6 +461,7 @@ class CompetitorsSuggestTest extends TestCase
 
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
+        $this->enablePlatformBilling($user);
 
         $this->actingAs($user)
             ->post(route('competitors.confirm-suggestions'), [
