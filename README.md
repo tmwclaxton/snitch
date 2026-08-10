@@ -414,7 +414,7 @@ Visit [http://localhost:8000](http://localhost:8000) (or your Sail URL).
 | `vendor/bin/pint --dirty` | Format dirty PHP files |
 | `npm run lint:check` | ESLint |
 | `npm run types:check` | TypeScript |
-| `php artisan snitch:sync-accounts` | Enqueue due tracked-account syncs |
+| `php artisan snitch:sync-accounts` | Ops only: enqueue syncs past min interval (not user-scheduled) |
 | `php artisan snitch:backfill-analytics` | Rebuild public analytics counters |
 | `php artisan snitch:backfill-analysis-terms` | Infer explore catalogue terms |
 | `php artisan snitch:probe-apify` | Live Apify adapter probe (needs live flags) |

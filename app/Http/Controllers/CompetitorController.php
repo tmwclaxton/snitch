@@ -123,20 +123,7 @@ class CompetitorController extends Controller
         $suggestId = (string) Str::uuid();
         $userId = $request->user()->id;
 
-        SuggestCompetitorsJob::clearLatest($userId);
-
-        Cache::put(SuggestCompetitorsJob::cacheKeyFor($userId, $suggestId), [
-            'status' => 'pending',
-            'suggestions' => null,
-            'error' => null,
-        ], now()->addHours(2));
-
-        Cache::put(
-            SuggestCompetitorsJob::activeCacheKeyFor($userId),
-            $suggestId,
-            now()->addHours(2),
-        );
-
+        SuggestCompetitorsJob::beginRun($userId, $suggestId);
         SuggestCompetitorsJob::dispatch($userId, $suggestId);
 
         return response()->json([
@@ -289,11 +276,6 @@ class CompetitorController extends Controller
             ->get()
             ->each(function (TrackedAccount $account): void {
                 $account->setAttribute('in_quota', true);
-                $account->setAttribute('sync_due', $account->isDueForSync());
-                $account->setAttribute(
-                    'next_sync_at',
-                    $account->nextSyncAt()?->toIso8601String(),
-                );
             });
 
         $latest = $this->latestSuggestPayload($request->user()->id);
@@ -363,6 +345,12 @@ class CompetitorController extends Controller
     private function activeSuggestRun(int $userId): ?array
     {
         $suggestId = Cache::get(SuggestCompetitorsJob::activeCacheKeyFor($userId));
+        $fromActivePointer = is_string($suggestId) && Str::isUuid($suggestId);
+
+        // Older MCP runs wrote latest without the active pointer; still surface those in the UI.
+        if (! $fromActivePointer) {
+            $suggestId = Cache::get(SuggestCompetitorsJob::latestCacheKeyFor($userId));
+        }
 
         if (! is_string($suggestId) || ! Str::isUuid($suggestId)) {
             return null;
@@ -371,22 +359,27 @@ class CompetitorController extends Controller
         $payload = Cache::get(SuggestCompetitorsJob::cacheKeyFor($userId, $suggestId));
 
         if (! is_array($payload)) {
-            SuggestCompetitorsJob::clearActive($userId, $suggestId);
+            if ($fromActivePointer) {
+                SuggestCompetitorsJob::clearActive($userId, $suggestId);
+            }
 
             return null;
         }
 
         $status = $payload['status'] ?? 'pending';
 
-        if (! in_array($status, ['pending', 'processing'], true)) {
-            SuggestCompetitorsJob::clearActive($userId, $suggestId);
+        // queued is a legacy MCP seed status; treat like pending for the web poll UI.
+        if (! in_array($status, ['pending', 'processing', 'queued'], true)) {
+            if ($fromActivePointer) {
+                SuggestCompetitorsJob::clearActive($userId, $suggestId);
+            }
 
             return null;
         }
 
         return [
             'id' => $suggestId,
-            'status' => $status,
+            'status' => $status === 'queued' ? 'pending' : $status,
         ];
     }
 

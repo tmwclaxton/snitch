@@ -170,7 +170,7 @@ class CompetitorsTest extends TestCase
         $this->assertSame('success', $account->fresh()?->last_sync_status);
     }
 
-    public function test_index_exposes_sync_schedule_and_controls(): void
+    public function test_index_exposes_sync_status_and_controls(): void
     {
         config(['snitch.sync.min_interval_days' => 7]);
 
@@ -191,16 +191,15 @@ class CompetitorsTest extends TestCase
                 ->has('accounts', 1)
                 ->where('accounts.0.handle', 'rivalbakery')
                 ->where('accounts.0.last_sync_status', 'success')
-                ->where('accounts.0.sync_due', false)
-                ->where(
-                    'accounts.0.next_sync_at',
-                    $syncedAt->copy()->addDays(7)->toIso8601String(),
-                )
+                ->where('accounts.0.last_synced_at', $syncedAt->toJSON())
+                ->missing('accounts.0.next_sync_at')
+                ->missing('accounts.0.sync_due')
             );
 
         $indexVue = file_get_contents(resource_path('js/pages/competitors/Index.vue'));
         $this->assertIsString($indexVue);
-        $this->assertStringContainsString('Auto sync', $indexVue);
+        $this->assertStringContainsString('Sync status', $indexVue);
+        $this->assertStringContainsString('accountSyncStatusLabel', $indexVue);
         $this->assertStringContainsString('syncAccount', $indexVue);
         $this->assertStringContainsString('isAccountSyncing', $indexVue);
         $this->assertStringContainsString('Sync in progress', $indexVue);
@@ -208,6 +207,8 @@ class CompetitorsTest extends TestCase
         $this->assertStringContainsString('No recent reels found', $indexVue);
         $this->assertStringContainsString('RemoveCompetitorModal', $indexVue);
         $this->assertStringContainsString('askRemove', $indexVue);
+        $this->assertStringNotContainsString('Auto sync', $indexVue);
+        $this->assertStringNotContainsString('nextSyncLabel', $indexVue);
         $this->assertStringNotContainsString('Sync ok', $indexVue);
         $this->assertStringNotContainsString('not synced', $indexVue);
     }
@@ -227,7 +228,6 @@ class CompetitorsTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('competitors/Index')
                 ->where('accounts.0.last_sync_status', 'running')
-                ->where('accounts.0.sync_due', false)
             );
     }
 

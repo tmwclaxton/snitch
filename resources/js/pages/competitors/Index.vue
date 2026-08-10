@@ -24,7 +24,7 @@ import PlatformSelect from '@/components/PlatformSelect.vue';
 import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
-import { lastSyncedLabel, nextSyncLabel } from '@/lib/syncSchedule';
+import { lastSyncedLabel } from '@/lib/syncSchedule';
 import { useToastStore } from '@/stores/toastStore';
 import type { SubscriptionSummary } from '@/types/global';
 
@@ -38,8 +38,6 @@ type Account = {
     posts_count?: number;
     last_synced_at: string | null;
     last_sync_status?: string | null;
-    sync_due?: boolean;
-    next_sync_at?: string | null;
     in_quota?: boolean;
 };
 
@@ -105,9 +103,7 @@ const suggestMessage = ref(props.suggestError ?? '');
 const removeDialogOpen = ref(false);
 const accountToRemove = ref<Account | null>(null);
 const syncingIds = ref<Record<number, boolean>>({});
-const nowMs = ref(Date.now());
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
-let countdownTimer: ReturnType<typeof setInterval> | null = null;
 let syncPollTimer: ReturnType<typeof setInterval> | null = null;
 
 const hasRunningSync = computed(() =>
@@ -267,10 +263,6 @@ watch(hasRunningSync, () => {
 }, { immediate: true });
 
 onMounted(() => {
-    countdownTimer = setInterval(() => {
-        nowMs.value = Date.now();
-    }, 30_000);
-
     if (localSuggestions.value.length > 0 && Object.keys(selected.value).length === 0) {
         selectAll();
         suggestMessage.value =
@@ -295,11 +287,6 @@ onMounted(() => {
 onUnmounted(() => {
     clearPoll();
     clearSyncPoll();
-
-    if (countdownTimer !== null) {
-        clearInterval(countdownTimer);
-        countdownTimer = null;
-    }
 });
 
 function csrfToken(): string {
@@ -473,16 +460,16 @@ function askRemove(account: Account): void {
     removeDialogOpen.value = true;
 }
 
-function accountSyncDue(account: Account): boolean {
-    return account.sync_due ?? nextSyncLabel(account, nowMs.value) === 'Due now';
-}
-
-function accountNextSyncLabel(account: Account): string {
+function accountSyncStatusLabel(account: Account): string {
     if (isAccountSyncing(account)) {
         return 'Syncing…';
     }
 
-    return nextSyncLabel(account, nowMs.value);
+    if (account.last_synced_at) {
+        return lastSyncedLabel(account.last_synced_at) ?? 'Manual';
+    }
+
+    return 'Manual';
 }
 
 function isAccountSyncing(account: Account): boolean {
@@ -840,10 +827,7 @@ function syncButtonTitle(account: Account): string {
                                     <span class="snitch-ink-label">Posts</span>
                                 </th>
                                 <th class="hidden px-2 py-2 md:table-cell md:w-[8.5rem]">
-                                    <span class="snitch-ink-label">Auto sync</span>
-                                </th>
-                                <th class="hidden px-2 py-2 lg:table-cell lg:w-[8.5rem]">
-                                    <span class="snitch-ink-label">Last synced</span>
+                                    <span class="snitch-ink-label">Sync status</span>
                                 </th>
                                 <th class="w-auto px-1.5 py-2 text-right sm:px-2">
                                     <span class="sr-only">Actions</span>
@@ -939,7 +923,7 @@ function syncButtonTitle(account: Account): string {
                                                 v-else
                                                 class="mt-0.5 text-[11px] text-snitch-ink/55 md:hidden"
                                             >
-                                                Auto sync {{ accountNextSyncLabel(account) }}
+                                                Sync {{ accountSyncStatusLabel(account) }}
                                             </p>
                                         </div>
                                     </Link>
@@ -953,9 +937,7 @@ function syncButtonTitle(account: Account): string {
                                         :class="
                                             isAccountSyncing(account)
                                                 ? 'text-snitch-ink'
-                                                : accountSyncDue(account)
-                                                  ? 'text-snitch-ink'
-                                                  : 'text-snitch-ink/55'
+                                                : 'text-snitch-ink/55'
                                         "
                                         :aria-live="isAccountSyncing(account) ? 'polite' : undefined"
                                     >
@@ -964,15 +946,8 @@ function syncButtonTitle(account: Account): string {
                                             class="mr-1.5 inline-block size-1.5 animate-pulse rounded-full bg-snitch-spot align-middle"
                                             aria-hidden="true"
                                         />
-                                        {{ accountNextSyncLabel(account) }}
+                                        {{ accountSyncStatusLabel(account) }}
                                     </span>
-                                </td>
-                                <td class="hidden px-2 py-2.5 align-middle text-xs text-snitch-ink/55 lg:table-cell">
-                                    {{
-                                        isAccountSyncing(account)
-                                            ? 'In progress'
-                                            : lastSyncedLabel(account.last_synced_at) || '-'
-                                    }}
                                 </td>
                                 <td class="px-1.5 py-2.5 align-middle text-right sm:px-2">
                                     <div class="flex flex-nowrap justify-end gap-1 sm:gap-1.5">

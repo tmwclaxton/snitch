@@ -11,7 +11,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | bootstrap/app.php, app/Providers/AppServiceProvider.php, app/Services/Apify/**, app/Jobs/SyncTrackedAccountJob.php, app/Support/ClientIp.php, app/Support/SafeExceptionMessage.php | .ai/rules/security-proxies-secrets.md |
 | app/Console/Commands/** | .ai/rules/commands.md |
 | app/Services/SnitchAnalyticsService.php, app/Support/AnalyticsDateRange.php, app/Http/Controllers/AnalyticsController.php, app/Http/Requests/AnalyticsPeriodRequest.php, app/Console/Commands/BackfillAnalyticsCommand.php, app/Models/SnitchDailyStat.php, app/Models/SnitchDailyPlatformStat.php, resources/js/pages/marketing/Analytics.vue, resources/js/components/analytics/** | .ai/rules/analytics.md |
-| app/Services/Competitors/** | .ai/rules/competitors.md |
+| app/Services/Competitors/**, resources/js/pages/competitors/**, app/Http/Controllers/CompetitorController.php | .ai/rules/competitors.md |
 | app/Services/Influencers/**, app/Http/Controllers/InfluencerController.php, app/Http/Requests/Influencers/**, app/Jobs/FindInfluencersJob.php, app/Console/Commands/ProbeInfluencerFindCommand.php, app/Enums/TrackedAccountKind.php, resources/js/pages/influencers/**, tests/Feature/InfluencersFindTest.php, tests/Unit/Services/Influencers/** | .ai/rules/influencers.md |
 | config/snitch.php | .ai/rules/config.md |
 | app/Mail/**, app/Http/Controllers/Marketing/ContactController.php, app/Http/Requests/Marketing/**, resources/js/pages/marketing/Contact.vue, config/mail.php, config/services.php | .ai/rules/mail.md |

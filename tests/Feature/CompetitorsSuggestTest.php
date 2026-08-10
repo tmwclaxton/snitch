@@ -631,13 +631,13 @@ class CompetitorsSuggestTest extends TestCase
         $this->assertStringContainsString('competitorShow.url', $page);
         $this->assertStringContainsString('@click="askRemove(account)"', $page);
         $this->assertStringContainsString('RemoveCompetitorModal', $page);
-        $this->assertStringContainsString('Last synced', $page);
-        $this->assertStringContainsString('Auto sync', $page);
+        $this->assertStringContainsString('Sync status', $page);
+        $this->assertStringContainsString('accountSyncStatusLabel', $page);
+        $this->assertStringNotContainsString('Auto sync', $page);
         $this->assertStringContainsString('<table', $page);
         $this->assertStringContainsString('min-w-0 overflow-x-auto', $page);
         $this->assertStringContainsString('sm:table-cell', $page);
         $this->assertStringContainsString('md:table-cell', $page);
-        $this->assertStringContainsString('lg:table-cell', $page);
         $this->assertStringNotContainsString('min-w-[48rem]', $page);
         $this->assertStringNotContainsString('min-w-[36rem]', $page);
         $this->assertStringNotContainsString('snitch-cutout-platform-mark', $page);
