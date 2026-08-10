@@ -293,11 +293,13 @@ class InfluencerController extends Controller
             : [];
         $selectedPlatform = is_string($runPlatforms[0] ?? null) ? $runPlatforms[0] : $defaultPlatform;
 
+        $rawLanguage = is_array($run['filters'] ?? null)
+            ? ($run['filters']['language'] ?? null)
+            : null;
+
         $filters = [
             'platform' => $selectedPlatform,
-            'language' => is_array($run['filters'] ?? null)
-                ? ($run['filters']['language'] ?? 'English')
-                : 'English',
+            'language' => $this->normalizeLanguageFilter($rawLanguage),
             'min_followers' => is_array($run['filters'] ?? null)
                 ? ($run['filters']['min_followers'] ?? null)
                 : null,
@@ -343,6 +345,28 @@ class InfluencerController extends Controller
                 'can_upgrade' => $summary['can_upgrade'],
             ],
         ];
+    }
+
+    /**
+     * Map stored / free-text language values onto the influencers UI select options.
+     * Defaults to English so the Language control always has a real selection.
+     */
+    private function normalizeLanguageFilter(mixed $language): string
+    {
+        if (! is_string($language) || trim($language) === '') {
+            return 'English';
+        }
+
+        $normalized = strtolower(trim($language));
+
+        return match ($normalized) {
+            'english', 'en', 'eng', 'en-gb', 'en-us', 'en_gb', 'en_us' => 'English',
+            'spanish', 'es', 'spa', 'es-es', 'es_es' => 'Spanish',
+            'french', 'fr', 'fre', 'fra', 'fr-fr', 'fr_fr' => 'French',
+            'german', 'de', 'ger', 'deu', 'de-de', 'de_de' => 'German',
+            'any' => 'any',
+            default => 'English',
+        };
     }
 
     private function canStartSearch(int $userId): bool

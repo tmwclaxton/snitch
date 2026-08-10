@@ -95,9 +95,45 @@ defineOptions({
 
 const toast = useToastStore();
 
+const languageOptions = [
+    { value: 'English', label: 'English' },
+    { value: 'Spanish', label: 'Spanish' },
+    { value: 'French', label: 'French' },
+    { value: 'German', label: 'German' },
+    { value: 'any', label: 'Any' },
+];
+
+function normalizeLanguage(value: string | null | undefined): string {
+    const raw = (value ?? '').trim().toLowerCase();
+
+    if (raw === '' || raw === 'en' || raw === 'eng' || raw === 'english' || raw === 'en-gb' || raw === 'en-us' || raw === 'en_gb' || raw === 'en_us') {
+        return 'English';
+    }
+
+    if (raw === 'es' || raw === 'spa' || raw === 'spanish' || raw === 'es-es' || raw === 'es_es') {
+        return 'Spanish';
+    }
+
+    if (raw === 'fr' || raw === 'fre' || raw === 'fra' || raw === 'french' || raw === 'fr-fr' || raw === 'fr_fr') {
+        return 'French';
+    }
+
+    if (raw === 'de' || raw === 'ger' || raw === 'deu' || raw === 'german' || raw === 'de-de' || raw === 'de_de') {
+        return 'German';
+    }
+
+    if (raw === 'any') {
+        return 'any';
+    }
+
+    const match = languageOptions.find((option) => option.value.toLowerCase() === raw);
+
+    return match?.value ?? 'English';
+}
+
 const form = useForm({
     platform: props.filters.platform || props.platforms[0] || 'instagram',
-    language: props.filters.language ?? 'English',
+    language: normalizeLanguage(props.filters.language),
     min_followers: props.filters.min_followers as number | null,
     max_followers: props.filters.max_followers as number | null,
     brief: props.filters.brief ?? '',
@@ -145,14 +181,6 @@ const thinFailedHint = computed(() => {
         !searching.value
     );
 });
-
-const languageOptions = [
-    { value: 'English', label: 'English' },
-    { value: 'Spanish', label: 'Spanish' },
-    { value: 'French', label: 'French' },
-    { value: 'German', label: 'German' },
-    { value: 'any', label: 'Any' },
-];
 
 function suggestionKey(item: Suggestion): string {
     return `${item.platform}:${item.handle}`;
