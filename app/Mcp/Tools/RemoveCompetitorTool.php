@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('remove_competitor')]
-#[Description('Remove a tracked competitor account.')]
+#[Description('Remove a tracked competitor account. Pass tracked_account_id (aliases: competitor_id, id) from list_competitors.')]
 class RemoveCompetitorTool extends Tool
 {
     public function handle(Request $request): Response
@@ -25,13 +25,21 @@ class RemoveCompetitorTool extends Tool
         }
 
         $data = $request->validate([
-            'tracked_account_id' => ['required', 'integer'],
+            'tracked_account_id' => ['nullable', 'integer'],
+            'competitor_id' => ['nullable', 'integer'],
+            'id' => ['nullable', 'integer'],
         ]);
+
+        $trackedAccountId = $data['tracked_account_id'] ?? $data['competitor_id'] ?? $data['id'] ?? null;
+
+        if ($trackedAccountId === null) {
+            return Response::error('tracked_account_id is required (aliases: competitor_id, id).');
+        }
 
         $account = TrackedAccount::query()
             ->where('user_id', $user->id)
             ->where('kind', TrackedAccountKind::Competitor)
-            ->whereKey($data['tracked_account_id'])
+            ->whereKey($trackedAccountId)
             ->first();
 
         if ($account === null) {
@@ -40,14 +48,22 @@ class RemoveCompetitorTool extends Tool
 
         $account->delete();
 
-        return Response::json(['deleted' => true, 'tracked_account_id' => $data['tracked_account_id']]);
+        return Response::json(['deleted' => true, 'tracked_account_id' => (int) $trackedAccountId]);
     }
 
     /** @return array<string, Type> */
     public function schema(JsonSchema $schema): array
     {
         return [
-            'tracked_account_id' => $schema->integer()->required(),
+            'tracked_account_id' => $schema->integer()
+                ->description('Tracked competitor id from list_competitors.id')
+                ->nullable(),
+            'competitor_id' => $schema->integer()
+                ->description('Alias for tracked_account_id')
+                ->nullable(),
+            'id' => $schema->integer()
+                ->description('Alias for tracked_account_id (same as list_competitors.id)')
+                ->nullable(),
         ];
     }
 }

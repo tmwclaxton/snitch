@@ -2,14 +2,19 @@
 
 namespace Tests\Feature\Mcp;
 
+use App\Enums\TrackedAccountKind;
 use App\Mcp\Servers\SnitchServer;
 use App\Mcp\Tools\BillingPortalTool;
 use App\Mcp\Tools\ExplorePostsTool;
 use App\Mcp\Tools\RemoveCompetitorTool;
+use App\Mcp\Tools\SyncCompetitorTool;
 use App\Mcp\Tools\UpdateWinnerRulesTool;
+use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Models\WinnerRule;
+use App\Services\Billing\UsageBillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -56,6 +61,39 @@ class SnitchServerToolsTest extends TestCase
         ]);
 
         $response->assertHasErrors();
+    }
+
+    public function test_remove_competitor_accepts_competitor_id_alias(): void
+    {
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->create([
+            'user_id' => $user->id,
+            'kind' => TrackedAccountKind::Competitor,
+        ]);
+        Sanctum::actingAs($user);
+
+        SnitchServer::tool(RemoveCompetitorTool::class, [
+            'competitor_id' => $account->id,
+        ])->assertOk()->assertSee('"deleted":true');
+
+        $this->assertDatabaseMissing('tracked_accounts', ['id' => $account->id]);
+    }
+
+    public function test_sync_competitor_accepts_id_alias(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        app(UsageBillingService::class)->creditFromTopUp($user, 500, 'topup:mcp-sync-alias');
+        $account = TrackedAccount::factory()->create([
+            'user_id' => $user->id,
+            'kind' => TrackedAccountKind::Competitor,
+        ]);
+        Sanctum::actingAs($user);
+
+        SnitchServer::tool(SyncCompetitorTool::class, [
+            'id' => $account->id,
+        ])->assertOk()->assertSee('"queued":true');
     }
 
     public function test_billing_portal_tool_requires_stripe_customer(): void

@@ -16,7 +16,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('sync_competitor')]
-#[Description('Queue a sync for a tracked account. Requires a credit balance above 20p; usage is billed when the job runs.')]
+#[Description('Queue a sync for a tracked account. Pass tracked_account_id (aliases: competitor_id, id) from list_competitors. Requires a credit balance above 20p; usage is billed when the job runs.')]
 class SyncCompetitorTool extends Tool
 {
     public function handle(Request $request, UsageBillingService $billing): Response
@@ -27,12 +27,20 @@ class SyncCompetitorTool extends Tool
         }
 
         $data = $request->validate([
-            'tracked_account_id' => ['required', 'integer'],
+            'tracked_account_id' => ['nullable', 'integer'],
+            'competitor_id' => ['nullable', 'integer'],
+            'id' => ['nullable', 'integer'],
         ]);
+
+        $trackedAccountId = $data['tracked_account_id'] ?? $data['competitor_id'] ?? $data['id'] ?? null;
+
+        if ($trackedAccountId === null) {
+            return Response::error('tracked_account_id is required (aliases: competitor_id, id).');
+        }
 
         $account = TrackedAccount::query()
             ->where('user_id', $user->id)
-            ->whereKey($data['tracked_account_id'])
+            ->whereKey($trackedAccountId)
             ->first();
 
         if ($account === null) {
@@ -55,7 +63,15 @@ class SyncCompetitorTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'tracked_account_id' => $schema->integer()->required(),
+            'tracked_account_id' => $schema->integer()
+                ->description('Tracked account id from list_competitors.id')
+                ->nullable(),
+            'competitor_id' => $schema->integer()
+                ->description('Alias for tracked_account_id')
+                ->nullable(),
+            'id' => $schema->integer()
+                ->description('Alias for tracked_account_id (same as list_competitors.id)')
+                ->nullable(),
         ];
     }
 }
