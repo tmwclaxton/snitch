@@ -30,7 +30,7 @@ class TikHubBillingTest extends TestCase
     {
         config([
             'billing.platform_stripe_price' => 'price_platform_test',
-            'billing.price_multiplier' => 1.4,
+            'billing.price_multiplier' => 1.3,
             'billing.usd_to_gbp' => 1.0,
         ]);
 
@@ -75,7 +75,7 @@ class TikHubBillingTest extends TestCase
             'action' => 'sync.account',
             'vendor' => BillingVendor::Apify,
             'cogs_usd' => 50,
-            'multiplier' => 1.4,
+            'multiplier' => 1.3,
             'amount_pence' => -100,
             'balance_after_pence' => 1000,
             'meta' => [],

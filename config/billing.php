@@ -31,9 +31,10 @@ return [
     'min_run_balance_pence' => (int) env('SNITCH_MIN_RUN_BALANCE_PENCE', 20),
 
     /*
-    | Internal price multiplier on vendor COGS. Never surface this to users.
+    | Internal price multiplier on vendor COGS (1.3 = 30% over provider).
+    | Never surface this ratio or markup language to users / MCP copy.
     */
-    'price_multiplier' => (float) env('SNITCH_BILLING_PRICE_MULTIPLIER', 1.4),
+    'price_multiplier' => (float) env('SNITCH_BILLING_PRICE_MULTIPLIER', 1.3),
 
     /*
     | Convert vendor USD COGS to GBP before applying the multiplier.
@@ -75,11 +76,13 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Vendor rate cards (USD COGS estimates / floors)
+    | Vendor rate cards (USD COGS estimates when measured usage is missing)
     |--------------------------------------------------------------------------
     |
-    | Apify prefers exact usageTotalUsd from the run API; floors apply when null.
-    | NanoGPT / Firecrawl use these unit costs × measured usage.
+    | Prefer exact upstream usage (Apify usageTotalUsd, NanoGPT tokens, etc.).
+    | These floors are COGS stand-ins only when that data is unavailable - not
+    | minimum user charges. Charged price is always COGS × price_multiplier
+    | rounded half-up to 0.01p (£0.0001). No min_charge / 1p ceil.
     |
     */
 
@@ -111,14 +114,11 @@ return [
                     'output_per_m_usd' => 0.0,
                 ],
             ],
-            // Ledger minimum for NanoGPT only (tenths of a penny). Other vendors stay at 1p.
-            'min_charge_pence' => 0.2,
-            // Typical call floors when token counts are unknown.
-            // video_analysis / chat ~0.2p after usd_to_gbp × price_multiplier (ceil to 0.1p).
+            // Typical call COGS when token counts are unknown (not a charge floor).
             'floors_usd' => [
-                'chat' => 0.0018,
-                'video_analysis' => 0.0018,
-                'embeddings' => 0.0002,
+                'chat' => 0.0005,
+                'video_analysis' => 0.0005,
+                'embeddings' => 0.00005,
             ],
         ],
         'firecrawl' => [
@@ -141,19 +141,19 @@ return [
     ],
 
     /*
-    | Product actions → default vendor floors when a run cannot report COGS.
+    | Product actions → default vendor COGS when a run cannot report usage.
     */
     'actions' => [
         'apify.run' => ['vendor' => 'apify', 'floor_usd' => 0.01],
         'tikhub.run' => ['vendor' => 'tikhub', 'floor_usd' => 0.001],
         'sync.account' => ['vendor' => 'apify', 'floor_usd' => 0.05],
-        'analyze.post' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0018],
-        'embed.analysis' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0002],
+        'analyze.post' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0005],
+        'embed.analysis' => ['vendor' => 'nanogpt', 'floor_usd' => 0.00005],
         'influencers.find' => ['vendor' => 'firecrawl', 'floor_usd' => 0.02],
         'competitors.suggest' => ['vendor' => 'firecrawl', 'floor_usd' => 0.02],
         'brand.autofill' => ['vendor' => 'firecrawl', 'floor_usd' => 0.005],
-        'influencer.brief' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0018],
-        'winners.copy' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0018],
+        'influencer.brief' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0005],
+        'winners.copy' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0005],
     ],
 
 ];

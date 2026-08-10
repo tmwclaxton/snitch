@@ -141,7 +141,7 @@ class ApifyMonthlyCapGateTest extends TestCase
             'action' => 'sync.account',
             'vendor' => BillingVendor::Apify,
             'cogs_usd' => $cogsUsd,
-            'multiplier' => 1.4,
+            'multiplier' => 1.3,
             'amount_pence' => -100,
             'balance_after_pence' => 0,
             'meta' => [],

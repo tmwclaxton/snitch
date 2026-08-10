@@ -24,7 +24,7 @@ class UsageBillingServiceTest extends TestCase
             'billing.platform_stripe_price' => 'price_platform_test',
             'billing.claim_bonus_pence' => 500,
             'billing.subscription_bonus_pence' => 3000,
-            'billing.price_multiplier' => 1.4,
+            'billing.price_multiplier' => 1.3,
             'billing.usd_to_gbp' => 1.0,
             'billing.min_run_balance_pence' => 20,
         ]);
@@ -232,14 +232,13 @@ class UsageBillingServiceTest extends TestCase
         $this->assertSame(abs($fourth->amount_pence), $lastMonth['nanogpt']);
     }
 
-    public function test_nanogpt_floor_charges_two_tenths_of_a_penny(): void
+    public function test_missing_nanogpt_tokens_use_catalog_cogs_not_min_charge(): void
     {
         config([
             'billing.usd_to_gbp' => 0.79,
-            'billing.price_multiplier' => 1.4,
-            'billing.vendors.nanogpt.min_charge_pence' => 0.2,
-            'billing.vendors.nanogpt.floors_usd.video_analysis' => 0.0018,
-            'billing.actions.analyze.post.floor_usd' => 0.0018,
+            'billing.price_multiplier' => 1.3,
+            'billing.vendors.nanogpt.floors_usd.video_analysis' => 0.0005,
+            'billing.actions.analyze.post.floor_usd' => 0.0005,
         ]);
 
         $cogs = $this->billing->estimateNanoGptChatUsd(
@@ -249,32 +248,38 @@ class UsageBillingServiceTest extends TestCase
             'video_analysis',
         );
 
-        $this->assertSame(0.0018, $cogs);
-        $this->assertSame(0.2, $this->billing->pricePenceFromCogs('analyze.post', BillingVendor::NanoGpt, $cogs));
+        // 0.0005 * 0.79 * 1.3 * 100 = 0.05135p → round half-up to 0.05p (£0.0005)
+        $this->assertSame(0.0005, $cogs);
+        $this->assertSame(0.05, $this->billing->pricePenceFromCogs('analyze.post', BillingVendor::NanoGpt, $cogs));
 
         $user = User::factory()->create();
         $this->billing->creditFromTopUp($user, 1000, 'topup:nanogpt-floor');
         $entry = $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, $cogs);
 
-        $this->assertSame(-0.2, $entry->amount_pence);
-        $this->assertSame(999.8, $this->billing->balancePence($user));
+        $this->assertSame(-0.05, $entry->amount_pence);
+        $this->assertSame(999.95, $this->billing->balancePence($user));
     }
 
-    public function test_non_nanogpt_vendors_still_ceil_to_one_penny(): void
+    public function test_vendors_round_to_centipence_without_minimum(): void
     {
         config([
             'billing.usd_to_gbp' => 0.79,
-            'billing.price_multiplier' => 1.4,
+            'billing.price_multiplier' => 1.3,
         ]);
 
-        // Tiny TikHub COGS would be well under 1p after pricing.
-        $this->assertSame(1.0, $this->billing->pricePenceFromCogs('tikhub.run', BillingVendor::TikHub, 0.001));
+        // 0.001 * 0.79 * 1.3 * 100 = 0.1027p → 0.10p (£0.0010), not ceil to 1p
+        $this->assertSame(0.1, $this->billing->pricePenceFromCogs('tikhub.run', BillingVendor::TikHub, 0.001));
+
+        // $0.01 Apify: 0.01 * 0.79 * 1.3 * 100 = 1.027p → 1.03p (£0.0103)
+        $this->assertSame(1.03, $this->billing->pricePenceFromCogs('apify.run', BillingVendor::Apify, 0.01));
+
+        $this->assertSame(0.0, $this->billing->pricePenceFromCogs('analyze.post', BillingVendor::NanoGpt, 0.0));
     }
 
-    public function test_estimate_nanogpt_uses_tokens_when_above_video_analysis_floor(): void
+    public function test_estimate_nanogpt_uses_token_math_without_floor_clamp(): void
     {
         config([
-            'billing.vendors.nanogpt.floors_usd.video_analysis' => 0.0018,
+            'billing.vendors.nanogpt.floors_usd.video_analysis' => 0.0005,
         ]);
 
         $tiny = $this->billing->estimateNanoGptChatUsd(
@@ -283,7 +288,8 @@ class UsageBillingServiceTest extends TestCase
             'deepseek/deepseek-v4-flash',
             'video_analysis',
         );
-        $this->assertSame(0.0018, $tiny);
+        // 2000 * 0.14/M + 800 * 0.28/M = 0.00028 + 0.000224 = 0.000504
+        $this->assertEqualsWithDelta(0.000504, $tiny, 0.0000001);
 
         $large = $this->billing->estimateNanoGptChatUsd(
             2_000_000,
@@ -293,6 +299,11 @@ class UsageBillingServiceTest extends TestCase
         );
         // 2M * 0.14/M + 0.5M * 0.28/M = 0.28 + 0.14 = 0.42
         $this->assertEqualsWithDelta(0.42, $large, 0.000001);
+    }
+
+    public function test_price_multiplier_default_is_one_point_three(): void
+    {
+        $this->assertSame(1.3, (float) config('billing.price_multiplier'));
     }
 
     private function subscribe(User $user): Subscription

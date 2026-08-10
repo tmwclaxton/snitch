@@ -22,7 +22,7 @@ class BillingChargesTest extends TestCase
 
         config([
             'billing.platform_stripe_price' => 'price_platform_test',
-            'billing.price_multiplier' => 1.4,
+            'billing.price_multiplier' => 1.3,
             'billing.usd_to_gbp' => 1.0,
             'billing.min_run_balance_pence' => 20,
         ]);
@@ -154,27 +154,27 @@ class BillingChargesTest extends TestCase
         );
     }
 
-    public function test_nanogpt_floor_charge_appears_as_two_tenths_of_a_penny(): void
+    public function test_nanogpt_charge_appears_at_centipence_precision(): void
     {
         config([
             'billing.usd_to_gbp' => 0.79,
-            'billing.price_multiplier' => 1.4,
-            'billing.vendors.nanogpt.min_charge_pence' => 0.2,
-            'billing.actions.analyze.post.floor_usd' => 0.0018,
+            'billing.price_multiplier' => 1.3,
+            'billing.actions.analyze.post.floor_usd' => 0.0005,
         ]);
 
         $user = User::factory()->create();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 1000, 'topup:nanogpt-display');
-        $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.0018);
+        // 0.0005 * 0.79 * 1.3 * 100 = 0.05135p → 0.05p
+        $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.0005);
 
         $this->actingAs($user)
             ->get(route('billing.charges', ['vendor' => 'nanogpt']))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('charges.data.0.vendor', 'nanogpt')
-                ->where('charges.data.0.amount_pence', -0.2)
-                ->where('charges.data.0.balance_after_pence', 999.8));
+                ->where('charges.data.0.amount_pence', -0.05)
+                ->where('charges.data.0.balance_after_pence', 999.95));
     }
 
     public function test_billing_index_recent_charges_are_preview_only(): void

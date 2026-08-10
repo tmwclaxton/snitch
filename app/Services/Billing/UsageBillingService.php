@@ -52,7 +52,7 @@ class UsageBillingService
     {
         $balance = $this->balancePence($user);
         $minExclusive = $this->minRunBalancePence();
-        $estimate = max(0.1, $estimatedPence);
+        $estimate = max(0.01, $estimatedPence);
         $required = max($minExclusive + 1, $estimate);
 
         if ($balance <= $minExclusive || $balance < $estimate) {
@@ -89,7 +89,7 @@ class UsageBillingService
         $this->assertCanRun($user, 1);
 
         $amountPence = $this->pricePenceFromCogs($action, $vendorEnum, $cogsUsd);
-        $multiplier = (float) config('billing.price_multiplier', 1.4);
+        $multiplier = (float) config('billing.price_multiplier', 1.3);
 
         return $this->writeEntry(
             user: $user,
@@ -486,24 +486,18 @@ class UsageBillingService
     public function pricePenceFromCogs(string $action, BillingVendor $vendor, ?float $cogsUsd): float
     {
         $floorUsd = (float) config("billing.actions.{$action}.floor_usd", config('billing.vendors.apify.floor_usd', 0.01));
-        $cogs = $cogsUsd !== null && $cogsUsd > 0 ? $cogsUsd : $floorUsd;
+        // Explicit 0 COGS charges 0; null falls back to catalog COGS for missing usage data.
+        $cogs = $cogsUsd !== null ? max(0.0, $cogsUsd) : $floorUsd;
         $gbp = $cogs * (float) config('billing.usd_to_gbp', 0.79);
-        $priced = $gbp * (float) config('billing.price_multiplier', 1.4);
-        $pence = $priced * 100;
+        $priced = $gbp * (float) config('billing.price_multiplier', 1.3);
 
-        if ($vendor === BillingVendor::NanoGpt) {
-            $min = (float) config('billing.vendors.nanogpt.min_charge_pence', 0.2);
-
-            // Ceil to tenths of a penny so NanoGPT can bill 0.2p accurately.
-            return max($min, $this->roundPence(ceil(($pence * 10) - 1e-9) / 10));
-        }
-
-        return (float) max(1, (int) ceil($pence - 1e-9));
+        // Round half-up to 0.01p (£0.0001). No min charge / vendor ceil.
+        return $this->roundPence($priced * 100);
     }
 
     public function estimateNanoGptChatUsd(?int $inputTokens, ?int $outputTokens, string $model, string $floorKey = 'chat'): float
     {
-        $floor = (float) config("billing.vendors.nanogpt.floors_usd.{$floorKey}", 0.002);
+        $floor = (float) config("billing.vendors.nanogpt.floors_usd.{$floorKey}", 0.0005);
         $rates = config("billing.vendors.nanogpt.models.{$model}");
 
         if (! is_array($rates) || ($inputTokens === null && $outputTokens === null)) {
@@ -512,10 +506,9 @@ class UsageBillingService
 
         $in = max(0, (int) ($inputTokens ?? 0));
         $out = max(0, (int) ($outputTokens ?? 0));
-        $usd = ($in / 1_000_000) * (float) ($rates['input_per_m_usd'] ?? 0)
-            + ($out / 1_000_000) * (float) ($rates['output_per_m_usd'] ?? 0);
 
-        return max($floor, $usd);
+        return ($in / 1_000_000) * (float) ($rates['input_per_m_usd'] ?? 0)
+            + ($out / 1_000_000) * (float) ($rates['output_per_m_usd'] ?? 0);
     }
 
     public function estimateFirecrawlSearchUsd(int $resultLimit = 10): float
@@ -618,6 +611,7 @@ class UsageBillingService
 
     private function roundPence(float $pence): float
     {
-        return round($pence, 1);
+        // Hundredths of a penny = £0.0001 grain.
+        return round($pence, 2);
     }
 }
