@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import {
     Check,
     LoaderCircle,
@@ -26,6 +26,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import { lastSyncedLabel, nextSyncLabel } from '@/lib/syncSchedule';
 import { useToastStore } from '@/stores/toastStore';
+import type { SubscriptionSummary } from '@/types/global';
 
 type Account = {
     id: number;
@@ -114,6 +115,14 @@ const hasRunningSync = computed(() =>
         (account) =>
             !!syncingIds.value[account.id] || account.last_sync_status === 'running',
     ),
+);
+
+const page = usePage();
+const canRunBillable = computed(
+    () => (page.props.subscription as SubscriptionSummary)?.can_run_billable === true,
+);
+const minRunBalancePence = computed(
+    () => (page.props.subscription as SubscriptionSummary)?.min_run_balance_pence ?? 20,
 );
 
 const trackedKeys = computed(() => {
@@ -497,7 +506,7 @@ function emptyImportHint(account: Account): string | null {
 }
 
 function syncAccount(account: Account): void {
-    if (syncingIds.value[account.id]) {
+    if (syncingIds.value[account.id] || !canRunBillable.value) {
         return;
     }
 
@@ -511,6 +520,18 @@ function syncAccount(account: Account): void {
             syncingIds.value = next;
         },
     });
+}
+
+function syncButtonTitle(account: Account): string {
+    if (isAccountSyncing(account)) {
+        return `Sync running for @${account.handle}`;
+    }
+
+    if (!canRunBillable.value) {
+        return `Balance must be more than ${minRunBalancePence.value}p to sync. Subscribe or top up on Billing.`;
+    }
+
+    return `Sync @${account.handle}`;
 }
 </script>
 
@@ -958,17 +979,9 @@ function syncAccount(account: Account): void {
                                         <button
                                             type="button"
                                             class="snitch-btn snitch-btn-spot shrink-0 px-2 py-1 text-xs sm:px-2.5"
-                                            :disabled="isAccountSyncing(account)"
-                                            :title="
-                                                isAccountSyncing(account)
-                                                    ? `Sync running for @${account.handle}`
-                                                    : `Sync @${account.handle}`
-                                            "
-                                            :aria-label="
-                                                isAccountSyncing(account)
-                                                    ? `Sync running for @${account.handle}`
-                                                    : `Sync @${account.handle}`
-                                            "
+                                            :disabled="isAccountSyncing(account) || !canRunBillable"
+                                            :title="syncButtonTitle(account)"
+                                            :aria-label="syncButtonTitle(account)"
                                             @click="syncAccount(account)"
                                         >
                                             <span class="relative z-10 inline-flex items-center gap-1.5">

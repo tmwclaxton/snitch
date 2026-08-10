@@ -4,14 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Enums\Platform;
 use App\Enums\TrackedAccountKind;
+use App\Exceptions\InsufficientCreditsException;
 use App\Http\Requests\Competitors\ConfirmSuggestionsRequest;
 use App\Http\Requests\Competitors\StoreTrackedAccountRequest;
 use App\Jobs\SuggestCompetitorsJob;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Models\Post;
 use App\Models\TrackedAccount;
+use App\Models\User;
 use App\Models\WinnerInsight;
 use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\UsageBillingService;
 use App\Support\PlatformEmbed;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -25,7 +28,10 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class CompetitorController extends Controller
 {
-    public function __construct(private PlanEntitlementService $entitlements) {}
+    public function __construct(
+        private PlanEntitlementService $entitlements,
+        private UsageBillingService $billing,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -97,8 +103,7 @@ class CompetitorController extends Controller
             ],
         );
 
-        $account->markSyncRunning();
-        SyncTrackedAccountJob::dispatch($account->id);
+        $this->queueSyncIfBillable($user, $account);
 
         SuggestCompetitorsJob::pruneLatestSuggestions($user->id, [[
             'platform' => $platform->value,
@@ -192,8 +197,7 @@ class CompetitorController extends Controller
                 ],
             );
 
-            $account->markSyncRunning();
-            SyncTrackedAccountJob::dispatch($account->id);
+            $this->queueSyncIfBillable($user, $account);
             $confirmed[] = [
                 'platform' => $platform->value,
                 'handle' => $handle,
@@ -204,7 +208,11 @@ class CompetitorController extends Controller
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => __('Competitors added. Sync is starting.'),
+            'message' => $this->billing->canRun($user)
+                ? __('Competitors added. Sync is starting.')
+                : __('Competitors added. Sync needs a balance above :min p - subscribe or top up on Billing.', [
+                    'min' => $this->billing->minRunBalancePence(),
+                ]),
         ]);
 
         return redirect()->route('competitors.index');
@@ -232,6 +240,17 @@ class CompetitorController extends Controller
     {
         $this->authorize('update', $trackedAccount);
 
+        try {
+            $this->billing->assertCanRun($request->user());
+        } catch (InsufficientCreditsException $exception) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => $exception->getMessage(),
+            ]);
+
+            return back();
+        }
+
         $trackedAccount->markSyncRunning();
         SyncTrackedAccountJob::dispatch($trackedAccount->id, force: true);
 
@@ -243,6 +262,16 @@ class CompetitorController extends Controller
         ]);
 
         return back();
+    }
+
+    private function queueSyncIfBillable(User $user, TrackedAccount $account): void
+    {
+        if (! $this->billing->canRun($user)) {
+            return;
+        }
+
+        $account->markSyncRunning();
+        SyncTrackedAccountJob::dispatch($account->id);
     }
 
     /**

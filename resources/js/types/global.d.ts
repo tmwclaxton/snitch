@@ -30,6 +30,8 @@ export type SubscriptionSummary = {
     billing_interval?: string | null;
     can_upgrade: boolean;
     balance_pence?: number;
+    min_run_balance_pence?: number;
+    can_run_billable?: boolean;
     platform_fee_pence?: number;
     usage?: Record<string, unknown>;
 } | null;

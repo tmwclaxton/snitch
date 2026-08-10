@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Models\TrackedAccount;
 use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\UsageBillingService;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -13,22 +14,27 @@ use Illuminate\Console\Command;
 #[Description('Enqueue sync jobs for tracked accounts due for a weekly refresh')]
 class SyncAccountsCommand extends Command
 {
-    public function handle(PlanEntitlementService $entitlements): int
+    public function handle(PlanEntitlementService $entitlements, UsageBillingService $billing): int
     {
         $count = 0;
         $skipped = 0;
         $overQuota = 0;
+        $billingSkipped = 0;
         $quotaCache = [];
+        $billingCache = [];
 
         TrackedAccount::query()
             ->with('user')
             ->orderBy('id')
             ->chunkById(100, function ($accounts) use (
                 $entitlements,
+                $billing,
                 &$count,
                 &$skipped,
                 &$overQuota,
+                &$billingSkipped,
                 &$quotaCache,
+                &$billingCache,
             ): void {
                 foreach ($accounts as $account) {
                     $user = $account->user;
@@ -60,13 +66,23 @@ class SyncAccountsCommand extends Command
                         continue;
                     }
 
+                    if (! isset($billingCache[$userId])) {
+                        $billingCache[$userId] = $billing->canRun($user);
+                    }
+
+                    if (! $billingCache[$userId]) {
+                        $billingSkipped++;
+
+                        continue;
+                    }
+
                     $account->markSyncRunning();
                     SyncTrackedAccountJob::dispatch($account->id);
                     $count++;
                 }
             });
 
-        $this->info("Enqueued {$count} account sync jobs ({$skipped} skipped recently; {$overQuota} over quota).");
+        $this->info("Enqueued {$count} account sync jobs ({$skipped} skipped recently; {$overQuota} over quota; {$billingSkipped} low balance).");
 
         return self::SUCCESS;
     }

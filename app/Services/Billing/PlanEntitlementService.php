@@ -84,6 +84,8 @@ class PlanEntitlementService
      *     billing_interval: string|null,
      *     can_upgrade: bool,
      *     balance_pence: int,
+     *     min_run_balance_pence: int,
+     *     can_run_billable: bool,
      *     platform_fee_pence: int,
      *     usage: array<string, mixed>
      * }
@@ -112,6 +114,8 @@ class PlanEntitlementService
             'billing_interval' => $subscribed ? 'month' : null,
             'can_upgrade' => ! $subscribed,
             'balance_pence' => $usage['balance_pence'],
+            'min_run_balance_pence' => $this->usage->minRunBalancePence(),
+            'can_run_billable' => $this->usage->canRun($user),
             'platform_fee_pence' => $usage['platform_fee_pence'],
             'usage' => $usage,
         ];

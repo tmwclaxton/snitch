@@ -11,6 +11,7 @@ use App\Jobs\FindInfluencersJob;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Models\TrackedAccount;
 use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\UsageBillingService;
 use App\Services\Influencers\InfluencerDiscoveryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -27,6 +28,7 @@ class InfluencerController extends Controller
     public function __construct(
         private PlanEntitlementService $entitlements,
         private InfluencerDiscoveryService $discovery,
+        private UsageBillingService $billing,
     ) {}
 
     public function index(Request $request): Response
@@ -194,14 +196,22 @@ class InfluencerController extends Controller
             ],
         );
 
-        $account->markSyncRunning();
-        SyncTrackedAccountJob::dispatch($account->id);
+        $canSync = $this->billing->canRun($user);
+
+        if ($canSync) {
+            $account->markSyncRunning();
+            SyncTrackedAccountJob::dispatch($account->id);
+        }
 
         $this->markDecision($user->id, $run['id'], $key, 'kept');
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => __('Influencer kept. Sync is starting.'),
+            'message' => $canSync
+                ? __('Influencer kept. Sync is starting.')
+                : __('Influencer kept. Sync needs a balance above :min p - subscribe or top up on Billing.', [
+                    'min' => $this->billing->minRunBalancePence(),
+                ]),
         ]);
 
         return redirect()->route('influencers.index');

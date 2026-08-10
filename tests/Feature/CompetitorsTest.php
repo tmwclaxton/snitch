@@ -6,14 +6,17 @@ use App\Jobs\SyncTrackedAccountJob;
 use App\Models\BrandProfile;
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Services\Billing\UsageBillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\WithPlatformBilling;
 use Tests\TestCase;
 
 class CompetitorsTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPlatformBilling;
 
     public function test_owner_can_list_and_create_competitors(): void
     {
@@ -21,6 +24,7 @@ class CompetitorsTest extends TestCase
 
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
+        $this->enablePlatformBilling($user);
 
         $this->actingAs($user)
             ->get(route('competitors.index'))
@@ -55,6 +59,7 @@ class CompetitorsTest extends TestCase
 
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
+        $this->enablePlatformBilling($user);
 
         $this->actingAs($user)
             ->post(route('competitors.confirm-suggestions'), [
@@ -84,6 +89,7 @@ class CompetitorsTest extends TestCase
 
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
+        $this->enablePlatformBilling($user);
         $account = TrackedAccount::factory()->for($user)->create();
 
         $this->actingAs($user)
@@ -107,6 +113,7 @@ class CompetitorsTest extends TestCase
 
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
+        $this->enablePlatformBilling($user);
         $account = TrackedAccount::factory()->for($user)->create([
             'last_synced_at' => now()->subDays(2),
             'last_sync_status' => 'success',
@@ -121,6 +128,46 @@ class CompetitorsTest extends TestCase
         });
 
         $this->assertSame('running', $account->fresh()?->last_sync_status);
+    }
+
+    public function test_create_competitor_skips_sync_when_balance_too_low(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->post(route('competitors.store'), [
+                'platform' => 'instagram',
+                'handle' => '@rivalbakery',
+            ])
+            ->assertRedirect(route('competitors.index'));
+
+        $account = TrackedAccount::query()->where('user_id', $user->id)->first();
+        $this->assertNotNull($account);
+        $this->assertNotSame('running', $account->last_sync_status);
+        Queue::assertNotPushed(SyncTrackedAccountJob::class);
+    }
+
+    public function test_manual_sync_is_blocked_when_balance_too_low(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        app(UsageBillingService::class)->creditFromTopUp($user, 20, 'topup:twenty');
+        $account = TrackedAccount::factory()->for($user)->create([
+            'last_synced_at' => now()->subDays(2),
+            'last_sync_status' => 'success',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('competitors.sync', $account))
+            ->assertRedirect();
+
+        Queue::assertNotPushed(SyncTrackedAccountJob::class);
+        $this->assertSame('success', $account->fresh()?->last_sync_status);
     }
 
     public function test_index_exposes_sync_schedule_and_controls(): void

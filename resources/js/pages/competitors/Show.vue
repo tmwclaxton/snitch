@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     Clapperboard,
@@ -21,6 +21,7 @@ import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { PostMetrics } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
+import type { SubscriptionSummary } from '@/types/global';
 
 type Account = {
     id: number;
@@ -146,8 +147,28 @@ onUnmounted(() => {
     clearSyncPoll();
 });
 
-function syncNow(): void {
+const page = usePage();
+const canRunBillable = computed(
+    () => (page.props.subscription as SubscriptionSummary)?.can_run_billable === true,
+);
+const minRunBalancePence = computed(
+    () => (page.props.subscription as SubscriptionSummary)?.min_run_balance_pence ?? 20,
+);
+
+const syncButtonLabel = computed(() => {
     if (isSyncing.value) {
+        return `Sync running for @${props.account.handle}`;
+    }
+
+    if (!canRunBillable.value) {
+        return `Balance must be more than ${minRunBalancePence.value}p to sync. Subscribe or top up on Billing.`;
+    }
+
+    return `Sync @${props.account.handle}`;
+});
+
+function syncNow(): void {
+    if (isSyncing.value || !canRunBillable.value) {
         return;
     }
 
@@ -196,17 +217,9 @@ function askRemove(): void {
                     <button
                         type="button"
                         class="snitch-btn snitch-btn-spot px-3 py-1.5 text-sm"
-                        :disabled="isSyncing"
-                        :title="
-                            isSyncing
-                                ? `Sync running for @${account.handle}`
-                                : undefined
-                        "
-                        :aria-label="
-                            isSyncing
-                                ? `Sync running for @${account.handle}`
-                                : `Sync @${account.handle}`
-                        "
+                        :disabled="isSyncing || !canRunBillable"
+                        :title="syncButtonLabel"
+                        :aria-label="syncButtonLabel"
                         @click="syncNow"
                     >
                         <span class="relative z-10 inline-flex items-center gap-1.5">

@@ -32,6 +32,17 @@ class UsageBillingService
         return max(0, (int) config('billing.min_run_balance_pence', 20));
     }
 
+    public function canRun(User $user, int $estimatedPence = 1): bool
+    {
+        try {
+            $this->assertCanRun($user, $estimatedPence);
+
+            return true;
+        } catch (InsufficientCreditsException) {
+            return false;
+        }
+    }
+
     public function assertCanRun(User $user, int $estimatedPence = 1): void
     {
         $balance = $this->balancePence($user);
