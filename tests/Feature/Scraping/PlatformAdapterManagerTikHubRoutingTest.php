@@ -6,13 +6,13 @@ use App\Enums\BillingVendor;
 use App\Enums\Platform;
 use App\Models\CreditLedgerEntry;
 use App\Models\User;
+use App\Services\Apify\Adapters\FacebookAdapter;
 use App\Services\Apify\Adapters\InstagramAdapter as ApifyInstagramAdapter;
 use App\Services\Apify\PlatformAdapterManager;
 use App\Services\Scraping\ApifyMonthlyCapGate;
 use App\Services\TikHub\Adapters\InstagramAdapter as TikHubInstagramAdapter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
-use RuntimeException;
 use Tests\TestCase;
 
 class PlatformAdapterManagerTikHubRoutingTest extends TestCase
@@ -64,7 +64,7 @@ class PlatformAdapterManagerTikHubRoutingTest extends TestCase
         $this->assertSame('tikhub', $manager->driverFor(Platform::Instagram));
     }
 
-    public function test_facebook_throws_when_apify_exhausted(): void
+    public function test_facebook_stays_on_apify_when_cap_exhausted(): void
     {
         config([
             'snitch.apify.monthly_cap_usd' => 49,
@@ -73,9 +73,10 @@ class PlatformAdapterManagerTikHubRoutingTest extends TestCase
 
         app(ApifyMonthlyCapGate::class)->markHardExhausted();
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Facebook sync is unavailable');
+        $manager = app(PlatformAdapterManager::class);
 
-        app(PlatformAdapterManager::class)->for(Platform::Facebook);
+        $this->assertInstanceOf(FacebookAdapter::class, $manager->for(Platform::Facebook));
+        $this->assertSame('apify', $manager->driverFor(Platform::Facebook));
+        $this->assertSame('tikhub', $manager->driverFor(Platform::Instagram));
     }
 }

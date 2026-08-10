@@ -1583,15 +1583,7 @@ class InfluencerDiscoveryService
         foreach ($batch as $batchIndex => $item) {
             $platform = $item['candidate']['platform'];
 
-            try {
-                $adapter = $this->adapters->for($platform);
-            } catch (RuntimeException) {
-                // Facebook (and any unsupported) soft-skip when Apify is capped.
-                $profiles[$batchIndex] = null;
-
-                continue;
-            }
-
+            $adapter = $this->adapters->for($platform);
             $resolveTarget = $this->resolveTargetForCandidate($item['candidate']);
 
             if ($adapter instanceof AbstractPlatformAdapter) {

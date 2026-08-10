@@ -288,7 +288,7 @@ flowchart TB
 | State | Pinia |
 | Auth | Laravel WorkOS (AuthKit) |
 | Routing DX | Laravel Wayfinder (typed TS route helpers) |
-| Scraping | Apify primary until ~$49/mo COGS, then TikHub for IG/TT/YT/LI (Facebook stays Apify) |
+| Scraping | Apify primary until ~$49/mo COGS, then TikHub for IG/TT/YT/LI; Facebook always Apify |
 | Web intel | Firecrawl |
 | LLM / video | NanoGPT (analysis, autofill, suggest, winner copy) |
 | Queues | Database locally; Redis in Sail / production |

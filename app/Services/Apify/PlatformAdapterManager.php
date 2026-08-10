@@ -14,7 +14,6 @@ use App\Services\TikHub\Adapters\InstagramAdapter as TikHubInstagramAdapter;
 use App\Services\TikHub\Adapters\LinkedInAdapter as TikHubLinkedInAdapter;
 use App\Services\TikHub\Adapters\TikTokAdapter as TikHubTikTokAdapter;
 use App\Services\TikHub\Adapters\YoutubeAdapter as TikHubYoutubeAdapter;
-use RuntimeException;
 
 class PlatformAdapterManager
 {
@@ -35,15 +34,18 @@ class PlatformAdapterManager
     {
         $platform = $platform instanceof Platform ? $platform : Platform::from($platform);
 
-        if ($this->capGate->isApifyExhausted() && $this->capGate->tikHubConfigured()) {
+        // Facebook has no TikHub coverage - always stay on Apify, even when the monthly cap is exhausted.
+        if ($platform === Platform::Facebook) {
+            return $this->facebook;
+        }
+
+        if ($this->capGate->shouldUseTikHub($platform)) {
             return match ($platform) {
                 Platform::Instagram => $this->tikhubInstagram,
                 Platform::TikTok => $this->tikhubTiktok,
                 Platform::LinkedIn => $this->tikhubLinkedin,
                 Platform::Youtube => $this->tikhubYoutube,
-                Platform::Facebook => throw new RuntimeException(
-                    'Facebook sync is unavailable while Apify monthly usage is exhausted (TikHub has no Facebook coverage).',
-                ),
+                Platform::Facebook => $this->facebook,
             };
         }
 
@@ -60,11 +62,7 @@ class PlatformAdapterManager
     {
         $platform = $platform instanceof Platform ? $platform : Platform::from($platform);
 
-        if ($this->capGate->isApifyExhausted() && $this->capGate->tikHubConfigured() && $platform !== Platform::Facebook) {
-            return 'tikhub';
-        }
-
-        return 'apify';
+        return $this->capGate->shouldUseTikHub($platform) ? 'tikhub' : 'apify';
     }
 
     public function apifyAdapter(Platform|string $platform): PlatformAdapter
