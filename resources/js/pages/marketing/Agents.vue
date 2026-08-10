@@ -36,7 +36,7 @@ defineProps<{
                 <p class="mt-4 max-w-2xl text-snitch-ink/80">
                     Snitch is a data layer for social marketing agents. Create an account from your agent, claim
                     it in the browser, keep a balance above 20p (subscribe for plan value or top up), then sync competitors, find influencers, and
-                    analyse posts. After suggest_competitors, agents must confirm_competitor_suggestions (or dismiss) - suggestions stay pending until confirmed.
+                    analyse posts.
                 </p>
 
                 <div class="mt-12">

@@ -117,7 +117,6 @@ class McpConnectionGuide
                     'Local php artisan serve is single-threaded: one long MCP tools/call can block the dashboard until it returns. If the site hangs, wait for the tool, pause MCP in the client, or restart serve. Production php-fpm is fine.',
                     'Subscribe to the platform plan and top up credits before billable tools.',
                     'Call authenticated tools on '.$mcpUrl.' with Authorization: Bearer <token>. Never paste tokens into public chats.',
-                    'After suggest_competitors, poll status then confirm_competitor_suggestions (or dismiss). Suggestions are not tracked until confirmed.',
                 ],
                 'snippet' => implode("\n", [
                     'Register (public): '.$registerUrl,
@@ -129,7 +128,6 @@ class McpConnectionGuide
                     'First calls: whoami (check runtime.app_url + brand_warnings), billing_status, get_brand',
                     'Local async: php artisan queue:work (composer run dev includes queue:listen)',
                     'Local note: artisan serve is single-request; long MCP calls can stall the browser UI',
-                    'Competitor loop: suggest_competitors → suggest_competitors_status → confirm_competitor_suggestions',
                     'Influencer loop: find_influencers → influencer_search_status → keep_influencer',
                 ]),
             ],
