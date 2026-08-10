@@ -18,7 +18,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('confirm_competitor_suggestions')]
-#[Description('REQUIRED after suggest_competitors to start tracking. Creates TrackedAccounts for selected handles from a suggest run and optionally queues syncs. Until this runs, suggestions remain pending cache/UI only.')]
+#[Description('REQUIRED after suggest_competitors to start tracking. Creates TrackedAccounts for selected handles from a suggest run and optionally queues syncs. Pass dismiss_remainder=true when you are done selecting so the Competitors pending panel clears (same as dismiss for leftover rows). Until confirmed, suggestions remain pending cache/UI only.')]
 class ConfirmCompetitorSuggestionsTool extends Tool
 {
     public function handle(Request $request): Response
@@ -33,6 +33,7 @@ class ConfirmCompetitorSuggestionsTool extends Tool
             'handles' => ['required', 'array', 'min:1'],
             'handles.*' => ['required', 'string', 'max:255'],
             'sync' => ['nullable', 'boolean'],
+            'dismiss_remainder' => ['nullable', 'boolean'],
         ]);
 
         if (! Str::isUuid($data['suggest_id'])) {
@@ -41,7 +42,10 @@ class ConfirmCompetitorSuggestionsTool extends Tool
 
         $payload = Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $data['suggest_id']));
         $suggestions = is_array($payload['suggestions'] ?? null) ? $payload['suggestions'] : [];
-        $wanted = array_map(fn ($h) => ltrim((string) $h, '@'), $data['handles']);
+        $wanted = array_map(
+            fn ($h) => strtolower(ltrim((string) $h, '@')),
+            $data['handles'],
+        );
         $created = [];
         $confirmed = [];
 
@@ -50,7 +54,7 @@ class ConfirmCompetitorSuggestionsTool extends Tool
                 continue;
             }
             $handle = ltrim((string) ($row['handle'] ?? ''), '@');
-            if ($handle === '' || ! in_array($handle, $wanted, true)) {
+            if ($handle === '' || ! in_array(strtolower($handle), $wanted, true)) {
                 continue;
             }
 
@@ -81,14 +85,34 @@ class ConfirmCompetitorSuggestionsTool extends Tool
         }
 
         if ($confirmed !== []) {
-            SuggestCompetitorsJob::pruneLatestSuggestions($user->id, $confirmed);
+            SuggestCompetitorsJob::pruneSuggestions($user->id, $data['suggest_id'], $confirmed);
+        }
+
+        $dismissRemainder = (bool) ($data['dismiss_remainder'] ?? false);
+        $remainingPayload = Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $data['suggest_id']));
+        $remaining = is_array($remainingPayload['suggestions'] ?? null) ? $remainingPayload['suggestions'] : [];
+
+        if ($dismissRemainder && $remaining !== []) {
+            SuggestCompetitorsJob::clearRun($user->id, $data['suggest_id']);
+            $remaining = [];
+        }
+
+        $nextStep = 'Done - confirmed handles are tracked.';
+        if ($created === []) {
+            $nextStep = 'No matches. Pass handles exactly as returned by suggest_competitors_status (case-insensitive).';
+        } elseif ($remaining !== []) {
+            $nextStep = 'Confirmed handles are tracked. Remaining suggestions still show on /competitors - call dismiss_competitor_suggestions or re-confirm with dismiss_remainder=true to clear the pending panel.';
         }
 
         return Response::json([
             'confirmed_ids' => $created,
+            'remaining_count' => count($remaining),
             'note' => $created === []
                 ? 'No matching suggestion handles. Pass handles exactly as returned by suggest_competitors_status.'
-                : 'Confirmed handles are now tracked competitors. Remaining suggestion rows stay until confirm, dismiss, or re-run.',
+                : ($remaining === []
+                    ? 'Confirmed handles are now tracked competitors. Pending suggestion panel is clear.'
+                    : 'Confirmed handles are now tracked competitors. Remaining suggestion rows stay until dismiss_competitor_suggestions or confirm with dismiss_remainder=true.'),
+            'next_step' => $nextStep,
         ]);
     }
 
@@ -99,6 +123,7 @@ class ConfirmCompetitorSuggestionsTool extends Tool
             'suggest_id' => $schema->string()->required(),
             'handles' => $schema->array()->required(),
             'sync' => $schema->boolean()->nullable(),
+            'dismiss_remainder' => $schema->boolean()->nullable(),
         ];
     }
 }

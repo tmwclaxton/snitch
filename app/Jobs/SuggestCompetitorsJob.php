@@ -214,11 +214,42 @@ class SuggestCompetitorsJob implements ShouldQueue
     }
 
     /**
+     * Clear one suggest run from cache and drop active/latest pointers that still point at it.
+     */
+    public static function clearRun(int $userId, string $suggestId): void
+    {
+        Cache::forget(self::cacheKeyFor($userId, $suggestId));
+
+        if (Cache::get(self::latestCacheKeyFor($userId)) === $suggestId) {
+            Cache::forget(self::latestCacheKeyFor($userId));
+        }
+
+        self::clearActive($userId, $suggestId);
+    }
+
+    /**
      * Drop confirmed/tracked rows from the persisted suggestion set so they stay gone after reload.
      *
      * @param  list<array{platform?: string, handle?: string}|string>  $keys  "platform:handle" or rows with those fields
      */
     public static function pruneLatestSuggestions(int $userId, array $keys): void
+    {
+        $latestId = Cache::get(self::latestCacheKeyFor($userId));
+
+        if (! is_string($latestId)) {
+            return;
+        }
+
+        self::pruneSuggestions($userId, $latestId, $keys);
+    }
+
+    /**
+     * Drop confirmed/tracked rows from a specific suggest run (MCP confirm uses this so prune
+     * still works when the latest pointer is missing or points elsewhere).
+     *
+     * @param  list<array{platform?: string, handle?: string}|string>  $keys
+     */
+    public static function pruneSuggestions(int $userId, string $suggestId, array $keys): void
     {
         $remove = [];
 
@@ -247,13 +278,7 @@ class SuggestCompetitorsJob implements ShouldQueue
             return;
         }
 
-        $latestId = Cache::get(self::latestCacheKeyFor($userId));
-
-        if (! is_string($latestId)) {
-            return;
-        }
-
-        $payload = Cache::get(self::cacheKeyFor($userId, $latestId));
+        $payload = Cache::get(self::cacheKeyFor($userId, $suggestId));
 
         if (! is_array($payload) || ($payload['status'] ?? null) !== 'completed') {
             return;
@@ -279,13 +304,17 @@ class SuggestCompetitorsJob implements ShouldQueue
         }
 
         if ($kept === []) {
-            self::clearLatest($userId);
+            self::clearRun($userId, $suggestId);
 
             return;
         }
 
         $payload['suggestions'] = $kept;
-        Cache::put(self::cacheKeyFor($userId, $latestId), $payload, now()->addHours(2));
+        Cache::put(self::cacheKeyFor($userId, $suggestId), $payload, now()->addHours(2));
+
+        // Keep the Competitors Index pointed at this pruned set.
+        Cache::put(self::latestCacheKeyFor($userId), $suggestId, now()->addHours(2));
+        self::clearActive($userId, $suggestId);
     }
 
     public static function clearActive(int $userId, ?string $suggestId = null): void

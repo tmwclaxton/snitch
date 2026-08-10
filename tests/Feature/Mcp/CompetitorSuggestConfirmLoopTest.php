@@ -7,6 +7,7 @@ use App\Jobs\SuggestCompetitorsJob;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Mcp\Servers\SnitchServer;
 use App\Mcp\Tools\ConfirmCompetitorSuggestionsTool;
+use App\Mcp\Tools\DismissCompetitorSuggestionsTool;
 use App\Mcp\Tools\SuggestCompetitorsStatusTool;
 use App\Mcp\Tools\SuggestCompetitorsTool;
 use App\Models\BrandProfile;
@@ -136,5 +137,111 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
 
         Queue::assertPushed(SyncTrackedAccountJob::class);
         $this->assertSame(1, TrackedAccount::query()->where('user_id', $user->id)->count());
+    }
+
+    public function test_confirm_prunes_even_when_latest_pointer_missing(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $suggestId = (string) Str::uuid();
+        Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
+            'status' => 'completed',
+            'suggestions' => [
+                [
+                    'platform' => 'instagram',
+                    'handle' => 'KeepMe',
+                    'display_name' => 'Keep Me',
+                ],
+                [
+                    'platform' => 'tiktok',
+                    'handle' => 'skipme',
+                    'display_name' => 'Skip Me',
+                ],
+            ],
+            'error' => null,
+        ], now()->addHours(2));
+
+        SnitchServer::tool(ConfirmCompetitorSuggestionsTool::class, [
+            'suggest_id' => $suggestId,
+            'handles' => ['keepme'],
+            'sync' => false,
+        ])->assertOk();
+
+        $pruned = Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId));
+        $this->assertSame(['skipme'], collect($pruned['suggestions'] ?? [])->pluck('handle')->all());
+        $this->assertSame($suggestId, Cache::get(SuggestCompetitorsJob::latestCacheKeyFor($user->id)));
+    }
+
+    public function test_confirm_dismiss_remainder_clears_pending_panel(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $suggestId = (string) Str::uuid();
+        Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
+            'status' => 'completed',
+            'suggestions' => [
+                [
+                    'platform' => 'instagram',
+                    'handle' => 'keepme',
+                ],
+                [
+                    'platform' => 'tiktok',
+                    'handle' => 'skipme',
+                ],
+            ],
+            'error' => null,
+        ], now()->addHours(2));
+        Cache::put(SuggestCompetitorsJob::latestCacheKeyFor($user->id), $suggestId, now()->addHours(2));
+        Cache::put(SuggestCompetitorsJob::activeCacheKeyFor($user->id), $suggestId, now()->addHours(2));
+
+        SnitchServer::tool(ConfirmCompetitorSuggestionsTool::class, [
+            'suggest_id' => $suggestId,
+            'handles' => ['keepme'],
+            'sync' => false,
+            'dismiss_remainder' => true,
+        ])
+            ->assertOk()
+            ->assertSee('Pending suggestion panel is clear');
+
+        $this->assertNull(Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId)));
+        $this->assertNull(Cache::get(SuggestCompetitorsJob::latestCacheKeyFor($user->id)));
+        $this->assertNull(Cache::get(SuggestCompetitorsJob::activeCacheKeyFor($user->id)));
+        $this->assertDatabaseHas('tracked_accounts', [
+            'user_id' => $user->id,
+            'handle' => 'keepme',
+        ]);
+        $this->assertDatabaseMissing('tracked_accounts', [
+            'user_id' => $user->id,
+            'handle' => 'skipme',
+        ]);
+    }
+
+    public function test_dismiss_clears_active_and_latest_pointers(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $suggestId = (string) Str::uuid();
+        Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
+            'status' => 'completed',
+            'suggestions' => [['platform' => 'instagram', 'handle' => 'rival']],
+            'error' => null,
+        ], now()->addHours(2));
+        Cache::put(SuggestCompetitorsJob::latestCacheKeyFor($user->id), $suggestId, now()->addHours(2));
+        Cache::put(SuggestCompetitorsJob::activeCacheKeyFor($user->id), $suggestId, now()->addHours(2));
+
+        SnitchServer::tool(DismissCompetitorSuggestionsTool::class, [
+            'suggest_id' => $suggestId,
+        ])->assertOk();
+
+        $this->assertNull(Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId)));
+        $this->assertNull(Cache::get(SuggestCompetitorsJob::latestCacheKeyFor($user->id)));
+        $this->assertNull(Cache::get(SuggestCompetitorsJob::activeCacheKeyFor($user->id)));
     }
 }
