@@ -5,6 +5,7 @@ namespace App\Mcp\Tools;
 use App\Jobs\FindInfluencersJob;
 use App\Mcp\Support\BrandContext;
 use App\Mcp\Support\McpAuth;
+use App\Mcp\Support\McpJobWait;
 use App\Mcp\Support\McpRuntime;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
@@ -17,7 +18,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('find_influencers')]
-#[Description('Queue influencer discovery for one platform (billable). Does NOT track anyone. After polling influencer_search_status, call keep_influencer for fits (queues sync) or discard_influencer. Requires a queue worker.')]
+#[Description('Queue influencer discovery for one platform (billable). Requires brand name + website. Optional wait_seconds (default ~22, max 45) polls cache so a completed run often returns suggestions in one call. Does NOT track anyone - after status completed call keep_influencer or discard_influencer.')]
 class FindInfluencersTool extends Tool
 {
     public function handle(Request $request): Response
@@ -27,8 +28,9 @@ class FindInfluencersTool extends Tool
             return $user;
         }
 
-        if ($user->brandProfile === null) {
-            return Response::error('Create a brand profile first.');
+        $blocked = BrandContext::assertReady($user);
+        if ($blocked !== null) {
+            return $blocked;
         }
 
         $data = $request->validate([
@@ -37,6 +39,7 @@ class FindInfluencersTool extends Tool
             'language' => ['nullable', 'string', 'max:32'],
             'min_followers' => ['nullable', 'integer', 'min:0'],
             'max_followers' => ['nullable', 'integer', 'min:0'],
+            'wait_seconds' => ['nullable', 'integer', 'min:0', 'max:45'],
         ]);
 
         $runId = (string) Str::uuid();
@@ -63,17 +66,61 @@ class FindInfluencersTool extends Tool
         $brandWarnings = BrandContext::warningsFor($user);
         $runtime = McpRuntime::snapshot();
 
-        return Response::json([
+        $wait = McpJobWait::untilTerminal(
+            FindInfluencersJob::cacheKeyFor($user->id, $runId),
+            isset($data['wait_seconds']) ? (int) $data['wait_seconds'] : null,
+        );
+
+        return $this->responseForWait($runId, $wait, $brandWarnings, $runtime);
+    }
+
+    /**
+     * @param  array{payload: mixed, timed_out: bool, waited_seconds: int}  $wait
+     * @param  list<string>  $brandWarnings
+     * @param  array<string, mixed>  $runtime
+     */
+    private function responseForWait(string $runId, array $wait, array $brandWarnings, array $runtime): Response
+    {
+        $payload = $wait['payload'];
+        $status = is_array($payload) ? ($payload['status'] ?? null) : null;
+        $suggestions = is_array($payload['suggestions'] ?? null) ? $payload['suggestions'] : [];
+        $terminal = McpJobWait::isTerminal($payload);
+
+        $base = [
             'run_id' => $runId,
-            'queued' => true,
+            'waited_seconds' => $wait['waited_seconds'],
             'brand_warnings' => $brandWarnings,
             'runtime' => [
                 'app_url' => $runtime['app_url'],
                 'pending_jobs' => $runtime['pending_jobs'],
                 'warnings' => $runtime['warnings'],
             ],
-            'note' => 'Poll influencer_search_status until completed. Creators are NOT tracked until keep_influencer.',
-            'next_step' => 'Poll influencer_search_status, then keep_influencer / discard_influencer. Requires a queue worker.',
+            'payload' => $payload,
+        ];
+
+        if ($status === 'failed') {
+            return Response::json([
+                ...$base,
+                'queued' => false,
+                'note' => 'Influencer search failed. Read payload.error then retry find_influencers.',
+                'next_step' => 'Retry find_influencers after fixing the error.',
+            ]);
+        }
+
+        if ($terminal || $suggestions !== []) {
+            return Response::json([
+                ...$base,
+                'queued' => false,
+                'note' => 'Creators are NOT tracked yet. Call keep_influencer for each fit (queues sync) or discard_influencer.',
+                'next_step' => 'keep_influencer / discard_influencer for each suggestion before ending the session.',
+            ]);
+        }
+
+        return Response::json([
+            ...$base,
+            'queued' => true,
+            'note' => 'Still running. Poll influencer_search_status (optionally with wait_seconds) until completed. Requires a queue worker.',
+            'next_step' => 'Poll influencer_search_status, then keep_influencer / discard_influencer. Ensure php artisan queue:work is running.',
         ]);
     }
 
@@ -86,6 +133,7 @@ class FindInfluencersTool extends Tool
             'language' => $schema->string()->nullable(),
             'min_followers' => $schema->integer()->nullable(),
             'max_followers' => $schema->integer()->nullable(),
+            'wait_seconds' => $schema->integer()->nullable(),
         ];
     }
 }

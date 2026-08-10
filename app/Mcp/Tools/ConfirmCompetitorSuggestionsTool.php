@@ -18,7 +18,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('confirm_competitor_suggestions')]
-#[Description('REQUIRED after suggest_competitors to start tracking. Creates TrackedAccounts for selected handles from a suggest run and optionally queues syncs. Pass dismiss_remainder=true when you are done selecting so the Competitors pending panel clears (same as dismiss for leftover rows). Until confirmed, suggestions remain pending cache/UI only.')]
+#[Description('REQUIRED after suggest_competitors to start tracking. Creates TrackedAccounts for selected handles from a suggest run and optionally queues syncs. dismiss_remainder defaults to true so leftover pending suggestion cards clear after a typical confirm; pass false to keep remainder. Until confirmed, suggestions remain pending cache/UI only.')]
 class ConfirmCompetitorSuggestionsTool extends Tool
 {
     public function handle(Request $request): Response
@@ -88,7 +88,7 @@ class ConfirmCompetitorSuggestionsTool extends Tool
             SuggestCompetitorsJob::pruneSuggestions($user->id, $data['suggest_id'], $confirmed);
         }
 
-        $dismissRemainder = (bool) ($data['dismiss_remainder'] ?? false);
+        $dismissRemainder = (bool) ($data['dismiss_remainder'] ?? true);
         $remainingPayload = Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $data['suggest_id']));
         $remaining = is_array($remainingPayload['suggestions'] ?? null) ? $remainingPayload['suggestions'] : [];
 
@@ -101,17 +101,18 @@ class ConfirmCompetitorSuggestionsTool extends Tool
         if ($created === []) {
             $nextStep = 'No matches. Pass handles exactly as returned by suggest_competitors_status (case-insensitive).';
         } elseif ($remaining !== []) {
-            $nextStep = 'Confirmed handles are tracked. Remaining suggestions still show on /competitors - call dismiss_competitor_suggestions or re-confirm with dismiss_remainder=true to clear the pending panel.';
+            $nextStep = 'Confirmed handles are tracked. Remaining suggestions still show on /competitors - call dismiss_competitor_suggestions or re-confirm (dismiss_remainder defaults true; pass false only when you want to keep remainder).';
         }
 
         return Response::json([
             'confirmed_ids' => $created,
             'remaining_count' => count($remaining),
+            'dismiss_remainder' => $dismissRemainder,
             'note' => $created === []
                 ? 'No matching suggestion handles. Pass handles exactly as returned by suggest_competitors_status.'
                 : ($remaining === []
                     ? 'Confirmed handles are now tracked competitors. Pending suggestion panel is clear.'
-                    : 'Confirmed handles are now tracked competitors. Remaining suggestion rows stay until dismiss_competitor_suggestions or confirm with dismiss_remainder=true.'),
+                    : 'Confirmed handles are now tracked competitors. Remaining suggestion rows stay because dismiss_remainder=false.'),
             'next_step' => $nextStep,
         ]);
     }

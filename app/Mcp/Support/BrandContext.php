@@ -3,6 +3,7 @@
 namespace App\Mcp\Support;
 
 use App\Models\User;
+use Laravel\Mcp\Response;
 
 /**
  * Brand readiness checks so agents do not discover rivals/creators against a stale profile.
@@ -10,6 +11,50 @@ use App\Models\User;
 class BrandContext
 {
     /**
+     * Hard blockers for billable discovery (suggest / find). Empty description is warning-only.
+     *
+     * @return list<string>
+     */
+    public static function blockingErrorsFor(User $user): array
+    {
+        $brand = $user->brandProfile;
+        $errors = [];
+
+        if ($brand === null) {
+            $errors[] = 'No brand profile. Call update_brand or start_brand_autofill with the target website before suggest_competitors / find_influencers.';
+
+            return $errors;
+        }
+
+        if (blank($brand->website)) {
+            $errors[] = 'Brand website is blank. Set website via update_brand or start_brand_autofill before discovery.';
+        }
+
+        if (blank($brand->name)) {
+            $errors[] = 'Brand name is blank. Set name via update_brand or start_brand_autofill before discovery.';
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Block suggest/find when brand is missing or website/name blank.
+     */
+    public static function assertReady(User $user): ?Response
+    {
+        $errors = self::blockingErrorsFor($user);
+        if ($errors === []) {
+            return null;
+        }
+
+        return Response::error(
+            implode(' ', $errors).' next_step: Call update_brand or start_brand_autofill, then get_brand before suggest_competitors / find_influencers.'
+        );
+    }
+
+    /**
+     * Soft warnings for whoami / get_brand (includes empty description and fuzzy name/host mismatch).
+     *
      * @return list<string>
      */
     public static function warningsFor(User $user): array
@@ -35,6 +80,45 @@ class BrandContext
             $warnings[] = 'Brand description is empty. Autofill or update_brand with positioning so discovery briefs are on-niche.';
         }
 
+        if (
+            filled($brand->name)
+            && filled($brand->website)
+            && self::nameLooksUnrelatedToWebsite((string) $brand->name, (string) $brand->website)
+        ) {
+            $warnings[] = 'Brand name looks unrelated to the website host. Confirm update_brand / start_brand_autofill targeted the right company before discovery.';
+        }
+
         return $warnings;
+    }
+
+    public static function nameLooksUnrelatedToWebsite(string $name, string $website): bool
+    {
+        $host = parse_url($website, PHP_URL_HOST);
+        if (! is_string($host) || $host === '') {
+            return false;
+        }
+
+        $host = strtolower(preg_replace('/^www\./', '', $host) ?? $host);
+        $hostBase = explode('.', $host)[0] ?? '';
+        $hostNorm = preg_replace('/[^a-z0-9]+/', '', $hostBase) ?? '';
+        $nameNorm = strtolower(preg_replace('/[^a-z0-9]+/i', '', $name) ?? '');
+
+        if (strlen($nameNorm) < 3 || strlen($hostNorm) < 3) {
+            return false;
+        }
+
+        if (str_contains($hostNorm, $nameNorm) || str_contains($nameNorm, $hostNorm)) {
+            return false;
+        }
+
+        $tokens = preg_split('/[^a-z0-9]+/i', $name) ?: [];
+        foreach ($tokens as $token) {
+            $t = strtolower($token);
+            if (strlen($t) >= 4 && str_contains($host, $t)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

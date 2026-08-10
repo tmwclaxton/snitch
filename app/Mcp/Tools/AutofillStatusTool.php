@@ -4,10 +4,10 @@ namespace App\Mcp\Tools;
 
 use App\Jobs\AutofillBrandFromWebsiteJob;
 use App\Mcp\Support\McpAuth;
+use App\Mcp\Support\McpJobWait;
 use App\Mcp\Support\McpRuntime;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,7 +16,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('autofill_status')]
-#[Description('Poll brand website autofill status. When completed, call get_brand and continue with competitors/influencers. Requires a queue worker.')]
+#[Description('Poll brand website autofill status. Optional wait_seconds (max 45; default 0) blocks briefly for a terminal status. When completed, call get_brand and continue with competitors/influencers. Requires a queue worker.')]
 class AutofillStatusTool extends Tool
 {
     public function handle(Request $request): Response
@@ -28,23 +28,30 @@ class AutofillStatusTool extends Tool
 
         $data = $request->validate([
             'autofill_id' => ['required', 'string'],
+            'wait_seconds' => ['nullable', 'integer', 'min:0', 'max:45'],
         ]);
 
         if (! Str::isUuid($data['autofill_id'])) {
             return Response::error('Invalid autofill_id.');
         }
 
-        $payload = Cache::get(AutofillBrandFromWebsiteJob::cacheKeyFor($user->id, $data['autofill_id']));
+        $wait = McpJobWait::untilTerminal(
+            AutofillBrandFromWebsiteJob::cacheKeyFor($user->id, $data['autofill_id']),
+            isset($data['wait_seconds']) ? (int) $data['wait_seconds'] : 0,
+            defaultSeconds: 0,
+        );
+
+        $payload = $wait['payload'];
         $status = is_array($payload) ? ($payload['status'] ?? null) : null;
         $runtime = McpRuntime::snapshot();
 
         $nextStep = 'Keep polling autofill_status until completed or failed.';
         $note = 'Still running - keep polling.';
 
-        if (in_array($status, ['pending', 'queued', 'running'], true)
+        if (in_array($status, ['pending', 'queued', 'running', 'processing'], true)
             && ($runtime['pending_jobs'] ?? 0) > 0) {
             $note = 'Autofill still queued/running. Ensure php artisan queue:work is running.';
-            $nextStep = 'Start or verify a queue worker, then keep polling.';
+            $nextStep = 'Start or verify a queue worker, then keep polling (optionally pass wait_seconds).';
         }
 
         if ($status === 'failed') {
@@ -60,6 +67,7 @@ class AutofillStatusTool extends Tool
         return Response::json([
             'autofill_id' => $data['autofill_id'],
             'payload' => $payload,
+            'waited_seconds' => $wait['waited_seconds'],
             'note' => $note,
             'next_step' => $nextStep,
             'runtime' => [
@@ -74,6 +82,7 @@ class AutofillStatusTool extends Tool
     {
         return [
             'autofill_id' => $schema->string()->required(),
+            'wait_seconds' => $schema->integer()->nullable(),
         ];
     }
 }

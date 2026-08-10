@@ -27,7 +27,9 @@ class QueuedStatusSeedTest extends TestCase
         BrandProfile::factory()->create(['user_id' => $user->id]);
         Sanctum::actingAs($user);
 
-        SnitchServer::tool(SuggestCompetitorsTool::class)
+        SnitchServer::tool(SuggestCompetitorsTool::class, [
+            'wait_seconds' => 0,
+        ])
             ->assertOk()
             ->assertSee('queued');
 
@@ -53,6 +55,7 @@ class QueuedStatusSeedTest extends TestCase
         SnitchServer::tool(FindInfluencersTool::class, [
             'platform' => 'tiktok',
             'brief' => 'Streetwear creators for young women',
+            'wait_seconds' => 0,
         ])
             ->assertOk()
             ->assertSee('queued');

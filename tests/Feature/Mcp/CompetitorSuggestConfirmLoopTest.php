@@ -50,7 +50,9 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
         BrandProfile::factory()->create(['user_id' => $user->id]);
         Sanctum::actingAs($user);
 
-        SnitchServer::tool(SuggestCompetitorsTool::class)
+        SnitchServer::tool(SuggestCompetitorsTool::class, [
+            'wait_seconds' => 0,
+        ])
             ->assertOk()
             ->assertSee('confirm_competitor_suggestions')
             ->assertSee('NOT tracked');
@@ -115,6 +117,7 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
             'suggest_id' => $suggestId,
             'handles' => ['keepme'],
             'sync' => true,
+            'dismiss_remainder' => false,
         ])
             ->assertOk()
             ->assertSee('tracked competitors');
@@ -168,11 +171,59 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
             'suggest_id' => $suggestId,
             'handles' => ['keepme'],
             'sync' => false,
+            'dismiss_remainder' => false,
         ])->assertOk();
 
         $pruned = Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId));
         $this->assertSame(['skipme'], collect($pruned['suggestions'] ?? [])->pluck('handle')->all());
         $this->assertSame($suggestId, Cache::get(SuggestCompetitorsJob::latestCacheKeyFor($user->id)));
+    }
+
+    public function test_confirm_defaults_dismiss_remainder_true(): void
+    {
+        Queue::fake();
+
+        $attributes = (new \ReflectionClass(ConfirmCompetitorSuggestionsTool::class))->getAttributes(Description::class);
+        $this->assertNotEmpty($attributes);
+        $description = $attributes[0]->newInstance()->value;
+        $this->assertStringContainsString('dismiss_remainder defaults to true', $description);
+
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $suggestId = (string) Str::uuid();
+        Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
+            'status' => 'completed',
+            'suggestions' => [
+                [
+                    'platform' => 'instagram',
+                    'handle' => 'keepme',
+                ],
+                [
+                    'platform' => 'tiktok',
+                    'handle' => 'skipme',
+                ],
+            ],
+            'error' => null,
+        ], now()->addHours(2));
+        Cache::put(SuggestCompetitorsJob::latestCacheKeyFor($user->id), $suggestId, now()->addHours(2));
+        Cache::put(SuggestCompetitorsJob::activeCacheKeyFor($user->id), $suggestId, now()->addHours(2));
+
+        SnitchServer::tool(ConfirmCompetitorSuggestionsTool::class, [
+            'suggest_id' => $suggestId,
+            'handles' => ['keepme'],
+            'sync' => false,
+        ])
+            ->assertOk()
+            ->assertSee('Pending suggestion panel is clear');
+
+        $this->assertNull(Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId)));
+        $this->assertNull(Cache::get(SuggestCompetitorsJob::latestCacheKeyFor($user->id)));
+        $this->assertNull(Cache::get(SuggestCompetitorsJob::activeCacheKeyFor($user->id)));
+        $this->assertDatabaseHas('tracked_accounts', [
+            'user_id' => $user->id,
+            'handle' => 'keepme',
+        ]);
     }
 
     public function test_confirm_dismiss_remainder_clears_pending_panel(): void

@@ -6,16 +6,20 @@ use App\Jobs\FindInfluencersJob;
 use App\Jobs\SuggestCompetitorsJob;
 use App\Mcp\Servers\SnitchServer;
 use App\Mcp\Support\BrandContext;
+use App\Mcp\Support\McpJobWait;
 use App\Mcp\Support\McpRuntime;
 use App\Mcp\Tools\BillingStatusTool;
+use App\Mcp\Tools\FindInfluencersTool;
 use App\Mcp\Tools\GetBrandTool;
 use App\Mcp\Tools\InfluencerSearchStatusTool;
 use App\Mcp\Tools\SuggestCompetitorsStatusTool;
+use App\Mcp\Tools\SuggestCompetitorsTool;
 use App\Mcp\Tools\WhoamiTool;
 use App\Models\BrandProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Server\Attributes\Instructions;
 use Laravel\Sanctum\Sanctum;
@@ -148,5 +152,146 @@ class McpRuntimeGuidanceTest extends TestCase
         $this->assertTrue(collect($snapshot['warnings'])->contains(
             fn (string $w): bool => str_contains(strtolower($w), 'local')
         ));
+    }
+
+    public function test_brand_context_blocks_when_website_blank(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->create([
+            'user_id' => $user->id,
+            'name' => 'Opinly',
+            'website' => null,
+            'description' => 'AI opinions',
+        ]);
+
+        $errors = BrandContext::blockingErrorsFor($user->fresh());
+        $this->assertNotEmpty($errors);
+        $this->assertTrue(collect($errors)->contains(fn (string $e): bool => str_contains($e, 'website')));
+
+        $warnings = BrandContext::warningsFor($user->fresh());
+        $this->assertTrue(collect($warnings)->contains(fn (string $w): bool => str_contains($w, 'website')));
+    }
+
+    public function test_brand_context_warns_empty_description_without_blocking(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->create([
+            'user_id' => $user->id,
+            'name' => 'Opinly',
+            'website' => 'https://opinly.ai',
+            'description' => null,
+        ]);
+
+        $this->assertSame([], BrandContext::blockingErrorsFor($user->fresh()));
+        $warnings = BrandContext::warningsFor($user->fresh());
+        $this->assertTrue(collect($warnings)->contains(fn (string $w): bool => str_contains($w, 'description')));
+    }
+
+    public function test_brand_context_soft_warns_when_name_unrelated_to_host(): void
+    {
+        $this->assertTrue(BrandContext::nameLooksUnrelatedToWebsite('Opinly', 'https://grantgunner.org'));
+        $this->assertFalse(BrandContext::nameLooksUnrelatedToWebsite('Grant Gunner', 'https://www.grantgunner.org'));
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->create([
+            'user_id' => $user->id,
+            'name' => 'Opinly',
+            'website' => 'https://grantgunner.org',
+            'description' => 'Something',
+        ]);
+
+        $warnings = BrandContext::warningsFor($user->fresh());
+        $this->assertTrue(collect($warnings)->contains(fn (string $w): bool => str_contains($w, 'unrelated')));
+        $this->assertSame([], BrandContext::blockingErrorsFor($user->fresh()));
+    }
+
+    public function test_suggest_competitors_errors_when_brand_not_ready(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->create([
+            'user_id' => $user->id,
+            'name' => 'Opinly',
+            'website' => null,
+            'description' => 'AI opinions',
+        ]);
+        Sanctum::actingAs($user);
+
+        SnitchServer::tool(SuggestCompetitorsTool::class, [
+            'wait_seconds' => 0,
+        ])->assertHasErrors([
+            'Brand website is blank',
+        ]);
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_find_influencers_errors_when_brand_not_ready(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        SnitchServer::tool(FindInfluencersTool::class, [
+            'platform' => 'tiktok',
+            'brief' => 'Creators',
+            'wait_seconds' => 0,
+        ])->assertHasErrors([
+            'No brand profile',
+        ]);
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_mcp_job_wait_returns_immediately_when_already_terminal(): void
+    {
+        $key = 'mcp-job-wait-test:'.Str::uuid();
+        Cache::put($key, ['status' => 'completed', 'suggestions' => [['handle' => 'x']]], now()->addMinute());
+
+        $result = McpJobWait::untilTerminal($key, 5);
+
+        $this->assertFalse($result['timed_out']);
+        $this->assertSame('completed', $result['payload']['status'] ?? null);
+        $this->assertLessThan(2, $result['waited_seconds']);
+    }
+
+    public function test_mcp_job_wait_zero_seconds_does_not_block(): void
+    {
+        $key = 'mcp-job-wait-zero:'.Str::uuid();
+        Cache::put($key, ['status' => 'queued'], now()->addMinute());
+
+        $result = McpJobWait::untilTerminal($key, 0);
+
+        $this->assertTrue($result['timed_out']);
+        $this->assertSame(0, $result['waited_seconds']);
+        $this->assertSame('queued', $result['payload']['status'] ?? null);
+    }
+
+    public function test_suggest_status_wait_seconds_returns_terminal_payload(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $suggestId = (string) Str::uuid();
+        Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
+            'status' => 'completed',
+            'suggestions' => [
+                [
+                    'platform' => 'instagram',
+                    'handle' => 'rivalbrand',
+                ],
+            ],
+            'error' => null,
+        ], now()->addHour());
+
+        SnitchServer::tool(SuggestCompetitorsStatusTool::class, [
+            'suggest_id' => $suggestId,
+            'wait_seconds' => 5,
+        ])
+            ->assertOk()
+            ->assertSee('confirm_competitor_suggestions')
+            ->assertSee('waited_seconds');
     }
 }

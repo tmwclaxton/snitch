@@ -25,13 +25,17 @@ class GetBrandTool extends Tool
 
         $brand = $user->brandProfile;
         $warnings = BrandContext::warningsFor($user);
+        $blocking = BrandContext::blockingErrorsFor($user);
 
         return Response::json([
             'brand' => $brand?->only(['id', 'name', 'description', 'website', 'own_handles']),
             'brand_warnings' => $warnings,
-            'next_step' => $warnings !== []
-                ? 'Fix brand_warnings via update_brand or start_brand_autofill before suggest_competitors / find_influencers.'
-                : 'Brand looks ready. Proceed with suggest_competitors or find_influencers.',
+            'brand_blocking' => $blocking,
+            'next_step' => $blocking !== []
+                ? 'Fix brand_blocking via update_brand or start_brand_autofill before suggest_competitors / find_influencers.'
+                : ($warnings !== []
+                    ? 'Brand is usable; review brand_warnings then proceed with suggest_competitors or find_influencers.'
+                    : 'Brand looks ready. Proceed with suggest_competitors or find_influencers.'),
         ]);
     }
 
