@@ -50,7 +50,7 @@ class VendorMarksContractTest extends TestCase
     }
 
     #[Test]
-    public function spend_chart_uses_vendor_logos_in_legend_and_bar_fills(): void
+    public function spend_chart_legend_uses_vendor_logos_not_colour_dots(): void
     {
         $source = file_get_contents(base_path('resources/js/components/billing/VendorSpendStackedChart.vue'));
         $css = file_get_contents(base_path('resources/css/app.css'));
@@ -59,13 +59,14 @@ class VendorMarksContractTest extends TestCase
         $this->assertIsString($css);
         $this->assertStringContainsString('snitch-vendor-legend-mark', $source);
         $this->assertStringContainsString('vendorIconSrc', $source);
-        $this->assertStringContainsString(':image-src="segment.iconSrc"', $source);
         $this->assertStringContainsString('alt=""', $source);
         $this->assertStringContainsString('aria-hidden="true"', $source);
+        $this->assertStringContainsString('variant="dots"', $source);
+        $this->assertStringContainsString('snitch-vendor-spend-tip', $source);
         $this->assertStringNotContainsString('swatchClass', $source);
-        $this->assertStringNotContainsString('fillClass', $source);
+        $this->assertStringNotContainsString(':image-src', $source);
         $this->assertStringContainsString('.snitch-vendor-legend-mark', $css);
-        $this->assertStringContainsString('.snitch-vendor-chart-logo', $css);
+        $this->assertStringContainsString('.snitch-vendor-spend-tip', $css);
     }
 
     #[Test]

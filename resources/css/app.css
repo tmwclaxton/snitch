@@ -621,10 +621,51 @@
         filter: none;
     }
 
-    /* Dense mini vendor marks inside stacked spend bars (not colour stipple dots) */
-    .snitch-vendor-chart-logo {
-        opacity: 0.9;
+    /* Invisible SVG hit band over each stacked vendor segment */
+    .snitch-vendor-spend-hit {
+        cursor: help;
+        pointer-events: all;
+    }
+
+    /* Wee paper scrap tip naming the hovered vendor band */
+    .snitch-vendor-spend-tip {
+        position: absolute;
+        z-index: 20;
+        min-width: 5.5rem;
+        max-width: 10rem;
+        padding: 0.4rem 0.55rem 0.45rem;
         pointer-events: none;
+        transform: translate(-50%, calc(-100% - 0.65rem)) rotate(-1.2deg);
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 18%, transparent);
+        border-radius: 1px;
+        background: color-mix(in oklab, var(--snitch-lift) 78%, var(--snitch-paper));
+        box-shadow:
+            2px 2px 0 color-mix(in oklab, var(--snitch-spot) 38%, transparent),
+            0 1px 0 color-mix(in oklab, var(--snitch-ink) 8%, transparent);
+        color: var(--snitch-ink);
+    }
+
+    .snitch-vendor-spend-tip-vendor {
+        font-family: var(--font-display), ui-serif, Georgia, serif;
+        font-size: 0.8rem;
+        line-height: 1.15;
+        letter-spacing: 0.01em;
+    }
+
+    .snitch-vendor-spend-tip-amount {
+        margin-top: 0.15rem;
+        font-size: 0.72rem;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    .snitch-vendor-spend-tip-period {
+        margin-top: 0.1rem;
+        font-size: 0.65rem;
+        line-height: 1.2;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: color-mix(in oklab, var(--snitch-ink) 55%, transparent);
     }
 
     /*

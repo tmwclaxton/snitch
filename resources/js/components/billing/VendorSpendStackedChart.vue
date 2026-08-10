@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import StippleBar from '@/components/dashboard/StippleBar.vue';
 import { formatPenceAsGbp } from '@/lib/money';
 import {
     SPEND_VENDORS,
+    VENDOR_CHART_FILL,
     vendorIconSrc,
     vendorLabel,
 } from '@/lib/vendors';
@@ -24,11 +25,11 @@ export type SpendPoint = {
 const vendors: Array<{
     key: SpendVendorKey;
     label: string;
-    iconSrc: string;
+    fillClass: string;
 }> = SPEND_VENDORS.map((key) => ({
     key,
     label: vendorLabel(key),
-    iconSrc: vendorIconSrc(key),
+    fillClass: VENDOR_CHART_FILL[key],
 }));
 
 const props = withDefaults(
@@ -98,19 +99,8 @@ const barWidth = computed(() => {
     return (plotWidth.value - barGap * (n - 1)) / n;
 });
 
-/** Dense mini-logo lattice; size scales with bar width so day grain still packs many marks. */
-const logoSize = computed(() => {
-    if (barWidth.value < 12) {
-        return 5.8;
-    }
-
-    if (barWidth.value < 22) {
-        return 7.2;
-    }
-
-    return 8.6;
-});
-const logoStep = computed(() => logoSize.value * 1.1);
+const stippleStep = computed(() => (barWidth.value < 12 ? 3.2 : 3.8));
+const stippleRadius = computed(() => (barWidth.value < 12 ? 0.95 : 1.15));
 
 const yTicks = computed(() => {
     const max = maxTotal.value;
@@ -134,10 +124,23 @@ type Segment = {
     y: number;
     width: number;
     height: number;
-    iconSrc: string;
-    title: string;
+    fillClass: string;
+    vendorLabel: string;
+    periodLabel: string;
+    amountLabel: string;
     seed: number;
 };
+
+type HoverTip = {
+    vendorLabel: string;
+    periodLabel: string;
+    amountLabel: string;
+    x: number;
+    y: number;
+};
+
+const chartShell = ref<HTMLElement | null>(null);
+const tip = ref<HoverTip | null>(null);
 
 const segments = computed((): Segment[] => {
     const result: Segment[] = [];
@@ -171,8 +174,10 @@ const segments = computed((): Segment[] => {
                 y: cursorY,
                 width: barWidth.value,
                 height,
-                iconSrc: vendor.iconSrc,
-                title: `${point.label}: ${vendor.label} ${formatPence(pence)}`,
+                fillClass: vendor.fillClass,
+                vendorLabel: vendor.label,
+                periodLabel: point.label,
+                amountLabel: formatPence(pence),
                 seed: index * 10 + vendorIndex + 1,
             });
         });
@@ -202,10 +207,50 @@ const xLabels = computed(() => {
                 point.index % every === 0,
         );
 });
+
+function tipPosition(event: PointerEvent): { x: number; y: number } {
+    const shell = chartShell.value;
+
+    if (!shell) {
+        return { x: 0, y: 0 };
+    }
+
+    const bounds = shell.getBoundingClientRect();
+
+    return {
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top,
+    };
+}
+
+function showTip(segment: Segment, event: PointerEvent): void {
+    const { x, y } = tipPosition(event);
+
+    tip.value = {
+        vendorLabel: segment.vendorLabel,
+        periodLabel: segment.periodLabel,
+        amountLabel: segment.amountLabel,
+        x,
+        y,
+    };
+}
+
+function moveTip(event: PointerEvent): void {
+    if (!tip.value) {
+        return;
+    }
+
+    const { x, y } = tipPosition(event);
+    tip.value = { ...tip.value, x, y };
+}
+
+function hideTip(): void {
+    tip.value = null;
+}
 </script>
 
 <template>
-    <div class="snitch-vendor-spend-chart">
+    <div ref="chartShell" class="snitch-vendor-spend-chart relative">
         <div class="flex flex-wrap items-end justify-between gap-3">
             <div>
                 <p class="snitch-ink-label">Spend over time</p>
@@ -274,12 +319,27 @@ const xLabels = computed(() => {
                 :y="segment.y"
                 :width="segment.width"
                 :height="segment.height"
-                :image-src="segment.iconSrc"
+                variant="dots"
                 :animate="false"
                 :seed="segment.seed"
-                :step="logoStep"
-                :radius="logoSize"
-                :title="segment.title"
+                :step="stippleStep"
+                :radius="stippleRadius"
+                :fill-class="segment.fillClass"
+            />
+
+            <!-- Transparent hit targets so each vendor band gets a paper tip on hover. -->
+            <rect
+                v-for="segment in segments"
+                :key="`hit-${segment.key}`"
+                class="snitch-vendor-spend-hit"
+                :x="segment.x"
+                :y="segment.y"
+                :width="segment.width"
+                :height="Math.max(segment.height, 3)"
+                fill="transparent"
+                @pointerenter="showTip(segment, $event)"
+                @pointermove="moveTip($event)"
+                @pointerleave="hideTip"
             />
 
             <text
@@ -295,7 +355,18 @@ const xLabels = computed(() => {
             </text>
         </svg>
 
-        <p v-else class="mt-4 text-sm text-snitch-ink/55">
+        <div
+            v-if="tip"
+            class="snitch-vendor-spend-tip"
+            role="tooltip"
+            :style="{ left: `${tip.x}px`, top: `${tip.y}px` }"
+        >
+            <p class="snitch-vendor-spend-tip-vendor">{{ tip.vendorLabel }}</p>
+            <p class="snitch-vendor-spend-tip-amount tabular-nums">{{ tip.amountLabel }}</p>
+            <p class="snitch-vendor-spend-tip-period">{{ tip.periodLabel }}</p>
+        </div>
+
+        <p v-else-if="!hasSpend" class="mt-4 text-sm text-snitch-ink/55">
             No vendor charges in the {{ windowLabel }} yet. Sync, analyse, or run discovery to see spend here.
         </p>
     </div>
