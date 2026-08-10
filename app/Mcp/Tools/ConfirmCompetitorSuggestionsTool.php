@@ -18,7 +18,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('confirm_competitor_suggestions')]
-#[Description('Confirm competitor suggestions from a suggest run and optionally queue syncs.')]
+#[Description('REQUIRED after suggest_competitors to start tracking. Creates TrackedAccounts for selected handles from a suggest run and optionally queues syncs. Until this runs, suggestions remain pending cache/UI only.')]
 class ConfirmCompetitorSuggestionsTool extends Tool
 {
     public function handle(Request $request): Response
@@ -43,6 +43,7 @@ class ConfirmCompetitorSuggestionsTool extends Tool
         $suggestions = is_array($payload['suggestions'] ?? null) ? $payload['suggestions'] : [];
         $wanted = array_map(fn ($h) => ltrim((string) $h, '@'), $data['handles']);
         $created = [];
+        $confirmed = [];
 
         foreach ($suggestions as $row) {
             if (! is_array($row)) {
@@ -53,10 +54,12 @@ class ConfirmCompetitorSuggestionsTool extends Tool
                 continue;
             }
 
+            $platform = (string) ($row['platform'] ?? 'instagram');
+
             $account = TrackedAccount::query()->updateOrCreate(
                 [
                     'user_id' => $user->id,
-                    'platform' => (string) ($row['platform'] ?? 'instagram'),
+                    'platform' => $platform,
                     'handle' => $handle,
                 ],
                 [
@@ -68,12 +71,25 @@ class ConfirmCompetitorSuggestionsTool extends Tool
                 ],
             );
             $created[] = $account->id;
+            $confirmed[] = [
+                'platform' => $platform,
+                'handle' => $handle,
+            ];
             if ($data['sync'] ?? true) {
                 SyncTrackedAccountJob::dispatch($account->id, true);
             }
         }
 
-        return Response::json(['confirmed_ids' => $created]);
+        if ($confirmed !== []) {
+            SuggestCompetitorsJob::pruneLatestSuggestions($user->id, $confirmed);
+        }
+
+        return Response::json([
+            'confirmed_ids' => $created,
+            'note' => $created === []
+                ? 'No matching suggestion handles. Pass handles exactly as returned by suggest_competitors_status.'
+                : 'Confirmed handles are now tracked competitors. Remaining suggestion rows stay until confirm, dismiss, or re-run.',
+        ]);
     }
 
     /** @return array<string, Type> */

@@ -43,6 +43,9 @@ Prefer real `usage.prompt_tokens` / `usage.completion_tokens` from the NanoGPT c
 - MCP register `/mcp/register` (create_account); authenticated `/mcp` (Sanctum bearer)
 - Claim `/claim/{token}` then WorkOS login
 
+## MCP discovery loops need a confirm step
+Competitor suggest and influencer find only queue discovery. Agents must confirm (`confirm_competitor_suggestions` / `keep_influencer`) or dismiss/discard before ending the session. Unconfirmed competitor suggestions stay pending in cache and on Competitors Index. Document the loop in SnitchServer instructions, tool descriptions, and `McpConnectionGuide` copy.
+
 ## Stripe
 Checkout: product `platform` or `credits` + pack key. Webhook `checkout.session.completed` with `snitch_product=credits` tops up ledger idempotently. Sync prices with `php artisan snitch:stripe-sync-plans`. Env: `STRIPE_PRICE_PLATFORM`, `STRIPE_PRICE_CREDITS_*`. Never commit secrets. Production uses the live SnitchSocial account (`acct_1U2GxgE7lACbEaHl`); sandbox customers (`acct_1U2Gxo2QNFnwAnG2`) must not be stored in prod `users.stripe_id`. `User::createOrGetStripeCustomer()` clears a missing customer id and recreates in the current mode so checkout does not hard-fail after a test/live mix-up.
 

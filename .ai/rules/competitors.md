@@ -25,8 +25,11 @@ Run niche-led per-platform Firecrawl `site:` queries (instagram, tiktok, youtube
 ## LinkedIn verify uses company vs profile actors
 Default Apify actor is `apimaestro/linkedin-company-posts` (`company_name`). Personal `/in/` resolves use `apimaestro/linkedin-profile-posts` (`username`). Pass full LinkedIn URLs into resolve so path kind is preserved. Profile `external_id` comes from `source_company` / `author.username` (live payloads have no `author.id`).
 
+## MCP suggest loop must confirm
+Agents must finish `suggest_competitors` → poll `suggest_competitors_status` → `confirm_competitor_suggestions` (selected handles) or `dismiss_competitor_suggestions`. Suggestions are cache/UI only until confirmed; they are NOT TrackedAccounts. Do not treat a completed suggest run as done. Keep this explicit in SnitchServer `#[Instructions]`, tool `#[Description]`s, and response `note` fields.
+
 ## Confirmed rivals leave the suggestion table
-On confirm (and manual add), prune those platform+handle rows from `competitor-suggest-latest` instead of wiping the whole set. Index/page load also filters already-tracked accounts out of persisted suggestions. Dismiss still clears all; re-run still replaces the set.
+On confirm (web and MCP) and manual add, prune those platform+handle rows from `competitor-suggest-latest` instead of wiping the whole set. Index/page load also filters already-tracked accounts out of persisted suggestions. Dismiss still clears all; re-run still replaces the set.
 
 ## Suggest streams verified rows during processing
 `SuggestCompetitorsJob` writes partial `suggestions` into the poll cache while status is `processing` (and keeps them on `failed` when under `min_suggestions`). Do not assume suggestions exist only on `completed`. Firecrawl searches and Apify resolves run via in-process `Http::pool` (`searchMany`, `resolve_concurrency`).

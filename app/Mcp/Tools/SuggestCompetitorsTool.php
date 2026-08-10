@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('suggest_competitors')]
-#[Description('Queue AI competitor suggestions (Firecrawl + NanoGPT + Apify; billable).')]
+#[Description('Queue AI competitor suggestions (Firecrawl + NanoGPT + Apify; billable). Does NOT track anyone. After polling suggest_competitors_status, you MUST call confirm_competitor_suggestions with selected handles (or dismiss_competitor_suggestions). Leaving suggestions unconfirmed means they stay pending in cache/UI only.')]
 class SuggestCompetitorsTool extends Tool
 {
     public function handle(Request $request): Response
@@ -36,7 +36,7 @@ class SuggestCompetitorsTool extends Tool
         return Response::json([
             'suggest_id' => $suggestId,
             'queued' => true,
-            'note' => 'Poll suggest_competitors_status with this suggest_id.',
+            'note' => 'Poll suggest_competitors_status with this suggest_id until completed or failed. Suggestions are NOT tracked until you call confirm_competitor_suggestions with selected handles (or dismiss_competitor_suggestions to clear).',
         ]);
     }
 

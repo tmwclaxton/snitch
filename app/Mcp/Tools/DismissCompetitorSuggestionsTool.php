@@ -15,7 +15,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('dismiss_competitor_suggestions')]
-#[Description('Dismiss / clear a competitor suggestion run from cache.')]
+#[Description('Clear a competitor suggestion run from cache without tracking anyone. Use when the agent or user rejects the suggest run instead of calling confirm_competitor_suggestions.')]
 class DismissCompetitorSuggestionsTool extends Tool
 {
     public function handle(Request $request): Response

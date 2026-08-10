@@ -114,6 +114,7 @@ class McpConnectionGuide
                     'Claim the account in the browser if an agent created it (claim URL is returned).',
                     'Subscribe to the platform plan and top up credits before billable tools.',
                     'Call authenticated tools on '.$mcpUrl.' with Authorization: Bearer <token>.',
+                    'After suggest_competitors, poll status then confirm_competitor_suggestions (or dismiss). Suggestions are not tracked until confirmed.',
                 ],
                 'snippet' => implode("\n", [
                     'Register (public): '.$registerUrl,
@@ -122,7 +123,9 @@ class McpConnectionGuide
                     'Authenticated: '.$mcpUrl,
                     '  Header: Authorization: Bearer YOUR_SNITCH_API_TOKEN',
                     '',
-                    'Useful first calls: whoami, billing_status, update_brand, add_competitor, find_influencers',
+                    'Useful first calls: whoami, billing_status, update_brand, add_competitor',
+                    'Competitor loop: suggest_competitors → suggest_competitors_status → confirm_competitor_suggestions',
+                    'Influencer loop: find_influencers → influencer_search_status → keep_influencer',
                 ]),
             ],
             'tools' => [

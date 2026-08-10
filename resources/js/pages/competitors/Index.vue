@@ -665,7 +665,7 @@ function syncButtonTitle(account: Account): string {
                             Suggested rivals
                         </h2>
                         <p class="mt-1.5 text-sm text-snitch-ink/65">
-                            Select accounts to track, then confirm. Reload keeps this table until you dismiss or re-run.
+                            Pending suggestions (including from an agent) are not tracked yet. Select accounts, then confirm. Reload keeps this table until you dismiss or re-run.
                         </p>
                     </div>
                     <div class="flex flex-wrap gap-2">

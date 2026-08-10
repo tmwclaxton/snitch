@@ -148,6 +148,10 @@ async function copyText(value: string): Promise<void> {
                     <li>The £19/mo platform plan includes £30 usage credits each billing period.</li>
                     <li>Billable tools need a balance above 20p - subscribe for plan value or top up credits.</li>
                     <li>Usage on the billing page is shown for Apify, NanoGPT, Firecrawl, and TikHub.</li>
+                    <li>
+                        Competitor suggest is not done until confirm: suggest_competitors →
+                        suggest_competitors_status → confirm_competitor_suggestions (or dismiss).
+                    </li>
                 </ul>
             </section>
 
