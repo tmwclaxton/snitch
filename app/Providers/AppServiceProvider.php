@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Listeners\HandleStripeWebhook;
 use App\Mail\PostalTransport;
+use App\Services\Apify\ApifyClient;
 use App\Services\TikHub\TikHubClient;
 use App\Support\ClientIp;
 use App\Support\WorkOs\Ipv4CurlRequestClient;
@@ -29,6 +30,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // In-process run cost buffers - must be shared so VendorUsageCharger
+        // sees the same instance adapters used during the job.
+        $this->app->singleton(ApifyClient::class);
         $this->app->singleton(TikHubClient::class);
     }
 

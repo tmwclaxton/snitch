@@ -192,11 +192,10 @@ class SyncTrackedAccountJob implements ShouldQueue
                 $this->dispatchAnalysisIfNeeded($post->fresh('analysis'));
             }
 
-            if ($scrapeDriver === 'tikhub') {
-                $charger->chargePulledTikHubRuns($owner, 'sync.account');
-            } else {
-                $charger->chargePulledApifyRuns($owner, 'sync.account');
-            }
+            // Pull both buffers: empty Apify→TikHub fallback and YouTube
+            // TikHub hydrate can leave costs on either client in one job.
+            $charger->chargePulledApifyRuns($owner, 'sync.account');
+            $charger->chargePulledTikHubRuns($owner, 'sync.account');
 
             $account->fill([
                 'last_synced_at' => now(),
