@@ -89,8 +89,18 @@ class DeployScriptTest extends TestCase
         $this->assertStringContainsString('SKIP_GHCR_PULL=1 ./deploy-production.sh', $workflow);
         $this->assertStringContainsString('docker/production/edge/nginx.conf', $workflow);
         $this->assertStringContainsString('upstream-active.conf.default', $workflow);
+        $this->assertStringContainsString('.deploy-staging', $workflow);
+        $this->assertStringContainsString('install-edge-deploy-files.sh', $workflow);
         $this->assertStringContainsString('EDGE_IMAGE: nginx:1.27-alpine', $workflow);
         $this->assertStringContainsString('docker pull "$EDGE_IMAGE"', $workflow);
         $this->assertStringContainsString('docker save "$IMAGE_SHA" "$EDGE_IMAGE"', $workflow);
+
+        $installEdge = file_get_contents(base_path('scripts/install-edge-deploy-files.sh'));
+
+        $this->assertNotFalse($installEdge);
+        $this->assertStringContainsString('install_edge_file', $installEdge);
+        $this->assertStringContainsString('rewriting via docker', $installEdge);
+        $this->assertStringContainsString('docker run --rm', $installEdge);
+        $this->assertStringContainsString('conf.d/snitch.conf', $installEdge);
     }
 }

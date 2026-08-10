@@ -180,14 +180,21 @@ jobs:
           }
 
           copy_deploy_files() {
-            ssh ${{ env.DEPLOY_HOST }} "mkdir -p ${{ env.DEPLOY_DIR }}/docker/production/edge/conf.d ${{ env.DEPLOY_DIR }}/edge"
-            scp compose.prod.yaml scripts/deploy-production.sh \
+            # Stage under DEPLOY_DIR (always writable by the deploy user), then
+            # install into bind-mount paths. scp cannot truncate root-owned files
+            # Docker may leave when a file bind source was missing (or became a
+            # root-owned directory). See scripts/install-edge-deploy-files.sh.
+            ssh ${{ env.DEPLOY_HOST }} "mkdir -p ${{ env.DEPLOY_DIR }}/.deploy-staging ${{ env.DEPLOY_DIR }}/docker/production/edge/conf.d ${{ env.DEPLOY_DIR }}/edge"
+            scp compose.prod.yaml scripts/deploy-production.sh scripts/install-edge-deploy-files.sh \
               ${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/
             scp docker/production/edge/nginx.conf \
               docker/production/edge/upstream-active.conf.default \
-              ${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/docker/production/edge/
-            scp docker/production/edge/conf.d/snitch.conf \
-              ${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/docker/production/edge/conf.d/
+              docker/production/edge/conf.d/snitch.conf \
+              ${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/.deploy-staging/
+            ssh ${{ env.DEPLOY_HOST }} \
+              "chmod +x ${{ env.DEPLOY_DIR }}/install-edge-deploy-files.sh && \
+               DEPLOY_DIR=${{ env.DEPLOY_DIR }} EDGE_IMAGE=${{ env.EDGE_IMAGE }} \
+               ${{ env.DEPLOY_DIR }}/install-edge-deploy-files.sh"
           }
 
           retry_with_backoff 5 copy_deploy_files
