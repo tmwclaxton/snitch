@@ -110,6 +110,10 @@ function formatMoney(pence: number): string {
     return formatPenceAsGbp(pence);
 }
 
+function formatCatalogMoney(pence: number): string {
+    return formatPenceAsGbp(pence, { decimals: 2 });
+}
+
 function rowLinkHref(row: ChargeRow): string {
     return chargeLinkHref(row.link) ?? '';
 }
@@ -169,8 +173,8 @@ function vendorAccent(key: SpendVendorKey): string {
                     <p class="text-sm text-snitch-ink/70">
                         Platform plan:
                         <strong>{{ subscription.subscribed ? 'Active' : 'Not subscribed' }}</strong>
-                        · {{ formatMoney(platform.fee_pence) }}/mo includes
-                        {{ formatMoney(platform.bonus_pence) }} usage each billing period
+                        · {{ formatCatalogMoney(platform.fee_pence) }}/mo includes
+                        {{ formatCatalogMoney(platform.bonus_pence) }} usage each billing period
                     </p>
                     <div class="flex flex-wrap gap-3">
                         <Form
@@ -273,7 +277,7 @@ function vendorAccent(key: SpendVendorKey): string {
                             <input type="hidden" name="pack" :value="pack.key" />
                             <p class="snitch-display text-lg text-snitch-ink">{{ pack.name }}</p>
                             <p class="mb-3 text-sm text-snitch-ink/70">
-                                {{ formatMoney(pack.credits_pence) }} usage balance
+                                {{ formatCatalogMoney(pack.credits_pence) }} usage balance
                             </p>
                             <button
                                 type="submit"
@@ -281,7 +285,7 @@ function vendorAccent(key: SpendVendorKey): string {
                                 :disabled="!pack.has_checkout"
                                 :data-test="`topup-${pack.key}`"
                             >
-                                Buy {{ formatMoney(pack.price_pence) }}
+                                Buy {{ formatCatalogMoney(pack.price_pence) }}
                             </button>
                         </Form>
                     </div>
