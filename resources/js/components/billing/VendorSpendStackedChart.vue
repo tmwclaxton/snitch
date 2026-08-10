@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import StippleBar from '@/components/dashboard/StippleBar.vue';
+import { formatPenceAsGbp } from '@/lib/money';
 import {
     SPEND_VENDORS,
     VENDOR_CHART_FILL,
@@ -44,14 +45,8 @@ const props = withDefaults(
     },
 );
 
-const money = new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 2,
-});
-
 function formatPence(pence: number): string {
-    return money.format(pence / 100);
+    return formatPenceAsGbp(pence);
 }
 
 const bucketCount = computed(() => props.periodCount ?? props.points.length);

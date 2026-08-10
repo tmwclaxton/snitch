@@ -5,6 +5,7 @@ import { computed } from 'vue';
 import { charges as billingCharges, index as billingIndex } from '@/actions/App/Http/Controllers/Settings/BillingController';
 import PaperSelect from '@/components/PaperSelect.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { formatPenceAsGbp } from '@/lib/money';
 import { vendorIconSrc, vendorLabel } from '@/lib/vendors';
 
 type ChargeRow = {
@@ -84,16 +85,7 @@ const hasActiveFilters = computed(
 );
 
 function formatMoney(pence: number): string {
-    const sign = pence > 0 ? '+' : '';
-
-    return (
-        sign +
-        new Intl.NumberFormat('en-GB', {
-            style: 'currency',
-            currency: 'GBP',
-            maximumFractionDigits: Math.abs(pence) % 100 === 0 ? 0 : 2,
-        }).format(pence / 100)
-    );
+    return formatPenceAsGbp(pence, { signed: true });
 }
 
 function formatWhen(iso: string | null): string {

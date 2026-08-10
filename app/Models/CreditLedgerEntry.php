@@ -26,8 +26,8 @@ class CreditLedgerEntry extends Model
             'vendor' => BillingVendor::class,
             'cogs_usd' => 'float',
             'multiplier' => 'float',
-            'amount_pence' => 'integer',
-            'balance_after_pence' => 'integer',
+            'amount_pence' => 'float',
+            'balance_after_pence' => 'float',
             'meta' => 'array',
         ];
     }

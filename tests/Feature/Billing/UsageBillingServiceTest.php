@@ -36,7 +36,7 @@ class UsageBillingServiceTest extends TestCase
     {
         $user = User::factory()->unclaimedAgent()->create();
 
-        $this->assertSame(0, $this->billing->balancePence($user));
+        $this->assertSame(0.0, $this->billing->balancePence($user));
         $this->assertFalse($this->billing->hasPlatformSubscription($user));
     }
 
@@ -47,7 +47,7 @@ class UsageBillingServiceTest extends TestCase
         $this->billing->creditClaimBonus($user);
         $this->billing->creditClaimBonus($user);
 
-        $this->assertSame(500, $this->billing->balancePence($user));
+        $this->assertSame(500.0, $this->billing->balancePence($user));
     }
 
     public function test_subscription_bonus_is_idempotent_per_invoice(): void
@@ -58,7 +58,7 @@ class UsageBillingServiceTest extends TestCase
         $this->billing->creditSubscriptionBonus($user, 'subscription_bonus:invoice:in_test_1');
         $this->billing->creditSubscriptionBonus($user, 'subscription_bonus:invoice:in_test_2');
 
-        $this->assertSame(6000, $this->billing->balancePence($user));
+        $this->assertSame(6000.0, $this->billing->balancePence($user));
     }
 
     public function test_charge_works_without_subscription_when_balance_above_floor(): void
@@ -95,7 +95,7 @@ class UsageBillingServiceTest extends TestCase
             $this->billing->assertCanRun($user);
             $this->fail('Expected InsufficientCreditsException');
         } catch (InsufficientCreditsException $exception) {
-            $this->assertSame(20, $exception->balancePence);
+            $this->assertSame(20.0, $exception->balancePence);
             $this->assertStringContainsString('more than 20p', $exception->getMessage());
             $this->assertStringContainsString('Subscribe', $exception->getMessage());
             $this->assertStringContainsString('top up', $exception->getMessage());
@@ -109,7 +109,7 @@ class UsageBillingServiceTest extends TestCase
 
         $this->billing->assertCanRun($user);
 
-        $this->assertSame(21, $this->billing->balancePence($user));
+        $this->assertSame(21.0, $this->billing->balancePence($user));
     }
 
     public function test_insufficient_credits_throws_when_balance_is_zero(): void
@@ -232,12 +232,14 @@ class UsageBillingServiceTest extends TestCase
         $this->assertSame(abs($fourth->amount_pence), $lastMonth['nanogpt']);
     }
 
-    public function test_video_analysis_floor_is_about_half_a_penny_before_ceil(): void
+    public function test_nanogpt_floor_charges_two_tenths_of_a_penny(): void
     {
         config([
             'billing.usd_to_gbp' => 0.79,
             'billing.price_multiplier' => 1.4,
-            'billing.vendors.nanogpt.floors_usd.video_analysis' => 0.0045,
+            'billing.vendors.nanogpt.min_charge_pence' => 0.2,
+            'billing.vendors.nanogpt.floors_usd.video_analysis' => 0.0018,
+            'billing.actions.analyze.post.floor_usd' => 0.0018,
         ]);
 
         $cogs = $this->billing->estimateNanoGptChatUsd(
@@ -247,14 +249,32 @@ class UsageBillingServiceTest extends TestCase
             'video_analysis',
         );
 
-        $this->assertSame(0.0045, $cogs);
-        $this->assertSame(1, $this->billing->pricePenceFromCogs('analyze.post', BillingVendor::NanoGpt, $cogs));
+        $this->assertSame(0.0018, $cogs);
+        $this->assertSame(0.2, $this->billing->pricePenceFromCogs('analyze.post', BillingVendor::NanoGpt, $cogs));
+
+        $user = User::factory()->create();
+        $this->billing->creditFromTopUp($user, 1000, 'topup:nanogpt-floor');
+        $entry = $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, $cogs);
+
+        $this->assertSame(-0.2, $entry->amount_pence);
+        $this->assertSame(999.8, $this->billing->balancePence($user));
+    }
+
+    public function test_non_nanogpt_vendors_still_ceil_to_one_penny(): void
+    {
+        config([
+            'billing.usd_to_gbp' => 0.79,
+            'billing.price_multiplier' => 1.4,
+        ]);
+
+        // Tiny TikHub COGS would be well under 1p after pricing.
+        $this->assertSame(1.0, $this->billing->pricePenceFromCogs('tikhub.run', BillingVendor::TikHub, 0.001));
     }
 
     public function test_estimate_nanogpt_uses_tokens_when_above_video_analysis_floor(): void
     {
         config([
-            'billing.vendors.nanogpt.floors_usd.video_analysis' => 0.0045,
+            'billing.vendors.nanogpt.floors_usd.video_analysis' => 0.0018,
         ]);
 
         $tiny = $this->billing->estimateNanoGptChatUsd(
@@ -263,7 +283,7 @@ class UsageBillingServiceTest extends TestCase
             'deepseek/deepseek-v4-flash',
             'video_analysis',
         );
-        $this->assertSame(0.0045, $tiny);
+        $this->assertSame(0.0018, $tiny);
 
         $large = $this->billing->estimateNanoGptChatUsd(
             2_000_000,

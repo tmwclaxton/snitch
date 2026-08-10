@@ -40,7 +40,7 @@ class AccountClaimTest extends TestCase
         $claimed = app(AccountClaimService::class)->claim($user, $workOs);
 
         $this->assertTrue($claimed->isClaimed());
-        $this->assertSame(500, app(UsageBillingService::class)->balancePence($claimed));
+        $this->assertSame(500.0, app(UsageBillingService::class)->balancePence($claimed));
 
         $this->expectException(\RuntimeException::class);
         app(AccountClaimService::class)->claim($claimed->fresh(), $workOs);

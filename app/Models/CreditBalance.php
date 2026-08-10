@@ -15,7 +15,7 @@ class CreditBalance extends Model
     protected function casts(): array
     {
         return [
-            'balance_pence' => 'integer',
+            'balance_pence' => 'float',
         ];
     }
 

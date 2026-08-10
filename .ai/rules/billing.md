@@ -33,8 +33,8 @@ Agent MCP `create_account` starts at £0. Claiming/confirming (WorkOS bind or we
 ## Vendors
 Ledger rows are per vendor: `apify`, `nanogpt`, `firecrawl`, `tikhub` (plus `bonus`/`topup`). Apify prefers exact `usageTotalUsd` from run API; NanoGPT/Firecrawl/TikHub use catalog estimates / floors. Billing page and MCP `billing_status` show spend by those four vendors.
 
-## NanoGPT analyze.post
-Prefer real `usage.prompt_tokens` / `usage.completion_tokens` from the NanoGPT chat response (via `VideoAnalysisService` → `estimateNanoGptChatUsd`). When tokens are missing or negligible, the `video_analysis` / `analyze.post` floor is **0.0045 USD** (~0.5p after `usd_to_gbp` × `price_multiplier`; ledger ceils to 1p). Do not show markup/COGS in UI.
+## NanoGPT analyze.post / queries
+Prefer real `usage.prompt_tokens` / `usage.completion_tokens` from the NanoGPT chat response (via `VideoAnalysisService` → `estimateNanoGptChatUsd`). Ledger columns store GBP pence with one decimal place (tenths of a penny). NanoGPT charges use `vendors.nanogpt.min_charge_pence` (**0.2p**) and ceil to 0.1p; other vendors still ceil to a **1p** minimum. When tokens are missing or negligible, `video_analysis` / `chat` / `analyze.post` / `influencer.brief` / `winners.copy` floors are **0.0018 USD** (~0.2p after `usd_to_gbp` × `price_multiplier`). `embed.analysis` uses the embeddings floor but still hits the 0.2p NanoGPT minimum. UI formats sub-penny amounts as £0.002. Do not show markup/COGS in UI.
 
 ## Surfaces
 - Authenticated `/billing` - balance, platform subscribe, credit packs, vendor usage, stacked stipple chart of Apify/NanoGPT/Firecrawl/TikHub spend (`UsageBillingService::spendSeries`) with `grain=day|week|month` (default day), and a short recent-charges preview (8 rows) with link to the full list

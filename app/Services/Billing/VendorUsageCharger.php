@@ -16,7 +16,7 @@ class VendorUsageCharger
         private TikHubClient $tikhub,
     ) {}
 
-    public function assertCanRun(User $user, int $estimatedPence = 1): void
+    public function assertCanRun(User $user, float $estimatedPence = 1): void
     {
         $this->billing->assertCanRun($user, $estimatedPence);
     }

@@ -52,7 +52,7 @@ class SubscriptionBonusWebhookTest extends TestCase
             ],
         ]));
 
-        $this->assertSame(3000, app(UsageBillingService::class)->balancePence($user));
+        $this->assertSame(3000.0, app(UsageBillingService::class)->balancePence($user));
 
         $listener->handle(new WebhookReceived([
             'type' => 'invoice.paid',
@@ -76,7 +76,7 @@ class SubscriptionBonusWebhookTest extends TestCase
             ],
         ]));
 
-        $this->assertSame(3000, app(UsageBillingService::class)->balancePence($user));
+        $this->assertSame(3000.0, app(UsageBillingService::class)->balancePence($user));
     }
 
     public function test_invoice_paid_ignores_non_platform_prices(): void
@@ -105,6 +105,6 @@ class SubscriptionBonusWebhookTest extends TestCase
             ],
         ]));
 
-        $this->assertSame(0, app(UsageBillingService::class)->balancePence($user));
+        $this->assertSame(0.0, app(UsageBillingService::class)->balancePence($user));
     }
 }

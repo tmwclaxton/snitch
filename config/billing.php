@@ -111,11 +111,13 @@ return [
                     'output_per_m_usd' => 0.0,
                 ],
             ],
+            // Ledger minimum for NanoGPT only (tenths of a penny). Other vendors stay at 1p.
+            'min_charge_pence' => 0.2,
             // Typical call floors when token counts are unknown.
-            // video_analysis ~0.5p after usd_to_gbp × price_multiplier (ceil to 1p on ledger).
+            // video_analysis / chat ~0.2p after usd_to_gbp × price_multiplier (ceil to 0.1p).
             'floors_usd' => [
-                'chat' => 0.002,
-                'video_analysis' => 0.0045,
+                'chat' => 0.0018,
+                'video_analysis' => 0.0018,
                 'embeddings' => 0.0002,
             ],
         ],
@@ -145,13 +147,13 @@ return [
         'apify.run' => ['vendor' => 'apify', 'floor_usd' => 0.01],
         'tikhub.run' => ['vendor' => 'tikhub', 'floor_usd' => 0.001],
         'sync.account' => ['vendor' => 'apify', 'floor_usd' => 0.05],
-        'analyze.post' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0045],
+        'analyze.post' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0018],
         'embed.analysis' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0002],
         'influencers.find' => ['vendor' => 'firecrawl', 'floor_usd' => 0.02],
         'competitors.suggest' => ['vendor' => 'firecrawl', 'floor_usd' => 0.02],
         'brand.autofill' => ['vendor' => 'firecrawl', 'floor_usd' => 0.005],
-        'influencer.brief' => ['vendor' => 'nanogpt', 'floor_usd' => 0.001],
-        'winners.copy' => ['vendor' => 'nanogpt', 'floor_usd' => 0.002],
+        'influencer.brief' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0018],
+        'winners.copy' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0018],
     ],
 
 ];

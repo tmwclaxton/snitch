@@ -12,6 +12,7 @@ import type {
     SpendPoint,
 } from '@/components/billing/VendorSpendStackedChart.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { formatPenceAsGbp } from '@/lib/money';
 import {
     SPEND_VENDORS,
     VENDOR_ACCENT_BORDER,
@@ -110,11 +111,7 @@ const checkoutStatus = computed(() => {
 });
 
 function formatMoney(pence: number): string {
-    return new Intl.NumberFormat('en-GB', {
-        style: 'currency',
-        currency: 'GBP',
-        maximumFractionDigits: Math.abs(pence) % 100 === 0 ? 0 : 2,
-    }).format(pence / 100);
+    return formatPenceAsGbp(pence);
 }
 
 const spendVendors = SPEND_VENDORS;

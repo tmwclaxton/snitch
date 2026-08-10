@@ -57,7 +57,7 @@ class BillingChargesTest extends TestCase
                 ->has('filters')
                 ->has('vendors')
                 ->has('actions')
-                ->where('usage.balance_pence', $this->billing->balancePence($user)));
+                ->where('usage.balance_pence', fn ($balance) => (float) $balance === $this->billing->balancePence($user)));
 
         $pageTwo = $this->actingAs($user)
             ->get(route('billing.charges', ['page' => 2]))
@@ -152,6 +152,29 @@ class BillingChargesTest extends TestCase
             $filtered->inertiaProps('charges.links'),
             requiredQuery: 'vendor=nanogpt',
         );
+    }
+
+    public function test_nanogpt_floor_charge_appears_as_two_tenths_of_a_penny(): void
+    {
+        config([
+            'billing.usd_to_gbp' => 0.79,
+            'billing.price_multiplier' => 1.4,
+            'billing.vendors.nanogpt.min_charge_pence' => 0.2,
+            'billing.actions.analyze.post.floor_usd' => 0.0018,
+        ]);
+
+        $user = User::factory()->create();
+        $this->subscribe($user);
+        $this->billing->creditFromTopUp($user, 1000, 'topup:nanogpt-display');
+        $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.0018);
+
+        $this->actingAs($user)
+            ->get(route('billing.charges', ['vendor' => 'nanogpt']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('charges.data.0.vendor', 'nanogpt')
+                ->where('charges.data.0.amount_pence', -0.2)
+                ->where('charges.data.0.balance_after_pence', 999.8));
     }
 
     public function test_billing_index_recent_charges_are_preview_only(): void

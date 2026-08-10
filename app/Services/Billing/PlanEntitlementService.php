@@ -83,7 +83,7 @@ class PlanEntitlementService
      *     subscribed: bool,
      *     billing_interval: string|null,
      *     can_upgrade: bool,
-     *     balance_pence: int,
+     *     balance_pence: float,
      *     min_run_balance_pence: int,
      *     can_run_billable: bool,
      *     platform_fee_pence: int,

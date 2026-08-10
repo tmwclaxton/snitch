@@ -19,9 +19,9 @@ class UsageBillingService
 
     public const CHARGES_PER_PAGE = 25;
 
-    public function balancePence(User $user): int
+    public function balancePence(User $user): float
     {
-        return (int) ($this->balanceRow($user)->balance_pence ?? 0);
+        return $this->roundPence((float) ($this->balanceRow($user)->balance_pence ?? 0));
     }
 
     public function hasPlatformSubscription(User $user): bool
@@ -37,7 +37,7 @@ class UsageBillingService
         return max(0, (int) config('billing.min_run_balance_pence', 20));
     }
 
-    public function canRun(User $user, int $estimatedPence = 1): bool
+    public function canRun(User $user, float $estimatedPence = 1): bool
     {
         try {
             $this->assertCanRun($user, $estimatedPence);
@@ -48,13 +48,14 @@ class UsageBillingService
         }
     }
 
-    public function assertCanRun(User $user, int $estimatedPence = 1): void
+    public function assertCanRun(User $user, float $estimatedPence = 1): void
     {
         $balance = $this->balancePence($user);
         $minExclusive = $this->minRunBalancePence();
-        $required = max($minExclusive + 1, max(1, $estimatedPence));
+        $estimate = max(0.1, $estimatedPence);
+        $required = max($minExclusive + 1, $estimate);
 
-        if ($balance <= $minExclusive || $balance < max(1, $estimatedPence)) {
+        if ($balance <= $minExclusive || $balance < $estimate) {
             throw new InsufficientCreditsException(
                 requiredPence: $required,
                 balancePence: $balance,
@@ -179,7 +180,7 @@ class UsageBillingService
         );
     }
 
-    public function estimatePence(string $action, BillingVendor|string $vendor, ?float $cogsUsd = null): int
+    public function estimatePence(string $action, BillingVendor|string $vendor, ?float $cogsUsd = null): float
     {
         $vendorEnum = $vendor instanceof BillingVendor ? $vendor : BillingVendor::from($vendor);
 
@@ -195,7 +196,7 @@ class UsageBillingService
      *     days: int,
      *     from: string,
      *     to: string,
-     *     points: list<array{date: string, label: string, apify: int, nanogpt: int, firecrawl: int, tikhub: int, total: int}>
+     *     points: list<array{date: string, label: string, apify: float, nanogpt: float, firecrawl: float, tikhub: float, total: float}>
      * }
      */
     public function dailySpendSeries(User $user, int $days = 30): array
@@ -213,7 +214,7 @@ class UsageBillingService
      *     days: int,
      *     from: string,
      *     to: string,
-     *     points: list<array{date: string, label: string, apify: int, nanogpt: int, firecrawl: int, tikhub: int, total: int}>
+     *     points: list<array{date: string, label: string, apify: float, nanogpt: float, firecrawl: float, tikhub: float, total: float}>
      * }
      */
     public function spendSeries(User $user, string $grain = 'day', ?int $periods = null): array
@@ -240,7 +241,7 @@ class UsageBillingService
             BillingVendor::TikHub->value,
         ];
 
-        /** @var array<string, array{date: string, label: string, apify: int, nanogpt: int, firecrawl: int, tikhub: int, total: int}> $buckets */
+        /** @var array<string, array{date: string, label: string, apify: float, nanogpt: float, firecrawl: float, tikhub: float, total: float}> $buckets */
         $buckets = [];
 
         for ($offset = 0; $offset < $periodCount; $offset++) {
@@ -257,11 +258,11 @@ class UsageBillingService
                     'month' => $cursor->format('M Y'),
                     default => $cursor->format('j M'),
                 },
-                'apify' => 0,
-                'nanogpt' => 0,
-                'firecrawl' => 0,
-                'tikhub' => 0,
-                'total' => 0,
+                'apify' => 0.0,
+                'nanogpt' => 0.0,
+                'firecrawl' => 0.0,
+                'tikhub' => 0.0,
+                'total' => 0.0,
             ];
         }
 
@@ -296,9 +297,9 @@ class UsageBillingService
                 continue;
             }
 
-            $pence = abs((int) $entry->amount_pence);
-            $buckets[$key][$vendor] += $pence;
-            $buckets[$key]['total'] += $pence;
+            $pence = abs($this->roundPence((float) $entry->amount_pence));
+            $buckets[$key][$vendor] = $this->roundPence($buckets[$key][$vendor] + $pence);
+            $buckets[$key]['total'] = $this->roundPence($buckets[$key]['total'] + $pence);
         }
 
         return [
@@ -313,13 +314,13 @@ class UsageBillingService
 
     /**
      * @return array{
-     *     balance_pence: int,
+     *     balance_pence: float,
      *     subscribed: bool,
      *     platform_fee_pence: int,
      *     period: array{from: string, to: string},
-     *     vendors: array<string, array{spend_pence: int, entries: int}>,
-     *     period_spend_pence: int,
-     *     all_time_spend_pence: int,
+     *     vendors: array<string, array{spend_pence: float, entries: int}>,
+     *     period_spend_pence: float,
+     *     all_time_spend_pence: float,
      *     recent: list<array<string, mixed>>,
      *     recent_total: int,
      *     recent_has_more: bool
@@ -339,7 +340,7 @@ class UsageBillingService
 
         $vendors = [];
         foreach ($vendorKeys as $key) {
-            $vendors[$key] = ['spend_pence' => 0, 'entries' => 0];
+            $vendors[$key] = ['spend_pence' => 0.0, 'entries' => 0];
         }
 
         $periodRows = CreditLedgerEntry::query()
@@ -354,18 +355,18 @@ class UsageBillingService
         foreach ($periodRows as $row) {
             $key = $row->vendor instanceof BillingVendor ? $row->vendor->value : (string) $row->vendor;
             $vendors[$key] = [
-                'spend_pence' => (int) $row->spend_pence,
+                'spend_pence' => $this->roundPence((float) $row->spend_pence),
                 'entries' => (int) $row->entries,
             ];
         }
 
-        $periodSpend = array_sum(array_column($vendors, 'spend_pence'));
+        $periodSpend = $this->roundPence(array_sum(array_column($vendors, 'spend_pence')));
 
-        $allTimeSpend = (int) CreditLedgerEntry::query()
+        $allTimeSpend = $this->roundPence((float) CreditLedgerEntry::query()
             ->where('user_id', $user->id)
             ->where('amount_pence', '<', 0)
             ->whereIn('vendor', $vendorKeys)
-            ->sum(DB::raw('ABS(amount_pence)'));
+            ->sum(DB::raw('ABS(amount_pence)')));
 
         $recentVendors = [...$vendorKeys, BillingVendor::Bonus->value, BillingVendor::Topup->value];
 
@@ -407,8 +408,8 @@ class UsageBillingService
      *     id: int,
      *     action: string,
      *     vendor: string,
-     *     amount_pence: int,
-     *     balance_after_pence: int,
+     *     amount_pence: float,
+     *     balance_after_pence: float,
      *     created_at: string|null
      * }>
      */
@@ -460,8 +461,8 @@ class UsageBillingService
      *     id: int,
      *     action: string,
      *     vendor: string,
-     *     amount_pence: int,
-     *     balance_after_pence?: int,
+     *     amount_pence: float,
+     *     balance_after_pence?: float,
      *     created_at: string|null
      * }
      */
@@ -471,25 +472,33 @@ class UsageBillingService
             'id' => $entry->id,
             'action' => $entry->action,
             'vendor' => $entry->vendor instanceof BillingVendor ? $entry->vendor->value : (string) $entry->vendor,
-            'amount_pence' => $entry->amount_pence,
+            'amount_pence' => $this->roundPence((float) $entry->amount_pence),
             'created_at' => $entry->created_at?->toIso8601String(),
         ];
 
         if ($includeBalance) {
-            $mapped['balance_after_pence'] = $entry->balance_after_pence;
+            $mapped['balance_after_pence'] = $this->roundPence((float) $entry->balance_after_pence);
         }
 
         return $mapped;
     }
 
-    public function pricePenceFromCogs(string $action, BillingVendor $vendor, ?float $cogsUsd): int
+    public function pricePenceFromCogs(string $action, BillingVendor $vendor, ?float $cogsUsd): float
     {
         $floorUsd = (float) config("billing.actions.{$action}.floor_usd", config('billing.vendors.apify.floor_usd', 0.01));
         $cogs = $cogsUsd !== null && $cogsUsd > 0 ? $cogsUsd : $floorUsd;
         $gbp = $cogs * (float) config('billing.usd_to_gbp', 0.79);
         $priced = $gbp * (float) config('billing.price_multiplier', 1.4);
+        $pence = $priced * 100;
 
-        return max(1, (int) ceil($priced * 100));
+        if ($vendor === BillingVendor::NanoGpt) {
+            $min = (float) config('billing.vendors.nanogpt.min_charge_pence', 0.2);
+
+            // Ceil to tenths of a penny so NanoGPT can bill 0.2p accurately.
+            return max($min, $this->roundPence(ceil(($pence * 10) - 1e-9) / 10));
+        }
+
+        return (float) max(1, (int) ceil($pence - 1e-9));
     }
 
     public function estimateNanoGptChatUsd(?int $inputTokens, ?int $outputTokens, string $model, string $floorKey = 'chat'): float
@@ -533,7 +542,7 @@ class UsageBillingService
         User $user,
         string $action,
         BillingVendor $vendor,
-        int $amountPence,
+        float $amountPence,
         ?float $cogsUsd,
         ?float $multiplier,
         array $meta,
@@ -541,6 +550,8 @@ class UsageBillingService
         bool $requirePlatform,
         bool $requireCredits,
     ): CreditLedgerEntry {
+        $amountPence = $this->roundPence($amountPence);
+
         if ($idempotencyKey !== null) {
             $existing = CreditLedgerEntry::query()->where('idempotency_key', $idempotencyKey)->first();
 
@@ -570,12 +581,13 @@ class UsageBillingService
                 throw new PlatformSubscriptionRequiredException;
             }
 
-            $next = (int) $balance->balance_pence + $amountPence;
+            $current = $this->roundPence((float) $balance->balance_pence);
+            $next = $this->roundPence($current + $amountPence);
 
             if ($requireCredits && $amountPence < 0 && $next < 0) {
                 throw new InsufficientCreditsException(
                     requiredPence: abs($amountPence),
-                    balancePence: (int) $balance->balance_pence,
+                    balancePence: $current,
                     message: 'Not enough credits for this charge. Subscribe to the platform plan for monthly credit value, or top up on the Billing page.',
                 );
             }
@@ -589,7 +601,7 @@ class UsageBillingService
                 'cogs_usd' => $cogsUsd,
                 'multiplier' => $multiplier,
                 'amount_pence' => $amountPence,
-                'balance_after_pence' => (int) $balance->balance_pence,
+                'balance_after_pence' => $this->roundPence((float) $balance->balance_pence),
                 'meta' => $meta === [] ? null : $meta,
                 'idempotency_key' => $idempotencyKey ?? (string) Str::uuid(),
             ]);
@@ -602,5 +614,10 @@ class UsageBillingService
             ['user_id' => $user->id],
             ['balance_pence' => 0],
         );
+    }
+
+    private function roundPence(float $pence): float
+    {
+        return round($pence, 1);
     }
 }
