@@ -179,6 +179,59 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
         $this->assertSame($suggestId, Cache::get(SuggestCompetitorsJob::latestCacheKeyFor($user->id)));
     }
 
+    public function test_confirm_accepts_platform_handle_objects(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $suggestId = (string) Str::uuid();
+        Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
+            'status' => 'completed',
+            'suggestions' => [
+                [
+                    'platform' => 'facebook',
+                    'handle' => 'farmbrite',
+                    'display_name' => 'Farmbrite FB',
+                ],
+                [
+                    'platform' => 'instagram',
+                    'handle' => 'farmbrite',
+                    'display_name' => 'Farmbrite IG',
+                ],
+                [
+                    'platform' => 'tiktok',
+                    'handle' => 'other',
+                    'display_name' => 'Other',
+                ],
+            ],
+            'error' => null,
+        ], now()->addHours(2));
+
+        SnitchServer::tool(ConfirmCompetitorSuggestionsTool::class, [
+            'suggest_id' => $suggestId,
+            'handles' => [
+                ['platform' => 'instagram', 'handle' => 'farmbrite'],
+            ],
+            'sync' => false,
+            'dismiss_remainder' => true,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('tracked_accounts', [
+            'user_id' => $user->id,
+            'platform' => 'instagram',
+            'handle' => 'farmbrite',
+            'kind' => TrackedAccountKind::Competitor->value,
+        ]);
+        $this->assertDatabaseMissing('tracked_accounts', [
+            'user_id' => $user->id,
+            'platform' => 'facebook',
+            'handle' => 'farmbrite',
+        ]);
+        $this->assertSame(1, TrackedAccount::query()->where('user_id', $user->id)->count());
+    }
+
     public function test_confirm_defaults_dismiss_remainder_true(): void
     {
         Queue::fake();

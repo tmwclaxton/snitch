@@ -18,7 +18,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('confirm_competitor_suggestions')]
-#[Description('REQUIRED after suggest_competitors to start tracking. Creates TrackedAccounts for selected handles from a suggest run and optionally queues syncs. dismiss_remainder defaults to true so leftover pending suggestion cards clear after a typical confirm; pass false to keep remainder. Until confirmed, suggestions remain pending cache/UI only.')]
+#[Description('REQUIRED after suggest_competitors to start tracking. Creates TrackedAccounts for selected handles from a suggest run and optionally queues syncs. handles may be strings ("farmbrite") or {platform, handle} objects for platform-specific picks. dismiss_remainder defaults to true so leftover pending suggestion cards clear after a typical confirm; pass false to keep remainder. Until confirmed, suggestions remain pending cache/UI only.')]
 class ConfirmCompetitorSuggestionsTool extends Tool
 {
     public function handle(Request $request): Response
@@ -31,7 +31,6 @@ class ConfirmCompetitorSuggestionsTool extends Tool
         $data = $request->validate([
             'suggest_id' => ['required', 'string'],
             'handles' => ['required', 'array', 'min:1'],
-            'handles.*' => ['required', 'string', 'max:255'],
             'sync' => ['nullable', 'boolean'],
             'dismiss_remainder' => ['nullable', 'boolean'],
         ]);
@@ -40,12 +39,13 @@ class ConfirmCompetitorSuggestionsTool extends Tool
             return Response::error('Invalid suggest_id.');
         }
 
+        $selectors = $this->normalizeHandleSelectors($data['handles']);
+        if ($selectors === []) {
+            return Response::error('handles must be non-empty strings or {platform, handle} objects.');
+        }
+
         $payload = Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $data['suggest_id']));
         $suggestions = is_array($payload['suggestions'] ?? null) ? $payload['suggestions'] : [];
-        $wanted = array_map(
-            fn ($h) => strtolower(ltrim((string) $h, '@')),
-            $data['handles'],
-        );
         $created = [];
         $confirmed = [];
 
@@ -54,11 +54,10 @@ class ConfirmCompetitorSuggestionsTool extends Tool
                 continue;
             }
             $handle = ltrim((string) ($row['handle'] ?? ''), '@');
-            if ($handle === '' || ! in_array(strtolower($handle), $wanted, true)) {
+            $platform = (string) ($row['platform'] ?? 'instagram');
+            if ($handle === '' || ! $this->rowMatchesSelectors($platform, $handle, $selectors)) {
                 continue;
             }
-
-            $platform = (string) ($row['platform'] ?? 'instagram');
 
             $account = TrackedAccount::query()->updateOrCreate(
                 [
@@ -115,6 +114,64 @@ class ConfirmCompetitorSuggestionsTool extends Tool
                     : 'Confirmed handles are now tracked competitors. Remaining suggestion rows stay because dismiss_remainder=false.'),
             'next_step' => $nextStep,
         ]);
+    }
+
+    /**
+     * @param  list<mixed>  $handles
+     * @return list<array{handle: string, platform: ?string}>
+     */
+    private function normalizeHandleSelectors(array $handles): array
+    {
+        $selectors = [];
+
+        foreach ($handles as $entry) {
+            if (is_string($entry)) {
+                $handle = strtolower(ltrim($entry, '@'));
+                if ($handle !== '') {
+                    $selectors[] = ['handle' => $handle, 'platform' => null];
+                }
+
+                continue;
+            }
+
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            $handle = strtolower(ltrim((string) ($entry['handle'] ?? ''), '@'));
+            if ($handle === '') {
+                continue;
+            }
+
+            $platform = isset($entry['platform']) ? strtolower(trim((string) $entry['platform'])) : null;
+            $selectors[] = [
+                'handle' => $handle,
+                'platform' => $platform !== '' ? $platform : null,
+            ];
+        }
+
+        return $selectors;
+    }
+
+    /**
+     * @param  list<array{handle: string, platform: ?string}>  $selectors
+     */
+    private function rowMatchesSelectors(string $platform, string $handle, array $selectors): bool
+    {
+        $handleKey = strtolower(ltrim($handle, '@'));
+        $platformKey = strtolower($platform);
+
+        foreach ($selectors as $selector) {
+            if ($selector['handle'] !== $handleKey) {
+                continue;
+            }
+
+            if ($selector['platform'] === null || $selector['platform'] === $platformKey) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** @return array<string, Type> */
