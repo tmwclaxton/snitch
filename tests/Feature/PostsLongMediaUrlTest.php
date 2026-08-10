@@ -11,22 +11,25 @@ use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Apify\ApifyClient;
 use App\Services\Apify\PlatformAdapterManager;
-use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\VendorUsageCharger;
 use App\Services\SnitchAnalyticsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Mockery;
+use Tests\Concerns\WithPlatformBilling;
 use Tests\TestCase;
 
 class PostsLongMediaUrlTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPlatformBilling;
 
     public function test_sync_persists_facebook_cdn_media_urls_over_255_chars(): void
     {
         Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
 
         $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
         $account = TrackedAccount::factory()->for($user)->create([
             'platform' => Platform::Facebook,
             'handle' => 'CandidDotOrg',
@@ -37,6 +40,7 @@ class PostsLongMediaUrlTest extends TestCase
         $this->assertGreaterThan(255, strlen($mediaUrl));
 
         $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
         $client->shouldReceive('runActor')->andReturn([
             [
                 'pageName' => 'Candid',
@@ -64,7 +68,7 @@ class PostsLongMediaUrlTest extends TestCase
         (new SyncTrackedAccountJob($account->id))->handle(
             app(PlatformAdapterManager::class),
             app(SnitchAnalyticsService::class),
-            app(PlanEntitlementService::class),
+            app(VendorUsageCharger::class),
         );
 
         $account->refresh();
