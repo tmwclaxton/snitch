@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Servers;
 
+use App\Mcp\Prompts\WorkflowGuidePrompt;
 use App\Mcp\Tools\AddCompetitorTool;
 use App\Mcp\Tools\AnalyzePostTool;
 use App\Mcp\Tools\AutofillStatusTool;
@@ -35,6 +36,7 @@ use App\Mcp\Tools\SyncCompetitorTool;
 use App\Mcp\Tools\UpdateBrandTool;
 use App\Mcp\Tools\UpdateWinnerRulesTool;
 use App\Mcp\Tools\WhoamiTool;
+use App\Mcp\Tools\WorkflowGuideTool;
 use Laravel\Mcp\Server;
 use Laravel\Mcp\Server\Attributes\Instructions;
 use Laravel\Mcp\Server\Attributes\Name;
@@ -42,12 +44,13 @@ use Laravel\Mcp\Server\Attributes\Version;
 
 #[Name('Snitch')]
 #[Version('1.0.0')]
-#[Instructions('Snitch is the social marketing data layer for agents. Authenticate with a Sanctum bearer token from create_account (or the website Agents page). Call whoami first: check runtime.app_url (local vs https://www.snitchsocial.net), brand_warnings, and queue warnings. Local MCP (localhost) uses a different database and credits than production. Async tools need php artisan queue:work. Billable tools need a credit balance above 20p - subscribe for monthly plan value or top up credits. Prefer sync/analyze/find tools explicitly - nothing is auto-scheduled. Never paste bearer tokens into public chats; prefer rotate_token after exposure. Competitor discovery must complete the full loop: suggest_competitors → poll suggest_competitors_status → confirm_competitor_suggestions with selected handles (or dismiss_competitor_suggestions). Suggestions are cache-only until confirmed; they are NOT tracked competitors. Influencer discovery is the same pattern: find_influencers → influencer_search_status → keep_influencer / discard_influencer. Fix brand_warnings before discovery so suggestions match the intended company.')]
+#[Instructions('Snitch is the social marketing data layer for agents. Authenticate with a Sanctum bearer token from create_account (or the website Agents page). Call workflow_guide first (workflow=overview or a specific flow), then whoami: check runtime.app_url (local vs https://www.snitchsocial.net), brand_warnings, and queue warnings. Local MCP (localhost) uses a different database and credits than production. Async tools need php artisan queue:work. Billable tools need a credit balance above 20p - subscribe for monthly plan value or top up credits. Prefer sync/analyze/find tools explicitly - nothing is auto-scheduled. Never paste bearer tokens into public chats; prefer rotate_token after exposure. Competitor discovery must complete the full loop: suggest_competitors → poll suggest_competitors_status → confirm_competitor_suggestions with selected handles (or dismiss_competitor_suggestions). Suggestions are cache-only until confirmed; they are NOT tracked competitors. Influencer discovery is the same pattern: find_influencers → influencer_search_status → keep_influencer / discard_influencer. Fix brand_warnings before discovery so suggestions match the intended company.')]
 class SnitchServer extends Server
 {
     public int $defaultPaginationLength = 50;
 
     protected array $tools = [
+        WorkflowGuideTool::class,
         WhoamiTool::class,
         ClaimInfoTool::class,
         RotateTokenTool::class,
@@ -85,5 +88,7 @@ class SnitchServer extends Server
 
     protected array $resources = [];
 
-    protected array $prompts = [];
+    protected array $prompts = [
+        WorkflowGuidePrompt::class,
+    ];
 }

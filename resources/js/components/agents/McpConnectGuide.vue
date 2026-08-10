@@ -155,7 +155,8 @@ async function copyText(value: string): Promise<void> {
                 <span class="snitch-tape left-4 -top-2" aria-hidden="true" />
                 <h2 class="snitch-display text-2xl text-snitch-ink">Tool catalogue</h2>
                 <p class="text-sm text-snitch-ink/70">
-                    Authenticated tools on the MCP server (plus create_account on register).
+                    Authenticated tools on the MCP server (plus create_account on register). Call
+                    <span class="font-mono">workflow_guide</span> first for ordered steps.
                 </p>
                 <ul class="flex flex-wrap gap-2">
                     <li
