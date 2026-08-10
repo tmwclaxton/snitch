@@ -31,14 +31,6 @@ export const VENDOR_CHART_FILL: Record<SpendVendorKey, string> = {
     tikhub: 'fill-snitch-ink/40',
 };
 
-/** Matching legend / chip background utilities (unique keys - no duplicate object keys). */
-export const VENDOR_CHART_SWATCH: Record<SpendVendorKey, string> = {
-    apify: 'bg-snitch-ink/75',
-    nanogpt: 'bg-snitch-stipple-spot',
-    firecrawl: 'bg-snitch-teal',
-    tikhub: 'bg-snitch-ink/40',
-};
-
 export const VENDOR_ACCENT_BORDER: Record<SpendVendorKey, string> = {
     apify: 'border-l-snitch-ink/70',
     nanogpt: 'border-l-snitch-stipple-spot',

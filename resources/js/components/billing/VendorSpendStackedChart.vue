@@ -4,7 +4,6 @@ import StippleBar from '@/components/dashboard/StippleBar.vue';
 import {
     SPEND_VENDORS,
     VENDOR_CHART_FILL,
-    VENDOR_CHART_SWATCH,
     vendorIconSrc,
     vendorLabel,
 } from '@/lib/vendors';
@@ -26,12 +25,10 @@ const vendors: Array<{
     key: SpendVendorKey;
     label: string;
     fillClass: string;
-    swatchClass: string;
 }> = SPEND_VENDORS.map((key) => ({
     key,
     label: vendorLabel(key),
     fillClass: VENDOR_CHART_FILL[key],
-    swatchClass: VENDOR_CHART_SWATCH[key],
 }));
 
 const props = withDefaults(
@@ -222,18 +219,18 @@ const xLabels = computed(() => {
                 :key="vendor.key"
                 class="inline-flex items-center gap-1.5"
             >
-                <img
-                    :src="vendorIconSrc(vendor.key)"
-                    alt=""
-                    class="snitch-platform-logo size-3.5 shrink-0 object-contain"
-                    width="14"
-                    height="14"
-                >
                 <span
-                    class="size-2.5 shrink-0 rounded-[1px]"
-                    :class="vendor.swatchClass"
+                    class="snitch-vendor-legend-mark inline-flex size-4 shrink-0 items-center justify-center"
                     aria-hidden="true"
-                />
+                >
+                    <img
+                        :src="vendorIconSrc(vendor.key)"
+                        alt=""
+                        class="snitch-platform-logo size-3 object-contain"
+                        width="12"
+                        height="12"
+                    >
+                </span>
                 {{ vendor.label }}
             </li>
         </ul>

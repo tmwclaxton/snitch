@@ -609,6 +609,18 @@
         );
     }
 
+    /* Tiny paper plate so official vendor logos read on snitch paper (billing legend) */
+    .snitch-vendor-legend-mark {
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 12%, transparent);
+        border-radius: 1px;
+        background: color-mix(in oklab, var(--snitch-lift) 72%, var(--snitch-paper));
+        box-shadow: 1px 1px 0 color-mix(in oklab, var(--snitch-spot) 22%, transparent);
+    }
+
+    .snitch-vendor-legend-mark .snitch-platform-logo {
+        filter: none;
+    }
+
     /*
      * Shared image shell: reserves space (aspect / size) so lazy loads and
      * broken CDN avatars do not collapse list rows or feed cells.

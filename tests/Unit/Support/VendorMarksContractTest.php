@@ -45,16 +45,24 @@ class VendorMarksContractTest extends TestCase
 
         $this->assertCount(4, $fills);
         $this->assertCount(4, array_unique(array_values($fills)));
+        $this->assertSame('fill-snitch-stipple-spot', $fills['nanogpt']);
+        $this->assertStringNotContainsString('VENDOR_CHART_SWATCH', $source);
+    }
 
-        $swatches = [];
-        preg_match_all("/(apify|nanogpt|firecrawl|tikhub): '(bg-[^']+)'/", $source, $swatchMatches);
-        foreach ($swatchMatches[1] as $index => $vendor) {
-            $swatches[$vendor] = $swatchMatches[2][$index];
-        }
+    #[Test]
+    public function spend_chart_legend_uses_vendor_logos_not_colour_dots(): void
+    {
+        $source = file_get_contents(base_path('resources/js/components/billing/VendorSpendStackedChart.vue'));
+        $css = file_get_contents(base_path('resources/css/app.css'));
 
-        $this->assertCount(4, $swatches);
-        $this->assertCount(4, array_unique(array_values($swatches)));
-        $this->assertSame('bg-snitch-stipple-spot', $swatches['nanogpt']);
+        $this->assertIsString($source);
+        $this->assertIsString($css);
+        $this->assertStringContainsString('snitch-vendor-legend-mark', $source);
+        $this->assertStringContainsString('vendorIconSrc', $source);
+        $this->assertStringContainsString('alt=""', $source);
+        $this->assertStringContainsString('aria-hidden="true"', $source);
+        $this->assertStringNotContainsString('swatchClass', $source);
+        $this->assertStringContainsString('.snitch-vendor-legend-mark', $css);
     }
 
     #[Test]
