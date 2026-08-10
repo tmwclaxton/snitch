@@ -61,7 +61,8 @@ class WorkflowGuideToolTest extends TestCase
         ])
             ->assertOk()
             ->assertSee('"workflow":"brand"')
-            ->assertSee('start_brand_autofill');
+            ->assertSee('start_brand_autofill')
+            ->assertSee('does NOT clear');
     }
 
     public function test_workflow_guide_influencers_mentions_latest_run_pointer(): void

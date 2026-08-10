@@ -39,6 +39,7 @@ class StartBrandAutofillTool extends Tool
             'fields' => null,
             'error' => null,
         ], now()->addHour());
+        Cache::put(AutofillBrandFromWebsiteJob::latestCacheKeyFor($user->id), $autofillId, now()->addHour());
 
         AutofillBrandFromWebsiteJob::dispatch($user->id, $autofillId, $data['website']);
 

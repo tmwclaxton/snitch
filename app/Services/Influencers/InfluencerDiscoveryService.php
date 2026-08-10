@@ -370,7 +370,7 @@ class InfluencerDiscoveryService
         ]);
 
         $text = $this->nanoGpt->extractAssistantText($response);
-        $payload = json_decode($this->extractJson($text), true);
+        $payload = $this->decodeModelJson($text);
 
         if (! is_array($payload)) {
             throw new RuntimeException('Influencer suggestion model returned invalid JSON.');
@@ -457,7 +457,7 @@ class InfluencerDiscoveryService
         ]);
 
         $text = $this->nanoGpt->extractAssistantText($response);
-        $payload = json_decode($this->extractJson($text), true);
+        $payload = $this->decodeModelJson($text);
 
         if (! is_array($payload)) {
             throw new RuntimeException('Model seed returned invalid JSON.');
@@ -1977,12 +1977,63 @@ class InfluencerDiscoveryService
         };
     }
 
-    private function extractJson(string $text): string
+    /**
+     * Decode model chat text into an associative array. Tolerates markdown fences,
+     * leading prose, and truncated trailing braces when possible.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function decodeModelJson(string $text): ?array
     {
-        if (preg_match('/\{.*\}/s', $text, $matches) === 1) {
-            return $matches[0];
+        $candidate = $this->extractJson($text);
+        $decoded = json_decode($candidate, true);
+
+        if (is_array($decoded)) {
+            return $decoded;
         }
 
-        return $text;
+        // Truncated object: close open braces/brackets if the start looks like JSON.
+        $trimmed = ltrim($candidate);
+        if ($trimmed !== '' && ($trimmed[0] === '{' || $trimmed[0] === '[')) {
+            $openCurly = substr_count($trimmed, '{') - substr_count($trimmed, '}');
+            $openSquare = substr_count($trimmed, '[') - substr_count($trimmed, ']');
+            if ($openCurly > 0 || $openSquare > 0) {
+                $repaired = rtrim($trimmed, ", \n\r\t");
+                $repaired .= str_repeat(']', max(0, $openSquare));
+                $repaired .= str_repeat('}', max(0, $openCurly));
+                $decoded = json_decode($repaired, true);
+                if (is_array($decoded)) {
+                    return $decoded;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function extractJson(string $text): string
+    {
+        $trimmed = trim($text);
+
+        if ($trimmed === '') {
+            return $trimmed;
+        }
+
+        // Strip common markdown fences: ```json ... ``` or ``` ... ```
+        if (preg_match('/^```(?:json)?\s*(.*?)\s*```$/is', $trimmed, $fenced) === 1) {
+            $trimmed = trim($fenced[1]);
+        } elseif (preg_match('/```(?:json)?\s*(\{.*\}|\[.*\])\s*```/is', $trimmed, $fenced) === 1) {
+            $trimmed = trim($fenced[1]);
+        }
+
+        if (($trimmed[0] ?? '') === '{' || ($trimmed[0] ?? '') === '[') {
+            return $trimmed;
+        }
+
+        if (preg_match('/(\{.*\}|\[.*\])/s', $trimmed, $matches) === 1) {
+            return $matches[1];
+        }
+
+        return $trimmed;
     }
 }

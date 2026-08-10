@@ -148,11 +148,17 @@ class AutofillBrandFromWebsiteJob implements ShouldQueue
     private function putStatus(array $payload): void
     {
         Cache::put($this->cacheKey(), $payload, now()->addMinutes(15));
+        Cache::put(self::latestCacheKeyFor($this->userId), $this->autofillId, now()->addHour());
     }
 
     public static function cacheKeyFor(int $userId, string $autofillId): string
     {
         return "brand-autofill:{$userId}:{$autofillId}";
+    }
+
+    public static function latestCacheKeyFor(int $userId): string
+    {
+        return "brand-autofill-latest:{$userId}";
     }
 
     private function cacheKey(): string

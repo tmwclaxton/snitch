@@ -439,4 +439,19 @@ class InfluencerDiscoveryServiceTest extends TestCase
         $this->assertSame(['sneaker Shorts creator'], $yt['searchQueries']);
         $this->assertSame(10, $yt['maxResultsShorts']);
     }
+
+    public function test_decode_model_json_tolerates_fences_and_prose(): void
+    {
+        $service = $this->service();
+
+        $fenced = $service->decodeModelJson("```json\n{\"influencers\":[{\"handle\":\"a\"}]}\n```");
+        $this->assertIsArray($fenced);
+        $this->assertSame('a', $fenced['influencers'][0]['handle'] ?? null);
+
+        $prose = $service->decodeModelJson('Here you go: {"influencers":[{"handle":"b"}]} Thanks!');
+        $this->assertIsArray($prose);
+        $this->assertSame('b', $prose['influencers'][0]['handle'] ?? null);
+
+        $this->assertNull($service->decodeModelJson('not json at all'));
+    }
 }

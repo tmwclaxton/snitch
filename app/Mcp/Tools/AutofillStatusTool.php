@@ -8,6 +8,7 @@ use App\Mcp\Support\McpJobWait;
 use App\Mcp\Support\McpRuntime;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,7 +17,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('autofill_status')]
-#[Description('Poll brand website autofill status. Optional wait_seconds (max 45; default 0) blocks briefly for a terminal status. When completed, fields are already saved on the brand profile - call get_brand then continue with competitors/influencers. Requires a queue worker.')]
+#[Description('Poll brand website autofill status. autofill_id optional - omit to use the latest autofill for this user. Optional wait_seconds (max 45; default 0) blocks briefly for a terminal status. When completed, fields are already saved on the brand profile - call get_brand then continue with competitors/influencers. Requires a queue worker.')]
 class AutofillStatusTool extends Tool
 {
     public function handle(Request $request): Response
@@ -27,16 +28,23 @@ class AutofillStatusTool extends Tool
         }
 
         $data = $request->validate([
-            'autofill_id' => ['required', 'string'],
+            'autofill_id' => ['nullable', 'string'],
             'wait_seconds' => ['nullable', 'integer', 'min:0', 'max:45'],
         ]);
 
-        if (! Str::isUuid($data['autofill_id'])) {
+        $autofillId = $data['autofill_id'] ?? null;
+        if ($autofillId === null || $autofillId === '') {
+            $latest = AutofillBrandFromWebsiteJob::latestCacheKeyFor($user->id);
+            $autofillId = Cache::get($latest);
+            if (! is_string($autofillId) || ! Str::isUuid($autofillId)) {
+                return Response::error('No autofill_id provided and no latest brand autofill found. Call start_brand_autofill first.');
+            }
+        } elseif (! Str::isUuid($autofillId)) {
             return Response::error('Invalid autofill_id.');
         }
 
         $wait = McpJobWait::untilTerminal(
-            AutofillBrandFromWebsiteJob::cacheKeyFor($user->id, $data['autofill_id']),
+            AutofillBrandFromWebsiteJob::cacheKeyFor($user->id, $autofillId),
             isset($data['wait_seconds']) ? (int) $data['wait_seconds'] : 0,
             defaultSeconds: 0,
         );
@@ -65,7 +73,7 @@ class AutofillStatusTool extends Tool
         }
 
         return Response::json([
-            'autofill_id' => $data['autofill_id'],
+            'autofill_id' => $autofillId,
             'payload' => $payload,
             'waited_seconds' => $wait['waited_seconds'],
             'note' => $note,
@@ -81,7 +89,7 @@ class AutofillStatusTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'autofill_id' => $schema->string()->required(),
+            'autofill_id' => $schema->string()->nullable(),
             'wait_seconds' => $schema->integer()->nullable(),
         ];
     }

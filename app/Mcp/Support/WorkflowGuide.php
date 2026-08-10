@@ -101,17 +101,20 @@ final class WorkflowGuide
             'do_not_skip' => [
                 'Brand name and website are required for suggest_competitors and find_influencers.',
                 'Empty description warns only; blank website/name hard-blocks discovery.',
+                'Switching brand does NOT clear tracked competitors/influencers - remove prior-niche accounts before discovery.',
             ],
             'steps' => [
                 self::step(1, 'whoami', 'Read brand_warnings.'),
                 self::step(2, 'get_brand', 'Inspect current brand profile.'),
                 self::step(3, 'update_brand', 'Set name, website, description when you already know them.'),
-                self::step(4, 'start_brand_autofill', 'Pass website; optional wait_seconds. Then autofill_status until completed.'),
-                self::step(5, 'get_brand', 'Confirm autofill persisted; tweak with update_brand if needed.'),
+                self::step(4, 'start_brand_autofill', 'Pass website; optional wait_seconds. Then autofill_status until completed (autofill_id optional - omit for latest).'),
+                self::step(5, 'list_competitors / list_influencers', 'After a brand switch, remove prior-niche tracked accounts with remove_competitor / remove_influencer.'),
+                self::step(6, 'get_brand', 'Confirm autofill persisted; tweak with update_brand if needed.'),
             ],
             'notes' => [
                 'Soft-warn when name looks unrelated to the website host - fix before discovery.',
                 'Autofill is billable (Firecrawl/NanoGPT) and needs queue workers locally.',
+                'One Sanctum user shares competitors/influencers across brand switches - clean up explicitly.',
             ],
         ];
     }
@@ -144,14 +147,15 @@ final class WorkflowGuide
                 self::step(2, 'billing_status', 'Ensure balance above 20p.'),
                 self::step(3, 'get_brand', 'Confirm name + website before suggest.'),
                 self::step(4, 'suggest_competitors', 'Queue suggestions; on local serve use wait_seconds 8-12 then re-poll status.'),
-                self::step(5, 'suggest_competitors_status', 'Poll with suggest_id until completed/failed if still running.'),
-                self::step(6, 'confirm_competitor_suggestions', 'Pass suggest_id + selected handles (strings or {platform, handle}). Default dismiss_remainder=true.'),
+                self::step(5, 'suggest_competitors_status', 'Poll until completed/failed (suggest_id optional - omit for latest/active run). On local serve use wait_seconds 8-12.'),
+                self::step(6, 'confirm_competitor_suggestions', 'Pass suggest_id + selected handles (strings or {platform, handle}). Default dismiss_remainder=true. Or dismiss_competitor_suggestions + add_competitor when suggestions are off-niche.'),
                 self::step(7, 'list_competitors', 'Verify tracked accounts. Use dismiss_competitor_suggestions to clear without tracking.'),
             ],
             'notes' => [
                 'add_competitor / remove_competitor for manual edits; sync_competitor after tracking.',
                 'Do not end the session with unconfirmed suggestions still pending.',
                 'Partial suggestions stream while processing - cherry-pick carefully or wait for completed.',
+                'Brand switch does not auto-clear rivals - remove_competitor for prior niche first.',
             ],
         ];
     }

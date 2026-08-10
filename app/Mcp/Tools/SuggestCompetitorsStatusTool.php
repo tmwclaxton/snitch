@@ -8,6 +8,7 @@ use App\Mcp\Support\McpJobWait;
 use App\Mcp\Support\McpRuntime;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,7 +17,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('suggest_competitors_status')]
-#[Description('Poll competitor suggestion status and rows. Optional wait_seconds (max 45; default 0) blocks briefly for a terminal status. When suggestions appear, call confirm_competitor_suggestions (required to track) or dismiss_competitor_suggestions. Status alone never adds TrackedAccounts.')]
+#[Description('Poll competitor suggestion status and rows. suggest_id optional - omit to use the latest suggest for this user (falls back to active run). Optional wait_seconds (max 45; default 0) blocks briefly for a terminal status. When suggestions appear, call confirm_competitor_suggestions (required to track) or dismiss_competitor_suggestions. Status alone never adds TrackedAccounts.')]
 class SuggestCompetitorsStatusTool extends Tool
 {
     public function handle(Request $request): Response
@@ -27,16 +28,25 @@ class SuggestCompetitorsStatusTool extends Tool
         }
 
         $data = $request->validate([
-            'suggest_id' => ['required', 'string'],
+            'suggest_id' => ['nullable', 'string'],
             'wait_seconds' => ['nullable', 'integer', 'min:0', 'max:45'],
         ]);
 
-        if (! Str::isUuid($data['suggest_id'])) {
+        $suggestId = $data['suggest_id'] ?? null;
+        if ($suggestId === null || $suggestId === '') {
+            $suggestId = Cache::get(SuggestCompetitorsJob::latestCacheKeyFor($user->id));
+            if (! is_string($suggestId) || $suggestId === '') {
+                $suggestId = Cache::get(SuggestCompetitorsJob::activeCacheKeyFor($user->id));
+            }
+            if (! is_string($suggestId) || ! Str::isUuid($suggestId)) {
+                return Response::error('No suggest_id provided and no latest competitor suggest found. Call suggest_competitors first.');
+            }
+        } elseif (! Str::isUuid($suggestId)) {
             return Response::error('Invalid suggest_id.');
         }
 
         $wait = McpJobWait::untilTerminal(
-            SuggestCompetitorsJob::cacheKeyFor($user->id, $data['suggest_id']),
+            SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId),
             isset($data['wait_seconds']) ? (int) $data['wait_seconds'] : 0,
             defaultSeconds: 0,
         );
@@ -66,7 +76,7 @@ class SuggestCompetitorsStatusTool extends Tool
         }
 
         return Response::json([
-            'suggest_id' => $data['suggest_id'],
+            'suggest_id' => $suggestId,
             'payload' => $payload,
             'waited_seconds' => $wait['waited_seconds'],
             'note' => $note,
@@ -82,7 +92,7 @@ class SuggestCompetitorsStatusTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'suggest_id' => $schema->string()->required(),
+            'suggest_id' => $schema->string()->nullable(),
             'wait_seconds' => $schema->integer()->nullable(),
         ];
     }
