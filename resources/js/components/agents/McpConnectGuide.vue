@@ -80,11 +80,16 @@ async function copyText(value: string): Promise<void> {
 
         <section class="snitch-scrap relative space-y-4 p-5 pt-6 sm:p-6">
             <span class="snitch-tape right-4 -top-2" aria-hidden="true" />
-            <div>
-                <h2 class="snitch-display text-2xl text-snitch-ink">Connect your agent</h2>
-                <p class="mt-1 text-sm text-snitch-ink/70">
-                    Pick your client, paste the config, then call whoami.
-                </p>
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <h2 class="snitch-display text-2xl text-snitch-ink">Connect your agent</h2>
+                    <p class="mt-1 text-sm text-snitch-ink/70">
+                        Pick your client, paste the config, then call whoami.
+                    </p>
+                </div>
+                <div v-if="$slots['title-action']" class="shrink-0">
+                    <slot name="title-action" />
+                </div>
             </div>
 
             <div class="snitch-seg flex flex-wrap gap-1" role="tablist" aria-label="Agent clients">
