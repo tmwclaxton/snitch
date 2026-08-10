@@ -10,6 +10,9 @@ paths:
 ## TikHub after monthly Apify COGS cap
 Soft cap: `SNITCH_APIFY_MONTHLY_CAP_USD` (default 49) sums platform-wide ledger `cogs_usd` where `vendor=apify` for the current UTC month via `ApifyMonthlyCapGate`. When exhausted and `TIKHUB_API_KEY` is set, `PlatformAdapterManager` routes Instagram/TikTok/YouTube/LinkedIn to TikHub adapters. Facebook has no TikHub coverage so it always stays on Apify (even when the soft cap is exhausted). Apify HTTP 402/quota failures mark a hard-exhaust cache for the rest of the UTC month. Empty/`0` cap disables the soft switch (hard quota path still works). Never put the TikHub key in query strings or commit it. Probe costs with `snitch:probe-tikhub` (`SNITCH_LIVE_TIKHUB=1`).
 
+## Empty Apify sync falls back to TikHub
+`SyncTrackedAccountJob` retries `listRecentPosts` via TikHub when Apify returns `[]` and a TikHub adapter exists for that platform. Apify can finish with an empty dataset and `$0` usage without tripping the monthly cap - without this fallback, sync marks success and advances `last_synced_at` while backlog stays empty. Manual/`force` sync always uses the full `recency_days` window (not incremental `last_synced_at - 1 day`) so a prior empty scrape cannot hide real posts.
+
 ## Product scope is reel and short-video only
 Skip images, carousels, text-only, and items without a resolvable video media_url on sync. Prefer PostType::Reel for short video. YouTube imports Shorts only (skip long-form). Feed/analysis/winners operate on reel-like types only.
 

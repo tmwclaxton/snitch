@@ -17,6 +17,7 @@ use App\Services\Apify\PlatformAdapterManager;
 use App\Services\Billing\VendorUsageCharger;
 use App\Services\SnitchAnalyticsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Mockery;
 use Tests\Concerns\WithPlatformBilling;
@@ -407,6 +408,136 @@ class SyncTrackedAccountJobTest extends TestCase
         $this->assertSame(10, $existing->metrics['views'] ?? null);
         $this->assertSame(1, Post::query()->count());
         Queue::assertNotPushed(AnalyzePostJob::class);
+    }
+
+    public function test_empty_apify_result_falls_back_to_tikhub_for_instagram(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        config([
+            'snitch.apify.monthly_cap_usd' => 49,
+            'snitch.tikhub.api_key' => 'tikhub-key',
+            'snitch.tikhub.base_url' => 'https://api.tikhub.test',
+            'snitch.sync.recency_days' => 30,
+            'snitch.sync.posts_limit' => 3,
+            'billing.vendors.tikhub.endpoints.instagram.floor_usd' => 0.002,
+        ]);
+
+        $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'ksi',
+            'external_id' => 'ig_1',
+            'url' => 'https://instagram.com/ksi',
+            'display_name' => 'KSI',
+            'last_synced_at' => now()->subHour(),
+        ]);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
+        $client->shouldReceive('runActor')->andReturn([]);
+        $this->app->instance(ApifyClient::class, $client);
+
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.tikhub.test/api/v1/instagram/v2/fetch_user_info*' => Http::response([
+                'code' => 200,
+                'data' => [
+                    'user' => [
+                        'username' => 'ksi',
+                        'pk' => 'ig_1',
+                        'full_name' => 'KSI',
+                        'profile_pic_url' => 'https://cdn.example.com/avatar.jpg',
+                    ],
+                ],
+            ]),
+            'https://api.tikhub.test/api/v1/instagram/v2/fetch_user_reels*' => Http::response([
+                'code' => 200,
+                'data' => [
+                    'items' => [
+                        [
+                            'code' => 'FALLBACK1',
+                            'url' => 'https://www.instagram.com/reel/FALLBACK1/',
+                            'taken_at' => now()->subDay()->timestamp,
+                            'product_type' => 'clips',
+                            'video_url' => 'https://cdn.example.com/fallback.mp4',
+                            'caption' => ['text' => 'From TikHub'],
+                            'like_count' => 10,
+                            'comment_count' => 1,
+                            'play_count' => 100,
+                        ],
+                    ],
+                ],
+            ]),
+            'https://api.tikhub.test/api/v1/instagram/v2/fetch_user_posts*' => Http::response([
+                'code' => 200,
+                'data' => ['items' => []],
+            ]),
+        ]);
+
+        (new SyncTrackedAccountJob($account->id, force: true))->handle(
+            app(PlatformAdapterManager::class),
+            app(SnitchAnalyticsService::class),
+            app(VendorUsageCharger::class),
+        );
+
+        $account->refresh();
+        $this->assertSame('success', $account->last_sync_status);
+        $this->assertSame(1, Post::query()->count());
+        $this->assertSame('FALLBACK1', Post::query()->value('external_id'));
+        Queue::assertPushed(AnalyzePostJob::class);
+    }
+
+    public function test_force_sync_uses_full_recency_window_not_incremental_since(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Facebook,
+            'handle' => 'rivalbakery',
+            'external_id' => 'page_1',
+            'url' => 'https://facebook.com/rivalbakery',
+            'display_name' => 'Rival Bakery',
+            // Poisoned by an earlier empty sync earlier today.
+            'last_synced_at' => now()->subHour(),
+        ]);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
+        $client->shouldReceive('runActor')->andReturn([
+            [
+                'pageName' => 'Rival Bakery',
+                'pageId' => 'page_1',
+                'postId' => 'older_reel',
+                'url' => 'https://facebook.com/rivalbakery/videos/9',
+                'text' => 'Still in window',
+                'time' => now()->subDays(5)->toIso8601String(),
+                'type' => 'video',
+                'videoUrl' => 'https://cdn.example.com/older.mp4',
+                'likes' => 10,
+                'comments' => 1,
+                'shares' => 0,
+                'viewsCount' => 100,
+            ],
+        ]);
+        $this->app->instance(ApifyClient::class, $client);
+
+        config([
+            'snitch.sync.recency_days' => 30,
+            'snitch.sync.posts_limit' => 12,
+        ]);
+
+        (new SyncTrackedAccountJob($account->id, force: true))->handle(
+            app(PlatformAdapterManager::class),
+            app(SnitchAnalyticsService::class),
+            app(VendorUsageCharger::class),
+        );
+
+        $this->assertSame(1, Post::query()->count());
+        $this->assertSame('older_reel', Post::query()->value('external_id'));
     }
 
     public function test_tiktok_sync_hydrates_media_only_for_new_posts(): void

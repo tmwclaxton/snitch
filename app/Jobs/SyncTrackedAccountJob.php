@@ -94,8 +94,29 @@ class SyncTrackedAccountJob implements ShouldQueue
                 ]);
             }
 
-            $since = $this->syncSince($account, $recencyDays);
+            // Manual / force sync uses the full recency window. Incremental since
+            // would skip real posts after an earlier empty scrape advanced last_synced_at.
+            $since = $this->force
+                ? CarbonImmutable::now()->subDays($recencyDays)
+                : $this->syncSince($account, $recencyDays);
             $posts = $adapter->listRecentPosts($account->handle, $limit, $since);
+
+            // Apify sometimes finishes with an empty dataset (and $0 usage) while
+            // TikHub still has reels. Fall back so sync does not "succeed" with nothing.
+            if ($posts === [] && $scrapeDriver === 'apify') {
+                $tikHubAdapter = $adapters->tikHubAdapter($account->platform);
+
+                if ($tikHubAdapter !== null && filled(config('snitch.tikhub.api_key'))) {
+                    Log::info('SyncTrackedAccountJob falling back to TikHub after empty Apify result', [
+                        'tracked_account_id' => $this->trackedAccountId,
+                        'platform' => $account->platform->value,
+                    ]);
+
+                    $adapter = $tikHubAdapter;
+                    $scrapeDriver = 'tikhub';
+                    $posts = $adapter->listRecentPosts($account->handle, $limit, $since);
+                }
+            }
 
             $existingPosts = Post::query()
                 ->with('analysis')
