@@ -227,12 +227,14 @@ return new class extends Migration
 
     private function mergeDuplicatePosts(): void
     {
+        // Use HAVING COUNT(*) (not the select alias): Postgres treats having('aggregate')
+        // as a quoted column reference and fails with "column aggregate does not exist".
         $groups = DB::table('posts')
             ->select('platform', 'external_id', DB::raw('COUNT(*) as aggregate'))
             ->whereNotNull('external_id')
             ->where('external_id', '!=', '')
             ->groupBy('platform', 'external_id')
-            ->having('aggregate', '>', 1)
+            ->havingRaw('COUNT(*) > 1')
             ->get();
 
         foreach ($groups as $group) {

@@ -22,6 +22,16 @@ class GlobalCorpusTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_globalize_posts_migration_uses_count_having_raw_for_pgsql(): void
+    {
+        $source = (string) file_get_contents(database_path(
+            'migrations/2026_08_10_220651_create_social_accounts_and_globalize_posts_table.php'
+        ));
+
+        $this->assertMatchesRegularExpression("/->havingRaw\\('COUNT\\(\\*\\) > 1'\\)/", $source);
+        $this->assertDoesNotMatchRegularExpression("/->having\\('aggregate'/", $source);
+    }
+
     public function test_removing_tracked_account_keeps_global_posts_and_analyses(): void
     {
         $user = User::factory()->create();
