@@ -168,6 +168,8 @@ const winnerScore = computed(() => {
                         class="snitch-platform-logo size-3.5 shrink-0"
                         width="14"
                         height="14"
+                        loading="lazy"
+                        decoding="async"
                     >
                     {{ platformLabel(post.platform) }} · {{ postTypeLabel(post.type) }}
                 </span>

@@ -20,6 +20,7 @@ import {
 } from '@/actions/App/Http/Controllers/InfluencerController';
 import PaperSelect from '@/components/PaperSelect.vue';
 import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
+import SnitchAvatar from '@/components/SnitchAvatar.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import { useToastStore } from '@/stores/toastStore';
@@ -573,20 +574,12 @@ onUnmounted(() => {
                         class="snitch-cutout flex flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <div class="flex min-w-0 items-center gap-3">
-                            <img
-                                v-if="item.avatar"
+                            <SnitchAvatar
                                 :src="item.avatar"
-                                alt=""
-                                class="h-12 w-12 shrink-0 object-cover"
-                                style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
+                                :name="item.display_name"
+                                :handle="item.handle"
+                                size="lg"
                             />
-                            <div
-                                v-else
-                                class="flex h-12 w-12 shrink-0 items-center justify-center bg-snitch-teal/20 text-sm font-semibold"
-                                style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
-                            >
-                                {{ item.display_name?.slice(0, 1) || '?' }}
-                            </div>
                             <div class="min-w-0">
                                 <p class="snitch-display truncate text-lg">{{ item.display_name }}</p>
                                 <p class="snitch-annotation truncate text-base leading-tight">
@@ -658,12 +651,11 @@ onUnmounted(() => {
                             :href="competitorShow(account.id)"
                             class="flex min-w-0 items-center gap-3"
                         >
-                            <img
-                                v-if="account.avatar"
+                            <SnitchAvatar
                                 :src="account.avatar"
-                                alt=""
-                                class="h-10 w-10 shrink-0 object-cover"
-                                style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
+                                :name="account.display_name"
+                                :handle="account.handle"
+                                size="md"
                             />
                             <div class="min-w-0">
                                 <p class="snitch-display truncate text-base">

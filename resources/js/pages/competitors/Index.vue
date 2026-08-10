@@ -22,6 +22,7 @@ import {
 } from '@/actions/App/Http/Controllers/CompetitorController';
 import PlatformSelect from '@/components/PlatformSelect.vue';
 import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
+import SnitchAvatar from '@/components/SnitchAvatar.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import { lastSyncedLabel } from '@/lib/syncSchedule';
@@ -750,20 +751,12 @@ function syncButtonTitle(account: Account): string {
                                     </td>
                                     <td class="min-w-0 px-1.5 py-2.5 align-middle sm:px-2">
                                         <div class="flex min-w-0 items-center gap-2">
-                                            <img
-                                                v-if="item.avatar"
+                                            <SnitchAvatar
                                                 :src="item.avatar"
-                                                alt=""
-                                                class="h-8 w-8 shrink-0 object-cover"
-                                                style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
+                                                :name="item.display_name"
+                                                :handle="item.handle"
+                                                size="sm"
                                             />
-                                            <div
-                                                v-else
-                                                class="flex h-8 w-8 shrink-0 items-center justify-center bg-snitch-teal/20 text-xs font-semibold"
-                                                style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
-                                            >
-                                                {{ item.display_name.slice(0, 1) }}
-                                            </div>
                                             <div class="min-w-0">
                                                 <p class="snitch-display truncate text-base">
                                                     {{ item.display_name }}
@@ -877,20 +870,12 @@ function syncButtonTitle(account: Account): string {
                                         :href="competitorShow.url(account.id)"
                                         class="flex min-w-0 items-center gap-2 text-inherit no-underline outline-none focus-visible:ring-2 focus-visible:ring-snitch-ink/30"
                                     >
-                                        <img
-                                            v-if="account.avatar"
+                                        <SnitchAvatar
                                             :src="account.avatar"
-                                            alt=""
-                                            class="h-8 w-8 shrink-0 object-cover"
-                                            style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
+                                            :name="account.display_name"
+                                            :handle="account.handle"
+                                            size="sm"
                                         />
-                                        <div
-                                            v-else
-                                            class="flex h-8 w-8 shrink-0 items-center justify-center bg-snitch-teal/20 text-xs font-semibold"
-                                            style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
-                                        >
-                                            {{ account.handle.slice(0, 2).toUpperCase() }}
-                                        </div>
                                         <div class="min-w-0">
                                             <p class="snitch-display truncate text-base">
                                                 {{ account.display_name || account.handle }}

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { House, LogIn } from '@lucide/vue';
+import SnitchImage from '@/components/SnitchImage.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { home, login } from '@/routes';
 
@@ -15,10 +16,14 @@ defineOptions({
             <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
             <div class="snitch-polaroid mx-auto mb-6 max-w-sm" style="--snitch-tilt: -1deg">
                 <div class="snitch-polaroid-frame !aspect-[16/10]">
-                    <img
+                    <SnitchImage
                         src="/images/marketing/empty-404.jpg"
                         alt="Snitch detective mascot looking at an empty polaroid"
-                        class="opacity-95"
+                        aspect-ratio="16 / 10"
+                        loading="eager"
+                        class="block size-full opacity-95"
+                        img-class="h-full w-full object-cover"
+                        fallback="paper"
                     />
                 </div>
             </div>

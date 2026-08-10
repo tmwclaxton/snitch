@@ -34,6 +34,7 @@ const isVisible = ref(!props.lazy);
 const shouldLoad = ref(false);
 const iframeReady = ref(false);
 const embedFailed = ref(false);
+const mediaFailed = ref(false);
 let observer: IntersectionObserver | null = null;
 let slotHeld = false;
 let cancelled = false;
@@ -46,11 +47,23 @@ const canEmbed = computed(
 
 const showFallback = computed(() => !canEmbed.value || !iframeReady.value);
 
+const usableMediaUrl = computed(() => {
+    if (mediaFailed.value || !props.mediaUrl) {
+        return null;
+    }
+
+    return props.mediaUrl;
+});
+
 const isVideoMedia = computed(() => {
-    const url = (props.mediaUrl ?? '').split('?')[0]?.toLowerCase() ?? '';
+    const url = (usableMediaUrl.value ?? '').split('?')[0]?.toLowerCase() ?? '';
 
     return /\.(mp4|webm|ogg|m4v)$/i.test(url);
 });
+
+function onMediaError(): void {
+    mediaFailed.value = true;
+}
 
 function clearSlotTimeout(): void {
     if (slotTimeoutId === null) {
@@ -153,7 +166,15 @@ function resetForEmbedChange(): void {
     shouldLoad.value = false;
     iframeReady.value = false;
     embedFailed.value = false;
+    mediaFailed.value = false;
 }
+
+watch(
+    () => props.mediaUrl,
+    () => {
+        mediaFailed.value = false;
+    },
+);
 
 onMounted(() => {
     startObserving();
@@ -197,19 +218,22 @@ watch(
             aria-hidden="true"
         >
             <video
-                v-if="mediaUrl && isVideoMedia"
-                :src="mediaUrl"
+                v-if="usableMediaUrl && isVideoMedia"
+                :src="usableMediaUrl"
                 class="snitch-platform-embed-fallback-img"
                 muted
                 playsinline
                 preload="metadata"
+                @error="onMediaError"
             />
             <img
-                v-else-if="mediaUrl"
-                :src="mediaUrl"
+                v-else-if="usableMediaUrl"
+                :src="usableMediaUrl"
                 alt=""
                 class="snitch-platform-embed-fallback-img"
                 loading="lazy"
+                decoding="async"
+                @error="onMediaError"
             />
             <div
                 v-else

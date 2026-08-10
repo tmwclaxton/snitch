@@ -9,6 +9,7 @@ import FeedContactCell from '@/components/FeedContactCell.vue';
 import PaperSelect from '@/components/PaperSelect.vue';
 import PaperTermPicker from '@/components/PaperTermPicker.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
+import SnitchImage from '@/components/SnitchImage.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { analysisDimensionIcon } from '@/lib/analysisTerms';
 import type { PostMetrics } from '@/lib/metrics';
@@ -580,11 +581,14 @@ function paginationLabel(label: string): string {
                     style="--snitch-tilt: -1.2deg"
                 >
                     <div class="snitch-polaroid-frame !aspect-square">
-                        <img
+                        <SnitchImage
                             src="/images/marketing/empty-404.jpg"
                             alt=""
-                            class="h-full w-full object-cover"
-                        >
+                            aspect-ratio="1 / 1"
+                            class="block size-full"
+                            img-class="h-full w-full object-cover"
+                            fallback="paper"
+                        />
                     </div>
                 </div>
                 <p class="snitch-display text-2xl text-snitch-ink">

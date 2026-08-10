@@ -609,6 +609,70 @@
         );
     }
 
+    /*
+     * Shared image shell: reserves space (aspect / size) so lazy loads and
+     * broken CDN avatars do not collapse list rows or feed cells.
+     */
+    .snitch-image {
+        position: relative;
+        display: inline-flex;
+        max-width: 100%;
+        overflow: hidden;
+        vertical-align: middle;
+        background: color-mix(in oklab, var(--snitch-paper) 88%, var(--snitch-ink));
+    }
+
+    .snitch-image-img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .snitch-image-fallback {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        min-height: inherit;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .snitch-image-fallback-paper {
+        background:
+            var(--snitch-halftone),
+            color-mix(in oklab, var(--snitch-paper) 92%, var(--snitch-teal));
+        background-size: 6px 6px, auto;
+    }
+
+    .snitch-image-fallback-initials {
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        color: var(--snitch-ink);
+        background: color-mix(in oklab, var(--snitch-teal) 20%, var(--snitch-paper));
+        user-select: none;
+    }
+
+    .snitch-image-fallback-polaroid {
+        background: color-mix(in oklab, var(--snitch-paper) 90%, var(--snitch-ink));
+    }
+
+    .snitch-image-fallback-polaroid-img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0.92;
+        filter: grayscale(0.2) contrast(1.05) sepia(0.08);
+    }
+
+    /* Ticket-cut avatar used in competitor / influencer rows */
+    .snitch-avatar {
+        flex-shrink: 0;
+        clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%);
+        background: color-mix(in oklab, var(--snitch-teal) 20%, var(--snitch-paper));
+    }
+
     /* Custom platform listbox - paper field + ink menu, not generic SaaS select */
     .snitch-platform-select-trigger {
         display: flex;

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { ArrowLeft, CalendarDays, Eye } from '@lucide/vue';
+import SnitchImage from '@/components/SnitchImage.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { index as blogIndex, show } from '@/routes/blog';
 
@@ -122,11 +123,15 @@ function shareHref(key: string): string {
                     </span>
                 </div>
 
-                <img
+                <SnitchImage
                     v-if="post.image_url"
                     :src="post.image_url"
                     :alt="post.title"
-                    class="relative z-10 mt-8 w-full border-2 border-snitch-ink/20 object-cover"
+                    aspect-ratio="16 / 9"
+                    loading="eager"
+                    class="relative z-10 mt-8 block w-full border-2 border-snitch-ink/20"
+                    img-class="w-full object-cover"
+                    fallback="paper"
                 />
 
                 <div

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { CalendarDays, Eye } from '@lucide/vue';
+import SnitchImage from '@/components/SnitchImage.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { show } from '@/routes/blog';
 
@@ -74,22 +75,14 @@ function formatDate(date: string): string {
                     class="snitch-scrap group relative flex flex-col overflow-hidden p-0 transition hover:-translate-y-0.5"
                     prefetch
                 >
-                    <div
-                        class="flex aspect-[16/10] items-center justify-center bg-snitch-ink/5"
-                    >
-                        <img
-                            v-if="post.image_url"
-                            :src="post.image_url"
-                            :alt="post.title"
-                            class="h-full w-full object-cover"
-                        />
-                        <span
-                            v-else
-                            class="snitch-ink-label px-4 text-center opacity-60"
-                        >
-                            Snitch scrap
-                        </span>
-                    </div>
+                    <SnitchImage
+                        :src="post.image_url"
+                        :alt="post.title"
+                        aspect-ratio="16 / 10"
+                        class="block w-full"
+                        img-class="h-full w-full object-cover"
+                        fallback="paper"
+                    />
                     <div class="relative z-10 space-y-3 p-5 sm:p-6">
                         <div
                             v-if="post.tags.length > 0"

@@ -18,6 +18,7 @@ import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController'
 import FeedContactCell from '@/components/FeedContactCell.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
+import SnitchAvatar from '@/components/SnitchAvatar.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { PostMetrics } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
@@ -250,20 +251,14 @@ function askRemove(): void {
 
             <header class="mt-5 border-b border-snitch-ink/10 pb-6">
                 <div class="flex min-w-0 items-center gap-4 sm:gap-5">
-                    <img
-                        v-if="account.avatar"
+                    <SnitchAvatar
                         :src="account.avatar"
-                        alt=""
-                        class="h-16 w-16 shrink-0 object-cover sm:h-20 sm:w-20"
-                        style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
+                        :name="account.display_name"
+                        :handle="account.handle"
+                        size="xl"
+                        loading="eager"
+                        :alt="account.display_name || account.handle"
                     />
-                    <div
-                        v-else
-                        class="flex h-16 w-16 shrink-0 items-center justify-center bg-snitch-teal/20 text-lg font-semibold sm:h-20 sm:w-20 sm:text-xl"
-                        style="clip-path: polygon(4% 0, 100% 3%, 96% 100%, 0 97%)"
-                    >
-                        {{ account.handle.slice(0, 2).toUpperCase() }}
-                    </div>
                     <div class="min-w-0">
                         <div class="flex items-center gap-2">
                             <img
