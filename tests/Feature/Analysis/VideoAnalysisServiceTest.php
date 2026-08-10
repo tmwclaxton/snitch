@@ -50,6 +50,10 @@ class VideoAnalysisServiceTest extends TestCase
                         ]),
                     ],
                 ]],
+                'usage' => [
+                    'prompt_tokens' => 1200,
+                    'completion_tokens' => 400,
+                ],
             ]),
         ]);
 
@@ -61,6 +65,8 @@ class VideoAnalysisServiceTest extends TestCase
         $this->assertSame('qwen3.7-flash', $result->model);
         $this->assertNotEmpty($result->sfx);
         $this->assertSame(['silent_visual_hook'], $result->hookTypeSlugs);
+        $this->assertSame(1200, $result->promptTokens);
+        $this->assertSame(400, $result->completionTokens);
 
         Http::assertSent(function ($request): bool {
             $payload = $request->data();
@@ -117,22 +123,22 @@ class VideoAnalysisServiceTest extends TestCase
 
         $analysis = app(VideoAnalysisService::class)->analyzePost($post);
 
-        $this->assertSame(AnalysisStatus::Completed, $analysis->status);
-        $this->assertSame('Steam hits the lens first', $analysis->hook);
-        $this->assertSame('Steam tease before product payoff', $analysis->concept);
-        $this->assertSame('Start on steam, cut to hands, end on boxed loaf.', $analysis->how_to_copy);
-        $this->assertContains('process reveal', $analysis->topics);
-        $this->assertContains('bakery ASMR', $analysis->topics);
-        $this->assertContains('Silent visual hook', $analysis->topics);
-        $this->assertContains('steam-asmr', $analysis->topics);
-        $this->assertSame(['steam-asmr'], $analysis->custom_tags);
-        $this->assertSame(3, $analysis->hook_window_end_sec);
-        $this->assertGreaterThanOrEqual(3, $analysis->terms()->count());
-        $this->assertTrue($analysis->terms()->where('slug', 'silent_visual_hook')->exists());
-        $this->assertTrue($analysis->terms()->where('slug', 'content_strategy')->exists());
-        $this->assertTrue($analysis->terms()->where('slug', 'broll_overlay')->exists());
+        $this->assertSame(AnalysisStatus::Completed, $analysis['analysis']->status);
+        $this->assertSame('Steam hits the lens first', $analysis['analysis']->hook);
+        $this->assertSame('Steam tease before product payoff', $analysis['analysis']->concept);
+        $this->assertSame('Start on steam, cut to hands, end on boxed loaf.', $analysis['analysis']->how_to_copy);
+        $this->assertContains('process reveal', $analysis['analysis']->topics);
+        $this->assertContains('bakery ASMR', $analysis['analysis']->topics);
+        $this->assertContains('Silent visual hook', $analysis['analysis']->topics);
+        $this->assertContains('steam-asmr', $analysis['analysis']->topics);
+        $this->assertSame(['steam-asmr'], $analysis['analysis']->custom_tags);
+        $this->assertSame(3, $analysis['analysis']->hook_window_end_sec);
+        $this->assertGreaterThanOrEqual(3, $analysis['analysis']->terms()->count());
+        $this->assertTrue($analysis['analysis']->terms()->where('slug', 'silent_visual_hook')->exists());
+        $this->assertTrue($analysis['analysis']->terms()->where('slug', 'content_strategy')->exists());
+        $this->assertTrue($analysis['analysis']->terms()->where('slug', 'broll_overlay')->exists());
         $this->assertFalse(
-            $analysis->terms()->where('slug', 'not_a_real_slug')->exists()
+            $analysis['analysis']->terms()->where('slug', 'not_a_real_slug')->exists()
         );
     }
 
@@ -177,12 +183,12 @@ class VideoAnalysisServiceTest extends TestCase
             'media_url' => 'https://cdn.example.com/myth.mp4',
         ]);
 
-        $analysis = app(VideoAnalysisService::class)->analyzePost($post);
+        $outcome = app(VideoAnalysisService::class)->analyzePost($post);
 
-        $this->assertSame(AnalysisStatus::Completed, $analysis->status);
+        $this->assertSame(AnalysisStatus::Completed, $outcome['analysis']->status);
         $this->assertTrue(
-            $analysis->terms()->where('slug', 'myth_bust')->exists(),
+            $outcome['analysis']->terms()->where('slug', 'myth_bust')->exists(),
         );
-        $this->assertContains('Myth bust', $analysis->topics);
+        $this->assertContains('Myth bust', $outcome['analysis']->topics);
     }
 }

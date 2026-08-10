@@ -39,4 +39,34 @@ class NanoGptClientTest extends TestCase
         Http::assertSentCount(2);
         $this->assertSame('{"ok":true}', data_get($response, 'choices.0.message.content'));
     }
+
+    public function test_extract_usage_reads_openai_and_alias_keys(): void
+    {
+        $client = app(NanoGptClient::class);
+
+        $this->assertSame(
+            ['prompt_tokens' => 100, 'completion_tokens' => 50],
+            $client->extractUsage([
+                'usage' => [
+                    'prompt_tokens' => 100,
+                    'completion_tokens' => 50,
+                ],
+            ]),
+        );
+
+        $this->assertSame(
+            ['prompt_tokens' => 80, 'completion_tokens' => 20],
+            $client->extractUsage([
+                'usage' => [
+                    'input_tokens' => 80,
+                    'output_tokens' => 20,
+                ],
+            ]),
+        );
+
+        $this->assertSame(
+            ['prompt_tokens' => null, 'completion_tokens' => null],
+            $client->extractUsage([]),
+        );
+    }
 }
