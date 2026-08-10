@@ -192,6 +192,7 @@ class SuggestCompetitorsJob implements ShouldQueue
             'status' => 'pending',
             'suggestions' => null,
             'error' => null,
+            'started_at' => now()->toIso8601String(),
         ], now()->addHours(2));
 
         Cache::put(

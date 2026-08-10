@@ -3,7 +3,9 @@
 namespace App\Mcp\Tools;
 
 use App\Jobs\FindInfluencersJob;
+use App\Mcp\Support\BrandContext;
 use App\Mcp\Support\McpAuth;
+use App\Mcp\Support\McpRuntime;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Illuminate\Support\Facades\Cache;
@@ -15,7 +17,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('find_influencers')]
-#[Description('Queue influencer discovery for one platform (billable).')]
+#[Description('Queue influencer discovery for one platform (billable). Does NOT track anyone. After polling influencer_search_status, call keep_influencer for fits (queues sync) or discard_influencer. Requires a queue worker.')]
 class FindInfluencersTool extends Tool
 {
     public function handle(Request $request): Response
@@ -58,7 +60,21 @@ class FindInfluencersTool extends Tool
 
         FindInfluencersJob::dispatch($user->id, $runId, $filters);
 
-        return Response::json(['run_id' => $runId, 'queued' => true]);
+        $brandWarnings = BrandContext::warningsFor($user);
+        $runtime = McpRuntime::snapshot();
+
+        return Response::json([
+            'run_id' => $runId,
+            'queued' => true,
+            'brand_warnings' => $brandWarnings,
+            'runtime' => [
+                'app_url' => $runtime['app_url'],
+                'pending_jobs' => $runtime['pending_jobs'],
+                'warnings' => $runtime['warnings'],
+            ],
+            'note' => 'Poll influencer_search_status until completed. Creators are NOT tracked until keep_influencer.',
+            'next_step' => 'Poll influencer_search_status, then keep_influencer / discard_influencer. Requires a queue worker.',
+        ]);
     }
 
     /** @return array<string, Type> */

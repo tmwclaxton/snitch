@@ -4,6 +4,7 @@ namespace App\Mcp\Tools;
 
 use App\Jobs\SuggestCompetitorsJob;
 use App\Mcp\Support\McpAuth;
+use App\Mcp\Support\McpRuntime;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Illuminate\Support\Facades\Cache;
@@ -36,16 +37,36 @@ class SuggestCompetitorsStatusTool extends Tool
         $payload = Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $data['suggest_id']));
         $suggestions = is_array($payload['suggestions'] ?? null) ? $payload['suggestions'] : [];
         $status = is_array($payload) ? ($payload['status'] ?? null) : null;
+        $runtime = McpRuntime::snapshot();
 
+        $nextStep = 'Keep polling suggest_competitors_status until status is completed or failed.';
         $note = 'Still running - keep polling.';
-        if (in_array($status, ['completed', 'failed'], true) || $suggestions !== []) {
+
+        if (in_array($status, ['pending', 'queued', 'running'], true)
+            && ($runtime['pending_jobs'] ?? 0) > 0) {
+            $note = 'Job still pending/running with queued workers work. Ensure php artisan queue:work is running.';
+            $nextStep = 'Start or verify a queue worker, then keep polling.';
+        }
+
+        if ($status === 'failed') {
+            $note = 'Suggest run failed. Read payload.error, fix brand/credits/queue, then call suggest_competitors again.';
+            $nextStep = 'Retry suggest_competitors after fixing the error.';
+        }
+
+        if ($status === 'completed' || $suggestions !== []) {
             $note = 'Suggestions are NOT tracked yet. Call confirm_competitor_suggestions with this suggest_id and selected handles, or dismiss_competitor_suggestions to clear.';
+            $nextStep = 'confirm_competitor_suggestions (selected handles) or dismiss_competitor_suggestions. Do not end the session while suggestions are pending.';
         }
 
         return Response::json([
             'suggest_id' => $data['suggest_id'],
             'payload' => $payload,
             'note' => $note,
+            'next_step' => $nextStep,
+            'runtime' => [
+                'pending_jobs' => $runtime['pending_jobs'],
+                'warnings' => $runtime['warnings'],
+            ],
         ]);
     }
 

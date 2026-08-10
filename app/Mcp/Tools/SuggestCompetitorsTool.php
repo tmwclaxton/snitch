@@ -3,7 +3,9 @@
 namespace App\Mcp\Tools;
 
 use App\Jobs\SuggestCompetitorsJob;
+use App\Mcp\Support\BrandContext;
 use App\Mcp\Support\McpAuth;
+use App\Mcp\Support\McpRuntime;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Illuminate\Support\Str;
@@ -30,13 +32,23 @@ class SuggestCompetitorsTool extends Tool
 
         $suggestId = (string) Str::uuid();
 
+        $brandWarnings = BrandContext::warningsFor($user);
+        $runtime = McpRuntime::snapshot();
+
         SuggestCompetitorsJob::beginRun($user->id, $suggestId);
         SuggestCompetitorsJob::dispatch($user->id, $suggestId);
 
         return Response::json([
             'suggest_id' => $suggestId,
             'queued' => true,
+            'brand_warnings' => $brandWarnings,
+            'runtime' => [
+                'app_url' => $runtime['app_url'],
+                'pending_jobs' => $runtime['pending_jobs'],
+                'warnings' => $runtime['warnings'],
+            ],
             'note' => 'Poll suggest_competitors_status with this suggest_id until completed or failed. Suggestions are NOT tracked until you call confirm_competitor_suggestions with selected handles (or dismiss_competitor_suggestions to clear).',
+            'next_step' => 'Poll suggest_competitors_status, then confirm_competitor_suggestions or dismiss_competitor_suggestions. Requires a queue worker.',
         ]);
     }
 

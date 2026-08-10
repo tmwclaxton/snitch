@@ -112,8 +112,10 @@ class McpConnectionGuide
                 'steps' => [
                     'Register at '.$registerUrl.' with create_account, or mint a token on the website Agents page.',
                     'Claim the account in the browser if an agent created it (claim URL is returned).',
+                    'Call whoami first and confirm runtime.app_url matches the environment you intend (local vs production). Credits and brand data are not shared across environments.',
+                    'For local MCP, run php artisan queue:work so autofill/suggest/find/sync/analyze jobs process.',
                     'Subscribe to the platform plan and top up credits before billable tools.',
-                    'Call authenticated tools on '.$mcpUrl.' with Authorization: Bearer <token>.',
+                    'Call authenticated tools on '.$mcpUrl.' with Authorization: Bearer <token>. Never paste tokens into public chats.',
                     'After suggest_competitors, poll status then confirm_competitor_suggestions (or dismiss). Suggestions are not tracked until confirmed.',
                 ],
                 'snippet' => implode("\n", [
@@ -123,7 +125,8 @@ class McpConnectionGuide
                     'Authenticated: '.$mcpUrl,
                     '  Header: Authorization: Bearer YOUR_SNITCH_API_TOKEN',
                     '',
-                    'Useful first calls: whoami, billing_status, update_brand, add_competitor',
+                    'First calls: whoami (check runtime.app_url + brand_warnings), billing_status, get_brand',
+                    'Local async: php artisan queue:work',
                     'Competitor loop: suggest_competitors → suggest_competitors_status → confirm_competitor_suggestions',
                     'Influencer loop: find_influencers → influencer_search_status → keep_influencer',
                 ]),
