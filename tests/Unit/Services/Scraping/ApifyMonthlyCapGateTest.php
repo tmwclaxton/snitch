@@ -34,6 +34,7 @@ class ApifyMonthlyCapGateTest extends TestCase
 
         $this->assertFalse($gate->isApifyExhausted());
         $this->assertFalse($gate->shouldUseTikHub(Platform::Instagram));
+        $this->assertFalse($gate->shouldUseTikHub(Platform::Facebook));
         $this->assertSame(39.0, $gate->remainingUsd());
     }
 
@@ -48,8 +49,18 @@ class ApifyMonthlyCapGateTest extends TestCase
         $this->assertTrue($gate->shouldUseTikHub(Platform::TikTok));
         $this->assertTrue($gate->shouldUseTikHub(Platform::Youtube));
         $this->assertTrue($gate->shouldUseTikHub(Platform::LinkedIn));
-        $this->assertFalse($gate->shouldUseTikHub(Platform::Facebook));
         $this->assertSame(0.0, $gate->remainingUsd());
+    }
+
+    public function test_over_cap_keeps_apify_for_facebook(): void
+    {
+        $this->seedApifyCogs(100.0);
+
+        $gate = app(ApifyMonthlyCapGate::class);
+
+        $this->assertTrue($gate->isApifyExhausted());
+        $this->assertFalse($gate->tikHubSupports(Platform::Facebook));
+        $this->assertFalse($gate->shouldUseTikHub(Platform::Facebook));
     }
 
     public function test_empty_cap_disables_soft_switch(): void
@@ -64,7 +75,7 @@ class ApifyMonthlyCapGateTest extends TestCase
         $this->assertNull($gate->remainingUsd());
     }
 
-    public function test_hard_exhaust_cache_forces_tikhub_even_when_under_cap(): void
+    public function test_hard_exhaust_uses_tikhub_when_supported_even_under_soft_cap(): void
     {
         $this->seedApifyCogs(1.0);
 
@@ -73,9 +84,21 @@ class ApifyMonthlyCapGateTest extends TestCase
 
         $this->assertTrue($gate->isApifyExhausted());
         $this->assertTrue($gate->shouldUseTikHub(Platform::Instagram));
+        $this->assertTrue($gate->shouldUseTikHub(Platform::TikTok));
+        $this->assertTrue($gate->shouldUseTikHub(Platform::Youtube));
+        $this->assertTrue($gate->shouldUseTikHub(Platform::LinkedIn));
     }
 
-    public function test_without_tikhub_key_never_routes_to_tikhub(): void
+    public function test_hard_exhaust_keeps_apify_for_facebook(): void
+    {
+        $gate = app(ApifyMonthlyCapGate::class);
+        $gate->markHardExhausted();
+
+        $this->assertTrue($gate->isApifyExhausted());
+        $this->assertFalse($gate->shouldUseTikHub(Platform::Facebook));
+    }
+
+    public function test_without_tikhub_key_never_routes_to_tikhub_when_soft_exhausted(): void
     {
         config(['snitch.tikhub.api_key' => '']);
         $this->seedApifyCogs(100.0);
@@ -84,6 +107,19 @@ class ApifyMonthlyCapGateTest extends TestCase
 
         $this->assertTrue($gate->isApifyExhausted());
         $this->assertFalse($gate->shouldUseTikHub(Platform::Instagram));
+        $this->assertFalse($gate->shouldUseTikHub(Platform::Facebook));
+    }
+
+    public function test_without_tikhub_key_never_routes_to_tikhub_when_hard_exhausted(): void
+    {
+        config(['snitch.tikhub.api_key' => '']);
+
+        $gate = app(ApifyMonthlyCapGate::class);
+        $gate->markHardExhausted();
+
+        $this->assertTrue($gate->isApifyExhausted());
+        $this->assertFalse($gate->shouldUseTikHub(Platform::Instagram));
+        $this->assertFalse($gate->shouldUseTikHub(Platform::Facebook));
     }
 
     public function test_looks_like_quota_failure(): void

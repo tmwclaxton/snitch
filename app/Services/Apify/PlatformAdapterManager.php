@@ -34,11 +34,8 @@ class PlatformAdapterManager
     {
         $platform = $platform instanceof Platform ? $platform : Platform::from($platform);
 
-        // Facebook has no TikHub coverage - always stay on Apify, even when the monthly cap is exhausted.
-        if ($platform === Platform::Facebook) {
-            return $this->facebook;
-        }
-
+        // Cap/hard-exhaust → TikHub only when shouldUseTikHub says so. Apify-only
+        // platforms (Facebook) and missing TIKHUB_API_KEY stay on Apify (cap override).
         if ($this->capGate->shouldUseTikHub($platform)) {
             return match ($platform) {
                 Platform::Instagram => $this->tikhubInstagram,
@@ -49,19 +46,11 @@ class PlatformAdapterManager
             };
         }
 
-        return match ($platform) {
-            Platform::Instagram => $this->apifyInstagram,
-            Platform::TikTok => $this->apifyTiktok,
-            Platform::Facebook => $this->facebook,
-            Platform::LinkedIn => $this->apifyLinkedin,
-            Platform::Youtube => $this->apifyYoutube,
-        };
+        return $this->apifyAdapter($platform);
     }
 
     public function driverFor(Platform|string $platform): string
     {
-        $platform = $platform instanceof Platform ? $platform : Platform::from($platform);
-
         return $this->capGate->shouldUseTikHub($platform) ? 'tikhub' : 'apify';
     }
 

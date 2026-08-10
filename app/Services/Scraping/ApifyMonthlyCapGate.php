@@ -21,6 +21,9 @@ class ApifyMonthlyCapGate
 
     /**
      * Platforms TikHub can serve when Apify is exhausted.
+     *
+     * Facebook (and any future Apify-only platform) returns false so the
+     * monthly soft/hard exhaust swap never blocks work that only Apify can do.
      */
     public function tikHubSupports(Platform|string $platform): bool
     {
@@ -32,17 +35,25 @@ class ApifyMonthlyCapGate
         };
     }
 
+    /**
+     * Route to TikHub only when Apify is soft- or hard-exhausted AND TikHub can
+     * serve this platform AND TIKHUB_API_KEY is present.
+     *
+     * Product rule: if Apify is the only viable provider (unsupported platform,
+     * missing TikHub key, etc.), ignore the monthly COGS cap / hard-exhaust swap
+     * and keep Apify. The cap must not refuse or block that work.
+     */
     public function shouldUseTikHub(Platform|string $platform): bool
     {
+        if (! $this->isApifyExhausted()) {
+            return false;
+        }
+
         if (! $this->tikHubConfigured()) {
             return false;
         }
 
-        if (! $this->tikHubSupports($platform)) {
-            return false;
-        }
-
-        return $this->isApifyExhausted();
+        return $this->tikHubSupports($platform);
     }
 
     public function isApifyExhausted(): bool
