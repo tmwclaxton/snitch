@@ -435,6 +435,7 @@ class UsageBillingService
 
         return $query
             ->paginate(max(1, min(100, $perPage)))
+            ->withPath(route('billing.charges', absolute: false))
             ->withQueryString()
             ->through(fn (CreditLedgerEntry $entry): array => $this->mapLedgerEntry($entry, includeBalance: true));
     }

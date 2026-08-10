@@ -29,11 +29,13 @@ Deploy flow (`scripts/deploy-production.sh`):
 2. Start the inactive slot with the new image and wait for `/up` health.
 3. Run `migrate`, `AnalysisTermSeeder`, and `storage:link` on the candidate slot.
 4. Rewrite `edge/upstream-active.conf`, `nginx -s reload` on edge.
+5. Stop and `compose rm -f` the retired slot (keeps monitors from flagging an exited inactive container); flip `.deploy-slot` (`blue` or `green`).
 
 Mount upstream at `/etc/nginx/snitch/upstream-active.conf` (not under `conf.d/`, or nginx parses it as a top-level server block).
 
 Edge nginx must use enlarged proxy buffers (`proxy_buffer_size 128k`, `proxy_buffers 8 128k`) or Inertia/Laravel response headers cause `502 upstream sent too big header` on `/` while `/up` still returns 200.
-5. Stop and `compose rm -f` the retired slot (keeps monitors from flagging an exited inactive container); flip `.deploy-slot` (`blue` or `green`).
+
+Edge must set `X-Forwarded-Proto https` (not `$scheme`). The edge container listens on HTTP only; Cloudflare terminates TLS. Using `$scheme` made Laravel emit `http://` pagination and absolute URLs, so Inertia visits from the HTTPS site failed as mixed content. App-side, `Paginator::currentPathResolver` also emits path-only links as a second line of defense.
 
 First deploy after this change retires legacy `app` / `snitch-app-1` if present (brief one-time cutover while port 8095 moves to edge). Copy edge configs in CI (`docker/production/edge/**`) and ensure `/opt/snitch/edge/upstream-active.conf` exists (seed from `upstream-active.conf.default`).
 

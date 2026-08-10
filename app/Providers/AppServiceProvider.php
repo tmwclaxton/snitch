@@ -11,6 +11,7 @@ use App\Support\WorkOs\Ipv4CurlRequestClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -45,6 +46,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureHttpClient();
         $this->configureWorkOsClient();
         $this->configureUrlGenerator();
+        $this->configurePaginator();
         $this->configureRateLimiting();
         $this->registerPostalMailer();
 
@@ -126,6 +128,22 @@ class AppServiceProvider extends ServiceProvider
         if (str_starts_with($root, 'https://')) {
             URL::forceScheme('https');
         }
+    }
+
+    /**
+     * Emit path-only pagination links (e.g. `/billing/charges?page=2`).
+     *
+     * Default Laravel uses `request()->url()` which includes the request scheme.
+     * Behind an HTTP-only edge proxy that can become `http://...` while the
+     * browser is on HTTPS, so Inertia XHR is blocked as mixed content.
+     */
+    protected function configurePaginator(): void
+    {
+        Paginator::currentPathResolver(function (): string {
+            $path = request()->getPathInfo();
+
+            return $path === '' ? '/' : $path;
+        });
     }
 
     /**

@@ -59,13 +59,49 @@ class BillingChargesTest extends TestCase
                 ->has('actions')
                 ->where('usage.balance_pence', $this->billing->balancePence($user)));
 
-        $this->actingAs($user)
+        $pageTwo = $this->actingAs($user)
             ->get(route('billing.charges', ['page' => 2]))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('billing/Charges')
-                ->has('charges.data', 6)
-                ->where('charges.current_page', 2));
+            ->assertOk();
+
+        $pageTwo->assertInertia(fn (Assert $page) => $page
+            ->component('billing/Charges')
+            ->has('charges.data', 6)
+            ->where('charges.current_page', 2)
+            ->where('charges.path', '/billing/charges'));
+
+        $this->assertPathOnlyChargeLinks($pageTwo->inertiaProps('charges.links'));
+    }
+
+    public function test_charges_pagination_links_stay_path_only_when_forwarded_proto_is_http(): void
+    {
+        $user = User::factory()->create();
+        $this->subscribe($user);
+        $this->billing->creditFromTopUp($user, 50_000, 'topup:charges-http-proto');
+
+        for ($i = 0; $i < 30; $i++) {
+            $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.04);
+        }
+
+        $response = $this->actingAs($user)
+            ->withServerVariables([
+                'REMOTE_ADDR' => '127.0.0.1',
+                'HTTP_HOST' => 'www.snitchsocial.net',
+                'HTTPS' => 'off',
+                'SERVER_PORT' => '80',
+            ])
+            ->withHeaders([
+                'X-Forwarded-Proto' => 'http',
+                'X-Forwarded-For' => '203.0.113.10',
+            ])
+            ->get('http://www.snitchsocial.net/billing/charges?page=2')
+            ->assertOk();
+
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('billing/Charges')
+            ->where('charges.current_page', 2)
+            ->where('charges.path', '/billing/charges'));
+
+        $this->assertPathOnlyChargeLinks($response->inertiaProps('charges.links'));
     }
 
     public function test_charges_page_filters_by_vendor_action_and_days(): void
@@ -103,6 +139,19 @@ class BillingChargesTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('filters.days', 30)
                 ->where('charges.total', 1));
+
+        $filtered = $this->actingAs($user)
+            ->get(route('billing.charges', ['vendor' => 'nanogpt', 'page' => 1]))
+            ->assertOk();
+
+        $filtered->assertInertia(fn (Assert $page) => $page
+            ->where('filters.vendor', 'nanogpt')
+            ->where('charges.path', '/billing/charges'));
+
+        $this->assertPathOnlyChargeLinks(
+            $filtered->inertiaProps('charges.links'),
+            requiredQuery: 'vendor=nanogpt',
+        );
     }
 
     public function test_billing_index_recent_charges_are_preview_only(): void
@@ -138,6 +187,30 @@ class BillingChargesTest extends TestCase
         $this->actingAs($user)
             ->get(route('billing.charges', ['days' => 14]))
             ->assertSessionHasErrors('days');
+    }
+
+    /**
+     * @param  list<array{url: ?string, label: string, active: bool}>  $links
+     */
+    private function assertPathOnlyChargeLinks(array $links, ?string $requiredQuery = null): void
+    {
+        $this->assertNotEmpty($links);
+
+        foreach ($links as $link) {
+            $url = $link['url'] ?? null;
+
+            if ($url === null) {
+                continue;
+            }
+
+            $this->assertStringStartsWith('/billing/charges', $url);
+            $this->assertStringNotContainsString('http://', $url);
+            $this->assertStringNotContainsString('https://', $url);
+
+            if ($requiredQuery !== null) {
+                $this->assertStringContainsString($requiredQuery, $url);
+            }
+        }
     }
 
     private function subscribe(User $user): void
