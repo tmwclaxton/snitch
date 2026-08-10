@@ -4,7 +4,6 @@ import { Bot, Copy, KeyRound } from '@lucide/vue';
 import { ref, watch } from 'vue';
 import { rotateToken } from '@/actions/App/Http/Controllers/AgentsController';
 import McpConnectGuide from '@/components/agents/McpConnectGuide.vue';
-import McpEndpoints from '@/components/agents/McpEndpoints.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 
 defineOptions({ layout: AppLayout });
@@ -119,11 +118,6 @@ async function copyToken(): Promise<void> {
                         </button>
                     </Form>
                 </section>
-
-                <McpEndpoints
-                    :mcp-url="mcp_url"
-                    :register-url="register_url"
-                />
             </div>
 
             <div class="mt-6">
