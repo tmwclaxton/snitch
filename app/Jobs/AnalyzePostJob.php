@@ -109,7 +109,7 @@ class AnalyzePostJob implements ShouldQueue
 
             if ($youtubeUpdates !== []) {
                 $post->forceFill($youtubeUpdates)->save();
-                $charger->chargePulledTikHubRuns($owner, 'analyze.post');
+                $charger->chargePulledTikHubRuns($owner, 'analyze.post', $this->chargeMeta($post));
                 $post->refresh();
             }
         }
@@ -129,7 +129,7 @@ class AnalyzePostJob implements ShouldQueue
                 action: 'analyze.post',
                 cogsUsd: $cogs,
                 meta: [
-                    'post_id' => $post->id,
+                    ...$this->chargeMeta($post),
                     'prompt_tokens' => $outcome['prompt_tokens'],
                     'completion_tokens' => $outcome['completion_tokens'],
                 ],
@@ -161,6 +161,19 @@ class AnalyzePostJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    /**
+     * @return array{post_id: int, tracked_account_id: int|null, platform: string|null, post_type: string|null}
+     */
+    private function chargeMeta(Post $post): array
+    {
+        return [
+            'post_id' => $post->id,
+            'tracked_account_id' => $post->tracked_account_id,
+            'platform' => $post->platform instanceof Platform ? $post->platform->value : null,
+            'post_type' => $post->type?->value,
+        ];
     }
 
     private function mediaLooksGone(Post $post): bool

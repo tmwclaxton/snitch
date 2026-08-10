@@ -5,17 +5,10 @@ import { computed } from 'vue';
 import { charges as billingCharges, index as billingIndex } from '@/actions/App/Http/Controllers/Settings/BillingController';
 import PaperSelect from '@/components/PaperSelect.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { chargeLinkHref } from '@/lib/billingCharges';
+import type { ChargeRow } from '@/lib/billingCharges';
 import { formatPenceAsGbp } from '@/lib/money';
 import { vendorIconSrc, vendorLabel } from '@/lib/vendors';
-
-type ChargeRow = {
-    id: number;
-    action: string;
-    vendor: string;
-    amount_pence: number;
-    balance_after_pence: number;
-    created_at: string | null;
-};
 
 type PaginationLink = {
     url: string | null;
@@ -86,6 +79,10 @@ const hasActiveFilters = computed(
 
 function formatMoney(pence: number): string {
     return formatPenceAsGbp(pence, { signed: true });
+}
+
+function rowLinkHref(row: ChargeRow): string {
+    return chargeLinkHref(row.link) ?? '';
 }
 
 function formatWhen(iso: string | null): string {
@@ -255,7 +252,7 @@ function paginationLabel(label: string): string {
                             <tr class="border-b border-snitch-ink/15 text-xs uppercase tracking-wide text-snitch-ink/50">
                                 <th class="py-2 pr-3 font-medium">When</th>
                                 <th class="py-2 pr-3 font-medium">Vendor</th>
-                                <th class="py-2 pr-3 font-medium">Action</th>
+                                <th class="py-2 pr-3 font-medium">Description</th>
                                 <th class="py-2 pr-3 text-right font-medium">Amount</th>
                                 <th class="py-2 text-right font-medium">Balance after</th>
                             </tr>
@@ -280,8 +277,23 @@ function paginationLabel(label: string): string {
                                         {{ vendorLabel(row.vendor) }}
                                     </span>
                                 </td>
-                                <td class="py-2.5 pr-3 text-snitch-ink/80">
-                                    {{ row.action }}
+                                <td class="py-2.5 pr-3">
+                                    <p class="text-snitch-ink/90">
+                                        {{ row.description }}
+                                    </p>
+                                    <Link
+                                        v-if="rowLinkHref(row)"
+                                        :href="rowLinkHref(row)"
+                                        class="mt-0.5 inline-block text-xs text-snitch-ink/55 underline decoration-snitch-spot/80 underline-offset-2 hover:text-snitch-ink"
+                                    >
+                                        {{ row.link?.label }}
+                                    </Link>
+                                    <p
+                                        v-else
+                                        class="mt-0.5 text-xs text-snitch-ink/40"
+                                    >
+                                        {{ row.action }}
+                                    </p>
                                 </td>
                                 <td
                                     class="py-2.5 pr-3 text-right tabular-nums text-snitch-ink"
@@ -290,7 +302,7 @@ function paginationLabel(label: string): string {
                                     {{ formatMoney(row.amount_pence) }}
                                 </td>
                                 <td class="py-2.5 text-right tabular-nums text-snitch-ink/70">
-                                    {{ formatMoney(row.balance_after_pence) }}
+                                    {{ formatMoney(row.balance_after_pence ?? 0) }}
                                 </td>
                             </tr>
                         </tbody>

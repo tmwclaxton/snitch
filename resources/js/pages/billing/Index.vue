@@ -12,6 +12,8 @@ import type {
     SpendPoint,
 } from '@/components/billing/VendorSpendStackedChart.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { chargeLinkHref } from '@/lib/billingCharges';
+import type { ChargeRow } from '@/lib/billingCharges';
 import { formatPenceAsGbp } from '@/lib/money';
 import {
     SPEND_VENDORS,
@@ -34,13 +36,7 @@ type UsageSummary = {
     period_spend_pence: number;
     all_time_spend_pence: number;
     vendors: Record<string, VendorUsage>;
-    recent: Array<{
-        id: number;
-        action: string;
-        vendor: string;
-        amount_pence: number;
-        created_at: string | null;
-    }>;
+    recent: ChargeRow[];
     recent_total: number;
     recent_has_more: boolean;
 };
@@ -112,6 +108,10 @@ const checkoutStatus = computed(() => {
 
 function formatMoney(pence: number): string {
     return formatPenceAsGbp(pence);
+}
+
+function rowLinkHref(row: ChargeRow): string {
+    return chargeLinkHref(row.link) ?? '';
 }
 
 const spendVendors = SPEND_VENDORS;
@@ -306,7 +306,7 @@ function vendorAccent(key: SpendVendorKey): string {
                         <li
                             v-for="row in usage.recent"
                             :key="row.id"
-                            class="flex items-center justify-between gap-3 py-2"
+                            class="flex items-start justify-between gap-3 py-2"
                         >
                             <span class="min-w-0">
                                 <span class="snitch-ink-label mr-2 inline-flex items-center gap-1.5">
@@ -319,7 +319,14 @@ function vendorAccent(key: SpendVendorKey): string {
                                     >
                                     {{ vendorLabel(row.vendor) }}
                                 </span>
-                                <span class="text-snitch-ink/80">{{ row.action }}</span>
+                                <span class="text-snitch-ink/90">{{ row.description }}</span>
+                                <Link
+                                    v-if="rowLinkHref(row)"
+                                    :href="rowLinkHref(row)"
+                                    class="mt-0.5 block text-xs text-snitch-ink/55 underline decoration-snitch-spot/80 underline-offset-2 hover:text-snitch-ink"
+                                >
+                                    {{ row.link?.label }}
+                                </Link>
                             </span>
                             <span class="shrink-0 tabular-nums text-snitch-ink">
                                 {{ formatMoney(row.amount_pence) }}

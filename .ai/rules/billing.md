@@ -38,8 +38,11 @@ Prefer real upstream usage (Apify `usageTotalUsd`, NanoGPT `usage.prompt_tokens`
 
 ## Surfaces
 - Authenticated `/billing` - balance, platform subscribe, credit packs, vendor usage, stacked stipple chart of Apify/NanoGPT/Firecrawl/TikHub spend (`UsageBillingService::spendSeries`) with `grain=day|week|month` (default day). Chart bars use coloured stipple dots (`VENDOR_CHART_FILL`) with a paper hover tip naming the vendor (+ amount / period); legend uses mini vendor logos on paper plates. Short recent-charges preview (8 rows) links to the full list.
-- Authenticated `/billing/charges` (`billing.charges`) - paginated ledger breakdown (`UsageBillingService::paginatedCharges`, 25/page) with vendor / action / days filters; amounts only (no COGS/markup)
+- Authenticated `/billing/charges` (`billing.charges`) - paginated ledger breakdown (`UsageBillingService::paginatedCharges`, 25/page) with vendor / action / days filters; amounts only (no COGS/markup). Rows include derived `description` + optional `link` (see below).
 - Public + auth `/agents` (MCP connect docs; auth also mints/rotates Sanctum token). `/for-agents` redirects to `/agents`
+
+## Charge descriptions and links
+Ledger `meta` JSON carries link targets (`post_id`, `tracked_account_id`, `suggest_id`, `run_id`, `platform`, `post_type`, `handle`, `account_kind`). `LedgerChargePresenter` derives a human `description` and optional `link` `{type,id?,label}` in `UsageBillingService::mapLedgerEntry` for billing preview + charges table. Prefer storing context IDs at charge time; optional `meta.description` overrides the derived line. Old rows without meta fall back to action labels (e.g. "Analyzed post"). Link types: `post` → feed show, `tracked_account` → competitors show (also influencers), `competitors` / `influencers` / `brand` index pages. Never show markup/COGS in UI.
 - MCP register `/mcp/register` (create_account); authenticated `/mcp` (Sanctum bearer)
 - Claim `/claim/{token}` then WorkOS login
 

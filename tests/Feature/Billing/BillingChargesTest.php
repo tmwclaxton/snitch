@@ -199,6 +199,89 @@ class BillingChargesTest extends TestCase
                 ->where('usage.recent_has_more', true));
     }
 
+    public function test_charges_include_description_and_link_from_meta(): void
+    {
+        $user = User::factory()->create();
+        $this->subscribe($user);
+        $this->billing->creditFromTopUp($user, 10_000, 'topup:desc-link');
+
+        $this->billing->charge(
+            $user,
+            'analyze.post',
+            BillingVendor::NanoGpt,
+            0.04,
+            [
+                'post_id' => 42,
+                'platform' => 'youtube',
+                'post_type' => 'reel',
+            ],
+        );
+
+        $this->billing->charge(
+            $user,
+            'sync.account',
+            BillingVendor::Apify,
+            0.05,
+            [
+                'tracked_account_id' => 7,
+                'platform' => 'instagram',
+                'account_kind' => 'competitor',
+                'handle' => 'rival',
+            ],
+        );
+
+        $this->billing->charge(
+            $user,
+            'competitors.suggest',
+            BillingVendor::Firecrawl,
+            0.01,
+            ['suggest_id' => 'sug-1', 'kind' => 'search'],
+        );
+
+        $this->actingAs($user)
+            ->get(route('billing.charges'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('billing/Charges')
+                ->where('charges.data.0.description', 'Suggested competitors')
+                ->where('charges.data.0.link.type', 'competitors')
+                ->where('charges.data.0.link.label', 'Competitors')
+                ->where('charges.data.1.description', 'Synced Instagram competitor @rival')
+                ->where('charges.data.1.link.type', 'tracked_account')
+                ->where('charges.data.1.link.id', 7)
+                ->where('charges.data.1.link.label', '@rival')
+                ->where('charges.data.2.description', 'Analyzed YouTube Short')
+                ->where('charges.data.2.link.type', 'post')
+                ->where('charges.data.2.link.id', 42));
+
+        $this->actingAs($user)
+            ->get(route('billing.edit'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('billing/Index')
+                ->where('usage.recent.0.description', 'Suggested competitors')
+                ->where('usage.recent.0.link.type', 'competitors')
+                ->where('usage.recent.2.description', 'Analyzed YouTube Short')
+                ->where('usage.recent.2.link.id', 42));
+    }
+
+    public function test_legacy_charges_fall_back_to_action_description(): void
+    {
+        $user = User::factory()->create();
+        $this->subscribe($user);
+        $this->billing->creditFromTopUp($user, 1000, 'topup:legacy-desc');
+
+        $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.04);
+
+        $this->actingAs($user)
+            ->get(route('billing.charges'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('charges.data.0.description', 'Analyzed post')
+                ->where('charges.data.0.link', null)
+                ->where('charges.data.0.action', 'analyze.post'));
+    }
+
     public function test_invalid_charge_filters_are_rejected(): void
     {
         $user = User::factory()->create();

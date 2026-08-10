@@ -103,11 +103,12 @@ class SuggestCompetitorsJob implements ShouldQueue
         UsageBillingService $billing,
     ): void {
         $searchLimit = (int) config('snitch.competitor_suggest.search_limit', 8);
+        $baseMeta = ['suggest_id' => $this->suggestId];
         $charger->chargeFirecrawl(
             user: $user,
             action: 'competitors.suggest',
             cogsUsd: $billing->estimateFirecrawlSearchUsd($searchLimit) * 3,
-            meta: ['suggest_id' => $this->suggestId, 'kind' => 'search'],
+            meta: [...$baseMeta, 'kind' => 'search'],
             idempotencyKey: 'competitors.suggest.firecrawl:'.$this->suggestId,
         );
         $charger->chargeNanoGpt(
@@ -118,11 +119,11 @@ class SuggestCompetitorsJob implements ShouldQueue
                 null,
                 (string) config('snitch.competitor_suggest.model'),
             ),
-            meta: ['suggest_id' => $this->suggestId, 'kind' => 'propose'],
+            meta: [...$baseMeta, 'kind' => 'propose'],
             idempotencyKey: 'competitors.suggest.nanogpt:'.$this->suggestId,
         );
-        $charger->chargePulledApifyRuns($user, 'competitors.suggest');
-        $charger->chargePulledTikHubRuns($user, 'competitors.suggest');
+        $charger->chargePulledApifyRuns($user, 'competitors.suggest', $baseMeta);
+        $charger->chargePulledTikHubRuns($user, 'competitors.suggest', $baseMeta);
     }
 
     public function failed(?Throwable $exception): void

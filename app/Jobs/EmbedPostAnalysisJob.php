@@ -61,6 +61,7 @@ class EmbedPostAnalysisJob implements ShouldQueue
 
         try {
             $embeddings->embedAnalysis($analysis);
+            $post = $analysis->post;
             $charger->chargeNanoGpt(
                 user: $owner,
                 action: 'embed.analysis',
@@ -70,7 +71,13 @@ class EmbedPostAnalysisJob implements ShouldQueue
                     (string) config('snitch.embeddings.model', 'text-embedding-3-small'),
                     'embeddings',
                 ),
-                meta: ['post_analysis_id' => $analysis->id],
+                meta: [
+                    'post_analysis_id' => $analysis->id,
+                    'post_id' => $post?->id,
+                    'tracked_account_id' => $post?->tracked_account_id,
+                    'platform' => $post?->platform?->value,
+                    'post_type' => $post?->type?->value,
+                ],
                 idempotencyKey: 'embed.analysis:'.$analysis->id,
             );
         } catch (Throwable $e) {

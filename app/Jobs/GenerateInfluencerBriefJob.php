@@ -90,7 +90,10 @@ class GenerateInfluencerBriefJob implements ShouldBeUnique, ShouldQueue
                 null,
                 (string) config('snitch.influencer_find.model'),
             ),
-            meta: ['kind' => 'onboarding'],
+            meta: [
+                'kind' => 'onboarding',
+                'brand_profile_id' => $brand->id,
+            ],
             idempotencyKey: 'influencer.brief:onboarding:'.$this->userId,
         );
     }

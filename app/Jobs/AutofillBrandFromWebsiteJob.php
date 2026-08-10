@@ -64,11 +64,15 @@ class AutofillBrandFromWebsiteJob implements ShouldQueue
 
         $fields = $autofill->extract($this->website);
 
+        $baseMeta = [
+            'autofill_id' => $this->autofillId,
+            'website' => $this->website,
+        ];
         $charger->chargeFirecrawl(
             user: $user,
             action: 'brand.autofill',
             cogsUsd: $billing->estimateFirecrawlScrapeUsd(),
-            meta: ['autofill_id' => $this->autofillId, 'kind' => 'scrape'],
+            meta: [...$baseMeta, 'kind' => 'scrape'],
             idempotencyKey: 'brand.autofill.firecrawl:'.$this->autofillId,
         );
         $charger->chargeNanoGpt(
@@ -79,7 +83,7 @@ class AutofillBrandFromWebsiteJob implements ShouldQueue
                 null,
                 (string) config('snitch.brand_autofill.model'),
             ),
-            meta: ['autofill_id' => $this->autofillId, 'kind' => 'extract'],
+            meta: [...$baseMeta, 'kind' => 'extract'],
             idempotencyKey: 'brand.autofill.nanogpt:'.$this->autofillId,
         );
 

@@ -19,6 +19,10 @@ class UsageBillingService
 
     public const CHARGES_PER_PAGE = 25;
 
+    public function __construct(
+        private LedgerChargePresenter $presenter,
+    ) {}
+
     public function balancePence(User $user): float
     {
         return $this->roundPence((float) ($this->balanceRow($user)->balance_pence ?? 0));
@@ -460,6 +464,8 @@ class UsageBillingService
      * @return array{
      *     id: int,
      *     action: string,
+     *     description: string,
+     *     link: array{type: string, id?: int, label: string}|null,
      *     vendor: string,
      *     amount_pence: float,
      *     balance_after_pence?: float,
@@ -468,9 +474,16 @@ class UsageBillingService
      */
     private function mapLedgerEntry(CreditLedgerEntry $entry, bool $includeBalance = false): array
     {
+        $presented = $this->presenter->present(
+            $entry->action,
+            is_array($entry->meta) ? $entry->meta : null,
+        );
+
         $mapped = [
             'id' => $entry->id,
             'action' => $entry->action,
+            'description' => $presented['description'],
+            'link' => $presented['link'],
             'vendor' => $entry->vendor instanceof BillingVendor ? $entry->vendor->value : (string) $entry->vendor,
             'amount_pence' => $this->roundPence((float) $entry->amount_pence),
             'created_at' => $entry->created_at?->toIso8601String(),

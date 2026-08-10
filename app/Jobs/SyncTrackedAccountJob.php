@@ -194,8 +194,14 @@ class SyncTrackedAccountJob implements ShouldQueue
 
             // Pull both buffers: empty Apify→TikHub fallback and YouTube
             // TikHub hydrate can leave costs on either client in one job.
-            $charger->chargePulledApifyRuns($owner, 'sync.account');
-            $charger->chargePulledTikHubRuns($owner, 'sync.account');
+            $syncMeta = [
+                'tracked_account_id' => $account->id,
+                'platform' => $account->platform?->value,
+                'handle' => $account->handle,
+                'account_kind' => $account->kind?->value,
+            ];
+            $charger->chargePulledApifyRuns($owner, 'sync.account', $syncMeta);
+            $charger->chargePulledTikHubRuns($owner, 'sync.account', $syncMeta);
 
             $account->fill([
                 'last_synced_at' => now(),

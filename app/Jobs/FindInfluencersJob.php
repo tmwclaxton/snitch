@@ -134,11 +134,12 @@ class FindInfluencersJob implements ShouldQueue
         UsageBillingService $billing,
     ): void {
         $searchLimit = (int) config('snitch.influencer_find.search_limit', 12);
+        $baseMeta = ['run_id' => $this->runId];
         $charger->chargeFirecrawl(
             user: $user,
             action: 'influencers.find',
             cogsUsd: $billing->estimateFirecrawlSearchUsd($searchLimit) * 3,
-            meta: ['run_id' => $this->runId, 'kind' => 'search'],
+            meta: [...$baseMeta, 'kind' => 'search'],
             idempotencyKey: 'influencers.find.firecrawl:'.$this->runId,
         );
         $charger->chargeNanoGpt(
@@ -149,11 +150,11 @@ class FindInfluencersJob implements ShouldQueue
                 null,
                 (string) config('snitch.influencer_find.model'),
             ),
-            meta: ['run_id' => $this->runId, 'kind' => 'propose'],
+            meta: [...$baseMeta, 'kind' => 'propose'],
             idempotencyKey: 'influencers.find.nanogpt:'.$this->runId,
         );
-        $charger->chargePulledApifyRuns($user, 'influencers.find');
-        $charger->chargePulledTikHubRuns($user, 'influencers.find');
+        $charger->chargePulledApifyRuns($user, 'influencers.find', $baseMeta);
+        $charger->chargePulledTikHubRuns($user, 'influencers.find', $baseMeta);
     }
 
     public function failed(?Throwable $exception): void

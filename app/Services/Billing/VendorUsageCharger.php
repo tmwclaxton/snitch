@@ -24,9 +24,10 @@ class VendorUsageCharger
     /**
      * Charge for all Apify runs recorded since the last pull.
      *
+     * @param  array<string, mixed>  $meta
      * @return list<CreditLedgerEntry>
      */
-    public function chargePulledApifyRuns(User $user, string $action = 'apify.run'): array
+    public function chargePulledApifyRuns(User $user, string $action = 'apify.run', array $meta = []): array
     {
         $entries = [];
 
@@ -37,6 +38,7 @@ class VendorUsageCharger
                 vendor: BillingVendor::Apify,
                 cogsUsd: $run['usageTotalUsd'],
                 meta: [
+                    ...$meta,
                     'actor_id' => $run['actorId'],
                     'run_id' => $run['runId'],
                 ],
@@ -50,9 +52,10 @@ class VendorUsageCharger
     /**
      * Charge for TikHub calls recorded since the last pull.
      *
+     * @param  array<string, mixed>  $meta
      * @return list<CreditLedgerEntry>
      */
-    public function chargePulledTikHubRuns(User $user, string $action = 'sync.account'): array
+    public function chargePulledTikHubRuns(User $user, string $action = 'sync.account', array $meta = []): array
     {
         $entries = [];
 
@@ -63,8 +66,9 @@ class VendorUsageCharger
                 vendor: BillingVendor::TikHub,
                 cogsUsd: $run['cogsUsd'],
                 meta: [
+                    ...$meta,
                     'endpoint' => $run['endpoint'],
-                    'platform' => $run['platform'],
+                    'platform' => $meta['platform'] ?? $run['platform'],
                 ],
             );
         }
