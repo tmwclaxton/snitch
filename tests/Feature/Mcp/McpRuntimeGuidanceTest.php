@@ -269,6 +269,20 @@ class McpRuntimeGuidanceTest extends TestCase
         $this->assertSame('queued', $result['payload']['status'] ?? null);
     }
 
+    public function test_mcp_job_wait_extends_execution_time_for_long_waits(): void
+    {
+        $previous = (int) ini_get('max_execution_time');
+        ini_set('max_execution_time', '30');
+
+        try {
+            McpJobWait::extendExecutionTime(45);
+            $limit = (int) ini_get('max_execution_time');
+            $this->assertGreaterThanOrEqual(45, $limit);
+        } finally {
+            ini_set('max_execution_time', (string) $previous);
+        }
+    }
+
     public function test_suggest_status_wait_seconds_returns_terminal_payload(): void
     {
         $user = User::factory()->create();

@@ -16,7 +16,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('autofill_status')]
-#[Description('Poll brand website autofill status. Optional wait_seconds (max 45; default 0) blocks briefly for a terminal status. When completed, call get_brand and continue with competitors/influencers. Requires a queue worker.')]
+#[Description('Poll brand website autofill status. Optional wait_seconds (max 45; default 0) blocks briefly for a terminal status. When completed, fields are already saved on the brand profile - call get_brand then continue with competitors/influencers. Requires a queue worker.')]
 class AutofillStatusTool extends Tool
 {
     public function handle(Request $request): Response

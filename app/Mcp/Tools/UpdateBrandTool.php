@@ -50,6 +50,7 @@ class UpdateBrandTool extends Tool
             'name' => $schema->string()->required(),
             'description' => $schema->string()->nullable(),
             'website' => $schema->string()->nullable(),
+            'own_handles' => $schema->object()->nullable(),
         ];
     }
 }

@@ -36,6 +36,10 @@ class McpJobWait
             ];
         }
 
+        // PHP's default max_execution_time is often 30s; wait_seconds allows up to 45.
+        // Without raising the limit, long waits fatal with 500 instead of returning timed_out.
+        self::extendExecutionTime($seconds);
+
         $deadline = microtime(true) + $seconds;
 
         while (microtime(true) < $deadline) {
@@ -65,6 +69,19 @@ class McpJobWait
         $value = $waitSeconds ?? $defaultSeconds;
 
         return max(0, min(self::MAX_SECONDS, $value));
+    }
+
+    /**
+     * Allow in-request waits longer than the process max_execution_time.
+     */
+    public static function extendExecutionTime(int $waitSeconds): void
+    {
+        if ($waitSeconds <= 0 || ! function_exists('set_time_limit')) {
+            return;
+        }
+
+        // Buffer for tool response serialization after the wait loop.
+        set_time_limit($waitSeconds + 30);
     }
 
     /**

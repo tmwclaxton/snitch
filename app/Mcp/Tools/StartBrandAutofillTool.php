@@ -17,7 +17,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('start_brand_autofill')]
-#[Description('Queue brand website autofill (Firecrawl + NanoGPT; billable). Optional wait_seconds (default ~22, max 45) polls cache so a completed autofill often returns in one call. Then get_brand before discovery.')]
+#[Description('Queue brand website autofill (Firecrawl + NanoGPT; billable). Applies extracted name/website/description/handles to the brand profile when completed. Optional wait_seconds (default ~22, max 45) polls cache so a completed autofill often returns in one call. Then get_brand before discovery.')]
 class StartBrandAutofillTool extends Tool
 {
     public function handle(Request $request): Response

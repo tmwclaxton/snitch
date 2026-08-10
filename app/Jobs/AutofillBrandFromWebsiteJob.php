@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\PlatformSubscriptionRequiredException;
+use App\Models\BrandProfile;
 use App\Models\User;
 use App\Services\Billing\UsageBillingService;
 use App\Services\Billing\VendorUsageCharger;
@@ -87,12 +88,41 @@ class AutofillBrandFromWebsiteJob implements ShouldQueue
             idempotencyKey: 'brand.autofill.nanogpt:'.$this->autofillId,
         );
 
+        $this->applyFieldsToBrand($user, $fields);
+
         $this->putStatus([
             'status' => 'completed',
             'website' => $this->website,
             'fields' => $fields,
             'error' => null,
         ]);
+    }
+
+    /**
+     * Persist extracted fields so MCP get_brand reflects autofill without a manual update_brand.
+     *
+     * @param  array<string, mixed>  $fields
+     */
+    private function applyFieldsToBrand(User $user, array $fields): void
+    {
+        $name = trim((string) ($fields['name'] ?? ''));
+        $website = trim((string) ($fields['website'] ?? $this->website));
+        $description = isset($fields['description']) ? trim((string) $fields['description']) : null;
+        $ownHandles = is_array($fields['own_handles'] ?? null) ? $fields['own_handles'] : [];
+
+        if ($name === '' || $website === '') {
+            return;
+        }
+
+        BrandProfile::query()->updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'name' => $name,
+                'website' => $website,
+                'description' => $description !== '' ? $description : null,
+                'own_handles' => $ownHandles,
+            ],
+        );
     }
 
     public function failed(?Throwable $exception): void

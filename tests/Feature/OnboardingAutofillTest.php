@@ -174,6 +174,16 @@ class OnboardingAutofillTest extends TestCase
         $this->assertSame('@loaf.local', $payload['fields']['own_handles']['instagram']);
         $this->assertSame('@loaflocal', $payload['fields']['own_handles']['tiktok']);
 
+        $brand = $user->fresh()->brandProfile;
+        $this->assertNotNull($brand);
+        $this->assertSame('Loaf Local', $brand->name);
+        $this->assertSame('https://loaf.example', $brand->website);
+        $this->assertSame(
+            'We bake sourdough for the neighborhood every morning with real butter and long ferments.',
+            $brand->description,
+        );
+        $this->assertSame('@loaf.local', $brand->own_handles['instagram'] ?? null);
+
         Http::assertSent(function ($request): bool {
             return $request->url() === 'https://api.firecrawl.test/v1/scrape'
                 && $request['url'] === 'https://loaf.example'
