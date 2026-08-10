@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\Analysis\VideoAnalysisService;
 use App\Services\Billing\UsageBillingService;
 use App\Services\Billing\VendorUsageCharger;
+use App\Services\Scraping\YoutubeMediaHydrator;
 use App\Services\Winners\WinnerScorer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -50,7 +51,11 @@ class EmbedPostAnalysisJobDispatchTest extends TestCase
         ]);
 
         $video = Mockery::mock(VideoAnalysisService::class);
-        $video->shouldReceive('analyzePost')->once()->andReturn($analysis);
+        $video->shouldReceive('analyzePost')->once()->andReturn([
+            'analysis' => $analysis,
+            'prompt_tokens' => 100,
+            'completion_tokens' => 50,
+        ]);
         $this->app->instance(VideoAnalysisService::class, $video);
 
         $scorer = Mockery::mock(WinnerScorer::class);
@@ -62,6 +67,7 @@ class EmbedPostAnalysisJobDispatchTest extends TestCase
             app(WinnerScorer::class),
             app(VendorUsageCharger::class),
             app(UsageBillingService::class),
+            app(YoutubeMediaHydrator::class),
         );
 
         Queue::assertPushed(

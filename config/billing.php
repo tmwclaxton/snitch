@@ -112,9 +112,10 @@ return [
                 ],
             ],
             // Typical call floors when token counts are unknown.
+            // video_analysis ~0.5p after usd_to_gbp × price_multiplier (ceil to 1p on ledger).
             'floors_usd' => [
                 'chat' => 0.002,
-                'video_analysis' => 0.04,
+                'video_analysis' => 0.0045,
                 'embeddings' => 0.0002,
             ],
         ],
@@ -144,7 +145,7 @@ return [
         'apify.run' => ['vendor' => 'apify', 'floor_usd' => 0.01],
         'tikhub.run' => ['vendor' => 'tikhub', 'floor_usd' => 0.001],
         'sync.account' => ['vendor' => 'apify', 'floor_usd' => 0.05],
-        'analyze.post' => ['vendor' => 'nanogpt', 'floor_usd' => 0.04],
+        'analyze.post' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0045],
         'embed.analysis' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0002],
         'influencers.find' => ['vendor' => 'firecrawl', 'floor_usd' => 0.02],
         'competitors.suggest' => ['vendor' => 'firecrawl', 'floor_usd' => 0.02],

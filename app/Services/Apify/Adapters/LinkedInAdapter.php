@@ -203,7 +203,8 @@ class LinkedInAdapter extends AbstractPlatformAdapter
             }
         }
 
-        if ($mediaUrl === null) {
+        // Reject LinkedIn page URLs - they are not analyzable video files.
+        if ($mediaUrl === null || str_contains(strtolower($mediaUrl), 'linkedin.com/')) {
             return null;
         }
 

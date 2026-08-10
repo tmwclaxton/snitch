@@ -4,10 +4,19 @@ namespace App\Services\Apify\Adapters;
 
 use App\Enums\Platform;
 use App\Enums\PostType;
+use App\Services\Apify\ApifyClient;
+use App\Services\Scraping\YoutubeMediaHydrator;
 use Carbon\CarbonImmutable;
 
 class YoutubeAdapter extends AbstractPlatformAdapter
 {
+    public function __construct(
+        ApifyClient $client,
+        private YoutubeMediaHydrator $mediaHydrator,
+    ) {
+        parent::__construct($client);
+    }
+
     public function platform(): Platform
     {
         return Platform::Youtube;
@@ -120,9 +129,9 @@ class YoutubeAdapter extends AbstractPlatformAdapter
             $item['streamingData']['formats'][0]['url'] ?? null,
         );
 
-        // Prefer a downloadable file when present; otherwise use the Shorts URL for embed + best-effort analysis.
-        if ($mediaUrl === null) {
-            $mediaUrl = $url;
+        // Keep page URLs on `url` for embeds; never store them as analyzable media_url.
+        if ($mediaUrl !== null && ! $this->mediaHydrator->isDownloadableMediaUrl($mediaUrl)) {
+            $mediaUrl = null;
         }
 
         return [
@@ -145,6 +154,11 @@ class YoutubeAdapter extends AbstractPlatformAdapter
     /**
      * @param  array<string, mixed>  $item
      */
+    public function hydrateMediaUrls(array $posts): array
+    {
+        return $this->mediaHydrator->hydratePosts($posts);
+    }
+
     private function isShort(array $item): bool
     {
         $url = strtolower((string) ($item['url'] ?? $item['shortsUrl'] ?? ''));

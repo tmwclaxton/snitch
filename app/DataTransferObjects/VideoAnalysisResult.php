@@ -33,6 +33,8 @@ final readonly class VideoAnalysisResult
         public bool $isOriginalAudio,
         public string $model,
         public array $raw,
+        public ?int $promptTokens = null,
+        public ?int $completionTokens = null,
     ) {}
 
     /**
@@ -42,6 +44,8 @@ final readonly class VideoAnalysisResult
         array $payload,
         string $model,
         ?float $minHookWindowEndSeconds = null,
+        ?int $promptTokens = null,
+        ?int $completionTokens = null,
     ): self {
         $hookWindow = is_array($payload['hook_window'] ?? null) ? $payload['hook_window'] : [];
         $sfxItems = [];
@@ -106,6 +110,8 @@ final readonly class VideoAnalysisResult
             isOriginalAudio: (bool) ($payload['is_original_audio'] ?? false),
             model: $model,
             raw: $payload,
+            promptTokens: $promptTokens,
+            completionTokens: $completionTokens,
         );
     }
 

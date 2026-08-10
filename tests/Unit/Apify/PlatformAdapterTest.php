@@ -9,6 +9,7 @@ use App\Services\Apify\Adapters\LinkedInAdapter;
 use App\Services\Apify\Adapters\TikTokAdapter;
 use App\Services\Apify\Adapters\YoutubeAdapter;
 use App\Services\Apify\ApifyClient;
+use App\Services\Scraping\YoutubeMediaHydrator;
 use Carbon\CarbonImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -34,7 +35,7 @@ class PlatformAdapterTest extends TestCase
     {
         $client = $this->createMock(ApifyClient::class);
         /** @var InstagramAdapter|TikTokAdapter|FacebookAdapter|LinkedInAdapter|YoutubeAdapter $adapter */
-        $adapter = new $adapterClass($client);
+        $adapter = $this->makeAdapter($adapterClass, $client);
 
         $items = json_decode(
             (string) file_get_contents(base_path('tests/Fixtures/Apify/'.$fixture)),
@@ -185,9 +186,21 @@ class PlatformAdapterTest extends TestCase
         $this->assertSame('https://linkedin.com/in/satyanadella', $profile['url']);
     }
 
+    /**
+     * @param  class-string  $adapterClass
+     */
+    private function makeAdapter(string $adapterClass, ApifyClient $client): InstagramAdapter|TikTokAdapter|FacebookAdapter|LinkedInAdapter|YoutubeAdapter
+    {
+        if ($adapterClass === YoutubeAdapter::class) {
+            return new YoutubeAdapter($client, app(YoutubeMediaHydrator::class));
+        }
+
+        return new $adapterClass($client);
+    }
+
     public function test_youtube_imports_shorts_only(): void
     {
-        $adapter = new YoutubeAdapter($this->createMock(ApifyClient::class));
+        $adapter = $this->makeAdapter(YoutubeAdapter::class, $this->createMock(ApifyClient::class));
         $items = json_decode(
             (string) file_get_contents(base_path('tests/Fixtures/Apify/youtube.json')),
             true,
@@ -204,7 +217,6 @@ class PlatformAdapterTest extends TestCase
 
     public function test_youtube_maps_profile_when_channel_has_no_shorts(): void
     {
-        $adapter = new YoutubeAdapter($this->createMock(ApifyClient::class));
         $items = json_decode(
             (string) file_get_contents(base_path('tests/Fixtures/Apify/youtube.json')),
             true,
@@ -216,7 +228,7 @@ class PlatformAdapterTest extends TestCase
 
         $client = $this->createMock(ApifyClient::class);
         $client->method('runActor')->willReturn([$about]);
-        $adapter = new YoutubeAdapter($client);
+        $adapter = $this->makeAdapter(YoutubeAdapter::class, $client);
 
         $profile = $adapter->resolveProfile('rivalbakery');
 
@@ -360,6 +372,40 @@ class PlatformAdapterTest extends TestCase
             'snitch.sync.recency_days' => 30,
         ]);
 
-        (new YoutubeAdapter($client))->listRecentPosts('rivalbakery', 12, $since);
+        $this->makeAdapter(YoutubeAdapter::class, $client)->listRecentPosts('rivalbakery', 12, $since);
+    }
+
+    public function test_linkedin_rejects_linkedin_page_media_urls(): void
+    {
+        $adapter = new LinkedInAdapter($this->createMock(ApifyClient::class));
+
+        $posts = $adapter->mapFixturePosts([[
+            'activity_urn' => 'urn:li:activity:1',
+            'post_url' => 'https://www.linkedin.com/posts/rivalbakery-1',
+            'text' => 'Page media',
+            'posted_at' => now()->subDay()->toIso8601String(),
+            'videoUrl' => 'https://www.linkedin.com/posts/rivalbakery-1',
+            'type' => 'video',
+        ]], 'rivalbakery');
+
+        $this->assertSame([], $posts);
+    }
+
+    public function test_youtube_map_post_does_not_store_shorts_page_as_media_url(): void
+    {
+        $adapter = $this->makeAdapter(YoutubeAdapter::class, $this->createMock(ApifyClient::class));
+
+        $posts = $adapter->mapFixturePosts([[
+            'id' => 'pageOnly1',
+            'url' => 'https://www.youtube.com/shorts/pageOnly1',
+            'title' => 'Page only',
+            'date' => now()->subDay()->toIso8601String(),
+            'isShort' => true,
+            'viewCount' => 10,
+        ]], 'rivalbakery');
+
+        $this->assertCount(1, $posts);
+        $this->assertNull($posts[0]['media_url']);
+        $this->assertSame('https://www.youtube.com/shorts/pageOnly1', $posts[0]['url']);
     }
 }

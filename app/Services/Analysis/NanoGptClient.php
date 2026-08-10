@@ -55,6 +55,32 @@ class NanoGptClient
     }
 
     /**
+     * OpenAI-compatible usage block (prompt/completion or input/output aliases).
+     *
+     * @param  array<string, mixed>  $response
+     * @return array{prompt_tokens: int|null, completion_tokens: int|null}
+     */
+    public function extractUsage(array $response): array
+    {
+        $usage = $response['usage'] ?? null;
+
+        if (! is_array($usage)) {
+            return [
+                'prompt_tokens' => null,
+                'completion_tokens' => null,
+            ];
+        }
+
+        $prompt = $usage['prompt_tokens'] ?? $usage['input_tokens'] ?? null;
+        $completion = $usage['completion_tokens'] ?? $usage['output_tokens'] ?? null;
+
+        return [
+            'prompt_tokens' => is_numeric($prompt) ? (int) $prompt : null,
+            'completion_tokens' => is_numeric($completion) ? (int) $completion : null,
+        ];
+    }
+
+    /**
      * Chat expecting a JSON object; returns decoded array or null.
      *
      * @param  list<array{role: string, content: string}>  $messages

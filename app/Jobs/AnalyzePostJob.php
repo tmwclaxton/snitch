@@ -11,6 +11,7 @@ use App\Models\PostAnalysis;
 use App\Services\Analysis\VideoAnalysisService;
 use App\Services\Billing\UsageBillingService;
 use App\Services\Billing\VendorUsageCharger;
+use App\Services\Scraping\YoutubeMediaHydrator;
 use App\Services\Winners\WinnerScorer;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -31,6 +32,7 @@ class AnalyzePostJob implements ShouldQueue
         WinnerScorer $scorer,
         VendorUsageCharger $charger,
         UsageBillingService $billing,
+        YoutubeMediaHydrator $youtubeMedia,
     ): void {
         $post = Post::query()->with(['analysis', 'user'])->find($this->postId);
 
@@ -71,22 +73,31 @@ class AnalyzePostJob implements ShouldQueue
             return;
         }
 
-        // Known gap: YouTube actor often returns Shorts page URLs; NanoGPT needs a file URL.
+        // Shorts sync may store a page URL; resolve a downloadable MP4 via TikHub before analysis.
         if ($post->youtubeMediaIsPageUrl()) {
-            $this->markAnalysisFailed(
-                $post,
-                'YouTube Shorts analysis needs a downloadable MP4; actor returned a page URL.',
-            );
+            $downloadUrl = $youtubeMedia->resolveDownloadUrl($post->url, $post->external_id);
 
-            return;
+            if ($downloadUrl === null) {
+                $this->markAnalysisFailed(
+                    $post,
+                    'YouTube Shorts analysis needs a downloadable MP4; actor returned a page URL.',
+                );
+
+                return;
+            }
+
+            $post->forceFill(['media_url' => $downloadUrl])->save();
+            $charger->chargePulledTikHubRuns($owner, 'analyze.post');
+            $post->refresh();
         }
 
         try {
-            $persisted = $analysis->analyzePost($post);
+            $outcome = $analysis->analyzePost($post);
+            $persisted = $outcome['analysis'];
 
             $cogs = $billing->estimateNanoGptChatUsd(
-                inputTokens: null,
-                outputTokens: null,
+                inputTokens: $outcome['prompt_tokens'],
+                outputTokens: $outcome['completion_tokens'],
                 model: (string) config('snitch.video_analysis.model'),
                 floorKey: 'video_analysis',
             );
@@ -94,7 +105,11 @@ class AnalyzePostJob implements ShouldQueue
                 user: $owner,
                 action: 'analyze.post',
                 cogsUsd: $cogs,
-                meta: ['post_id' => $post->id],
+                meta: [
+                    'post_id' => $post->id,
+                    'prompt_tokens' => $outcome['prompt_tokens'],
+                    'completion_tokens' => $outcome['completion_tokens'],
+                ],
                 idempotencyKey: 'analyze.post:'.$post->id.':'.$persisted->id,
             );
 

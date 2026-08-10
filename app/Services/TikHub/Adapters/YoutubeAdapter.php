@@ -4,12 +4,21 @@ namespace App\Services\TikHub\Adapters;
 
 use App\Enums\Platform;
 use App\Enums\PostType;
+use App\Services\Scraping\YoutubeMediaHydrator;
+use App\Services\TikHub\TikHubClient;
 use Carbon\CarbonImmutable;
 
 class YoutubeAdapter extends AbstractTikHubAdapter
 {
     /** @var array<string, string> */
     private array $channelIdCache = [];
+
+    public function __construct(
+        TikHubClient $client,
+        private YoutubeMediaHydrator $mediaHydrator,
+    ) {
+        parent::__construct($client);
+    }
 
     public function platform(): Platform
     {
@@ -171,8 +180,8 @@ class YoutubeAdapter extends AbstractTikHubAdapter
             $item['mediaUrl'] ?? null,
         );
 
-        if ($mediaUrl === null) {
-            $mediaUrl = $url;
+        if ($mediaUrl !== null && ! $this->mediaHydrator->isDownloadableMediaUrl($mediaUrl)) {
+            $mediaUrl = null;
         }
 
         return [
@@ -201,6 +210,11 @@ class YoutubeAdapter extends AbstractTikHubAdapter
     /**
      * @param  array<string, mixed>  $item
      */
+    public function hydrateMediaUrls(array $posts): array
+    {
+        return $this->mediaHydrator->hydratePosts($posts);
+    }
+
     private function isShort(array $item): bool
     {
         $url = strtolower((string) ($item['url'] ?? $item['shortsUrl'] ?? ''));

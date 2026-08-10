@@ -98,7 +98,7 @@ class LinkedInAdapter extends AbstractTikHubAdapter
             data_get($item, 'media.video.url'),
         );
 
-        if ($mediaUrl === null) {
+        if ($mediaUrl === null || str_contains(strtolower($mediaUrl), 'linkedin.com/')) {
             return null;
         }
 

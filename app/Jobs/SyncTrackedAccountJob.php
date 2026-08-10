@@ -281,12 +281,8 @@ class SyncTrackedAccountJob implements ShouldQueue
             return;
         }
 
-        // Do not burn queue/NanoGPT retries on the known YouTube page-URL gap.
-        if ($status === AnalysisStatus::Failed && $post->youtubeMediaIsPageUrl()) {
-            return;
-        }
-
         // New posts, missing analysis, or failed analyses (soft retry).
+        // YouTube page-URL failures can succeed after TikHub media hydration in AnalyzePostJob.
         AnalyzePostJob::dispatch($post->id);
     }
 }

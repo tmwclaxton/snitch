@@ -205,6 +205,7 @@ return [
                 'channel_info' => '/api/v1/youtube/web/get_channel_id',
                 'channel_videos' => '/api/v1/youtube/web/get_channel_videos_v2',
                 'channel_shorts' => '/api/v1/youtube/web/get_channel_short_videos',
+                'video_info' => '/api/v1/youtube/web/get_video_info_v2',
                 'search' => '/api/v1/youtube/web/search_channel',
             ],
             'linkedin' => [

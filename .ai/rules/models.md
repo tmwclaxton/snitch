@@ -5,5 +5,5 @@ paths:
 
 # Models
 
-## Post::youtubeMediaIsPageUrl guards the YouTube MP4 gap
-Use Post::youtubeMediaIsPageUrl() before NanoGPT analysis or soft-retries. Sync may keep the Shorts page URL for embeds; analysis must fail fast without calling NanoGPT until a downloadable MP4/webm exists.
+## Post::youtubeMediaIsPageUrl guards YouTube page media
+Use Post::youtubeMediaIsPageUrl() before NanoGPT analysis. When true, `AnalyzePostJob` must resolve a downloadable MP4 via `YoutubeMediaHydrator` (TikHub) before analyzing; only fail if hydration cannot produce a file URL.

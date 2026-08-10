@@ -71,14 +71,21 @@ SYSTEM,
             throw new RuntimeException('Video analysis did not return valid JSON.');
         }
 
+        $usage = $this->client->extractUsage($response);
+
         return VideoAnalysisResult::fromModelPayload(
             $payload,
             $model,
             (float) config('snitch.video_analysis.success.min_hook_window_end_seconds'),
+            $usage['prompt_tokens'],
+            $usage['completion_tokens'],
         );
     }
 
-    public function analyzePost(Post $post): PostAnalysis
+    /**
+     * @return array{analysis: PostAnalysis, prompt_tokens: int|null, completion_tokens: int|null}
+     */
+    public function analyzePost(Post $post): array
     {
         $analysis = PostAnalysis::query()->firstOrNew(['post_id' => $post->id]);
         $analysis->fill([
@@ -156,7 +163,11 @@ SYSTEM,
             $analysis->terms()->sync($termIds);
             $this->analytics->recordAnalysisCompleted();
 
-            return $analysis->refresh()->load('terms');
+            return [
+                'analysis' => $analysis->refresh()->load('terms'),
+                'prompt_tokens' => $result->promptTokens,
+                'completion_tokens' => $result->completionTokens,
+            ];
         } catch (Throwable $e) {
             Log::warning('Post analysis failed', [
                 'post_id' => $post->id,
