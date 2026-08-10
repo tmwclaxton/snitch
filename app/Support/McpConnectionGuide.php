@@ -128,7 +128,7 @@ class McpConnectionGuide
                     'First calls: whoami (check runtime.app_url + brand_warnings), billing_status, get_brand',
                     'Local async: php artisan queue:work',
                     'Competitor loop: suggest_competitors → suggest_competitors_status → confirm_competitor_suggestions',
-                    'Influencer loop: find_influencers → influencer_search_status → keep_influencer',
+                    'Influencer loop: find_influencers → influencer_search_status → keep_influencer → list_influencers',
                 ]),
             ],
             'tools' => [
@@ -137,7 +137,7 @@ class McpConnectionGuide
                 'get_brand', 'update_brand', 'start_brand_autofill', 'autofill_status',
                 'list_competitors', 'add_competitor', 'remove_competitor', 'sync_competitor',
                 'suggest_competitors', 'suggest_competitors_status', 'confirm_competitor_suggestions', 'dismiss_competitor_suggestions',
-                'generate_influencer_brief', 'find_influencers', 'influencer_search_status', 'keep_influencer', 'discard_influencer',
+                'generate_influencer_brief', 'find_influencers', 'influencer_search_status', 'keep_influencer', 'discard_influencer', 'list_influencers',
                 'list_feed', 'get_post', 'analyze_post',
                 'list_winners', 'update_winner_rules', 'rescore_winners', 'rescore_winners_status',
                 'explore_posts',
