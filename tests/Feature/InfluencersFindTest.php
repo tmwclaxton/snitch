@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Concerns\WithPlatformBilling;
 use Tests\TestCase;
@@ -38,7 +39,39 @@ class InfluencersFindTest extends TestCase
                 ->where('brand.name', 'Sneaker Co')
                 ->where('canSearch', true)
                 ->where('filters.platform', 'instagram')
+                ->where('filters.language', 'English')
                 ->has('influencerCap')
+            );
+    }
+
+    public function test_influencers_page_normalizes_language_code_to_english(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create(['name' => 'Sneaker Co']);
+        $runId = (string) Str::uuid();
+
+        Cache::put(FindInfluencersJob::latestCacheKeyFor($user->id), $runId, now()->addHour());
+        Cache::put(FindInfluencersJob::cacheKeyFor($user->id, $runId), [
+            'status' => 'completed',
+            'filters' => [
+                'platforms' => ['instagram'],
+                'language' => 'en',
+                'min_followers' => null,
+                'max_followers' => null,
+                'brief' => 'Find creators',
+            ],
+            'brief' => 'Find creators',
+            'suggestions' => [],
+            'decisions' => [],
+            'error' => null,
+        ], now()->addHour());
+
+        $this->actingAs($user)
+            ->get(route('influencers.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('influencers/Index')
+                ->where('filters.language', 'English')
             );
     }
 
