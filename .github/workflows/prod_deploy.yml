@@ -180,7 +180,15 @@ jobs:
           }
 
           copy_deploy_files() {
-            ssh ${{ env.DEPLOY_HOST }} "mkdir -p ${{ env.DEPLOY_DIR }}/docker/production/edge/conf.d ${{ env.DEPLOY_DIR }}/edge"
+            # Unlink targets before scp. Directory is snitch-writable, but a file
+            # owned by another UID (e.g. leftover from a different deploy user)
+            # cannot be overwritten and fails with "Permission denied".
+            ssh ${{ env.DEPLOY_HOST }} "mkdir -p ${{ env.DEPLOY_DIR }}/docker/production/edge/conf.d ${{ env.DEPLOY_DIR }}/edge && rm -f \
+              ${{ env.DEPLOY_DIR }}/compose.prod.yaml \
+              ${{ env.DEPLOY_DIR }}/deploy-production.sh \
+              ${{ env.DEPLOY_DIR }}/docker/production/edge/nginx.conf \
+              ${{ env.DEPLOY_DIR }}/docker/production/edge/upstream-active.conf.default \
+              ${{ env.DEPLOY_DIR }}/docker/production/edge/conf.d/snitch.conf"
             scp compose.prod.yaml scripts/deploy-production.sh \
               ${{ env.DEPLOY_HOST }}:${{ env.DEPLOY_DIR }}/
             scp docker/production/edge/nginx.conf \

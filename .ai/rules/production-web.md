@@ -42,5 +42,7 @@ First deploy after this change retires legacy `app` / `snitch-app-1` if present 
 ## Cloudflare Access SSH
 Deploy uses `cloudflared access ssh` with a service token. Fresh ProxyCommand handshakes can flap as `Connection timed out during banner exchange` / `UNKNOWN port 65535`. Open one SSH `ControlMaster` (IPv4 / absolute `cloudflared` path) before scp/image transfer/deploy so later steps reuse the socket, and copy compose + deploy script in a single `scp`.
 
+Before `scp`, the workflow must `rm -f` the destination deploy files under `/opt/snitch`. Directory mode lets `snitch` unlink, but overwriting a file owned by another UID (seen with `edge/conf.d/snitch.conf` owned by `autocvapply`) fails with `Permission denied` and aborts before image transfer.
+
 ## Image size
 Do not `COPY` host `storage/` into the image (local `inertia-devtools` / logs can be hundreds of MB). Keep a root `.dockerignore` that excludes `.git`, `node_modules`, `vendor`, and `storage/inertia-devtools`. Create empty runtime storage dirs in the Dockerfile instead.
