@@ -13,7 +13,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('list_feed')]
-#[Description('List recent synced posts for the authenticated user.')]
+#[Description('List recent reel-like posts for the authenticated user\'s tracked accounts.')]
 class ListFeedTool extends Tool
 {
     public function handle(Request $request): Response
@@ -28,10 +28,14 @@ class ListFeedTool extends Tool
         ]);
 
         $posts = Post::query()
-            ->where('user_id', $user->id)
-            ->orderByDesc('posted_at')
+            ->forUser($user)
+            ->reelLike()
+            ->with('socialAccount:id,handle,platform')
+            ->latest('posted_at')
             ->limit((int) ($data['limit'] ?? 20))
-            ->get(['id', 'platform', 'type', 'url', 'caption', 'posted_at', 'tracked_account_id']);
+            ->get(['id', 'platform', 'type', 'url', 'caption', 'posted_at', 'social_account_id']);
+
+        $posts->each(fn (Post $post) => $post->makeHidden(['raw_payload']));
 
         return Response::json(['posts' => $posts]);
     }

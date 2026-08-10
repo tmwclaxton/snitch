@@ -35,7 +35,7 @@ class SyncTrackedAccountJob implements ShouldQueue
         SnitchAnalyticsService $analytics,
         VendorUsageCharger $charger,
     ): void {
-        $account = TrackedAccount::query()->with('user')->find($this->trackedAccountId);
+        $account = TrackedAccount::query()->with(['user', 'socialAccount'])->find($this->trackedAccountId);
 
         if ($account === null) {
             return;
@@ -44,6 +44,14 @@ class SyncTrackedAccountJob implements ShouldQueue
         $owner = $account->user;
 
         if ($owner === null) {
+            return;
+        }
+
+        if ($account->social_account_id === null) {
+            Log::warning('SyncTrackedAccountJob skipped; missing social_account_id', [
+                'tracked_account_id' => $this->trackedAccountId,
+            ]);
+
             return;
         }
 
@@ -120,7 +128,7 @@ class SyncTrackedAccountJob implements ShouldQueue
 
             $existingPosts = Post::query()
                 ->with('analysis')
-                ->where('tracked_account_id', $account->id)
+                ->where('social_account_id', $account->social_account_id)
                 ->get()
                 ->keyBy('external_id');
 
@@ -148,7 +156,7 @@ class SyncTrackedAccountJob implements ShouldQueue
                 $externalId = (string) ($payload['external_id'] ?? md5((string) $payload['url']));
 
                 if ($existingPosts->has($externalId)) {
-                    $this->dispatchAnalysisIfNeeded($existingPosts->get($externalId));
+                    $this->dispatchAnalysisIfNeeded($existingPosts->get($externalId), (int) $account->user_id);
 
                     continue;
                 }
@@ -177,9 +185,8 @@ class SyncTrackedAccountJob implements ShouldQueue
                 }
 
                 $post = Post::query()->create([
-                    'tracked_account_id' => $account->id,
+                    'social_account_id' => $account->social_account_id,
                     'external_id' => (string) $payload['external_id'],
-                    'user_id' => $account->user_id,
                     'platform' => $account->platform,
                     'type' => (string) $payload['type'],
                     'url' => (string) $payload['url'],
@@ -195,7 +202,7 @@ class SyncTrackedAccountJob implements ShouldQueue
 
                 $analytics->recordPostSynced($account->platform);
 
-                $this->dispatchAnalysisIfNeeded($post->fresh('analysis'));
+                $this->dispatchAnalysisIfNeeded($post->fresh('analysis'), (int) $account->user_id);
             }
 
             // Pull both buffers: empty Apify→TikHub fallback and YouTube
@@ -269,7 +276,7 @@ class SyncTrackedAccountJob implements ShouldQueue
         return $withBuffer->greaterThan($floor) ? $withBuffer : $floor;
     }
 
-    private function dispatchAnalysisIfNeeded(Post $post): void
+    private function dispatchAnalysisIfNeeded(Post $post, int $billingUserId): void
     {
         if (! $post->isAnalyzable()) {
             return;
@@ -294,6 +301,6 @@ class SyncTrackedAccountJob implements ShouldQueue
 
         // New posts, missing analysis, or failed analyses (soft retry).
         // YouTube page-URL failures can succeed after TikHub media hydration in AnalyzePostJob.
-        AnalyzePostJob::dispatch($post->id);
+        AnalyzePostJob::dispatch($post->id, $billingUserId);
     }
 }

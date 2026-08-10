@@ -5,6 +5,7 @@ const VENDOR_LABELS: Record<string, string> = {
     nanogpt: 'NanoGPT',
     firecrawl: 'Firecrawl',
     tikhub: 'TikHub',
+    snitch: 'Snitch',
     bonus: 'Bonus',
     topup: 'Top up',
 };
@@ -19,6 +20,7 @@ const VENDOR_ICON_FILES: Record<string, string> = {
     nanogpt: 'nanogpt.svg',
     firecrawl: 'firecrawl.svg',
     tikhub: 'tikhub.png',
+    snitch: 'snitch.svg',
     bonus: 'bonus.svg',
     topup: 'topup.svg',
 };

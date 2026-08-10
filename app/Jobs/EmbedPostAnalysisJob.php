@@ -6,6 +6,8 @@ use App\Enums\AnalysisStatus;
 use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Models\PostAnalysis;
+use App\Models\TrackedAccount;
+use App\Models\User;
 use App\Services\Analysis\AnalysisEmbeddingService;
 use App\Services\Billing\UsageBillingService;
 use App\Services\Billing\VendorUsageCharger;
@@ -23,7 +25,10 @@ class EmbedPostAnalysisJob implements ShouldQueue
     /** @var list<int> */
     public array $backoff = [5, 30, 120];
 
-    public function __construct(public int $postAnalysisId) {}
+    public function __construct(
+        public int $postAnalysisId,
+        public ?int $billingUserId = null,
+    ) {}
 
     public function handle(
         AnalysisEmbeddingService $embeddings,
@@ -31,7 +36,7 @@ class EmbedPostAnalysisJob implements ShouldQueue
         UsageBillingService $billing,
     ): void {
         $analysis = PostAnalysis::query()
-            ->with('post.user')
+            ->with('post.socialAccount')
             ->find($this->postAnalysisId);
 
         if ($analysis === null) {
@@ -42,7 +47,8 @@ class EmbedPostAnalysisJob implements ShouldQueue
             return;
         }
 
-        $owner = $analysis->post?->user;
+        $post = $analysis->post;
+        $owner = $this->resolveBillingUser($post?->social_account_id);
 
         if ($owner === null) {
             return;
@@ -61,7 +67,6 @@ class EmbedPostAnalysisJob implements ShouldQueue
 
         try {
             $embeddings->embedAnalysis($analysis);
-            $post = $analysis->post;
             $charger->chargeNanoGpt(
                 user: $owner,
                 action: 'embed.analysis',
@@ -74,7 +79,7 @@ class EmbedPostAnalysisJob implements ShouldQueue
                 meta: [
                     'post_analysis_id' => $analysis->id,
                     'post_id' => $post?->id,
-                    'tracked_account_id' => $post?->tracked_account_id,
+                    'social_account_id' => $post?->social_account_id,
                     'platform' => $post?->platform?->value,
                     'post_type' => $post?->type?->value,
                 ],
@@ -88,5 +93,23 @@ class EmbedPostAnalysisJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    private function resolveBillingUser(?int $socialAccountId): ?User
+    {
+        if ($this->billingUserId !== null) {
+            return User::query()->find($this->billingUserId);
+        }
+
+        if ($socialAccountId === null) {
+            return null;
+        }
+
+        $trackerId = TrackedAccount::query()
+            ->where('social_account_id', $socialAccountId)
+            ->orderBy('id')
+            ->value('user_id');
+
+        return $trackerId !== null ? User::query()->find($trackerId) : null;
     }
 }

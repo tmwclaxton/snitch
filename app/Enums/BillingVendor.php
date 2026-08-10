@@ -8,6 +8,7 @@ enum BillingVendor: string
     case NanoGpt = 'nanogpt';
     case Firecrawl = 'firecrawl';
     case TikHub = 'tikhub';
+    case Snitch = 'snitch';
     case Bonus = 'bonus';
     case Topup = 'topup';
 }

@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use App\Models\TrackedAccount;
 use App\Models\WinnerInsight;
 use App\Services\Billing\PlanEntitlementService;
 use App\Services\Dashboard\DashboardActivityBuilder;
 use App\Support\PlatformEmbed;
+use App\Support\PostAccountPresenter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,30 +22,25 @@ class DashboardController extends Controller
     ): Response {
         $user = $request->user();
         $inQuotaIds = $entitlements->inQuotaTrackedAccountIds($user);
+        $socialIds = $this->socialIdsForTrackedAccounts($inQuotaIds);
 
         $trackedCount = $user->trackedAccounts()->count();
         $lastSyncedAt = $inQuotaIds === []
             ? null
             : $user->trackedAccounts()->whereIn('id', $inQuotaIds)->max('last_synced_at');
 
-        $postsBase = function () use ($user, $entitlements) {
-            $query = Post::query()
-                ->where('user_id', $user->id)
-                ->reelLike();
-
-            return $entitlements->constrainPostsToInQuotaAccounts($query, $user);
-        };
+        $postsBase = fn () => Post::query()->forUser($user)->reelLike();
 
         $postsCount = $postsBase()->count();
 
         $winnersCount = WinnerInsight::query()
             ->where('user_id', $user->id)
             ->when(
-                $inQuotaIds === [],
+                $socialIds === [],
                 fn ($query) => $query->whereRaw('0 = 1'),
                 fn ($query) => $query->whereHas(
                     'post',
-                    fn ($post) => $post->whereIn('tracked_account_id', $inQuotaIds),
+                    fn ($post) => $post->whereIn('social_account_id', $socialIds),
                 ),
             )
             ->count();
@@ -53,45 +50,51 @@ class DashboardController extends Controller
         $analysisFailed = $postsBase()->analysisFailed()->count();
 
         $recentPosts = $postsBase()
-            ->with(['trackedAccount', 'analysis', 'winnerInsight'])
+            ->with([
+                'socialAccount',
+                'analysis',
+                'winnerInsight' => fn ($q) => $q->where('user_id', $user->id),
+            ])
             ->latest('posted_at')
             ->limit(6)
-            ->get()
-            ->map(function (Post $post): Post {
-                $post->setAttribute(
-                    'embed',
-                    PlatformEmbed::resolve($post->platform, $post->url, compact: true),
-                );
+            ->get();
+        PostAccountPresenter::attachForUser($recentPosts, $user);
+        $recentPosts->transform(function (Post $post): Post {
+            $post->setAttribute(
+                'embed',
+                PlatformEmbed::resolve($post->platform, $post->url, compact: true),
+            );
 
-                return $post;
-            });
+            return $post;
+        });
 
         $topWinners = WinnerInsight::query()
             ->where('user_id', $user->id)
             ->when(
-                $inQuotaIds === [],
+                $socialIds === [],
                 fn ($query) => $query->whereRaw('0 = 1'),
                 fn ($query) => $query->whereHas(
                     'post',
-                    fn ($post) => $post->whereIn('tracked_account_id', $inQuotaIds),
+                    fn ($post) => $post->whereIn('social_account_id', $socialIds),
                 ),
             )
-            ->with(['post.trackedAccount', 'post.analysis'])
+            ->with(['post.socialAccount', 'post.analysis'])
             ->orderByDesc('score')
             ->limit(4)
-            ->get()
-            ->each(function (WinnerInsight $winner): void {
-                $post = $winner->post;
+            ->get();
+        PostAccountPresenter::attachForUser($topWinners->pluck('post')->filter(), $user);
+        $topWinners->each(function (WinnerInsight $winner): void {
+            $post = $winner->post;
 
-                if ($post === null) {
-                    return;
-                }
+            if ($post === null) {
+                return;
+            }
 
-                $post->setAttribute(
-                    'embed',
-                    PlatformEmbed::resolve($post->platform, $post->url, compact: true),
-                );
-            });
+            $post->setAttribute(
+                'embed',
+                PlatformEmbed::resolve($post->platform, $post->url, compact: true),
+            );
+        });
 
         return Inertia::render('Dashboard', [
             'stats' => [
@@ -106,5 +109,24 @@ class DashboardController extends Controller
             'recent_posts' => $recentPosts,
             'top_winners' => $topWinners,
         ]);
+    }
+
+    /**
+     * @param  list<int>  $trackedAccountIds
+     * @return list<int>
+     */
+    private function socialIdsForTrackedAccounts(array $trackedAccountIds): array
+    {
+        if ($trackedAccountIds === []) {
+            return [];
+        }
+
+        return TrackedAccount::query()
+            ->whereIn('id', $trackedAccountIds)
+            ->pluck('social_account_id')
+            ->filter()
+            ->map(fn (mixed $id): int => (int) $id)
+            ->values()
+            ->all();
     }
 }

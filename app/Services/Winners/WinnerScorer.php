@@ -93,14 +93,18 @@ class WinnerScorer
         ];
     }
 
-    public function scoreAndPersist(Post $post, ?WinnerRule $rule = null, ?WinnerInsight $existing = null): ?WinnerInsight
-    {
-        $rule ??= $this->ruleFor($post->user);
+    public function scoreAndPersist(
+        Post $post,
+        User $user,
+        ?WinnerRule $rule = null,
+        ?WinnerInsight $existing = null,
+    ): ?WinnerInsight {
+        $rule ??= $this->ruleFor($user);
         $verdict = $this->evaluate($post, $rule);
 
         if (! $verdict['passes']) {
             WinnerInsight::query()
-                ->where('user_id', $post->user_id)
+                ->where('user_id', $user->id)
                 ->where('post_id', $post->id)
                 ->delete();
 
@@ -108,13 +112,13 @@ class WinnerScorer
         }
 
         $existing ??= WinnerInsight::query()
-            ->where('user_id', $post->user_id)
+            ->where('user_id', $user->id)
             ->where('post_id', $post->id)
             ->first();
 
         $insight = WinnerInsight::query()->updateOrCreate(
             [
-                'user_id' => $post->user_id,
+                'user_id' => $user->id,
                 'post_id' => $post->id,
             ],
             [
@@ -145,15 +149,16 @@ class WinnerScorer
             ->keyBy('post_id');
 
         Post::query()
-            ->where('user_id', $user->id)
+            ->forUser($user)
             ->with('analysis')
             ->orderByDesc('posted_at')
             ->limit(100)
             ->get()
-            ->each(function (Post $post) use ($rule, $insights, $existingByPostId): void {
+            ->each(function (Post $post) use ($user, $rule, $insights, $existingByPostId): void {
                 $existing = $existingByPostId->get($post->id);
                 $insight = $this->scoreAndPersist(
                     $post,
+                    $user,
                     $rule,
                     $existing instanceof WinnerInsight ? $existing : null,
                 );

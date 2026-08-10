@@ -19,6 +19,7 @@ use App\Models\WinnerInsight;
 use App\Services\Billing\PlanEntitlementService;
 use App\Services\Billing\UsageBillingService;
 use App\Support\PlatformEmbed;
+use App\Support\PostAccountPresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -55,14 +56,18 @@ class CompetitorController extends Controller
         $trackedAccount->setAttribute('in_quota', true);
 
         $posts = Post::query()
-            ->where('tracked_account_id', $trackedAccount->id)
-            ->where('user_id', $user->id)
+            ->where('social_account_id', $trackedAccount->social_account_id)
             ->reelLike()
-            ->with(['trackedAccount', 'analysis', 'winnerInsight'])
+            ->with([
+                'socialAccount',
+                'analysis',
+                'winnerInsight' => fn ($q) => $q->where('user_id', $user->id),
+            ])
             ->latest('posted_at')
             ->limit(24)
             ->get()
-            ->map(function (Post $post): Post {
+            ->map(function (Post $post) use ($user): Post {
+                PostAccountPresenter::attachForUser([$post], $user);
                 $post->setAttribute(
                     'embed',
                     PlatformEmbed::resolve($post->platform, $post->url, compact: true),
@@ -73,11 +78,12 @@ class CompetitorController extends Controller
 
         $winners = WinnerInsight::query()
             ->where('user_id', $user->id)
-            ->whereHas('post', fn ($query) => $query->where('tracked_account_id', $trackedAccount->id))
-            ->with(['post.trackedAccount', 'post.analysis'])
+            ->whereHas('post', fn ($query) => $query->where('social_account_id', $trackedAccount->social_account_id))
+            ->with(['post.socialAccount', 'post.analysis'])
             ->orderByDesc('score')
             ->limit(8)
             ->get();
+        PostAccountPresenter::attachForUser($winners->pluck('post')->filter(), $user);
 
         return Inertia::render('competitors/Show', [
             'account' => $trackedAccount,

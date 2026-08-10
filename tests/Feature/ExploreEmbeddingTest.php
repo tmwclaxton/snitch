@@ -9,6 +9,7 @@ use App\Models\Post;
 use App\Models\PostAnalysis;
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Services\Billing\UsageBillingService;
 use Database\Seeders\AnalysisTermSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -42,6 +43,7 @@ class ExploreEmbeddingTest extends TestCase
 
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
+        app(UsageBillingService::class)->creditFromTopUp($user, 1000, 'topup:explore-embed-1');
         $account = TrackedAccount::factory()->for($user)->create();
 
         $exact = Post::factory()->forAccount($account)->create([
@@ -97,6 +99,7 @@ class ExploreEmbeddingTest extends TestCase
 
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
+        app(UsageBillingService::class)->creditFromTopUp($user, 1000, 'topup:explore-embed-2');
         $account = TrackedAccount::factory()->for($user)->create();
 
         $post = Post::factory()->forAccount($account)->create([
@@ -147,6 +150,7 @@ class ExploreEmbeddingTest extends TestCase
 
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
+        app(UsageBillingService::class)->creditFromTopUp($user, 1000, 'topup:explore-embed-3');
         $account = TrackedAccount::factory()->for($user)->create();
 
         $match = Post::factory()->forAccount($account)->create(['type' => PostType::Reel]);

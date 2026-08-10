@@ -79,6 +79,16 @@ class LedgerChargePresenterTest extends TestCase
                 ['post_analysis_id' => 3, 'post_id' => 9],
                 'Indexed post analysis',
             ],
+            'explore search' => [
+                'explore.search',
+                ['query' => 'steam asmr', 'kind' => 'q'],
+                'Explore search: steam asmr',
+            ],
+            'explore view' => [
+                'explore.view',
+                ['platform' => 'instagram', 'post_type' => 'reel', 'handle' => 'rival'],
+                'Explore Instagram Reel @rival',
+            ],
         ];
     }
 

@@ -15,8 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
-    'user_id',
-    'tracked_account_id',
+    'social_account_id',
     'platform',
     'type',
     'external_id',
@@ -49,6 +48,22 @@ class Post extends Model
             'metrics' => 'array',
             'raw_payload' => 'array',
         ];
+    }
+
+    /**
+     * Posts for social accounts the user currently tracks.
+     *
+     * @param  Builder<Post>  $query
+     * @return Builder<Post>
+     */
+    public function scopeForUser(Builder $query, User $user): Builder
+    {
+        return $query->whereIn(
+            'social_account_id',
+            TrackedAccount::query()
+                ->where('user_id', $user->id)
+                ->select('social_account_id'),
+        );
     }
 
     /**
@@ -199,19 +214,11 @@ class Post extends Model
     }
 
     /**
-     * @return BelongsTo<User, $this>
+     * @return BelongsTo<SocialAccount, $this>
      */
-    public function user(): BelongsTo
+    public function socialAccount(): BelongsTo
     {
-        return $this->belongsTo(User::class);
-    }
-
-    /**
-     * @return BelongsTo<TrackedAccount, $this>
-     */
-    public function trackedAccount(): BelongsTo
-    {
-        return $this->belongsTo(TrackedAccount::class);
+        return $this->belongsTo(SocialAccount::class);
     }
 
     /**
@@ -223,6 +230,8 @@ class Post extends Model
     }
 
     /**
+     * User-scoped winner row. Always constrain with where('user_id', ...) when eager loading.
+     *
      * @return HasOne<WinnerInsight, $this>
      */
     public function winnerInsight(): HasOne

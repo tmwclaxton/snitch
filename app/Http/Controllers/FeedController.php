@@ -4,11 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Enums\Platform;
 use App\Enums\PostType;
+use App\Exceptions\InsufficientCreditsException;
 use App\Models\Post;
+use App\Models\TrackedAccount;
 use App\Services\Analysis\AnalysisTermCatalogue;
+use App\Services\Billing\ExploreBillingService;
 use App\Services\Billing\PlanEntitlementService;
 use App\Support\PlatformEmbed;
+use App\Support\PostAccountPresenter;
 use App\Support\SafeMarkdown;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -18,6 +23,7 @@ class FeedController extends Controller
     public function __construct(
         private AnalysisTermCatalogue $catalogue,
         private PlanEntitlementService $entitlements,
+        private ExploreBillingService $exploreBilling,
     ) {}
 
     public function index(Request $request): Response
@@ -28,12 +34,14 @@ class FeedController extends Controller
         $inQuotaIds = $this->entitlements->inQuotaTrackedAccountIds($user);
 
         $query = Post::query()
-            ->where('user_id', $user->id)
+            ->forUser($user)
             ->reelLike()
-            ->with(['trackedAccount', 'analysis.terms', 'winnerInsight'])
+            ->with([
+                'socialAccount',
+                'analysis.terms',
+                'winnerInsight' => fn ($q) => $q->where('user_id', $user->id),
+            ])
             ->latest('posted_at');
-
-        $this->entitlements->constrainPostsToInQuotaAccounts($query, $user);
 
         if ($request->filled('platform')) {
             $query->where('platform', $request->string('platform')->toString());
@@ -48,11 +56,16 @@ class FeedController extends Controller
 
         if ($request->filled('account')) {
             $accountId = $request->integer('account');
-            $query->where('tracked_account_id', in_array($accountId, $inQuotaIds, true) ? $accountId : -1);
+            $socialId = in_array($accountId, $inQuotaIds, true)
+                ? TrackedAccount::query()->whereKey($accountId)->value('social_account_id')
+                : null;
+            $query->where('social_account_id', $socialId ?? -1);
         }
 
         $posts = $query->paginate(24)->withQueryString();
+        PostAccountPresenter::attachForUser($posts->getCollection(), $user);
         $posts->getCollection()->transform(function (Post $post): Post {
+            $post->makeHidden(['raw_payload']);
             $post->setAttribute(
                 'embed',
                 PlatformEmbed::resolve($post->platform, $post->url, compact: true),
@@ -84,11 +97,30 @@ class FeedController extends Controller
         ]);
     }
 
-    public function show(Request $request, Post $post): Response
+    public function show(Request $request, Post $post): Response|RedirectResponse
     {
         $this->authorize('view', $post);
 
-        $post->load(['trackedAccount', 'analysis.terms', 'winnerInsight']);
+        $user = $request->user();
+        $post->load([
+            'socialAccount',
+            'analysis.terms',
+            'winnerInsight' => fn ($q) => $q->where('user_id', $user->id),
+        ]);
+
+        try {
+            $this->exploreBilling->chargeViewIfNeeded($user, $post);
+        } catch (InsufficientCreditsException $exception) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => $exception->getMessage(),
+            ]);
+
+            return redirect()->route('billing.edit');
+        }
+
+        PostAccountPresenter::attachForUser([$post], $user);
+        $post->makeHidden(['raw_payload']);
         $post->setAttribute(
             'embed',
             PlatformEmbed::resolve($post->platform, $post->url),

@@ -3,16 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
-use App\Services\Billing\PlanEntitlementService;
 use App\Support\PlatformEmbed;
+use App\Support\PostAccountPresenter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class BacklogController extends Controller
 {
-    public function __construct(private PlanEntitlementService $entitlements) {}
-
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', Post::class);
@@ -24,14 +22,14 @@ class BacklogController extends Controller
             $filter = 'queue';
         }
 
-        $baseQuery = function () use ($user) {
-            $query = Post::query()
-                ->where('user_id', $user->id)
-                ->reelLike()
-                ->with(['trackedAccount', 'analysis', 'winnerInsight']);
-
-            return $this->entitlements->constrainPostsToInQuotaAccounts($query, $user);
-        };
+        $baseQuery = fn () => Post::query()
+            ->forUser($user)
+            ->reelLike()
+            ->with([
+                'socialAccount',
+                'analysis',
+                'winnerInsight' => fn ($q) => $q->where('user_id', $user->id),
+            ]);
 
         $postsQuery = match ($filter) {
             'failed' => $baseQuery()->analysisFailed(),
@@ -44,6 +42,7 @@ class BacklogController extends Controller
             ->paginate(24)
             ->withQueryString();
 
+        PostAccountPresenter::attachForUser($posts->getCollection(), $user);
         $posts->getCollection()->transform(function (Post $post): Post {
             $post->setAttribute(
                 'embed',

@@ -1,4 +1,5 @@
 import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
+import { index as exploreIndex } from '@/actions/App/Http/Controllers/ExploreController';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import { index as influencersIndex } from '@/actions/App/Http/Controllers/InfluencerController';
 import { edit as brandEdit } from '@/routes/brand';
@@ -37,6 +38,8 @@ export function chargeLinkHref(link: ChargeLink | null | undefined): string | nu
             return influencersIndex.url();
         case 'brand':
             return brandEdit.url();
+        case 'explore':
+            return exploreIndex.url();
         default:
             return null;
     }

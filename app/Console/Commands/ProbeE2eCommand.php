@@ -99,7 +99,7 @@ class ProbeE2eCommand extends Command
         }
 
         $posts = Post::query()
-            ->where('tracked_account_id', $account->id)
+            ->where('social_account_id', $account->social_account_id)
             ->reelLike()
             ->mediaAvailable()
             ->whereNotNull('media_url')
@@ -167,7 +167,7 @@ class ProbeE2eCommand extends Command
             }
         }
 
-        $insight = $scorer->scoreAndPersist($post->fresh(['analysis', 'user']));
+        $insight = $scorer->scoreAndPersist($post->fresh(['analysis']), $account->user);
 
         $this->info('Winner report: '.json_encode([
             'post_id' => $post->id,

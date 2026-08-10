@@ -9,6 +9,8 @@ use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Models\Post;
 use App\Models\PostAnalysis;
+use App\Models\TrackedAccount;
+use App\Models\User;
 use App\Services\Analysis\VideoAnalysisService;
 use App\Services\Billing\UsageBillingService;
 use App\Services\Billing\VendorUsageCharger;
@@ -27,7 +29,10 @@ class AnalyzePostJob implements ShouldQueue
 
     public int $tries = 2;
 
-    public function __construct(public int $postId) {}
+    public function __construct(
+        public int $postId,
+        public ?int $billingUserId = null,
+    ) {}
 
     public function handle(
         VideoAnalysisService $analysis,
@@ -36,7 +41,7 @@ class AnalyzePostJob implements ShouldQueue
         UsageBillingService $billing,
         YoutubeMediaHydrator $youtubeMedia,
     ): void {
-        $post = Post::query()->with(['analysis', 'user'])->find($this->postId);
+        $post = Post::query()->with(['analysis', 'socialAccount'])->find($this->postId);
 
         if ($post === null) {
             return;
@@ -55,7 +60,7 @@ class AnalyzePostJob implements ShouldQueue
             return;
         }
 
-        $owner = $post->user;
+        $owner = $this->resolveBillingUser($post);
 
         if ($owner === null) {
             return;
@@ -136,10 +141,10 @@ class AnalyzePostJob implements ShouldQueue
                 idempotencyKey: 'analyze.post:'.$post->id.':'.$persisted->id,
             );
 
-            $scorer->scoreAndPersist($post->fresh('analysis'));
+            $scorer->scoreAndPersist($post->fresh('analysis'), $owner);
 
             if ($persisted->status === AnalysisStatus::Completed) {
-                EmbedPostAnalysisJob::dispatch($persisted->id);
+                EmbedPostAnalysisJob::dispatch($persisted->id, $owner->id);
             }
         } catch (Throwable $e) {
             if ($this->isUnavailableException($e)) {
@@ -164,16 +169,30 @@ class AnalyzePostJob implements ShouldQueue
     }
 
     /**
-     * @return array{post_id: int, tracked_account_id: int|null, platform: string|null, post_type: string|null}
+     * @return array{post_id: int, social_account_id: int|null, platform: string|null, post_type: string|null}
      */
     private function chargeMeta(Post $post): array
     {
         return [
             'post_id' => $post->id,
-            'tracked_account_id' => $post->tracked_account_id,
+            'social_account_id' => $post->social_account_id,
             'platform' => $post->platform instanceof Platform ? $post->platform->value : null,
             'post_type' => $post->type?->value,
         ];
+    }
+
+    private function resolveBillingUser(Post $post): ?User
+    {
+        if ($this->billingUserId !== null) {
+            return User::query()->find($this->billingUserId);
+        }
+
+        $trackerId = TrackedAccount::query()
+            ->where('social_account_id', $post->social_account_id)
+            ->orderBy('id')
+            ->value('user_id');
+
+        return $trackerId !== null ? User::query()->find($trackerId) : null;
     }
 
     private function mediaLooksGone(Post $post): bool

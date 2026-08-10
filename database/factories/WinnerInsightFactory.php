@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Post;
+use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Models\WinnerInsight;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -13,8 +14,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 class WinnerInsightFactory extends Factory
 {
     /**
-     * Define the model's default state.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array
@@ -28,11 +27,19 @@ class WinnerInsightFactory extends Factory
         ];
     }
 
-    public function forPost(Post $post): static
+    public function forPost(Post $post, ?User $user = null): static
     {
-        return $this->state(fn () => [
-            'user_id' => $post->user_id,
-            'post_id' => $post->id,
-        ]);
+        return $this->state(function () use ($post, $user) {
+            $userId = $user?->id
+                ?? TrackedAccount::query()
+                    ->where('social_account_id', $post->social_account_id)
+                    ->value('user_id')
+                ?? User::factory();
+
+            return [
+                'user_id' => $userId,
+                'post_id' => $post->id,
+            ];
+        });
     }
 }

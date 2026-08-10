@@ -142,6 +142,7 @@ return [
 
     /*
     | Product actions → default vendor COGS when a run cannot report usage.
+    | Explore product fees use fixed_pence (exact user charge, not COGS × markup).
     */
     'actions' => [
         'apify.run' => ['vendor' => 'apify', 'floor_usd' => 0.01],
@@ -154,6 +155,8 @@ return [
         'brand.autofill' => ['vendor' => 'firecrawl', 'floor_usd' => 0.005],
         'influencer.brief' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0005],
         'winners.copy' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0005],
+        'explore.search' => ['vendor' => 'snitch', 'fixed_pence' => 0.5],
+        'explore.view' => ['vendor' => 'snitch', 'fixed_pence' => 0.1],
     ],
 
 ];

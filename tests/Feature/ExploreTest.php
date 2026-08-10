@@ -11,6 +11,7 @@ use App\Models\Post;
 use App\Models\PostAnalysis;
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Services\Billing\UsageBillingService;
 use Database\Seeders\AnalysisTermSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -41,7 +42,7 @@ class ExploreTest extends TestCase
         $this->assertStringContainsString('· {{ count }}', $chipVue);
     }
 
-    public function test_explore_lists_completed_analyses_for_owner(): void
+    public function test_explore_lists_completed_analyses_across_corpus(): void
     {
         $this->seed(AnalysisTermSeeder::class);
 
@@ -52,6 +53,7 @@ class ExploreTest extends TestCase
         $account = TrackedAccount::factory()->for($user)->create();
         $post = Post::factory()->forAccount($account)->create([
             'type' => PostType::Reel,
+            'external_id' => 'own-reel-1',
         ]);
         $analysis = PostAnalysis::factory()->for($post)->create([
             'status' => AnalysisStatus::Completed,
@@ -65,6 +67,7 @@ class ExploreTest extends TestCase
         $otherAccount = TrackedAccount::factory()->for($other)->create();
         $otherPost = Post::factory()->forAccount($otherAccount)->create([
             'type' => PostType::Reel,
+            'external_id' => 'other-reel-1',
         ]);
         PostAnalysis::factory()->for($otherPost)->create([
             'status' => AnalysisStatus::Completed,
@@ -75,10 +78,17 @@ class ExploreTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('explore/Index')
-                ->has('posts.data', 1)
-                ->where('posts.data.0.id', $post->id)
-                ->where('posts.data.0.analysis.term_labels.0.slug', 'pattern_interrupt')
-                ->where('posts.data.0.analysis.term_labels.0.section', 'Claims & takes')
+                ->has('posts.data', 2)
+                ->where('posts.data', function ($posts) use ($post, $otherPost, $term): bool {
+                    $ids = collect($posts)->pluck('id')->all();
+                    $own = collect($posts)->firstWhere('id', $post->id);
+
+                    return in_array($post->id, $ids, true)
+                        && in_array($otherPost->id, $ids, true)
+                        && is_array($own)
+                        && ($own['analysis']['term_labels'][0]['slug'] ?? null) === $term->slug
+                        && ($own['analysis']['term_labels'][0]['section'] ?? null) === 'Claims & takes';
+                })
                 ->has('terms.hook_type')
                 ->where('terms.hook_type.0.section', fn ($section) => is_string($section) && $section !== '')
                 ->where('terms.hook_type', function ($terms) use ($term): bool {
@@ -96,7 +106,7 @@ class ExploreTest extends TestCase
             );
     }
 
-    public function test_explore_term_counts_are_scoped_to_owner(): void
+    public function test_explore_term_counts_include_corpus(): void
     {
         $this->seed(AnalysisTermSeeder::class);
 
@@ -112,6 +122,7 @@ class ExploreTest extends TestCase
         $account = TrackedAccount::factory()->for($user)->create();
         $post = Post::factory()->forAccount($account)->create([
             'type' => PostType::Reel,
+            'external_id' => 'own-myth',
         ]);
         $analysis = PostAnalysis::factory()->for($post)->create([
             'status' => AnalysisStatus::Completed,
@@ -121,6 +132,7 @@ class ExploreTest extends TestCase
         $otherAccount = TrackedAccount::factory()->for($other)->create();
         $otherPost = Post::factory()->forAccount($otherAccount)->create([
             'type' => PostType::Reel,
+            'external_id' => 'other-myth',
         ]);
         $otherAnalysis = PostAnalysis::factory()->for($otherPost)->create([
             'status' => AnalysisStatus::Completed,
@@ -136,7 +148,7 @@ class ExploreTest extends TestCase
                     $match = collect($terms)->firstWhere('slug', $term->slug);
 
                     return is_array($match)
-                        && ($match['count'] ?? null) === 1;
+                        && ($match['count'] ?? null) === 2;
                 })
             );
     }
@@ -242,6 +254,7 @@ class ExploreTest extends TestCase
 
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
+        app(UsageBillingService::class)->creditFromTopUp($user, 1000, 'topup:explore-search-tags');
         $account = TrackedAccount::factory()->for($user)->create();
 
         $post = Post::factory()->forAccount($account)->create([
@@ -279,6 +292,7 @@ class ExploreTest extends TestCase
 
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
+        app(UsageBillingService::class)->creditFromTopUp($user, 1000, 'topup:explore-search-topics');
         $account = TrackedAccount::factory()->for($user)->create();
 
         $post = Post::factory()->forAccount($account)->create([

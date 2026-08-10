@@ -7,6 +7,9 @@ paths:
 
 # Competitors
 
+## Untrack does not delete the corpus
+Removing a competitor/influencer deletes only the user's `tracked_accounts` row. Global `social_accounts` + `posts` + analyses stay. Re-add resolves the same social account and attaches existing posts (sync refreshes; it should not recreate from zero when the reel already exists).
+
 ## Sync is intentional - no auto-sync countdown
 Competitors Index/Show show Sync status only: Manual, last synced date, or Syncing. Do not expose next_sync_at / sync_due or a scheduled countdown. Agents and users kick sync; snitch:sync-accounts is ops-only and not registered in routes/console.php.
 

@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('analyze_post')]
-#[Description('Queue NanoGPT video analysis for a post (billable).')]
+#[Description('Queue analysis for a tracked post (billed to the calling user).')]
 class AnalyzePostTool extends Tool
 {
     public function handle(Request $request): Response
@@ -28,12 +28,16 @@ class AnalyzePostTool extends Tool
             'post_id' => ['required', 'integer'],
         ]);
 
-        $post = Post::query()->where('user_id', $user->id)->whereKey($data['post_id'])->first();
+        $post = Post::query()
+            ->forUser($user)
+            ->whereKey($data['post_id'])
+            ->first();
+
         if ($post === null) {
             return Response::error('Post not found.');
         }
 
-        AnalyzePostJob::dispatch($post->id);
+        AnalyzePostJob::dispatch($post->id, $user->id);
 
         return Response::json(['queued' => true, 'post_id' => $post->id]);
     }

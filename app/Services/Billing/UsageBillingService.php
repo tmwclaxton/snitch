@@ -90,17 +90,21 @@ class UsageBillingService
             throw new \InvalidArgumentException('Use credit helpers for bonus/top-up entries.');
         }
 
-        $this->assertCanRun($user, 1);
+        $fixedPence = $this->fixedPenceForAction($action);
+        $amountPence = $fixedPence ?? $this->pricePenceFromCogs($action, $vendorEnum, $cogsUsd);
+        $this->assertCanRun($user, max(0.01, abs($amountPence)));
 
-        $amountPence = $this->pricePenceFromCogs($action, $vendorEnum, $cogsUsd);
-        $multiplier = (float) config('billing.price_multiplier', 1.3);
+        $multiplier = $fixedPence !== null
+            ? null
+            : (float) config('billing.price_multiplier', 1.3);
+        $cogsForEntry = $fixedPence !== null ? null : $cogsUsd;
 
         return $this->writeEntry(
             user: $user,
             action: $action,
             vendor: $vendorEnum,
             amountPence: -abs($amountPence),
-            cogsUsd: $cogsUsd,
+            cogsUsd: $cogsForEntry,
             multiplier: $multiplier,
             meta: $meta,
             idempotencyKey: $idempotencyKey,
@@ -186,6 +190,11 @@ class UsageBillingService
 
     public function estimatePence(string $action, BillingVendor|string $vendor, ?float $cogsUsd = null): float
     {
+        $fixedPence = $this->fixedPenceForAction($action);
+        if ($fixedPence !== null) {
+            return $fixedPence;
+        }
+
         $vendorEnum = $vendor instanceof BillingVendor ? $vendor : BillingVendor::from($vendor);
 
         return $this->pricePenceFromCogs($action, $vendorEnum, $cogsUsd);
@@ -372,7 +381,12 @@ class UsageBillingService
             ->whereIn('vendor', $vendorKeys)
             ->sum(DB::raw('ABS(amount_pence)')));
 
-        $recentVendors = [...$vendorKeys, BillingVendor::Bonus->value, BillingVendor::Topup->value];
+        $recentVendors = [
+            ...$vendorKeys,
+            BillingVendor::Snitch->value,
+            BillingVendor::Bonus->value,
+            BillingVendor::Topup->value,
+        ];
 
         $recentQuery = CreditLedgerEntry::query()
             ->where('user_id', $user->id)
@@ -498,6 +512,11 @@ class UsageBillingService
 
     public function pricePenceFromCogs(string $action, BillingVendor $vendor, ?float $cogsUsd): float
     {
+        $fixedPence = $this->fixedPenceForAction($action);
+        if ($fixedPence !== null) {
+            return $fixedPence;
+        }
+
         $floorUsd = (float) config("billing.actions.{$action}.floor_usd", config('billing.vendors.apify.floor_usd', 0.01));
         // Explicit 0 COGS charges 0; null falls back to catalog COGS for missing usage data.
         $cogs = $cogsUsd !== null ? max(0.0, $cogsUsd) : $floorUsd;
@@ -506,6 +525,32 @@ class UsageBillingService
 
         // Round half-up to 0.01p (£0.0001). No min charge / vendor ceil.
         return $this->roundPence($priced * 100);
+    }
+
+    /**
+     * Product fees with an exact user charge (pence), bypassing COGS × markup.
+     *
+     * Action keys may contain dots (e.g. explore.search), so look up the map
+     * by array key instead of dotted config paths.
+     */
+    public function fixedPenceForAction(string $action): ?float
+    {
+        $actions = config('billing.actions', []);
+        if (! is_array($actions) || ! isset($actions[$action]) || ! is_array($actions[$action])) {
+            return null;
+        }
+
+        $raw = $actions[$action]['fixed_pence'] ?? null;
+
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        if (! is_numeric($raw)) {
+            return null;
+        }
+
+        return $this->roundPence(max(0.0, (float) $raw));
     }
 
     public function estimateNanoGptChatUsd(?int $inputTokens, ?int $outputTokens, string $model, string $floorKey = 'chat'): float

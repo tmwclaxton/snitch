@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\Platform;
 use App\Enums\TrackedAccountKind;
+use App\Models\SocialAccount;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -14,8 +15,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 class TrackedAccountFactory extends Factory
 {
     /**
-     * Define the model's default state.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array
@@ -41,6 +40,19 @@ class TrackedAccountFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'platform' => $platform,
             'url' => $this->profileUrl($platform, (string) $attributes['handle']),
+        ]);
+    }
+
+    public function forSocialAccount(SocialAccount $socialAccount): static
+    {
+        return $this->state(fn () => [
+            'social_account_id' => $socialAccount->id,
+            'platform' => $socialAccount->platform,
+            'handle' => $socialAccount->handle,
+            'url' => $socialAccount->url,
+            'external_id' => $socialAccount->external_id,
+            'avatar' => $socialAccount->avatar,
+            'display_name' => $socialAccount->display_name,
         ]);
     }
 

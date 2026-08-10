@@ -2,14 +2,14 @@
 
 namespace App\Policies;
 
+use App\Enums\AnalysisStatus;
+use App\Enums\PostType;
 use App\Models\Post;
+use App\Models\TrackedAccount;
 use App\Models\User;
-use App\Services\Billing\PlanEntitlementService;
 
 class PostPolicy
 {
-    public function __construct(private PlanEntitlementService $entitlements) {}
-
     public function viewAny(User $user): bool
     {
         return true;
@@ -17,17 +17,23 @@ class PostPolicy
 
     public function view(User $user, Post $post): bool
     {
-        if (! $user->is($post->user)) {
-            return false;
-        }
-
-        $accountId = $post->tracked_account_id;
-
-        if ($accountId === null) {
+        if ($this->userTracks($user, $post)) {
             return true;
         }
 
-        return $this->entitlements->isTrackedAccountInQuota($user, (int) $accountId);
+        // Platform Explore: any authenticated user may open a completed reel analysis.
+        if (! $this->isReelLike($post)) {
+            return false;
+        }
+
+        if ($post->relationLoaded('analysis')) {
+            return $post->analysis !== null
+                && $post->analysis->status === AnalysisStatus::Completed;
+        }
+
+        return $post->analysis()
+            ->where('status', AnalysisStatus::Completed)
+            ->exists();
     }
 
     public function create(User $user): bool
@@ -37,11 +43,38 @@ class PostPolicy
 
     public function update(User $user, Post $post): bool
     {
-        return $user->is($post->user);
+        return $this->userTracks($user, $post);
     }
 
     public function delete(User $user, Post $post): bool
     {
-        return $user->is($post->user);
+        return $this->userTracks($user, $post);
+    }
+
+    private function userTracks(User $user, Post $post): bool
+    {
+        if ($post->social_account_id === null) {
+            return false;
+        }
+
+        return TrackedAccount::query()
+            ->where('user_id', $user->id)
+            ->where('social_account_id', $post->social_account_id)
+            ->exists();
+    }
+
+    private function isReelLike(Post $post): bool
+    {
+        $type = $post->type;
+
+        if ($type instanceof PostType) {
+            return $type->isReelLike();
+        }
+
+        if (is_string($type)) {
+            return in_array($type, PostType::analyzableValues(), true);
+        }
+
+        return false;
     }
 }

@@ -6,14 +6,17 @@ use App\Enums\AnalysisStatus;
 use App\Enums\AnalysisTermDimension;
 use App\Enums\Platform;
 use App\Enums\PostType;
+use App\Exceptions\InsufficientCreditsException;
 use App\Models\AnalysisTerm;
 use App\Models\Post;
 use App\Services\Analysis\AnalysisEmbeddingService;
 use App\Services\Analysis\AnalysisTermCatalogue;
 use App\Services\Analysis\ExploreMixService;
-use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\ExploreBillingService;
 use App\Support\PlatformEmbed;
+use App\Support\PostAccountPresenter;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -26,10 +29,10 @@ class ExploreController extends Controller
         private AnalysisTermCatalogue $catalogue,
         private AnalysisEmbeddingService $embeddings,
         private ExploreMixService $exploreMix,
-        private PlanEntitlementService $entitlements,
+        private ExploreBillingService $exploreBilling,
     ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request): Response|RedirectResponse
     {
         $this->authorize('viewAny', Post::class);
 
@@ -42,16 +45,21 @@ class ExploreController extends Controller
         $queryText = $this->nullableString($request->query('q'));
         $customTag = $this->nullableString($request->query('custom_tag'));
 
-        $query = Post::query()
-            ->where('user_id', $user->id)
-            ->reelLike()
-            ->whereHas('analysis', function (Builder $analysis): void {
-                $analysis->where('status', AnalysisStatus::Completed);
-            })
-            ->with(['trackedAccount', 'analysis.terms', 'winnerInsight'])
-            ->latest('posted_at');
+        if ($customTag !== null) {
+            try {
+                $this->exploreBilling->chargeSearch($user, $customTag, 'custom_tag');
+            } catch (InsufficientCreditsException $exception) {
+                return $this->redirectToBilling($exception);
+            }
+        } elseif ($queryText !== null) {
+            try {
+                $this->exploreBilling->chargeSearch($user, $queryText, 'q');
+            } catch (InsufficientCreditsException $exception) {
+                return $this->redirectToBilling($exception);
+            }
+        }
 
-        $this->entitlements->constrainPostsToInQuotaAccounts($query, $user);
+        $query = $this->corpusCompletedReelsQuery();
 
         if ($platform !== null && in_array($platform, array_column(Platform::cases(), 'value'), true)) {
             $query->where('platform', $platform);
@@ -92,7 +100,9 @@ class ExploreController extends Controller
 
         $posts ??= $this->paginateQualityMix($request, $query, $mixSeed);
 
+        PostAccountPresenter::attachForUser($posts->getCollection(), $user);
         $posts->getCollection()->transform(function (Post $post): Post {
+            $post->makeHidden(['raw_payload']);
             $post->setAttribute(
                 'embed',
                 PlatformEmbed::resolve($post->platform, $post->url, compact: true),
@@ -109,7 +119,7 @@ class ExploreController extends Controller
         });
 
         $sections = $this->catalogue->sectionByKey();
-        $termCounts = $this->termUsageCounts($user->id, $this->entitlements->inQuotaTrackedAccountIds($user));
+        $termCounts = $this->termUsageCounts();
         $terms = AnalysisTerm::query()
             ->orderBy('dimension')
             ->orderBy('label')
@@ -149,6 +159,22 @@ class ExploreController extends Controller
             ],
             'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
         ]);
+    }
+
+    /**
+     * Completed reel-like analyses across the shared platform corpus.
+     *
+     * @return Builder<Post>
+     */
+    private function corpusCompletedReelsQuery(): Builder
+    {
+        return Post::query()
+            ->reelLike()
+            ->whereHas('analysis', function (Builder $analysis): void {
+                $analysis->where('status', AnalysisStatus::Completed);
+            })
+            ->with(['socialAccount', 'analysis.terms'])
+            ->latest('posted_at');
     }
 
     /**
@@ -293,7 +319,7 @@ class ExploreController extends Controller
             ? collect()
             : Post::query()
                 ->whereIn('id', $slice)
-                ->with(['trackedAccount', 'analysis.terms', 'winnerInsight'])
+                ->with(['socialAccount', 'analysis.terms'])
                 ->get()
                 ->sortBy(fn (Post $post): int => (int) array_search($post->id, $slice, true))
                 ->values();
@@ -313,17 +339,12 @@ class ExploreController extends Controller
     }
 
     /**
-     * How often each catalogue term appears on the user's completed reel-like analyses.
+     * How often each catalogue term appears on completed reel-like analyses in the corpus.
      *
-     * @param  list<int>  $inQuotaAccountIds
      * @return array<int, int>
      */
-    private function termUsageCounts(int $userId, array $inQuotaAccountIds): array
+    private function termUsageCounts(): array
     {
-        if ($inQuotaAccountIds === []) {
-            return [];
-        }
-
         return AnalysisTerm::query()
             ->select([
                 'analysis_terms.id',
@@ -332,8 +353,6 @@ class ExploreController extends Controller
             ->join('analysis_term_post_analysis', 'analysis_terms.id', '=', 'analysis_term_post_analysis.analysis_term_id')
             ->join('post_analyses', 'post_analyses.id', '=', 'analysis_term_post_analysis.post_analysis_id')
             ->join('posts', 'posts.id', '=', 'post_analyses.post_id')
-            ->where('posts.user_id', $userId)
-            ->whereIn('posts.tracked_account_id', $inQuotaAccountIds)
             ->whereIn('posts.type', PostType::analyzableValues())
             ->where('post_analyses.status', AnalysisStatus::Completed)
             ->groupBy('analysis_terms.id')
@@ -396,5 +415,15 @@ class ExploreController extends Controller
         $trimmed = trim((string) $value);
 
         return $trimmed === '' ? null : $trimmed;
+    }
+
+    private function redirectToBilling(InsufficientCreditsException $exception): RedirectResponse
+    {
+        Inertia::flash('toast', [
+            'type' => 'error',
+            'message' => $exception->getMessage(),
+        ]);
+
+        return redirect()->route('billing.edit');
     }
 }

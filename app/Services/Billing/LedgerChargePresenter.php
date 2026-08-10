@@ -47,6 +47,8 @@ class LedgerChargePresenter
             'influencer.brief' => 'Generated influencer brief',
             'brand.autofill' => 'Brand autofill',
             'winners.copy' => 'Generated winner copy',
+            'explore.search' => $this->exploreSearchDescription($meta),
+            'explore.view' => $this->exploreViewDescription($meta),
             'apify.run' => 'Apify run',
             'tikhub.run' => 'TikHub run',
             'claim_bonus' => 'Welcome credits',
@@ -96,8 +98,47 @@ class LedgerChargePresenter
                 'type' => 'brand',
                 'label' => 'Brand',
             ],
+            'explore.search' => [
+                'type' => 'explore',
+                'label' => 'Explore',
+            ],
             default => null,
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
+     */
+    private function exploreSearchDescription(array $meta): string
+    {
+        $query = $this->stringMeta($meta['query'] ?? null);
+        if ($query !== null) {
+            $short = mb_strlen($query) > 40 ? mb_substr($query, 0, 37).'...' : $query;
+
+            return 'Explore search: '.$short;
+        }
+
+        return 'Explore search';
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
+     */
+    private function exploreViewDescription(array $meta): string
+    {
+        $platform = $this->platformLabel($meta['platform'] ?? null);
+        $noun = $this->contentNoun($meta['platform'] ?? null, $meta['post_type'] ?? null);
+        $handle = $this->stringMeta($meta['handle'] ?? null);
+
+        $base = $platform !== null
+            ? "Explore {$platform} {$noun}"
+            : 'Explore reel view';
+
+        if ($handle !== null) {
+            return $base.' @'.ltrim($handle, '@');
+        }
+
+        return $base;
     }
 
     /**

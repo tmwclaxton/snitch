@@ -92,14 +92,23 @@ class DomainSchemaTest extends TestCase
         $this->assertFalse($other->can('delete', $account));
     }
 
-    public function test_post_policy_allows_only_owner(): void
+    public function test_post_policy_allows_trackers_and_completed_corpus_reels(): void
     {
         $owner = User::factory()->create();
         $other = User::factory()->create();
         $account = TrackedAccount::factory()->for($owner)->create();
-        $post = Post::factory()->forAccount($account)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+        ]);
 
         $this->assertTrue($owner->can('view', $post));
         $this->assertFalse($other->can('view', $post));
+
+        PostAnalysis::factory()->for($post)->create([
+            'status' => AnalysisStatus::Completed,
+        ]);
+        $post->unsetRelation('analysis');
+
+        $this->assertTrue($other->can('view', $post->fresh('analysis')));
     }
 }

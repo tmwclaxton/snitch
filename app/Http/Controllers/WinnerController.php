@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\ScoreWinnersJob;
+use App\Models\TrackedAccount;
 use App\Models\WinnerInsight;
 use App\Services\Billing\PlanEntitlementService;
 use App\Services\Winners\WinnerScorer;
 use App\Support\PlatformEmbed;
+use App\Support\PostAccountPresenter;
 use App\Support\SafeMarkdown;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -23,38 +25,49 @@ class WinnerController extends Controller
         $user = $request->user();
         $rule = $scorer->ruleFor($user);
         $inQuotaIds = $this->entitlements->inQuotaTrackedAccountIds($user);
+        $socialIds = $inQuotaIds === []
+            ? []
+            : TrackedAccount::query()
+                ->whereIn('id', $inQuotaIds)
+                ->pluck('social_account_id')
+                ->filter()
+                ->map(fn (mixed $id): int => (int) $id)
+                ->values()
+                ->all();
 
         $winners = WinnerInsight::query()
             ->where('user_id', $user->id)
-            ->whereHas('post', function ($query) use ($inQuotaIds): void {
-                if ($inQuotaIds === []) {
+            ->whereHas('post', function ($query) use ($socialIds): void {
+                if ($socialIds === []) {
                     $query->whereRaw('0 = 1');
 
                     return;
                 }
 
-                $query->whereIn('tracked_account_id', $inQuotaIds);
+                $query->whereIn('social_account_id', $socialIds);
             })
-            ->with(['post.trackedAccount', 'post.analysis'])
+            ->with(['post.socialAccount', 'post.analysis'])
             ->orderByDesc('score')
-            ->get()
-            ->each(function (WinnerInsight $winner): void {
-                $winner->setAttribute(
-                    'how_to_copy_html',
-                    SafeMarkdown::toHtml($winner->how_to_copy),
-                );
+            ->get();
 
-                $post = $winner->post;
+        PostAccountPresenter::attachForUser($winners->pluck('post')->filter(), $user);
+        $winners->each(function (WinnerInsight $winner): void {
+            $winner->setAttribute(
+                'how_to_copy_html',
+                SafeMarkdown::toHtml($winner->how_to_copy),
+            );
 
-                if ($post === null) {
-                    return;
-                }
+            $post = $winner->post;
 
-                $post->setAttribute(
-                    'embed',
-                    PlatformEmbed::resolve($post->platform, $post->url, compact: true),
-                );
-            });
+            if ($post === null) {
+                return;
+            }
+
+            $post->setAttribute(
+                'embed',
+                PlatformEmbed::resolve($post->platform, $post->url, compact: true),
+            );
+        });
 
         return Inertia::render('winners/Index', [
             'winners' => $winners,
