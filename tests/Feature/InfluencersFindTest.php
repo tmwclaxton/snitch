@@ -11,11 +11,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\WithPlatformBilling;
 use Tests\TestCase;
 
 class InfluencersFindTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPlatformBilling;
 
     public function test_guest_cannot_open_influencers_page(): void
     {
@@ -165,6 +167,7 @@ class InfluencersFindTest extends TestCase
 
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
+        $this->enablePlatformBilling($user);
         $runId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 
         Cache::put(FindInfluencersJob::cacheKeyFor($user->id, $runId), [
