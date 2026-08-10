@@ -17,6 +17,7 @@ use App\Mcp\Tools\SuggestCompetitorsTool;
 use App\Mcp\Tools\WhoamiTool;
 use App\Models\BrandProfile;
 use App\Models\User;
+use App\Support\McpConnectionGuide;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
@@ -151,6 +152,19 @@ class McpRuntimeGuidanceTest extends TestCase
         $this->assertNotEmpty($snapshot['warnings']);
         $this->assertTrue(collect($snapshot['warnings'])->contains(
             fn (string $w): bool => str_contains(strtolower($w), 'local')
+        ));
+        $this->assertTrue(collect($snapshot['warnings'])->contains(
+            fn (string $w): bool => str_contains($w, 'single-threaded')
+        ));
+    }
+
+    public function test_mcp_connection_guide_mentions_local_serve_blocking(): void
+    {
+        $steps = collect(McpConnectionGuide::payload()['general']['steps']);
+
+        $this->assertTrue($steps->contains(
+            fn (string $step): bool => str_contains($step, 'single-threaded')
+                || str_contains($step, 'single-request')
         ));
     }
 

@@ -391,7 +391,9 @@ SNITCH_LIVE_E2E=0
 composer run dev
 ```
 
-Starts the Laravel server, queue worker, log tail (Pail), and Vite together.
+Starts the Laravel server (`php artisan serve`), queue worker, log tail (Pail), and Vite together.
+
+`artisan serve` is single-threaded: a long local MCP `tools/call` can stall browser pages (dashboard, etc.) until it finishes. Pause MCP or wait for the tool if the UI hangs. Production uses nginx + php-fpm with multiple workers.
 
 With Sail:
 

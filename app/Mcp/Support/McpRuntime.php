@@ -32,6 +32,7 @@ class McpRuntime
 
         if (str_contains(strtolower($appUrl), 'localhost') || str_contains(strtolower($appUrl), '127.0.0.1')) {
             $warnings[] = 'This MCP endpoint is local ('.$appUrl.'). Credits and data are NOT shared with production (https://www.snitchsocial.net). Top up and brand setup must be done in this environment.';
+            $warnings[] = 'Local php artisan serve (composer run dev) is single-threaded: a long MCP tools/call or SSE hold can stall the browser dashboard until it finishes. Wait for the tool, pause MCP, or restart the serve process. Production uses php-fpm with multiple workers and is not blocked the same way.';
         }
 
         if ($pending !== null && $pending > 0) {
