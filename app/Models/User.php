@@ -12,6 +12,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Cashier\Billable;
 use Laravel\Sanctum\HasApiTokens;
+use Stripe\Customer;
+use Stripe\Exception\InvalidRequestException;
 
 #[Fillable(['name', 'email', 'workos_id', 'avatar', 'created_via', 'claim_token', 'claimed_at'])]
 #[Hidden(['workos_id', 'remember_token', 'claim_token'])]
@@ -36,6 +38,31 @@ class User extends Authenticatable
     public function isClaimed(): bool
     {
         return $this->claimed_at !== null && filled($this->workos_id);
+    }
+
+    /**
+     * Recreate the Stripe customer when the stored id is missing in the
+     * current Stripe mode/account (e.g. sandbox id after switching to live).
+     *
+     * @param  array<string, mixed>  $options
+     * @param  array<string, mixed>  $requestOptions
+     * @return Customer
+     */
+    public function createOrGetStripeCustomer(array $options = [], array $requestOptions = [])
+    {
+        if ($this->hasStripeId()) {
+            try {
+                return $this->asStripeCustomer($options['expand'] ?? []);
+            } catch (InvalidRequestException $exception) {
+                if (! str_contains($exception->getMessage(), 'No such customer')) {
+                    throw $exception;
+                }
+
+                $this->forceFill(['stripe_id' => null])->save();
+            }
+        }
+
+        return $this->createAsStripeCustomer($options, $requestOptions);
     }
 
     /**
