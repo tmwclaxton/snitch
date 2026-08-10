@@ -8,11 +8,13 @@ use App\Models\TrackedAccount;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Tests\Concerns\WithPlatformBilling;
 use Tests\TestCase;
 
 class CompetitorPlanGateTest extends TestCase
 {
     use RefreshDatabase;
+    use WithPlatformBilling;
 
     protected function setUp(): void
     {
@@ -25,6 +27,7 @@ class CompetitorPlanGateTest extends TestCase
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
+        $this->enablePlatformBilling($user);
         TrackedAccount::factory()->count(5)->for($user)->create();
 
         $this->actingAs($user)
