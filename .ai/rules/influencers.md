@@ -47,6 +47,12 @@ While undecided suggestions remain for a completed run, block a new search. Fail
 ## fit_reason (brand-deal why)
 Suggestion rows carry `fit_reason` (1-2 sentences on brand-deal fit). NanoGPT propose/model-seed may include it; `enrichFitReasons` backfills missing reasons after verify (fail soft with a short fallback). Keep copies `fit_reason` onto `tracked_accounts.fit_reason`. UI shows it on Review queue + Kept cards with an external Profile link (`url`, new tab, `rel=noopener`). MCP: `find_influencers` / `influencer_search_status` expose suggestions with `fit_reason` + `url`; `keep_influencer` returns them; `list_influencers` lists kept rows including `fit_reason`.
 
+## Bulk select floating bar
+Review queue and Kept influencers have independent checkbox selection. Shared `BulkActionBar` scrap floats when a section has picks: review gets Keep / Discard / Open (profile URLs); kept gets Open / Remove. Batch routes: `influencers.keep-many`, `influencers.discard-many`, `influencers.batch-destroy` (influencers scope only - do not delete competitors). Open is client-side `window.open` on stored `url`.
+
+## Hide finished review queue
+Do not render the Review queue section (including "All suggestions decided") when `pendingReview` is empty and no search is running. Only show it for pending undecided suggestions or an in-progress search. Kept influencers stay visible.
+
 ## Quality-loop lessons (prompts / queries)
 - Prefer niche-led queries (`sneaker streetwear`, `cafe coffee food`, `belleza maquillaje`, `home workout fitness`, `startup grants`) over brand-name-only fishing.
 - Add per-platform query variants (`site:instagram.com`, `site:tiktok.com/@`, LinkedIn `/in`, YouTube `@` / Shorts) plus micro/mid-tier wording when a follower band is set.

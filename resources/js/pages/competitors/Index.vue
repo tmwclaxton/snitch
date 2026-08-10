@@ -21,6 +21,7 @@ import {
     suggestStatus,
     sync,
 } from '@/actions/App/Http/Controllers/CompetitorController';
+import BulkActionBar from '@/components/BulkActionBar.vue';
 import PlatformSelect from '@/components/PlatformSelect.vue';
 import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
@@ -1169,115 +1170,95 @@ const syncSelectedTitle = computed(() => {
             v-if="showAnyActionBar"
             class="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2.5 px-4 pb-4 sm:pb-5"
         >
-            <div
+            <BulkActionBar
                 v-if="showSuggestActionBar"
-                class="snitch-scrap pointer-events-auto relative w-full max-w-3xl px-3 py-3 pt-4 sm:px-4"
-                role="toolbar"
+                :count="selectedSuggestions.length"
+                :label="selectedSuggestions.length === 1 ? 'suggested rival' : 'suggested rivals'"
                 aria-label="Suggested rivals actions"
             >
-                <span class="snitch-tape left-4 -top-2 scale-90" aria-hidden="true" />
-                <div class="relative z-10 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                    <p class="text-sm text-snitch-ink/70">
-                        <span class="font-medium text-snitch-ink">{{ selectedSuggestions.length }}</span>
-                        suggested
-                        {{ selectedSuggestions.length === 1 ? 'rival' : 'rivals' }}
-                    </p>
-                    <div class="flex flex-wrap items-center gap-1.5 sm:justify-end">
-                        <button
-                            type="button"
-                            class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
-                            @click="toggleSelectAllSuggestions"
-                        >
-                            {{ allSuggestionsSelected ? 'Clear' : 'Select all' }}
-                        </button>
-                        <button
-                            type="button"
-                            class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
-                            :disabled="confirmForm.processing"
-                            @click="dismissSelectedSuggestions"
-                        >
-                            <X class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
-                            <span class="relative z-10">Dismiss</span>
-                        </button>
-                        <button
-                            type="button"
-                            class="snitch-btn snitch-btn-spot px-2.5 py-1.5 text-xs sm:text-sm"
-                            :disabled="confirmForm.processing"
-                            @click="submitConfirm"
-                        >
-                            <span class="relative z-10 inline-flex items-center gap-1.5">
-                                <LoaderCircle
-                                    v-if="confirmForm.processing"
-                                    class="size-3.5 shrink-0 animate-spin"
-                                    aria-hidden="true"
-                                />
-                                <Check
-                                    v-else
-                                    class="size-3.5 shrink-0"
-                                    aria-hidden="true"
-                                />
-                                Confirm {{ selectedSuggestions.length }}
-                            </span>
-                        </button>
-                    </div>
-                </div>
-            </div>
+                <button
+                    type="button"
+                    class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
+                    @click="toggleSelectAllSuggestions"
+                >
+                    {{ allSuggestionsSelected ? 'Clear' : 'Select all' }}
+                </button>
+                <button
+                    type="button"
+                    class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
+                    :disabled="confirmForm.processing"
+                    @click="dismissSelectedSuggestions"
+                >
+                    <X class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                    <span class="relative z-10">Dismiss</span>
+                </button>
+                <button
+                    type="button"
+                    class="snitch-btn snitch-btn-spot px-2.5 py-1.5 text-xs sm:text-sm"
+                    :disabled="confirmForm.processing"
+                    @click="submitConfirm"
+                >
+                    <span class="relative z-10 inline-flex items-center gap-1.5">
+                        <LoaderCircle
+                            v-if="confirmForm.processing"
+                            class="size-3.5 shrink-0 animate-spin"
+                            aria-hidden="true"
+                        />
+                        <Check
+                            v-else
+                            class="size-3.5 shrink-0"
+                            aria-hidden="true"
+                        />
+                        Confirm {{ selectedSuggestions.length }}
+                    </span>
+                </button>
+            </BulkActionBar>
 
-            <div
+            <BulkActionBar
                 v-if="showAccountActionBar"
-                class="snitch-scrap pointer-events-auto relative w-full max-w-3xl px-3 py-3 pt-4 sm:px-4"
-                role="toolbar"
+                :count="selectedAccounts.length"
+                :label="selectedAccounts.length === 1 ? 'tracked competitor' : 'tracked competitors'"
                 aria-label="Tracked competitors actions"
             >
-                <span class="snitch-tape left-4 -top-2 scale-90" aria-hidden="true" />
-                <div class="relative z-10 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                    <p class="text-sm text-snitch-ink/70">
-                        <span class="font-medium text-snitch-ink">{{ selectedAccounts.length }}</span>
-                        tracked
-                        {{ selectedAccounts.length === 1 ? 'competitor' : 'competitors' }}
-                    </p>
-                    <div class="flex flex-wrap items-center gap-1.5 sm:justify-end">
-                        <button
-                            type="button"
-                            class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
-                            @click="toggleSelectAllAccounts"
-                        >
-                            {{ allAccountsSelected ? 'Clear' : 'Select all' }}
-                        </button>
-                        <button
-                            type="button"
-                            class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
-                            :disabled="batchWorking"
-                            @click="askRemoveSelectedAccounts"
-                        >
-                            <Trash2 class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
-                            <span class="relative z-10">Remove</span>
-                        </button>
-                        <button
-                            type="button"
-                            class="snitch-btn snitch-btn-spot px-2.5 py-1.5 text-xs sm:text-sm"
-                            :disabled="batchWorking || !canRunBillable"
-                            :title="syncSelectedTitle"
-                            :aria-label="syncSelectedTitle"
-                            @click="syncSelectedAccounts"
-                        >
-                            <span class="relative z-10 inline-flex items-center gap-1.5">
-                                <LoaderCircle
-                                    v-if="batchWorking"
-                                    class="size-3.5 shrink-0 animate-spin"
-                                    aria-hidden="true"
-                                />
-                                <RefreshCw
-                                    v-else
-                                    class="size-3.5 shrink-0"
-                                    aria-hidden="true"
-                                />
-                                Sync {{ selectedAccounts.length }}
-                            </span>
-                        </button>
-                    </div>
-                </div>
-            </div>
+                <button
+                    type="button"
+                    class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
+                    @click="toggleSelectAllAccounts"
+                >
+                    {{ allAccountsSelected ? 'Clear' : 'Select all' }}
+                </button>
+                <button
+                    type="button"
+                    class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
+                    :disabled="batchWorking"
+                    @click="askRemoveSelectedAccounts"
+                >
+                    <Trash2 class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                    <span class="relative z-10">Remove</span>
+                </button>
+                <button
+                    type="button"
+                    class="snitch-btn snitch-btn-spot px-2.5 py-1.5 text-xs sm:text-sm"
+                    :disabled="batchWorking || !canRunBillable"
+                    :title="syncSelectedTitle"
+                    :aria-label="syncSelectedTitle"
+                    @click="syncSelectedAccounts"
+                >
+                    <span class="relative z-10 inline-flex items-center gap-1.5">
+                        <LoaderCircle
+                            v-if="batchWorking"
+                            class="size-3.5 shrink-0 animate-spin"
+                            aria-hidden="true"
+                        />
+                        <RefreshCw
+                            v-else
+                            class="size-3.5 shrink-0"
+                            aria-hidden="true"
+                        />
+                        Sync {{ selectedAccounts.length }}
+                    </span>
+                </button>
+            </BulkActionBar>
         </div>
 
         <RemoveCompetitorModal

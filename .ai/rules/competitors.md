@@ -16,6 +16,9 @@ Web and MCP must call `SuggestCompetitorsJob::beginRun()` before dispatch so `co
 ## Index table is reel-focused scan columns
 Competitors Index counts reel-like posts only (`reels_count`), plus cheap `analysis_backlog_count` and `winners_count`. Do not show a separate Posts column or invent follower metrics not stored on TrackedAccount.
 
+## Bulk select floating bar
+Suggested rivals and tracked competitors use independent checkbox selection. Shared `BulkActionBar` scrap floats with Confirm/Dismiss (suggestions) or Sync/Remove (tracked). Batch routes: `competitors.batch-sync`, `competitors.batch-destroy`. Prefer the shared component over a second inline scrap bar.
+
 ## Competitor suggest is Firecrawl-first
 Discovery order: Firecrawl search -> NanoGPT normalize/dedupe grounded in hits -> Apify resolveProfile (require external_id). Do not invent rivals from LLM memory alone. Target 12-16 verified rows when possible; fail clearly under min_suggestions. Multi-platform mix including youtube.
 

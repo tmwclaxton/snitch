@@ -13,12 +13,16 @@ import {
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import {
+    batchDestroy,
     discard,
+    discardMany,
     generateBrief,
     keep,
+    keepMany,
     search,
     searchStatus,
 } from '@/actions/App/Http/Controllers/InfluencerController';
+import BulkActionBar from '@/components/BulkActionBar.vue';
 import PaperSelect from '@/components/PaperSelect.vue';
 import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
@@ -154,6 +158,9 @@ const generatingBrief = ref(false);
 const decidingKey = ref<string | null>(null);
 const removeDialogOpen = ref(false);
 const accountToRemove = ref<KeptAccount | null>(null);
+const selectedReview = ref<Record<string, boolean>>({});
+const selectedKept = ref<Record<number, boolean>>({});
+const bulkProcessing = ref(false);
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 
 const platformOptions = computed(() =>
@@ -175,6 +182,48 @@ const reviewedCount = computed(() => {
 const totalCount = computed(() => localSuggestions.value.length);
 
 const searchLocked = computed(() => searching.value || !props.canSearch);
+
+const selectedReviewItems = computed(() =>
+    pendingReview.value.filter((item) => selectedReview.value[suggestionKey(item)]),
+);
+
+const selectedKeptItems = computed(() =>
+    props.keptAccounts.filter((account) => selectedKept.value[account.id]),
+);
+
+const allReviewSelected = computed(
+    () =>
+        pendingReview.value.length > 0 &&
+        pendingReview.value.every((item) => selectedReview.value[suggestionKey(item)]),
+);
+
+const allKeptSelected = computed(
+    () =>
+        props.keptAccounts.length > 0 &&
+        props.keptAccounts.every((account) => selectedKept.value[account.id]),
+);
+
+const showReviewBar = computed(() => selectedReviewItems.value.length > 0);
+
+const showKeptBar = computed(() => selectedKeptItems.value.length > 0);
+
+const showAnyBulkBar = computed(() => showReviewBar.value || showKeptBar.value);
+
+const keptBarLabel = computed(() =>
+    selectedKeptItems.value.length === 1 ? 'kept influencer' : 'kept influencers',
+);
+
+const reviewOpenUrls = computed(() =>
+    selectedReviewItems.value
+        .map((item) => item.url)
+        .filter((url): url is string => typeof url === 'string' && url.length > 0),
+);
+
+const keptOpenUrls = computed(() =>
+    selectedKeptItems.value
+        .map((account) => account.url)
+        .filter((url): url is string => typeof url === 'string' && url.length > 0),
+);
 
 const thinFailedHint = computed(() => {
     const status = props.latestRun?.status;
@@ -358,6 +407,97 @@ function clearPoll(): void {
     }
 }
 
+function runId(): string | null {
+    return props.latestRun?.id ?? props.searchRun?.id ?? null;
+}
+
+function pruneReviewSelection(): void {
+    const next: Record<string, boolean> = {};
+
+    for (const item of pendingReview.value) {
+        const key = suggestionKey(item);
+
+        if (selectedReview.value[key]) {
+            next[key] = true;
+        }
+    }
+
+    selectedReview.value = next;
+}
+
+function pruneKeptSelection(): void {
+    const next: Record<number, boolean> = {};
+
+    for (const account of props.keptAccounts) {
+        if (selectedKept.value[account.id]) {
+            next[account.id] = true;
+        }
+    }
+
+    selectedKept.value = next;
+}
+
+function toggleReview(item: Suggestion): void {
+    const key = suggestionKey(item);
+    selectedReview.value = {
+        ...selectedReview.value,
+        [key]: !selectedReview.value[key],
+    };
+}
+
+function toggleKept(account: KeptAccount): void {
+    selectedKept.value = {
+        ...selectedKept.value,
+        [account.id]: !selectedKept.value[account.id],
+    };
+}
+
+function clearReviewSelection(): void {
+    selectedReview.value = {};
+}
+
+function clearKeptSelection(): void {
+    selectedKept.value = {};
+}
+
+function toggleSelectAllReview(): void {
+    if (allReviewSelected.value) {
+        clearReviewSelection();
+
+        return;
+    }
+
+    const next: Record<string, boolean> = {};
+
+    for (const item of pendingReview.value) {
+        next[suggestionKey(item)] = true;
+    }
+
+    selectedReview.value = next;
+}
+
+function toggleSelectAllKept(): void {
+    if (allKeptSelected.value) {
+        clearKeptSelection();
+
+        return;
+    }
+
+    const next: Record<number, boolean> = {};
+
+    for (const account of props.keptAccounts) {
+        next[account.id] = true;
+    }
+
+    selectedKept.value = next;
+}
+
+function openProfileUrls(urls: string[]): void {
+    for (const url of urls) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
+}
+
 function onKeep(item: Suggestion): void {
     const key = suggestionKey(item);
     decidingKey.value = key;
@@ -367,7 +507,7 @@ function onKeep(item: Suggestion): void {
         {
             platform: item.platform,
             handle: item.handle,
-            run_id: props.latestRun?.id ?? props.searchRun?.id ?? null,
+            run_id: runId(),
         },
         {
             preserveScroll: true,
@@ -387,7 +527,7 @@ function onDiscard(item: Suggestion): void {
         {
             platform: item.platform,
             handle: item.handle,
-            run_id: props.latestRun?.id ?? props.searchRun?.id ?? null,
+            run_id: runId(),
         },
         {
             preserveScroll: true,
@@ -398,15 +538,107 @@ function onDiscard(item: Suggestion): void {
     );
 }
 
+function bulkKeep(): void {
+    if (bulkProcessing.value || selectedReviewItems.value.length === 0) {
+        return;
+    }
+
+    bulkProcessing.value = true;
+
+    router.post(
+        keepMany.url(),
+        {
+            run_id: runId(),
+            suggestions: selectedReviewItems.value.map((item) => ({
+                platform: item.platform,
+                handle: item.handle,
+            })),
+        },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                bulkProcessing.value = false;
+            },
+            onSuccess: () => {
+                clearReviewSelection();
+            },
+        },
+    );
+}
+
+function bulkDiscard(): void {
+    if (bulkProcessing.value || selectedReviewItems.value.length === 0) {
+        return;
+    }
+
+    bulkProcessing.value = true;
+
+    router.post(
+        discardMany.url(),
+        {
+            run_id: runId(),
+            suggestions: selectedReviewItems.value.map((item) => ({
+                platform: item.platform,
+                handle: item.handle,
+            })),
+        },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                bulkProcessing.value = false;
+            },
+            onSuccess: () => {
+                clearReviewSelection();
+            },
+        },
+    );
+}
+
 function openRemove(account: KeptAccount): void {
     accountToRemove.value = account;
     removeDialogOpen.value = true;
+}
+
+function bulkRemoveKept(): void {
+    if (bulkProcessing.value || selectedKeptItems.value.length === 0) {
+        return;
+    }
+
+    const count = selectedKeptItems.value.length;
+    const confirmed = window.confirm(
+        count === 1
+            ? `Remove @${selectedKeptItems.value[0].handle} from kept influencers?`
+            : `Remove ${count} kept influencers?`,
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    bulkProcessing.value = true;
+
+    router.post(
+        batchDestroy.url(),
+        {
+            ids: selectedKeptItems.value.map((account) => account.id),
+        },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                bulkProcessing.value = false;
+            },
+            onSuccess: () => {
+                clearKeptSelection();
+            },
+        },
+    );
 }
 
 watch(
     () => props.suggestions,
     (rows) => {
         localSuggestions.value = [...rows];
+        pruneReviewSelection();
     },
     { deep: true },
 );
@@ -415,6 +647,15 @@ watch(
     () => props.decisions,
     (rows) => {
         localDecisions.value = { ...rows };
+        pruneReviewSelection();
+    },
+    { deep: true },
+);
+
+watch(
+    () => props.keptAccounts,
+    () => {
+        pruneKeptSelection();
     },
     { deep: true },
 );
@@ -436,7 +677,10 @@ onUnmounted(() => {
         <Head title="Find Influencers" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="relative z-10 mx-auto w-full min-w-0 max-w-6xl">
+        <div
+            class="relative z-10 mx-auto w-full min-w-0 max-w-6xl"
+            :class="{ 'pb-28': showAnyBulkBar }"
+        >
             <header>
                 <p class="snitch-ink-label">Brand deals</p>
                 <h1 class="snitch-display mt-2 text-3xl text-snitch-ink sm:text-4xl">
@@ -555,7 +799,7 @@ onUnmounted(() => {
                 </div>
             </section>
 
-            <section v-if="localSuggestions.length || searching" class="mt-10">
+            <section v-if="pendingReview.length || searching" class="mt-10">
                 <div class="flex flex-wrap items-end justify-between gap-3">
                     <div>
                         <h2 class="snitch-display text-2xl text-snitch-ink">Review queue</h2>
@@ -563,20 +807,44 @@ onUnmounted(() => {
                             Reviewed {{ reviewedCount }} / {{ totalCount || '…' }}
                         </p>
                     </div>
-                    <UserRoundSearch class="size-6 text-snitch-ink/40" aria-hidden="true" />
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button
+                            v-if="pendingReview.length"
+                            type="button"
+                            class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
+                            @click="toggleSelectAllReview"
+                        >
+                            {{ allReviewSelected ? 'Clear selection' : 'Select all' }}
+                        </button>
+                        <UserRoundSearch class="size-6 text-snitch-ink/40" aria-hidden="true" />
+                    </div>
                 </div>
 
-                <div v-if="searching && !localSuggestions.length" class="snitch-scrap relative mt-6 p-6">
+                <div v-if="searching && !pendingReview.length" class="snitch-scrap relative mt-6 p-6">
                     <p class="text-sm text-snitch-ink/70">Searching for creators…</p>
                 </div>
 
-                <ul class="mt-6 space-y-3">
+                <ul v-if="pendingReview.length" class="mt-6 space-y-3">
                     <li
                         v-for="item in pendingReview"
                         :key="suggestionKey(item)"
-                        class="snitch-cutout flex flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-start sm:justify-between"
+                        class="snitch-cutout flex cursor-pointer flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-start sm:justify-between"
+                        :class="
+                            selectedReview[suggestionKey(item)]
+                                ? 'ring-2 ring-snitch-spot/70'
+                                : ''
+                        "
+                        @click="toggleReview(item)"
                     >
                         <div class="flex min-w-0 items-start gap-3">
+                            <input
+                                type="checkbox"
+                                class="mt-1 size-4 shrink-0 accent-[var(--snitch-spot)]"
+                                :checked="!!selectedReview[suggestionKey(item)]"
+                                :aria-label="`Select ${item.display_name}`"
+                                @click.stop
+                                @change="toggleReview(item)"
+                            />
                             <SnitchAvatar
                                 :src="item.avatar"
                                 :name="item.display_name"
@@ -609,7 +877,7 @@ onUnmounted(() => {
                                 </p>
                             </div>
                         </div>
-                        <div class="flex shrink-0 flex-wrap gap-2">
+                        <div class="flex shrink-0 flex-wrap gap-2" @click.stop>
                             <a
                                 v-if="item.url"
                                 :href="item.url"
@@ -647,31 +915,46 @@ onUnmounted(() => {
                         </div>
                     </li>
                 </ul>
-
-                <p
-                    v-if="!pendingReview.length && localSuggestions.length && !searching"
-                    class="mt-4 text-sm text-snitch-ink/65"
-                >
-                    All suggestions decided. You can kick off a new search.
-                </p>
             </section>
 
             <section v-if="keptAccounts.length" class="mt-12">
-                <h2 class="snitch-display text-2xl text-snitch-ink">Kept influencers</h2>
-                <p class="mt-1.5 text-sm text-snitch-ink/65">
-                    Creators you kept for brand deals and outreach. Separate from competitor tracking.
-                </p>
+                <div class="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <h2 class="snitch-display text-2xl text-snitch-ink">Kept influencers</h2>
+                        <p class="mt-1.5 text-sm text-snitch-ink/65">
+                            Creators you kept for brand deals and outreach. Separate from competitor tracking.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
+                        @click="toggleSelectAllKept"
+                    >
+                        {{ allKeptSelected ? 'Clear selection' : 'Select all' }}
+                    </button>
+                </div>
 
                 <ul class="mt-6 space-y-3">
                     <li
                         v-for="account in keptAccounts"
                         :key="account.id"
-                        class="snitch-cutout flex flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-start sm:justify-between"
+                        class="snitch-cutout flex cursor-pointer flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-start sm:justify-between"
+                        :class="selectedKept[account.id] ? 'ring-2 ring-snitch-spot/70' : ''"
+                        @click="toggleKept(account)"
                     >
                         <div class="flex min-w-0 items-start gap-3">
+                            <input
+                                type="checkbox"
+                                class="mt-1 size-4 shrink-0 accent-[var(--snitch-spot)]"
+                                :checked="!!selectedKept[account.id]"
+                                :aria-label="`Select ${account.display_name || account.handle}`"
+                                @click.stop
+                                @change="toggleKept(account)"
+                            />
                             <Link
                                 :href="competitorShow(account.id)"
                                 class="flex min-w-0 items-start gap-3"
+                                @click.stop
                             >
                                 <SnitchAvatar
                                     :src="account.avatar"
@@ -695,7 +978,7 @@ onUnmounted(() => {
                                 </div>
                             </Link>
                         </div>
-                        <div class="flex shrink-0 flex-wrap gap-2">
+                        <div class="flex shrink-0 flex-wrap gap-2" @click.stop>
                             <a
                                 v-if="account.url"
                                 :href="account.url"
@@ -727,6 +1010,101 @@ onUnmounted(() => {
                 v-model:open="removeDialogOpen"
                 :account="accountToRemove"
             />
+        </div>
+
+        <div
+            v-if="showAnyBulkBar"
+            class="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2.5 px-4 pb-4 sm:pb-5"
+        >
+            <BulkActionBar
+                v-if="showReviewBar"
+                :count="selectedReviewItems.length"
+                label="in review"
+                aria-label="Review queue actions"
+            >
+                <button
+                    type="button"
+                    class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
+                    @click="toggleSelectAllReview"
+                >
+                    {{ allReviewSelected ? 'Clear' : 'Select all' }}
+                </button>
+                <button
+                    v-if="reviewOpenUrls.length"
+                    type="button"
+                    class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
+                    @click="openProfileUrls(reviewOpenUrls)"
+                >
+                    <span class="relative z-10 inline-flex items-center gap-1.5">
+                        <ExternalLink class="size-3.5" aria-hidden="true" />
+                        Open{{ reviewOpenUrls.length > 1 ? ` ${reviewOpenUrls.length}` : '' }}
+                    </span>
+                </button>
+                <button
+                    type="button"
+                    class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
+                    :disabled="bulkProcessing"
+                    @click="bulkDiscard"
+                >
+                    <span class="relative z-10 inline-flex items-center gap-1.5">
+                        <X class="size-3.5" aria-hidden="true" />
+                        Discard
+                    </span>
+                </button>
+                <button
+                    type="button"
+                    class="snitch-btn snitch-btn-spot px-2.5 py-1.5 text-xs sm:text-sm"
+                    :disabled="bulkProcessing"
+                    @click="bulkKeep"
+                >
+                    <span class="relative z-10 inline-flex items-center gap-1.5">
+                        <LoaderCircle
+                            v-if="bulkProcessing"
+                            class="size-3.5 animate-spin"
+                            aria-hidden="true"
+                        />
+                        <Check v-else class="size-3.5" aria-hidden="true" />
+                        Keep {{ selectedReviewItems.length }}
+                    </span>
+                </button>
+            </BulkActionBar>
+
+            <BulkActionBar
+                v-if="showKeptBar"
+                :count="selectedKeptItems.length"
+                :label="keptBarLabel"
+                aria-label="Kept influencers actions"
+            >
+                <button
+                    type="button"
+                    class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
+                    @click="toggleSelectAllKept"
+                >
+                    {{ allKeptSelected ? 'Clear' : 'Select all' }}
+                </button>
+                <button
+                    v-if="keptOpenUrls.length"
+                    type="button"
+                    class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
+                    @click="openProfileUrls(keptOpenUrls)"
+                >
+                    <span class="relative z-10 inline-flex items-center gap-1.5">
+                        <ExternalLink class="size-3.5" aria-hidden="true" />
+                        Open{{ keptOpenUrls.length > 1 ? ` ${keptOpenUrls.length}` : '' }}
+                    </span>
+                </button>
+                <button
+                    type="button"
+                    class="snitch-btn snitch-btn-ghost px-2.5 py-1.5 text-xs sm:text-sm"
+                    :disabled="bulkProcessing"
+                    @click="bulkRemoveKept"
+                >
+                    <span class="relative z-10 inline-flex items-center gap-1.5">
+                        <Trash2 class="size-3.5" aria-hidden="true" />
+                        Remove
+                    </span>
+                </button>
+            </BulkActionBar>
         </div>
     </div>
 </template>

@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Enums\Platform;
 use App\Enums\TrackedAccountKind;
+use App\Http\Requests\Influencers\BatchDecideInfluencersRequest;
+use App\Http\Requests\Influencers\BatchDestroyInfluencersRequest;
 use App\Http\Requests\Influencers\DecideInfluencerRequest;
 use App\Http\Requests\Influencers\GenerateInfluencerBriefRequest;
 use App\Http\Requests\Influencers\SearchInfluencersRequest;
 use App\Jobs\FindInfluencersJob;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Models\TrackedAccount;
+use App\Models\User;
 use App\Services\Billing\PlanEntitlementService;
 use App\Services\Billing\UsageBillingService;
 use App\Services\Influencers\InfluencerDiscoveryService;
@@ -148,7 +151,6 @@ class InfluencerController extends Controller
         $data = $request->validated();
         $platform = Platform::from($data['platform']);
         $handle = $data['handle'];
-        $key = "{$platform->value}:{$handle}";
 
         $run = $this->resolveRunPayload($user->id, $data['run_id'] ?? null);
 
@@ -156,9 +158,9 @@ class InfluencerController extends Controller
             return redirect()->route('influencers.index');
         }
 
-        $suggestion = $this->findSuggestion($run['payload'], $platform->value, $handle);
+        $result = $this->keepSuggestion($user, $run['id'], $run['payload'], $platform, $handle);
 
-        if ($suggestion === null) {
+        if ($result === 'missing') {
             Inertia::flash('toast', [
                 'type' => 'error',
                 'message' => __('That influencer is not in the current review queue.'),
@@ -167,17 +169,7 @@ class InfluencerController extends Controller
             return redirect()->route('influencers.index');
         }
 
-        $existing = TrackedAccount::query()
-            ->where('user_id', $user->id)
-            ->where('platform', $platform)
-            ->where('handle', $handle)
-            ->first();
-
-        // Already tracked as a competitor still counts as kept for review, without
-        // converting the row or consuming an influencer slot.
-        if ($existing !== null && $existing->kind === TrackedAccountKind::Competitor) {
-            $this->markDecision($user->id, $run['id'], $key, 'kept');
-
+        if ($result === 'competitor') {
             Inertia::flash('toast', [
                 'type' => 'success',
                 'message' => __('Already tracked as a competitor. Marked as kept.'),
@@ -186,33 +178,7 @@ class InfluencerController extends Controller
             return redirect()->route('influencers.index');
         }
 
-        $fitReason = isset($suggestion['fit_reason']) && is_string($suggestion['fit_reason'])
-            ? trim($suggestion['fit_reason'])
-            : '';
-
-        $account = TrackedAccount::query()->updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'platform' => $platform,
-                'handle' => $handle,
-            ],
-            [
-                'kind' => TrackedAccountKind::Influencer,
-                'url' => (string) ($suggestion['url'] ?? $this->defaultUrl($platform, $handle)),
-                'display_name' => $suggestion['display_name'] ?? $handle,
-                'avatar' => $suggestion['avatar'] ?? null,
-                'fit_reason' => $fitReason !== '' ? Str::limit($fitReason, 280, '') : null,
-            ],
-        );
-
         $canSync = $this->billing->canRun($user);
-
-        if ($canSync) {
-            $account->markSyncRunning();
-            SyncTrackedAccountJob::dispatch($account->id);
-        }
-
-        $this->markDecision($user->id, $run['id'], $key, 'kept');
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -232,7 +198,6 @@ class InfluencerController extends Controller
         $data = $request->validated();
         $platform = Platform::from($data['platform']);
         $handle = $data['handle'];
-        $key = "{$platform->value}:{$handle}";
 
         $run = $this->resolveRunPayload($user->id, $data['run_id'] ?? null);
 
@@ -240,11 +205,96 @@ class InfluencerController extends Controller
             return redirect()->route('influencers.index');
         }
 
-        if ($this->findSuggestion($run['payload'], $platform->value, $handle) === null) {
+        $this->discardSuggestion($user->id, $run['id'], $run['payload'], $platform, $handle);
+
+        return redirect()->route('influencers.index');
+    }
+
+    public function keepMany(BatchDecideInfluencersRequest $request): RedirectResponse
+    {
+        $user = $request->user();
+        $data = $request->validated();
+        $run = $this->resolveRunPayload($user->id, $data['run_id'] ?? null);
+
+        if ($run === null) {
             return redirect()->route('influencers.index');
         }
 
-        $this->markDecision($user->id, $run['id'], $key, 'discarded');
+        $kept = 0;
+        $canSync = $this->billing->canRun($user);
+
+        foreach ($data['suggestions'] as $row) {
+            $platform = Platform::from($row['platform']);
+            $handle = $row['handle'];
+            $result = $this->keepSuggestion($user, $run['id'], $run['payload'], $platform, $handle);
+
+            if ($result === 'kept' || $result === 'competitor') {
+                $kept++;
+            }
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => $canSync
+                ? __('Kept :count influencers. Sync is starting.', ['count' => $kept])
+                : __('Kept :count influencers. Sync needs a balance above :min p - subscribe or top up on Billing.', [
+                    'count' => $kept,
+                    'min' => $this->billing->minRunBalancePence(),
+                ]),
+        ]);
+
+        return redirect()->route('influencers.index');
+    }
+
+    public function discardMany(BatchDecideInfluencersRequest $request): RedirectResponse
+    {
+        $user = $request->user();
+        $data = $request->validated();
+        $run = $this->resolveRunPayload($user->id, $data['run_id'] ?? null);
+
+        if ($run === null) {
+            return redirect()->route('influencers.index');
+        }
+
+        $discarded = 0;
+
+        foreach ($data['suggestions'] as $row) {
+            $platform = Platform::from($row['platform']);
+            $handle = $row['handle'];
+
+            if ($this->discardSuggestion($user->id, $run['id'], $run['payload'], $platform, $handle)) {
+                $discarded++;
+            }
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Discarded :count suggestions.', ['count' => $discarded]),
+        ]);
+
+        return redirect()->route('influencers.index');
+    }
+
+    public function batchDestroy(BatchDestroyInfluencersRequest $request): RedirectResponse
+    {
+        $ids = $request->validated('ids');
+        $user = $request->user();
+
+        $accounts = TrackedAccount::query()
+            ->where('user_id', $user->id)
+            ->influencers()
+            ->whereIn('id', $ids)
+            ->get();
+
+        foreach ($accounts as $account) {
+            $this->authorize('delete', $account);
+            $account->delete();
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Removed :count influencers.', ['count' => $accounts->count()]),
+        ]);
 
         return redirect()->route('influencers.index');
     }
@@ -525,6 +575,86 @@ class InfluencerController extends Controller
 
         Cache::put(FindInfluencersJob::cacheKeyFor($userId, $runId), $payload, now()->addHours(2));
         Cache::put(FindInfluencersJob::latestCacheKeyFor($userId), $runId, now()->addHours(24));
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return 'kept'|'competitor'|'missing'
+     */
+    private function keepSuggestion(
+        User $user,
+        string $runId,
+        array $payload,
+        Platform $platform,
+        string $handle,
+    ): string {
+        $key = "{$platform->value}:{$handle}";
+        $suggestion = $this->findSuggestion($payload, $platform->value, $handle);
+
+        if ($suggestion === null) {
+            return 'missing';
+        }
+
+        $existing = TrackedAccount::query()
+            ->where('user_id', $user->id)
+            ->where('platform', $platform)
+            ->where('handle', $handle)
+            ->first();
+
+        // Already tracked as a competitor still counts as kept for review, without
+        // converting the row or consuming an influencer slot.
+        if ($existing !== null && $existing->kind === TrackedAccountKind::Competitor) {
+            $this->markDecision($user->id, $runId, $key, 'kept');
+
+            return 'competitor';
+        }
+
+        $fitReason = isset($suggestion['fit_reason']) && is_string($suggestion['fit_reason'])
+            ? trim($suggestion['fit_reason'])
+            : '';
+
+        $account = TrackedAccount::query()->updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'platform' => $platform,
+                'handle' => $handle,
+            ],
+            [
+                'kind' => TrackedAccountKind::Influencer,
+                'url' => (string) ($suggestion['url'] ?? $this->defaultUrl($platform, $handle)),
+                'display_name' => $suggestion['display_name'] ?? $handle,
+                'avatar' => $suggestion['avatar'] ?? null,
+                'fit_reason' => $fitReason !== '' ? Str::limit($fitReason, 280, '') : null,
+            ],
+        );
+
+        if ($this->billing->canRun($user)) {
+            $account->markSyncRunning();
+            SyncTrackedAccountJob::dispatch($account->id);
+        }
+
+        $this->markDecision($user->id, $runId, $key, 'kept');
+
+        return 'kept';
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function discardSuggestion(
+        int $userId,
+        string $runId,
+        array $payload,
+        Platform $platform,
+        string $handle,
+    ): bool {
+        if ($this->findSuggestion($payload, $platform->value, $handle) === null) {
+            return false;
+        }
+
+        $this->markDecision($userId, $runId, "{$platform->value}:{$handle}", 'discarded');
+
+        return true;
     }
 
     private function defaultUrl(Platform $platform, string $handle): string

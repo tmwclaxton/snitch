@@ -104,6 +104,9 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
             ->name('influencers.search.status');
         Route::post('/influencers/keep', [InfluencerController::class, 'keep'])->name('influencers.keep');
         Route::post('/influencers/discard', [InfluencerController::class, 'discard'])->name('influencers.discard');
+        Route::post('/influencers/keep-many', [InfluencerController::class, 'keepMany'])->name('influencers.keep-many');
+        Route::post('/influencers/discard-many', [InfluencerController::class, 'discardMany'])->name('influencers.discard-many');
+        Route::post('/influencers/batch-destroy', [InfluencerController::class, 'batchDestroy'])->name('influencers.batch-destroy');
 
         Route::get('/feed', [FeedController::class, 'index'])->name('feed.index');
         Route::get('/feed/{post}', [FeedController::class, 'show'])->name('feed.show');
