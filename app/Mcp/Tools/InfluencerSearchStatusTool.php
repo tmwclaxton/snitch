@@ -8,6 +8,7 @@ use App\Mcp\Support\McpJobWait;
 use App\Mcp\Support\McpRuntime;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -16,7 +17,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('influencer_search_status')]
-#[Description('Poll influencer search status and suggestions (each row may include url + fit_reason for brand-deal fit). Optional wait_seconds (max 45; default 0) blocks briefly for a terminal status. When suggestions appear, call keep_influencer for fits (queues sync) or discard_influencer. Status alone never tracks creators.')]
+#[Description('Poll influencer search status and suggestions (each row may include url + fit_reason for brand-deal fit). run_id optional - omit to use the latest find for this user. Optional wait_seconds (max 45; default 0) blocks briefly for a terminal status. When suggestions appear, call keep_influencer for fits (queues sync) or discard_influencer. Status alone never tracks creators.')]
 class InfluencerSearchStatusTool extends Tool
 {
     public function handle(Request $request): Response
@@ -27,16 +28,23 @@ class InfluencerSearchStatusTool extends Tool
         }
 
         $data = $request->validate([
-            'run_id' => ['required', 'string'],
+            'run_id' => ['nullable', 'string'],
             'wait_seconds' => ['nullable', 'integer', 'min:0', 'max:45'],
         ]);
 
-        if (! Str::isUuid($data['run_id'])) {
+        $runId = $data['run_id'] ?? null;
+        if ($runId === null || $runId === '') {
+            $latest = FindInfluencersJob::latestCacheKeyFor($user->id);
+            $runId = Cache::get($latest);
+            if (! is_string($runId) || ! Str::isUuid($runId)) {
+                return Response::error('No run_id provided and no latest influencer search found. Call find_influencers first.');
+            }
+        } elseif (! Str::isUuid($runId)) {
             return Response::error('Invalid run_id.');
         }
 
         $wait = McpJobWait::untilTerminal(
-            FindInfluencersJob::cacheKeyFor($user->id, $data['run_id']),
+            FindInfluencersJob::cacheKeyFor($user->id, $runId),
             isset($data['wait_seconds']) ? (int) $data['wait_seconds'] : 0,
             defaultSeconds: 0,
         );
@@ -66,7 +74,7 @@ class InfluencerSearchStatusTool extends Tool
         }
 
         return Response::json([
-            'run_id' => $data['run_id'],
+            'run_id' => $runId,
             'payload' => $payload,
             'suggestions' => $suggestions,
             'waited_seconds' => $wait['waited_seconds'],
@@ -83,7 +91,7 @@ class InfluencerSearchStatusTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'run_id' => $schema->string()->required(),
+            'run_id' => $schema->string()->nullable(),
             'wait_seconds' => $schema->integer()->nullable(),
         ];
     }

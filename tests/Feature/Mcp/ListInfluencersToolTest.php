@@ -80,6 +80,40 @@ class ListInfluencersToolTest extends TestCase
             ->assertSee('https://www.instagram.com/fitcreator/');
     }
 
+    public function test_influencer_search_status_uses_latest_when_run_id_omitted(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $runId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+        Cache::put(FindInfluencersJob::latestCacheKeyFor($user->id), $runId, now()->addHour());
+        Cache::put(FindInfluencersJob::cacheKeyFor($user->id, $runId), [
+            'status' => 'completed',
+            'filters' => ['platforms' => ['instagram'], 'brief' => 'Find creators'],
+            'brief' => 'Find creators',
+            'suggestions' => [
+                [
+                    'platform' => 'instagram',
+                    'handle' => 'latestcreator',
+                    'url' => 'https://www.instagram.com/latestcreator/',
+                    'display_name' => 'Latest Creator',
+                    'fit_reason' => 'Matches latest pointer brief.',
+                ],
+            ],
+            'decisions' => [],
+            'error' => null,
+        ], now()->addHour());
+
+        Sanctum::actingAs($user);
+
+        SnitchServer::tool(InfluencerSearchStatusTool::class, [
+            'wait_seconds' => 0,
+        ])
+            ->assertOk()
+            ->assertSee('latestcreator')
+            ->assertSee($runId);
+    }
+
     public function test_keep_influencer_persists_fit_reason_from_run(): void
     {
         Queue::fake();

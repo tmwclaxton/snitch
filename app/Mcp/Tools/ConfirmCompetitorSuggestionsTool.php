@@ -45,9 +45,17 @@ class ConfirmCompetitorSuggestionsTool extends Tool
         }
 
         $payload = Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $data['suggest_id']));
+        if (! is_array($payload)) {
+            return Response::error('Suggest run not found. Call suggest_competitors_status with this suggest_id first.');
+        }
+
+        $runStatus = is_string($payload['status'] ?? null) ? (string) $payload['status'] : null;
         $suggestions = is_array($payload['suggestions'] ?? null) ? $payload['suggestions'] : [];
         $created = [];
         $confirmed = [];
+        $midRunWarning = in_array($runStatus, ['queued', 'pending', 'processing', 'running'], true)
+            ? 'Suggest run status is still '.$runStatus.'. Partial rows may include weak matches - prefer waiting until completed before confirming.'
+            : null;
 
         foreach ($suggestions as $row) {
             if (! is_array($row)) {
@@ -107,6 +115,8 @@ class ConfirmCompetitorSuggestionsTool extends Tool
             'confirmed_ids' => $created,
             'remaining_count' => count($remaining),
             'dismiss_remainder' => $dismissRemainder,
+            'run_status' => $runStatus,
+            'warning' => $midRunWarning,
             'note' => $created === []
                 ? 'No matching suggestion handles. Pass handles exactly as returned by suggest_competitors_status.'
                 : ($remaining === []

@@ -3,8 +3,8 @@
 namespace Tests\Feature\Mcp;
 
 use App\Mcp\Servers\SnitchServer;
+use App\Mcp\Support\WorkflowGuide;
 use App\Mcp\Tools\WorkflowGuideTool;
-use App\Models\BrandProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Server\Attributes\Instructions;
@@ -23,40 +23,41 @@ class WorkflowGuideToolTest extends TestCase
         $instructions = $attributes[0]->newInstance()->value;
 
         $this->assertStringContainsString('workflow_guide', $instructions);
-        $this->assertStringContainsString('wait_seconds', $instructions);
     }
 
-    public function test_workflow_guide_returns_owner_loops_and_next_step(): void
+    public function test_workflow_guide_overview_lists_core_loops(): void
     {
-        config(['app.url' => 'http://localhost:8000']);
-
         $user = User::factory()->create();
-        BrandProfile::factory()->for($user)->create([
-            'name' => 'FarmDrive',
-            'website' => 'https://farmdrive.io/',
-            'description' => 'Livestock management app.',
-        ]);
         Sanctum::actingAs($user);
 
         SnitchServer::tool(WorkflowGuideTool::class)
             ->assertOk()
-            ->assertSee('confirm_competitor_suggestions')
-            ->assertSee('keep_influencer')
-            ->assertSee('next_step')
-            ->assertSee('FarmDrive')
-            ->assertSee('suggest_competitors');
+            ->assertSee('whoami')
+            ->assertSee('billing_status')
+            ->assertSee('available_workflows');
     }
 
-    public function test_workflow_guide_topic_filters_flows(): void
+    public function test_workflow_guide_competitors_requires_confirm(): void
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
         SnitchServer::tool(WorkflowGuideTool::class, [
-            'topic' => 'competitors',
+            'workflow' => 'competitors',
         ])
             ->assertOk()
             ->assertSee('confirm_competitor_suggestions')
-            ->assertSee('"topic":"competitors"');
+            ->assertSee('"workflow":"competitors"')
+            ->assertSee('wait_seconds');
+    }
+
+    public function test_workflow_guide_influencers_mentions_latest_run_pointer(): void
+    {
+        $guide = WorkflowGuide::for('influencers');
+
+        $this->assertSame('influencers', $guide['workflow']);
+        $this->assertTrue(collect($guide['notes'])->contains(
+            fn (string $note): bool => str_contains($note, 'latest'),
+        ));
     }
 }

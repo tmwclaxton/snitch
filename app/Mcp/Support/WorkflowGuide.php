@@ -76,6 +76,7 @@ final class WorkflowGuide
             'notes' => [
                 'Localhost and production are different databases and credit balances.',
                 'Nothing is auto-scheduled - agents/users trigger sync, suggest, find, analyze, winners.',
+                'On local artisan serve prefer short wait_seconds (8-12) and re-poll status tools - long waits stall the browser UI.',
                 'Never paste bearer tokens into public chats; use rotate_token if exposed.',
             ],
         ];
@@ -136,12 +137,13 @@ final class WorkflowGuide
             'do_not_skip' => [
                 'After suggest completes you MUST call confirm_competitor_suggestions or dismiss_competitor_suggestions.',
                 'Completed suggest_competitors_status is NOT tracked competitors yet.',
+                'Prefer waiting until status=completed before confirming - mid-run rows can include weak/off-niche matches.',
             ],
             'steps' => [
                 self::step(1, 'whoami', 'Check brand_warnings and runtime.'),
                 self::step(2, 'billing_status', 'Ensure balance above 20p.'),
                 self::step(3, 'get_brand', 'Confirm name + website before suggest.'),
-                self::step(4, 'suggest_competitors', 'Queue suggestions; optional wait_seconds (default ~22, max 45).'),
+                self::step(4, 'suggest_competitors', 'Queue suggestions; on local serve use wait_seconds 8-12 then re-poll status.'),
                 self::step(5, 'suggest_competitors_status', 'Poll with suggest_id until completed/failed if still running.'),
                 self::step(6, 'confirm_competitor_suggestions', 'Pass suggest_id + selected handles (strings or {platform, handle}). Default dismiss_remainder=true.'),
                 self::step(7, 'list_competitors', 'Verify tracked accounts. Use dismiss_competitor_suggestions to clear without tracking.'),
@@ -149,6 +151,7 @@ final class WorkflowGuide
             'notes' => [
                 'add_competitor / remove_competitor for manual edits; sync_competitor after tracking.',
                 'Do not end the session with unconfirmed suggestions still pending.',
+                'Partial suggestions stream while processing - cherry-pick carefully or wait for completed.',
             ],
         ];
     }
@@ -179,13 +182,14 @@ final class WorkflowGuide
                 self::step(1, 'whoami', 'Check brand_warnings and runtime.'),
                 self::step(2, 'billing_status', 'Ensure balance above 20p.'),
                 self::step(3, 'generate_influencer_brief', 'Optional; persist brief from brand context.'),
-                self::step(4, 'find_influencers', 'Pass platform + brief; optional wait_seconds.'),
-                self::step(5, 'influencer_search_status', 'Poll run_id until completed/failed if still running.'),
+                self::step(4, 'find_influencers', 'Pass platform + brief; on local serve use wait_seconds 8-12 then re-poll.'),
+                self::step(5, 'influencer_search_status', 'Poll run_id (or omit to use latest) until completed/failed.'),
                 self::step(6, 'keep_influencer', 'Keep selected rows (platform + handle; include run_id when available).'),
                 self::step(7, 'discard_influencer', 'Discard rejects. Then list_influencers to verify kept set.'),
             ],
             'notes' => [
                 'fit_reason and url appear on suggestions - use them when choosing keep vs discard.',
+                'A new find_influencers call replaces the latest pointer - always poll the run_id you were given (or omit run_id to follow latest).',
             ],
         ];
     }

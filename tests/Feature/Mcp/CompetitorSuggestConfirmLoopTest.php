@@ -232,6 +232,43 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
         $this->assertSame(1, TrackedAccount::query()->where('user_id', $user->id)->count());
     }
 
+    public function test_confirm_warns_when_suggest_still_processing(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $suggestId = (string) Str::uuid();
+        Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
+            'status' => 'processing',
+            'suggestions' => [
+                [
+                    'platform' => 'instagram',
+                    'handle' => 'earlybird',
+                    'display_name' => 'Early Bird',
+                ],
+            ],
+            'error' => null,
+        ], now()->addHours(2));
+
+        SnitchServer::tool(ConfirmCompetitorSuggestionsTool::class, [
+            'suggest_id' => $suggestId,
+            'handles' => ['earlybird'],
+            'sync' => false,
+            'dismiss_remainder' => true,
+        ])
+            ->assertOk()
+            ->assertSee('warning')
+            ->assertSee('processing')
+            ->assertSee('tracked competitors');
+
+        $this->assertDatabaseHas('tracked_accounts', [
+            'user_id' => $user->id,
+            'handle' => 'earlybird',
+        ]);
+    }
+
     public function test_confirm_defaults_dismiss_remainder_true(): void
     {
         Queue::fake();
