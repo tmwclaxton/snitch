@@ -1821,12 +1821,14 @@
         inset-inline: -8%;
         bottom: -6%;
         height: 52%;
-        z-index: 0;
+        /* Above the mascot so feet tuck into the mustard ink band. */
+        z-index: 2;
         background:
             linear-gradient(
                 180deg,
                 transparent 0%,
-                color-mix(in oklab, var(--snitch-spot) 55%, transparent) 28%,
+                color-mix(in oklab, var(--snitch-spot) 70%, transparent) 35%,
+                var(--snitch-spot) 50%,
                 var(--snitch-spot) 100%
             );
         clip-path: polygon(
@@ -1841,7 +1843,6 @@
             100% 100%,
             0% 100%
         );
-        opacity: 0.92;
         transform: rotate(-1.2deg);
     }
 
@@ -1850,7 +1851,8 @@
         z-index: 1;
         width: min(84vw, 20.5rem);
         margin-inline: auto;
-        margin-bottom: -0.25rem;
+        /* Sit a touch higher so the yellow floor covers the lower legs. */
+        margin-bottom: 4rem;
     }
 
     .snitch-hero-mobile-mascot-bob {
@@ -1879,6 +1881,7 @@
 
         .snitch-hero-mobile-mascot {
             width: min(74vw, 16.5rem);
+            margin-bottom: 3rem;
         }
 
         .snitch-hero-mobile-cta {

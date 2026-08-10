@@ -204,7 +204,7 @@ const steps = [
                 <div class="snitch-grain z-[1] opacity-30" />
             </div>
 
-            <!-- Floor + mascot pinned to the poster bottom (not a flex-1 void). -->
+            <!-- Floor over mascot: mustard ink band covers the feet. -->
             <div class="snitch-hero-mobile-stage" aria-hidden="true">
                 <div class="snitch-hero-mobile-floor" />
                 <div class="snitch-hero-mobile-mascot">
