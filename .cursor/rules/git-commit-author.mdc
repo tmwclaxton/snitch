@@ -1,23 +1,13 @@
 ---
-description: Always commit as GitHub user tmwclaxton; never use toby / tobyclaxton attribution
+description: Always commit and push as GitHub user tmwclaxton; never use toby / tobyclaxton
 alwaysApply: true
 ---
 
-# Git Commit Author and Committer
+# Git Commit Author, Committer, and Push Identity
 
-When creating git commits in this project, set **both Author and Committer** to **tmwclaxton**. Never leave attribution as `toby`, `tobyclaxton`, or `toby.claxton@*`.
+This repo is owned by **tmwclaxton**. Commits and pushes must use that account only. Never attribute or authenticate as `toby`, `tobyclaxton`, or `toby.claxton@*`.
 
 `--author` alone is not enough: Git still records the Committer from local `user.name` / `user.email`, which often shows up as Toby on GitHub.
-
-## How to detect availability
-
-Prefer this identity when any of the following is true:
-
-1. `gh api user --jq .login` returns `tmwclaxton`
-2. The remote is under `github.com/tmwclaxton/` (e.g. `origin` fetch/push URL)
-3. The user asks to commit/push as tmwclaxton
-
-If none of those apply, fall back to the repository's existing git author / user rules and do not invent an identity.
 
 ## Identity to use
 
@@ -25,7 +15,50 @@ If none of those apply, fall back to the repository's existing git author / user
 tmwclaxton <57643714+tmwclaxton@users.noreply.github.com>
 ```
 
-## How to apply
+## Before every push (required)
+
+Run these checks and **do not push** until they pass:
+
+1. Active GitHub CLI user is tmwclaxton:
+
+```bash
+gh api user --jq .login
+# must print: tmwclaxton
+```
+
+2. `origin` points at the tmwclaxton repo (not a fork under another login):
+
+```bash
+git remote get-url origin
+# must contain: github.com/tmwclaxton/snitch
+```
+
+3. Commits about to be pushed are not attributed to toby / cineark:
+
+```bash
+git log origin/main..HEAD --format='Author: %an <%ae>%nCommitter: %cn <%ce>'
+# Author and Committer must be tmwclaxton / 57643714+tmwclaxton@users.noreply.github.com
+# (GitHub <noreply@github.com> as Committer on merge commits is fine)
+```
+
+If `gh` is logged in as `tobyclaxton`, switch or log out first:
+
+```bash
+gh auth switch --user tmwclaxton
+# or: gh auth logout --user tobyclaxton
+```
+
+## How to detect availability for commits
+
+Prefer this identity when any of the following is true:
+
+1. `gh api user --jq .login` returns `tmwclaxton`
+2. The remote is under `github.com/tmwclaxton/`
+3. The user asks to commit/push as tmwclaxton
+
+If none of those apply, fall back to the repository's existing git author / user rules and do not invent an identity.
+
+## How to apply on commit
 
 Set Author **and** Committer via env vars on every commit (do not rely on `--author` alone):
 
@@ -41,12 +74,12 @@ EOF
 )"
 ```
 
-- Do **not** run `git config` to change global or local `user.name` / `user.email`.
+- Do **not** run `git config` to change global or local `user.name` / `user.email` unless the user explicitly asks.
 - Do **not** commit with Author or Committer as `toby`, `tobyclaxton`, or any `toby.claxton@*` email.
-- After committing, verify with `git log -1 --format='Author: %an <%ae>%nCommitter: %cn <%ce>'` when attribution matters.
+- After committing, verify with `git log -1 --format='Author: %an <%ae>%nCommitter: %cn <%ce>'`.
 - If a commit was just created in this conversation with wrong Author/Committer and has not been pushed, amend with the same env vars and `--reset-author` (only when amend rules allow).
 - If it was already pushed and the user wants attribution fixed, ask before force-pushing; on `main`/`master` only force-push when the user explicitly approves.
 
 ## Pushing
 
-Push to the `tmwclaxton` remote/repo when that is the project remote. Do not change remotes unless the user asks.
+Push to `origin` on `github.com/tmwclaxton/snitch` only. Do not change remotes unless the user asks. Do not push while authenticated as `tobyclaxton`.
