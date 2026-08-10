@@ -31,12 +31,13 @@ class QueuedStatusSeedTest extends TestCase
             ->assertOk()
             ->assertSee('queued');
 
-        $suggestId = Cache::get(SuggestCompetitorsJob::latestCacheKeyFor($user->id));
+        $suggestId = Cache::get(SuggestCompetitorsJob::activeCacheKeyFor($user->id));
         $this->assertIsString($suggestId);
+        $this->assertNull(Cache::get(SuggestCompetitorsJob::latestCacheKeyFor($user->id)));
 
         $cached = Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId));
         $this->assertIsArray($cached);
-        $this->assertSame('queued', $cached['status'] ?? null);
+        $this->assertSame('pending', $cached['status'] ?? null);
 
         Queue::assertPushed(SuggestCompetitorsJob::class);
     }

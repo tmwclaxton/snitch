@@ -180,6 +180,27 @@ class SuggestCompetitorsJob implements ShouldQueue
         return "competitor-suggest-latest:{$userId}";
     }
 
+    /**
+     * Seed the poll cache + active pointer used by the Competitors page and MCP status tools.
+     * Web and MCP must both call this so Inertia can show a running suggest job.
+     */
+    public static function beginRun(int $userId, string $suggestId): void
+    {
+        self::clearLatest($userId);
+
+        Cache::put(self::cacheKeyFor($userId, $suggestId), [
+            'status' => 'pending',
+            'suggestions' => null,
+            'error' => null,
+        ], now()->addHours(2));
+
+        Cache::put(
+            self::activeCacheKeyFor($userId),
+            $suggestId,
+            now()->addHours(2),
+        );
+    }
+
     public static function clearLatest(int $userId): void
     {
         $latestId = Cache::get(self::latestCacheKeyFor($userId));

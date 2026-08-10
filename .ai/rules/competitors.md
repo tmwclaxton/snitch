@@ -10,6 +10,12 @@ paths:
 ## Sync is intentional - no auto-sync countdown
 Competitors Index/Show show Sync status only: Manual, last synced date, or Syncing. Do not expose next_sync_at / sync_due or a scheduled countdown. Agents and users kick sync; snitch:sync-accounts is ops-only and not registered in routes/console.php.
 
+## Suggest runs share one active cache pointer
+Web and MCP must call `SuggestCompetitorsJob::beginRun()` before dispatch so `competitor-suggest-active:{userId}` is set. Competitors Index reads that pointer as `suggestRun` and polls until terminal. Do not seed only `latest` / status `queued` - the UI will miss in-progress agent jobs.
+
+## Index table is reel-focused scan columns
+Competitors Index counts reel-like posts only (`reels_count`), plus cheap `analysis_backlog_count` and `winners_count`. Do not show a separate Posts column or invent follower metrics not stored on TrackedAccount.
+
 ## Competitor suggest is Firecrawl-first
 Discovery order: Firecrawl search -> NanoGPT normalize/dedupe grounded in hits -> Apify resolveProfile (require external_id). Do not invent rivals from LLM memory alone. Target 12-16 verified rows when possible; fail clearly under min_suggestions. Multi-platform mix including youtube.
 

@@ -2,10 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PostType;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Models\BrandProfile;
+use App\Models\Post;
+use App\Models\PostAnalysis;
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Models\WinnerInsight;
 use App\Services\Billing\UsageBillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -228,6 +232,44 @@ class CompetitorsTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('competitors/Index')
                 ->where('accounts.0.last_sync_status', 'running')
+            );
+    }
+
+    public function test_index_exposes_reel_backlog_and_winner_counts(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $account = TrackedAccount::factory()->for($user)->create([
+            'handle' => 'rivalbakery',
+        ]);
+
+        $readyReel = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+        ]);
+        PostAnalysis::factory()->for($readyReel)->create();
+        WinnerInsight::factory()->forPost($readyReel)->create([
+            'user_id' => $user->id,
+            'score' => 82,
+        ]);
+
+        $backlogReel = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Video,
+        ]);
+        PostAnalysis::factory()->pending()->for($backlogReel)->create();
+
+        Post::factory()->forAccount($account)->create([
+            'type' => PostType::Image,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('competitors.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('competitors/Index')
+                ->where('accounts.0.reels_count', 2)
+                ->where('accounts.0.analysis_backlog_count', 1)
+                ->where('accounts.0.winners_count', 1)
+                ->missing('accounts.0.posts_count')
             );
     }
 

@@ -35,7 +35,9 @@ type Account = {
     display_name: string | null;
     avatar: string | null;
     url: string;
-    posts_count?: number;
+    reels_count?: number;
+    analysis_backlog_count?: number;
+    winners_count?: number;
     last_synced_at: string | null;
     last_sync_status?: string | null;
     in_quota?: boolean;
@@ -477,7 +479,7 @@ function isAccountSyncing(account: Account): boolean {
 }
 
 function emptyImportHint(account: Account): string | null {
-    if ((account.posts_count ?? 0) > 0) {
+    if ((account.reels_count ?? 0) > 0) {
         return null;
     }
 
@@ -824,9 +826,15 @@ function syncButtonTitle(account: Account): string {
                                     <span class="snitch-ink-label">Account</span>
                                 </th>
                                 <th class="w-14 px-1.5 py-2 text-right sm:px-2 sm:text-left">
-                                    <span class="snitch-ink-label">Posts</span>
+                                    <span class="snitch-ink-label">Reels</span>
                                 </th>
-                                <th class="hidden px-2 py-2 md:table-cell md:w-[8.5rem]">
+                                <th class="hidden w-16 px-2 py-2 text-right sm:table-cell sm:text-left">
+                                    <span class="snitch-ink-label">Backlog</span>
+                                </th>
+                                <th class="hidden w-16 px-2 py-2 text-right md:table-cell md:text-left">
+                                    <span class="snitch-ink-label">Winners</span>
+                                </th>
+                                <th class="hidden px-2 py-2 lg:table-cell lg:w-[8.5rem]">
                                     <span class="snitch-ink-label">Sync status</span>
                                 </th>
                                 <th class="w-auto px-1.5 py-2 text-right sm:px-2">
@@ -921,7 +929,7 @@ function syncButtonTitle(account: Account): string {
                                             </p>
                                             <p
                                                 v-else
-                                                class="mt-0.5 text-[11px] text-snitch-ink/55 md:hidden"
+                                                class="mt-0.5 text-[11px] text-snitch-ink/55 lg:hidden"
                                             >
                                                 Sync {{ accountSyncStatusLabel(account) }}
                                             </p>
@@ -929,9 +937,15 @@ function syncButtonTitle(account: Account): string {
                                     </Link>
                                 </td>
                                 <td class="w-14 px-1.5 py-2.5 align-middle text-right tabular-nums text-snitch-ink/70 sm:px-2 sm:text-left">
-                                    {{ account.posts_count ?? 0 }}
+                                    {{ account.reels_count ?? 0 }}
                                 </td>
-                                <td class="hidden px-2 py-2.5 align-middle text-xs md:table-cell">
+                                <td class="hidden px-2 py-2.5 align-middle text-right tabular-nums text-snitch-ink/70 sm:table-cell sm:text-left">
+                                    {{ account.analysis_backlog_count ?? 0 }}
+                                </td>
+                                <td class="hidden px-2 py-2.5 align-middle text-right tabular-nums text-snitch-ink/70 md:table-cell md:text-left">
+                                    {{ account.winners_count ?? 0 }}
+                                </td>
+                                <td class="hidden px-2 py-2.5 align-middle text-xs lg:table-cell">
                                     <span
                                         class="font-medium"
                                         :class="

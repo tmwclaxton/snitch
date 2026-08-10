@@ -83,6 +83,31 @@ class CompetitorsSuggestTest extends TestCase
             );
     }
 
+    public function test_competitors_index_surfaces_legacy_mcp_queued_suggest_via_latest(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $suggestId = '55555555-5555-4555-8555-555555555555';
+
+        Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
+            'status' => 'queued',
+            'suggestions' => null,
+            'error' => null,
+        ], now()->addMinutes(15));
+        Cache::put(SuggestCompetitorsJob::latestCacheKeyFor($user->id), $suggestId, now()->addMinutes(15));
+
+        $this->actingAs($user)
+            ->get(route('competitors.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('competitors/Index')
+                ->where('suggestRun', [
+                    'id' => $suggestId,
+                    'status' => 'pending',
+                ])
+            );
+    }
+
     public function test_competitors_index_clears_stale_completed_active_suggest(): void
     {
         $user = User::factory()->create();
@@ -633,11 +658,19 @@ class CompetitorsSuggestTest extends TestCase
         $this->assertStringContainsString('RemoveCompetitorModal', $page);
         $this->assertStringContainsString('Sync status', $page);
         $this->assertStringContainsString('accountSyncStatusLabel', $page);
+        $this->assertStringContainsString('>Reels<', $page);
+        $this->assertStringContainsString('>Backlog<', $page);
+        $this->assertStringContainsString('>Winners<', $page);
+        $this->assertStringContainsString('reels_count', $page);
+        $this->assertStringContainsString('analysis_backlog_count', $page);
+        $this->assertStringContainsString('winners_count', $page);
         $this->assertStringNotContainsString('Auto sync', $page);
+        $this->assertStringNotContainsString('>Posts<', $page);
         $this->assertStringContainsString('<table', $page);
         $this->assertStringContainsString('min-w-0 overflow-x-auto', $page);
         $this->assertStringContainsString('sm:table-cell', $page);
         $this->assertStringContainsString('md:table-cell', $page);
+        $this->assertStringContainsString('lg:table-cell', $page);
         $this->assertStringNotContainsString('min-w-[48rem]', $page);
         $this->assertStringNotContainsString('min-w-[36rem]', $page);
         $this->assertStringNotContainsString('snitch-cutout-platform-mark', $page);
