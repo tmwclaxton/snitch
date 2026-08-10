@@ -26,6 +26,7 @@ use App\Mcp\Tools\ListFeedTool;
 use App\Mcp\Tools\ListInfluencersTool;
 use App\Mcp\Tools\ListWinnersTool;
 use App\Mcp\Tools\RemoveCompetitorTool;
+use App\Mcp\Tools\RemoveInfluencerTool;
 use App\Mcp\Tools\RescoreWinnersStatusTool;
 use App\Mcp\Tools\RescoreWinnersTool;
 use App\Mcp\Tools\RotateTokenTool;
@@ -75,6 +76,7 @@ class SnitchServer extends Server
         InfluencerSearchStatusTool::class,
         KeepInfluencerTool::class,
         DiscardInfluencerTool::class,
+        RemoveInfluencerTool::class,
         ListInfluencersTool::class,
         ListFeedTool::class,
         GetPostTool::class,

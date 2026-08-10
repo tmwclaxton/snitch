@@ -186,10 +186,12 @@ final class WorkflowGuide
                 self::step(5, 'influencer_search_status', 'Poll run_id (or omit to use latest) until completed/failed.'),
                 self::step(6, 'keep_influencer', 'Keep selected rows (platform + handle; include run_id when available).'),
                 self::step(7, 'discard_influencer', 'Discard rejects. Then list_influencers to verify kept set.'),
+                self::step(8, 'remove_influencer', 'Optional: delete a kept tracked influencer (id / influencer_id / tracked_account_id).'),
             ],
             'notes' => [
                 'fit_reason and url appear on suggestions - use them when choosing keep vs discard.',
                 'A new find_influencers call replaces the latest pointer - always poll the run_id you were given (or omit run_id to follow latest).',
+                'discard_influencer only clears suggestion cache; remove_influencer deletes a kept tracked account.',
             ],
         ];
     }

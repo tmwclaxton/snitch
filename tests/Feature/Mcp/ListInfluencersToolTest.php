@@ -8,6 +8,7 @@ use App\Mcp\Servers\SnitchServer;
 use App\Mcp\Tools\InfluencerSearchStatusTool;
 use App\Mcp\Tools\KeepInfluencerTool;
 use App\Mcp\Tools\ListInfluencersTool;
+use App\Mcp\Tools\RemoveInfluencerTool;
 use App\Models\BrandProfile;
 use App\Models\TrackedAccount;
 use App\Models\User;
@@ -38,6 +39,22 @@ class ListInfluencersToolTest extends TestCase
             ->assertSee('dealmaker')
             ->assertSee('Strong mid-tier fashion audience for DTC collabs.')
             ->assertSee('https://www.instagram.com/dealmaker/');
+    }
+
+    public function test_remove_influencer_accepts_influencer_id_alias(): void
+    {
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->influencer()->create([
+            'platform' => 'instagram',
+            'handle' => 'to-remove',
+        ]);
+        Sanctum::actingAs($user);
+
+        SnitchServer::tool(RemoveInfluencerTool::class, [
+            'influencer_id' => $account->id,
+        ])->assertOk()->assertSee('"deleted":true');
+
+        $this->assertDatabaseMissing('tracked_accounts', ['id' => $account->id]);
     }
 
     public function test_influencer_search_status_exposes_fit_reason_on_suggestions(): void
