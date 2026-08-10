@@ -687,7 +687,7 @@ function syncButtonTitle(account: Account): string {
                     </div>
                 </div>
 
-                <div class="snitch-scrap relative mt-6 p-3 pt-5 sm:p-4 sm:pt-6">
+                <div class="snitch-scrap relative mt-6 p-3 pt-5 pb-6 sm:p-4 sm:pt-6 sm:pb-7">
                     <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
                     <div class="relative z-10 min-w-0 overflow-x-auto">
                         <table class="w-full border-collapse text-left text-sm">
@@ -812,7 +812,7 @@ function syncButtonTitle(account: Account): string {
 
             <div
                 v-if="accounts.length"
-                class="snitch-scrap relative mt-8 p-3 pt-5 sm:p-4 sm:pt-6"
+                class="snitch-scrap relative mt-8 p-3 pt-5 pb-6 sm:p-4 sm:pt-6 sm:pb-7"
             >
                 <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
                 <div class="relative z-10 min-w-0 overflow-x-auto">

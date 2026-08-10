@@ -796,12 +796,13 @@
         box-shadow:
             2px 2px 0 color-mix(in oklab, var(--snitch-spot) 22%, transparent),
             0 14px 28px -20px var(--snitch-grade-shadow);
+        /* Mild paper crop - keep bottom nearly flat so tall tables keep the last row usable */
         clip-path: polygon(
-            0.8% 1.5%,
-            98.5% 0%,
-            100% 97.8%,
-            1.8% 100%,
-            0% 40%
+            0.35% 0.6%,
+            99.5% 0%,
+            100% 99.35%,
+            0.55% 100%,
+            0% 44%
         );
     }
 
@@ -1641,7 +1642,8 @@
             ),
             color-mix(in oklab, var(--snitch-paper) 92%, var(--snitch-lift));
         border: 0;
-        clip-path: polygon(0% 2%, 97% 0%, 100% 96%, 3% 100%);
+        /* Soft ticket slant (~1%) so names / actions keep breathing room at the cut edges */
+        clip-path: polygon(0% 0.7%, 99.1% 0%, 100% 98.8%, 0.9% 100%);
         filter:
             drop-shadow(
                 3px 4px 1.5px color-mix(in oklab, var(--snitch-cutout-offset) 55%, transparent)

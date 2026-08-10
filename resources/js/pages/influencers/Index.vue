@@ -541,7 +541,7 @@ onUnmounted(() => {
                     <li
                         v-for="item in pendingReview"
                         :key="suggestionKey(item)"
-                        class="snitch-cutout flex flex-col gap-3 bg-snitch-paper/70 p-3 sm:flex-row sm:items-center sm:justify-between"
+                        class="snitch-cutout flex flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <div class="flex min-w-0 items-center gap-3">
                             <img
@@ -623,7 +623,7 @@ onUnmounted(() => {
                     <li
                         v-for="account in keptAccounts"
                         :key="account.id"
-                        class="snitch-cutout flex flex-col gap-3 bg-snitch-paper/70 p-3 sm:flex-row sm:items-center sm:justify-between"
+                        class="snitch-cutout flex flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <Link
                             :href="competitorShow(account.id)"
