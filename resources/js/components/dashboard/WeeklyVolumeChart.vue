@@ -122,7 +122,7 @@ function barY(count: number): number {
                     :seed="index + 1"
                     :fill-class="
                         index === peakIndex
-                            ? 'fill-snitch-spot'
+                            ? 'fill-snitch-stipple-spot'
                             : 'fill-snitch-ink/70'
                     "
                     :title="`${week.label}: ${week.count}`"

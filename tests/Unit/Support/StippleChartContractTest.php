@@ -67,7 +67,7 @@ class StippleChartContractTest extends TestCase
         $this->assertIsString($source);
         $this->assertStringContainsString('<StippleBar', $source);
         $this->assertStringContainsString('variant="dots"', $source);
-        $this->assertStringContainsString('fill-snitch-spot', $source);
+        $this->assertStringContainsString('fill-snitch-stipple-spot', $source);
         $this->assertStringContainsString('fill-snitch-teal', $source);
         $this->assertStringNotContainsString('<rect', $source);
     }

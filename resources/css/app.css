@@ -68,6 +68,7 @@
     --color-snitch-teal: var(--snitch-teal);
     --color-snitch-fog: var(--snitch-fog);
     --color-snitch-spot: var(--snitch-spot);
+    --color-snitch-stipple-spot: var(--snitch-stipple-spot);
     --color-snitch-press: var(--snitch-press);
     --color-snitch-stock: var(--snitch-stock);
     --color-snitch-on-spot: var(--snitch-on-spot);
@@ -111,6 +112,8 @@
     --snitch-spot: #f0c400;
     --snitch-accent: #f0c400;
     --snitch-marker: #f0c400;
+    /* Darker mustard for chart stipple dots (brand spot stays fluorescent). */
+    --snitch-stipple-spot: color-mix(in oklab, var(--snitch-spot) 58%, var(--snitch-press));
     --snitch-teal: #3a5f6b;
     --snitch-grade-tint: rgba(240, 196, 0, 0.18);
     --snitch-grade-shadow: rgba(28, 27, 26, 0.42);
@@ -203,6 +206,7 @@
     --snitch-spot: #f0c400;
     --snitch-accent: #f0c400;
     --snitch-marker: #f0c400;
+    --snitch-stipple-spot: color-mix(in oklab, var(--snitch-spot) 58%, var(--snitch-press));
     --snitch-teal: #7a9aa6;
     --snitch-grade-tint: rgba(240, 196, 0, 0.14);
     --snitch-grade-shadow: rgba(0, 0, 0, 0.55);

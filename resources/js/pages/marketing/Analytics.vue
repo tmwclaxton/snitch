@@ -425,7 +425,7 @@ function commitDaysInput(): void {
                         empty-description="When Snitch finishes analysing posts, daily totals will appear here."
                         :series="analytics.metrics.analyses_completed.series"
                         :days="analytics.days"
-                        bar-class="fill-snitch-spot hover:fill-snitch-spot/90"
+                        bar-class="fill-snitch-stipple-spot hover:fill-snitch-stipple-spot/90"
                         unit-label="analyses"
                     />
                 </div>

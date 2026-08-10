@@ -18,9 +18,9 @@ type VendorKey = 'apify' | 'nanogpt' | 'firecrawl' | 'tikhub';
 
 const vendors: Array<{ key: VendorKey; label: string; fillClass: string }> = [
     { key: 'apify', label: 'Apify', fillClass: 'fill-snitch-ink/75' },
-    { key: 'nanogpt', label: 'NanoGPT', fillClass: 'fill-snitch-spot' },
+    { key: 'nanogpt', label: 'NanoGPT', fillClass: 'fill-snitch-stipple-spot' },
     { key: 'firecrawl', label: 'Firecrawl', fillClass: 'fill-snitch-teal' },
-    { key: 'tikhub', label: 'TikHub', fillClass: 'fill-snitch-marker' },
+    { key: 'tikhub', label: 'TikHub', fillClass: 'fill-snitch-stipple-spot' },
 ];
 
 const props = withDefaults(
@@ -213,9 +213,9 @@ const xLabels = computed(() => {
                     class="size-2.5 shrink-0 rounded-[1px]"
                     :class="{
                         'bg-snitch-ink/75': vendor.key === 'apify',
-                        'bg-snitch-spot': vendor.key === 'nanogpt',
+                        'bg-snitch-stipple-spot': vendor.key === 'nanogpt',
                         'bg-snitch-teal': vendor.key === 'firecrawl',
-                        'bg-snitch-marker': vendor.key === 'tikhub',
+                        'bg-snitch-stipple-spot': vendor.key === 'tikhub',
                     }"
                     aria-hidden="true"
                 />

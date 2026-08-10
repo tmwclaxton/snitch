@@ -56,7 +56,7 @@ const fillPercent = computed(() => (fillWidth.value / trackUnits) * 100);
                 :seed="seed"
                 :fill-class="
                     isPeak
-                        ? 'fill-snitch-spot'
+                        ? 'fill-snitch-stipple-spot'
                         : 'fill-snitch-ink/70'
                 "
             />

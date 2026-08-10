@@ -131,7 +131,7 @@ function showLabel(hour: number): boolean {
                     :seed="row.hour + 11"
                     :fill-class="
                         index === peakIndex
-                            ? 'fill-snitch-spot'
+                            ? 'fill-snitch-stipple-spot'
                             : 'fill-snitch-ink/70'
                     "
                     :title="`${row.label}: ${row.count}`"

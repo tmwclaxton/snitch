@@ -10,3 +10,4 @@ Appearance is light / dark / system via `useAppearance`, the `appearance` cookie
 - Use `--snitch-lift` instead of bare `white` in `color-mix` surface lifts.
 - Use `--snitch-print-blend` (`multiply` light / `soft-light` dark) for print overlays on paper.
 - Spot yellow stays `#F0C400` in both modes. Paper grade stays warm - no cold gray SaaS dark theme.
+- Chart stipple dots use `--snitch-stipple-spot` (spot mixed with press) so yellow marks read darker than UI chrome; do not use bright `--snitch-spot` for stipple fills.
