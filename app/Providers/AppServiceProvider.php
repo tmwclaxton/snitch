@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Listeners\HandleStripeWebhook;
 use App\Mail\PostalTransport;
+use App\Services\TikHub\TikHubClient;
 use App\Support\ClientIp;
 use App\Support\WorkOs\Ipv4CurlRequestClient;
 use Carbon\CarbonImmutable;
@@ -28,7 +29,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(TikHubClient::class);
     }
 
     /**

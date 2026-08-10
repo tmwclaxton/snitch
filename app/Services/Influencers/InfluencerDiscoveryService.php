@@ -14,6 +14,10 @@ use App\Services\Apify\Adapters\YoutubeAdapter;
 use App\Services\Apify\ApifyClient;
 use App\Services\Apify\PlatformAdapterManager;
 use App\Services\Firecrawl\FirecrawlClient;
+use App\Services\Scraping\ApifyMonthlyCapGate;
+use App\Services\TikHub\Adapters\InstagramAdapter as TikHubInstagramAdapter;
+use App\Services\TikHub\Adapters\TikTokAdapter as TikHubTikTokAdapter;
+use App\Services\TikHub\Adapters\YoutubeAdapter as TikHubYoutubeAdapter;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
@@ -25,6 +29,7 @@ class InfluencerDiscoveryService
         public NanoGptClient $nanoGpt,
         public PlatformAdapterManager $adapters,
         public ApifyClient $apify,
+        public ApifyMonthlyCapGate $apifyCapGate,
     ) {}
 
     /**
@@ -99,7 +104,7 @@ class InfluencerDiscoveryService
         $candidates = $this->filterCreatorCandidates($candidates);
 
         if ($candidates === []) {
-            throw new RuntimeException('No influencer leads from Firecrawl, model seed, or Apify search.');
+            throw new RuntimeException('No influencer leads from Firecrawl, model seed, or vendor search.');
         }
 
         $verified = $this->verify($candidates, $brand, $filters, $platforms, $hits, $onProgress);
@@ -479,7 +484,9 @@ class InfluencerDiscoveryService
      */
     public function seedFromApifySearch(BrandProfile $brand, array $filters, array $platforms): array
     {
-        if ((string) config('snitch.apify.token') === '') {
+        $useTikHub = $this->apifyCapGate->isApifyExhausted() && $this->apifyCapGate->tikHubConfigured();
+
+        if (! $useTikHub && (string) config('snitch.apify.token') === '') {
             throw new RuntimeException('APIFY_TOKEN is not configured.');
         }
 
@@ -492,40 +499,29 @@ class InfluencerDiscoveryService
                 continue;
             }
 
+            if ($useTikHub && ! $this->apifyCapGate->tikHubSupports($platform)) {
+                continue;
+            }
+
             $queries = $this->apifySearchQueries($brand, $filters, $platform);
 
             if ($queries === []) {
                 continue;
             }
 
-            $adapter = $this->adapters->for($platform);
             $query = $queries[0];
-            $job = match ($platform) {
-                'instagram' => $adapter instanceof InstagramAdapter
-                    ? $adapter->searchUsersActorJob($query, $limit)
-                    : null,
-                'tiktok' => $adapter instanceof TikTokAdapter
-                    ? $adapter->searchUsersActorJob($query, $limit)
-                    : null,
-                'youtube' => $adapter instanceof YoutubeAdapter
-                    ? $adapter->searchChannelsActorJob($query, $limit)
-                    : null,
-                default => null,
-            };
-
-            if ($job === null) {
-                continue;
-            }
 
             try {
-                $items = $this->apify->runActor($job['actorId'], $job['input']);
+                $rows = $useTikHub
+                    ? $this->searchUsersViaTikHub($platform, $query, $limit)
+                    : $this->searchUsersViaApify($platform, $query, $limit);
             } catch (Throwable $exception) {
                 report($exception);
 
                 continue;
             }
 
-            foreach ($this->candidatesFromApifySearchItems($platform, $items, $limit) as $candidate) {
+            foreach ($rows as $candidate) {
                 $key = "{$candidate['platform']}:{$candidate['handle']}";
 
                 if (isset($seen[$key])) {
@@ -542,6 +538,56 @@ class InfluencerDiscoveryService
         }
 
         return array_slice($candidates, 0, $limit);
+    }
+
+    /**
+     * @return list<array{name: string, platform: string, handle: string, source: string, seed: string, followers?: int|null}>
+     */
+    private function searchUsersViaTikHub(string $platform, string $query, int $limit): array
+    {
+        $adapter = $this->adapters->tikHubAdapter($platform);
+
+        $rows = match (true) {
+            $adapter instanceof TikHubInstagramAdapter => $adapter->searchUsers($query, $limit),
+            $adapter instanceof TikHubTikTokAdapter => $adapter->searchUsers($query, $limit),
+            $adapter instanceof TikHubYoutubeAdapter => $adapter->searchChannels($query, $limit),
+            default => [],
+        };
+
+        return array_map(function (array $row): array {
+            $row['source'] = 'tikhub-search';
+            $row['seed'] = 'tikhub-search';
+
+            return $row;
+        }, $rows);
+    }
+
+    /**
+     * @return list<array{name: string, platform: string, handle: string, source: string|null, seed: string, followers?: int|null}>
+     */
+    private function searchUsersViaApify(string $platform, string $query, int $limit): array
+    {
+        $adapter = $this->adapters->apifyAdapter($platform);
+        $job = match ($platform) {
+            'instagram' => $adapter instanceof InstagramAdapter
+                ? $adapter->searchUsersActorJob($query, $limit)
+                : null,
+            'tiktok' => $adapter instanceof TikTokAdapter
+                ? $adapter->searchUsersActorJob($query, $limit)
+                : null,
+            'youtube' => $adapter instanceof YoutubeAdapter
+                ? $adapter->searchChannelsActorJob($query, $limit)
+                : null,
+            default => null,
+        };
+
+        if ($job === null) {
+            return [];
+        }
+
+        $items = $this->apify->runActor($job['actorId'], $job['input']);
+
+        return $this->candidatesFromApifySearchItems($platform, $items, $limit);
     }
 
     /**
@@ -1300,6 +1346,7 @@ class InfluencerDiscoveryService
 
         $buckets = [
             'apify-search' => [],
+            'tikhub-search' => [],
             'firecrawl' => [],
             'model-seed' => [],
         ];
@@ -1326,7 +1373,7 @@ class InfluencerDiscoveryService
         }
 
         $merged = [];
-        $order = ['apify-search', 'firecrawl', 'model-seed'];
+        $order = ['apify-search', 'tikhub-search', 'firecrawl', 'model-seed'];
 
         while (true) {
             $added = false;
@@ -1359,6 +1406,7 @@ class InfluencerDiscoveryService
 
         return match (true) {
             $source === 'apify-search' || str_starts_with($source, 'apify') => 'apify-search',
+            $source === 'tikhub-search' || str_starts_with($source, 'tikhub') => 'tikhub-search',
             $source === 'model-seed' => 'model-seed',
             default => 'firecrawl',
         };
@@ -1534,7 +1582,16 @@ class InfluencerDiscoveryService
 
         foreach ($batch as $batchIndex => $item) {
             $platform = $item['candidate']['platform'];
-            $adapter = $this->adapters->for($platform);
+
+            try {
+                $adapter = $this->adapters->for($platform);
+            } catch (RuntimeException) {
+                // Facebook (and any unsupported) soft-skip when Apify is capped.
+                $profiles[$batchIndex] = null;
+
+                continue;
+            }
+
             $resolveTarget = $this->resolveTargetForCandidate($item['candidate']);
 
             if ($adapter instanceof AbstractPlatformAdapter) {

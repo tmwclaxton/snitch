@@ -8,15 +8,17 @@ export type SpendPoint = {
     apify: number;
     nanogpt: number;
     firecrawl: number;
+    tikhub: number;
     total: number;
 };
 
-type VendorKey = 'apify' | 'nanogpt' | 'firecrawl';
+type VendorKey = 'apify' | 'nanogpt' | 'firecrawl' | 'tikhub';
 
 const vendors: Array<{ key: VendorKey; label: string; fillClass: string }> = [
     { key: 'apify', label: 'Apify', fillClass: 'fill-snitch-ink/75' },
     { key: 'nanogpt', label: 'NanoGPT', fillClass: 'fill-snitch-spot' },
     { key: 'firecrawl', label: 'Firecrawl', fillClass: 'fill-snitch-teal' },
+    { key: 'tikhub', label: 'TikHub', fillClass: 'fill-snitch-marker' },
 ];
 
 const props = defineProps<{
@@ -166,6 +168,7 @@ const xLabels = computed(() => {
                         'bg-snitch-ink/75': vendor.key === 'apify',
                         'bg-snitch-spot': vendor.key === 'nanogpt',
                         'bg-snitch-teal': vendor.key === 'firecrawl',
+                        'bg-snitch-marker': vendor.key === 'tikhub',
                     }"
                     aria-hidden="true"
                 />

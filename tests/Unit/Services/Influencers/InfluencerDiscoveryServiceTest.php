@@ -12,6 +12,7 @@ use App\Services\Apify\ApifyClient;
 use App\Services\Apify\PlatformAdapterManager;
 use App\Services\Firecrawl\FirecrawlClient;
 use App\Services\Influencers\InfluencerDiscoveryService;
+use App\Services\Scraping\ApifyMonthlyCapGate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -19,13 +20,18 @@ class InfluencerDiscoveryServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function service(): InfluencerDiscoveryService
-    {
+    private function service(
+        ?PlatformAdapterManager $adapters = null,
+        ?ApifyClient $apify = null,
+        ?ApifyMonthlyCapGate $gate = null,
+        ?NanoGptClient $nano = null,
+    ): InfluencerDiscoveryService {
         return new InfluencerDiscoveryService(
             $this->createMock(FirecrawlClient::class),
-            $this->createMock(NanoGptClient::class),
-            $this->createMock(PlatformAdapterManager::class),
-            $this->createMock(ApifyClient::class),
+            $nano ?? $this->createMock(NanoGptClient::class),
+            $adapters ?? $this->createMock(PlatformAdapterManager::class),
+            $apify ?? $this->createMock(ApifyClient::class),
+            $gate ?? $this->createMock(ApifyMonthlyCapGate::class),
         );
     }
 
@@ -124,12 +130,7 @@ class InfluencerDiscoveryServiceTest extends TestCase
 
         config(['snitch.nanogpt.api_key' => 'test-key']);
 
-        $service = new InfluencerDiscoveryService(
-            $this->createMock(FirecrawlClient::class),
-            $nano,
-            $this->createMock(PlatformAdapterManager::class),
-            $this->createMock(ApifyClient::class),
-        );
+        $service = $this->service(nano: $nano);
 
         $reject = $service->rejectOrgOrBrandKeys([
             ['platform' => 'instagram', 'handle' => 'fundingfiona', 'name' => 'Funding Fiona'],
@@ -155,12 +156,7 @@ class InfluencerDiscoveryServiceTest extends TestCase
 
         config(['snitch.nanogpt.api_key' => 'test-key']);
 
-        $service = new InfluencerDiscoveryService(
-            $this->createMock(FirecrawlClient::class),
-            $nano,
-            $this->createMock(PlatformAdapterManager::class),
-            $this->createMock(ApifyClient::class),
-        );
+        $service = $this->service(nano: $nano);
 
         $filtered = $service->filterCreatorCandidates([
             ['name' => 'Creator', 'platform' => 'instagram', 'handle' => 'creatorone', 'seed' => 'model-seed'],
@@ -183,12 +179,7 @@ class InfluencerDiscoveryServiceTest extends TestCase
         $nano = $this->createMock(NanoGptClient::class);
         $nano->expects($this->never())->method('chatJson');
 
-        $service = new InfluencerDiscoveryService(
-            $this->createMock(FirecrawlClient::class),
-            $nano,
-            $this->createMock(PlatformAdapterManager::class),
-            $this->createMock(ApifyClient::class),
-        );
+        $service = $this->service(nano: $nano);
 
         $this->assertSame([], $service->rejectOrgOrBrandKeys([
             ['platform' => 'instagram', 'handle' => 'seedcamp', 'name' => 'Seedcamp'],
@@ -346,12 +337,7 @@ class InfluencerDiscoveryServiceTest extends TestCase
             'snitch.influencer_find.platforms' => ['instagram', 'tiktok', 'youtube'],
         ]);
 
-        $service = new InfluencerDiscoveryService(
-            $this->createMock(FirecrawlClient::class),
-            $nano,
-            $this->createMock(PlatformAdapterManager::class),
-            $this->createMock(ApifyClient::class),
-        );
+        $service = $this->service(nano: $nano);
 
         $rows = $service->seedFromModel($brand, [
             'platforms' => ['instagram'],

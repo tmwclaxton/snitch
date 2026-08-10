@@ -31,10 +31,10 @@ Platform fee (£19/mo via `STRIPE_PRICE_PLATFORM`) plus prepaid usage credits (p
 Agent MCP `create_account` starts at £0. Claiming/confirming (WorkOS bind or web signup) grants `claim_bonus_pence` (£5) once (`idempotency_key` `claim_bonus:{user_id}`). Each paid platform subscription invoice grants `subscription_bonus_pence` (£30) once per invoice (`idempotency_key` `subscription_bonus:invoice:{invoice_id}`) via Stripe `invoice.paid`. Billable jobs require active platform subscription + positive credit balance.
 
 ## Vendors
-Ledger rows are per vendor: `apify`, `nanogpt`, `firecrawl` (plus `bonus`/`topup`). Apify prefers exact `usageTotalUsd` from run API; NanoGPT/Firecrawl use catalog estimates. Billing page and MCP `billing_status` show spend by those three vendors.
+Ledger rows are per vendor: `apify`, `nanogpt`, `firecrawl`, `tikhub` (plus `bonus`/`topup`). Apify prefers exact `usageTotalUsd` from run API; NanoGPT/Firecrawl/TikHub use catalog estimates / floors. Billing page and MCP `billing_status` show spend by those four vendors.
 
 ## Surfaces
-- Authenticated `/billing` - balance, platform subscribe, credit packs, vendor usage, and a stacked stipple chart of daily Apify/NanoGPT/Firecrawl spend (`UsageBillingService::dailySpendSeries`)
+- Authenticated `/billing` - balance, platform subscribe, credit packs, vendor usage, and a stacked stipple chart of daily Apify/NanoGPT/Firecrawl/TikHub spend (`UsageBillingService::dailySpendSeries`)
 - Public + auth `/agents` (MCP connect docs; auth also mints/rotates Sanctum token). `/for-agents` redirects to `/agents`
 - MCP register `/mcp/register` (create_account); authenticated `/mcp` (Sanctum bearer)
 - Claim `/claim/{token}` then WorkOS login

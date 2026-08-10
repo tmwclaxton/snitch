@@ -169,6 +169,8 @@ return [
         'token' => env('APIFY_TOKEN'),
         'base_url' => rtrim((string) env('APIFY_BASE_URL', 'https://api.apify.com/v2'), '/'),
         'timeout' => (int) env('APIFY_TIMEOUT', 180),
+        // Soft monthly COGS cap (USD). At/over this + TikHub key set → TikHub for IG/TT/YT/LI.
+        'monthly_cap_usd' => (float) env('SNITCH_APIFY_MONTHLY_CAP_USD', 49),
         'actors' => [
             'instagram' => env('APIFY_ACTOR_INSTAGRAM', 'apify/instagram-scraper'),
             'tiktok' => env('APIFY_ACTOR_TIKTOK', 'clockworks/tiktok-scraper'),
@@ -179,6 +181,37 @@ return [
             'linkedin_profile' => env('APIFY_ACTOR_LINKEDIN_PROFILE', 'apimaestro/linkedin-profile-posts'),
             // Shorts-only import policy via maxResultsShorts; skip long-form uploads.
             'youtube' => env('APIFY_ACTOR_YOUTUBE', 'streamers/youtube-scraper'),
+        ],
+    ],
+
+    'tikhub' => [
+        'api_key' => env('TIKHUB_API_KEY'),
+        'base_url' => rtrim((string) env('TIKHUB_BASE_URL', 'https://api.tikhub.io'), '/'),
+        'timeout' => (int) env('TIKHUB_TIMEOUT', 60),
+        'endpoints' => [
+            'instagram' => [
+                'user_info' => '/api/v1/instagram/v2/fetch_user_info',
+                'user_posts' => '/api/v1/instagram/v2/fetch_user_posts',
+                'user_reels' => '/api/v1/instagram/v2/fetch_user_reels',
+                'search_users' => '/api/v1/instagram/v2/search_users',
+            ],
+            'tiktok' => [
+                'user_profile' => '/api/v1/tiktok/web/fetch_user_profile',
+                'user_posts' => '/api/v1/tiktok/app/v3/fetch_user_post_videos',
+                'one_video' => '/api/v1/tiktok/app/v3/fetch_one_video',
+                'search_users' => '/api/v1/tiktok/app/v3/fetch_user_search',
+            ],
+            'youtube' => [
+                'channel_info' => '/api/v1/youtube/web/get_channel_id',
+                'channel_videos' => '/api/v1/youtube/web/get_channel_videos_v2',
+                'channel_shorts' => '/api/v1/youtube/web/get_channel_short_videos',
+                'search' => '/api/v1/youtube/web/search_channel',
+            ],
+            'linkedin' => [
+                'company_posts' => '/api/v1/linkedin/web_v2/get_company_posts',
+                'profile_posts' => '/api/v1/linkedin/web_v2/get_user_posts',
+                'company_info' => '/api/v1/linkedin/web_v2/get_company_profile',
+            ],
         ],
     ],
 

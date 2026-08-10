@@ -170,7 +170,7 @@ class UsageBillingService
      *     days: int,
      *     from: string,
      *     to: string,
-     *     points: list<array{date: string, label: string, apify: int, nanogpt: int, firecrawl: int, total: int}>
+     *     points: list<array{date: string, label: string, apify: int, nanogpt: int, firecrawl: int, tikhub: int, total: int}>
      * }
      */
     public function dailySpendSeries(User $user, int $days = 30): array
@@ -182,9 +182,10 @@ class UsageBillingService
             BillingVendor::Apify->value,
             BillingVendor::NanoGpt->value,
             BillingVendor::Firecrawl->value,
+            BillingVendor::TikHub->value,
         ];
 
-        /** @var array<string, array{date: string, label: string, apify: int, nanogpt: int, firecrawl: int, total: int}> $buckets */
+        /** @var array<string, array{date: string, label: string, apify: int, nanogpt: int, firecrawl: int, tikhub: int, total: int}> $buckets */
         $buckets = [];
 
         for ($offset = 0; $offset < $days; $offset++) {
@@ -196,6 +197,7 @@ class UsageBillingService
                 'apify' => 0,
                 'nanogpt' => 0,
                 'firecrawl' => 0,
+                'tikhub' => 0,
                 'total' => 0,
             ];
         }
@@ -257,6 +259,7 @@ class UsageBillingService
             BillingVendor::Apify->value,
             BillingVendor::NanoGpt->value,
             BillingVendor::Firecrawl->value,
+            BillingVendor::TikHub->value,
         ];
 
         $vendors = [];

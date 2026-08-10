@@ -78,6 +78,7 @@ class SyncTrackedAccountJob implements ShouldQueue
         $limit = max(1, (int) config('snitch.sync.posts_limit', 12));
         $recencyDays = max(1, (int) config('snitch.sync.recency_days', 30));
         $cutoff = CarbonImmutable::now()->subDays($recencyDays);
+        $scrapeDriver = $adapters->driverFor($account->platform);
 
         try {
             $adapter = $adapters->for($account->platform);
@@ -170,7 +171,11 @@ class SyncTrackedAccountJob implements ShouldQueue
                 $this->dispatchAnalysisIfNeeded($post->fresh('analysis'));
             }
 
-            $charger->chargePulledApifyRuns($owner, 'sync.account');
+            if ($scrapeDriver === 'tikhub') {
+                $charger->chargePulledTikHubRuns($owner, 'sync.account');
+            } else {
+                $charger->chargePulledApifyRuns($owner, 'sync.account');
+            }
 
             $account->fill([
                 'last_synced_at' => now(),

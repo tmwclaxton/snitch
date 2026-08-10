@@ -6,7 +6,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | --- | --- |
 | app/Services/Apify/Adapters/YoutubeAdapter.php | .ai/rules/adapters.md |
 | app/Services/Analysis/**, database/data/analysis_terms.php, app/Http/Controllers/ExploreController.php, resources/js/pages/explore/** | .ai/rules/analysis.md |
-| app/Services/Apify/** | .ai/rules/apify.md |
+| app/Services/Apify/**, app/Services/TikHub/**, app/Services/Scraping/** | .ai/rules/apify.md |
 | app/Services/Billing/**, app/Http/Controllers/Settings/BillingController.php, app/Http/Controllers/ClaimController.php, app/Http/Controllers/AgentsController.php, app/Listeners/HandleStripeWebhook.php, app/Policies/TrackedAccountPolicy.php, app/Http/Controllers/CompetitorController.php, app/Http/Controllers/InfluencerController.php, app/Mcp/**, app/Support/McpConnectionGuide.php, routes/ai.php, config/billing.php, config/subscriptions.php, config/cashier.php, resources/js/pages/billing/**, resources/js/pages/marketing/Pricing.vue, resources/js/pages/marketing/Agents.vue, resources/js/pages/agents/**, resources/js/components/agents/**, resources/js/pages/claim/** | .ai/rules/billing.md |
 | bootstrap/app.php, app/Providers/AppServiceProvider.php, app/Services/Apify/**, app/Jobs/SyncTrackedAccountJob.php, app/Support/ClientIp.php, app/Support/SafeExceptionMessage.php | .ai/rules/security-proxies-secrets.md |
 | app/Console/Commands/** | .ai/rules/commands.md |

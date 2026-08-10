@@ -288,7 +288,7 @@ flowchart TB
 | State | Pinia |
 | Auth | Laravel WorkOS (AuthKit) |
 | Routing DX | Laravel Wayfinder (typed TS route helpers) |
-| Scraping | Apify actors (Instagram, TikTok, Facebook, LinkedIn, YouTube) |
+| Scraping | Apify primary until ~$49/mo COGS, then TikHub for IG/TT/YT/LI (Facebook stays Apify) |
 | Web intel | Firecrawl |
 | LLM / video | NanoGPT (analysis, autofill, suggest, winner copy) |
 | Queues | Database locally; Redis in Sail / production |
@@ -369,11 +369,17 @@ NANOGPT_API_KEY=
 # Firecrawl - website autofill + competitor discovery
 FIRECRAWL_API_KEY=
 
-# Apify - profile resolve + post sync
+# Apify - profile resolve + post sync (primary until monthly COGS cap)
 APIFY_TOKEN=
+SNITCH_APIFY_MONTHLY_CAP_USD=49
+
+# TikHub - IG/TT/YT/LI fallback after Apify monthly COGS cap (Facebook stays Apify)
+TIKHUB_API_KEY=
+TIKHUB_BASE_URL=https://api.tikhub.io
 
 # Keep live probes off unless you intend to spend credits
 SNITCH_LIVE_APIFY=0
+SNITCH_LIVE_TIKHUB=0
 SNITCH_LIVE_VIDEO=0
 SNITCH_LIVE_ANALYSIS_MATRIX=0
 SNITCH_LIVE_E2E=0
@@ -412,6 +418,7 @@ Visit [http://localhost:8000](http://localhost:8000) (or your Sail URL).
 | `php artisan snitch:backfill-analytics` | Rebuild public analytics counters |
 | `php artisan snitch:backfill-analysis-terms` | Infer explore catalogue terms |
 | `php artisan snitch:probe-apify` | Live Apify adapter probe (needs live flags) |
+| `php artisan snitch:probe-tikhub` | Live TikHub cost probe (needs `SNITCH_LIVE_TIKHUB`) |
 | `php artisan snitch:probe-video-analysis` | Live NanoGPT analysis probe |
 | `php artisan snitch:probe-e2e` | End-to-end live probe |
 

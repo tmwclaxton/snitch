@@ -90,12 +90,14 @@ const vendorLabels: Record<string, string> = {
     apify: 'Apify',
     nanogpt: 'NanoGPT',
     firecrawl: 'Firecrawl',
+    tikhub: 'TikHub',
 };
 
 const vendorAccent: Record<string, string> = {
     apify: 'border-l-snitch-ink/70',
     nanogpt: 'border-l-snitch-spot',
     firecrawl: 'border-l-snitch-teal',
+    tikhub: 'border-l-snitch-marker',
 };
 </script>
 

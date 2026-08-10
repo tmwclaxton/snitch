@@ -2,6 +2,7 @@
 
 namespace App\Services\Apify;
 
+use App\Services\Scraping\ApifyMonthlyCapGate;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
@@ -15,6 +16,8 @@ class ApifyClient
      * @var list<array{actorId: string, usageTotalUsd: float|null, runId: string|null}>
      */
     private array $runCosts = [];
+
+    public function __construct(private ApifyMonthlyCapGate $capGate) {}
 
     /**
      * @param  array<string, mixed>  $input
@@ -37,6 +40,8 @@ class ApifyClient
         $runResponse = $this->http()->post("/acts/{$encodedActor}/runs?waitForFinish={$wait}", $input);
 
         if (! $runResponse->successful()) {
+            $this->rememberQuotaFailure($runResponse->status(), $runResponse->body());
+
             throw new RuntimeException("Apify actor {$actorId} failed: ".$runResponse->body());
         }
 
@@ -143,6 +148,10 @@ class ApifyClient
             $response = $responses[(string) $key] ?? null;
 
             if (! $response instanceof Response || ! $response->successful()) {
+                if ($response instanceof Response) {
+                    $this->rememberQuotaFailure($response->status(), $response->body());
+                }
+
                 $out[$key] = [];
 
                 continue;
@@ -243,5 +252,12 @@ class ApifyClient
             ->withToken($token)
             ->acceptJson()
             ->timeout((int) config('snitch.apify.timeout', 180));
+    }
+
+    private function rememberQuotaFailure(int $status, string $body): void
+    {
+        if ($this->capGate->looksLikeQuotaFailure($status, $body)) {
+            $this->capGate->markHardExhausted();
+        }
     }
 }

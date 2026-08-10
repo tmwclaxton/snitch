@@ -153,6 +153,7 @@ class FindInfluencersJob implements ShouldQueue
             idempotencyKey: 'influencers.find.nanogpt:'.$this->runId,
         );
         $charger->chargePulledApifyRuns($user, 'influencers.find');
+        $charger->chargePulledTikHubRuns($user, 'influencers.find');
     }
 
     public function failed(?Throwable $exception): void

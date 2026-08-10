@@ -332,7 +332,16 @@ class CompetitorSuggestionService
 
         foreach ($batch as $batchIndex => $item) {
             $platform = $item['candidate']['platform'];
-            $adapter = $this->adapters->for($platform);
+
+            try {
+                $adapter = $this->adapters->for($platform);
+            } catch (RuntimeException) {
+                // Facebook soft-fails when Apify monthly usage is exhausted.
+                $profiles[$batchIndex] = null;
+
+                continue;
+            }
+
             $resolveTarget = $this->resolveTargetForCandidate($item['candidate']);
 
             if ($adapter instanceof AbstractPlatformAdapter) {

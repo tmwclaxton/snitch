@@ -117,6 +117,17 @@ return [
             'scrape_credits' => 1,
             'search_credits_per_10_results' => 2,
         ],
+        'tikhub' => [
+            // PAYG list pricing from TikHub docs (retuned after snitch:probe-tikhub).
+            'floor_usd' => 0.001,
+            'endpoints' => [
+                'default' => ['floor_usd' => 0.001],
+                'instagram' => ['floor_usd' => 0.002],
+                'tiktok' => ['floor_usd' => 0.001],
+                'youtube' => ['floor_usd' => 0.001],
+                'linkedin' => ['floor_usd' => 0.001],
+            ],
+        ],
     ],
 
     /*
@@ -124,6 +135,7 @@ return [
     */
     'actions' => [
         'apify.run' => ['vendor' => 'apify', 'floor_usd' => 0.01],
+        'tikhub.run' => ['vendor' => 'tikhub', 'floor_usd' => 0.001],
         'sync.account' => ['vendor' => 'apify', 'floor_usd' => 0.05],
         'analyze.post' => ['vendor' => 'nanogpt', 'floor_usd' => 0.04],
         'embed.analysis' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0002],

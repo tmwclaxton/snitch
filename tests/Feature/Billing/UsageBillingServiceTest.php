@@ -121,6 +121,7 @@ class UsageBillingServiceTest extends TestCase
         $this->billing->charge($user, 'sync.account', BillingVendor::Apify, 0.05);
         $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.04);
         $this->billing->charge($user, 'brand.autofill', BillingVendor::Firecrawl, 0.01);
+        $this->billing->charge($user, 'sync.account', BillingVendor::TikHub, 0.002);
 
         $series = $this->billing->dailySpendSeries($user, 14);
 
@@ -132,8 +133,9 @@ class UsageBillingServiceTest extends TestCase
         $this->assertGreaterThan(0, $today['apify']);
         $this->assertGreaterThan(0, $today['nanogpt']);
         $this->assertGreaterThan(0, $today['firecrawl']);
+        $this->assertGreaterThan(0, $today['tikhub']);
         $this->assertSame(
-            $today['apify'] + $today['nanogpt'] + $today['firecrawl'],
+            $today['apify'] + $today['nanogpt'] + $today['firecrawl'] + $today['tikhub'],
             $today['total'],
         );
     }

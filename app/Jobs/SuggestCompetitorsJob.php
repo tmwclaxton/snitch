@@ -122,6 +122,7 @@ class SuggestCompetitorsJob implements ShouldQueue
             idempotencyKey: 'competitors.suggest.nanogpt:'.$this->suggestId,
         );
         $charger->chargePulledApifyRuns($user, 'competitors.suggest');
+        $charger->chargePulledTikHubRuns($user, 'competitors.suggest');
     }
 
     public function failed(?Throwable $exception): void

@@ -17,4 +17,4 @@ paths:
 Contact rate limiting uses the `contact` limiter keyed by `ClientIp` (prefer `CF-Connecting-IP`). Do not rely on spoofable `X-Forwarded-For` alone for guest throttles.
 
 ## Apify auth is Bearer header only
-`ApifyClient` must send `Authorization: Bearer` via `withToken()`. Never put `APIFY_TOKEN` in query strings. Persist sync failures with `SafeExceptionMessage::forUsers()` so tokens cannot appear in `last_sync_error`.
+`ApifyClient` and `TikHubClient` must send `Authorization: Bearer` via `withToken()`. Never put `APIFY_TOKEN` or `TIKHUB_API_KEY` in query strings or commit them. Persist sync failures with `SafeExceptionMessage::forUsers()` so tokens cannot appear in `last_sync_error`.

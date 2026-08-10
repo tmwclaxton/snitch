@@ -1,9 +1,14 @@
 ---
 paths:
   - 'app/Services/Apify/**'
+  - 'app/Services/TikHub/**'
+  - 'app/Services/Scraping/**'
 ---
 
-# Apify
+# Apify (+ TikHub fallback)
+
+## TikHub after monthly Apify COGS cap
+Soft cap: `SNITCH_APIFY_MONTHLY_CAP_USD` (default 49) sums platform-wide ledger `cogs_usd` where `vendor=apify` for the current UTC month via `ApifyMonthlyCapGate`. When exhausted and `TIKHUB_API_KEY` is set, `PlatformAdapterManager` routes Instagram/TikTok/YouTube/LinkedIn to TikHub adapters. Facebook stays Apify-only and throws a clear error when capped. Apify HTTP 402/quota failures mark a hard-exhaust cache for the rest of the UTC month. Empty/`0` cap disables the soft switch (hard quota path still works). Never put the TikHub key in query strings or commit it. Probe costs with `snitch:probe-tikhub` (`SNITCH_LIVE_TIKHUB=1`).
 
 ## Product scope is reel and short-video only
 Skip images, carousels, text-only, and items without a resolvable video media_url on sync. Prefer PostType::Reel for short video. YouTube imports Shorts only (skip long-form). Feed/analysis/winners operate on reel-like types only.

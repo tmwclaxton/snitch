@@ -6,12 +6,14 @@ use App\Enums\BillingVendor;
 use App\Models\CreditLedgerEntry;
 use App\Models\User;
 use App\Services\Apify\ApifyClient;
+use App\Services\TikHub\TikHubClient;
 
 class VendorUsageCharger
 {
     public function __construct(
         private UsageBillingService $billing,
         private ApifyClient $apify,
+        private TikHubClient $tikhub,
     ) {}
 
     public function assertCanRun(User $user, int $estimatedPence = 1): void
@@ -43,6 +45,51 @@ class VendorUsageCharger
         }
 
         return $entries;
+    }
+
+    /**
+     * Charge for TikHub calls recorded since the last pull.
+     *
+     * @return list<CreditLedgerEntry>
+     */
+    public function chargePulledTikHubRuns(User $user, string $action = 'sync.account'): array
+    {
+        $entries = [];
+
+        foreach ($this->tikhub->pullRunCosts() as $run) {
+            $entries[] = $this->billing->charge(
+                user: $user,
+                action: $action,
+                vendor: BillingVendor::TikHub,
+                cogsUsd: $run['cogsUsd'],
+                meta: [
+                    'endpoint' => $run['endpoint'],
+                    'platform' => $run['platform'],
+                ],
+            );
+        }
+
+        return $entries;
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
+     */
+    public function chargeTikHub(
+        User $user,
+        string $action,
+        ?float $cogsUsd = null,
+        array $meta = [],
+        ?string $idempotencyKey = null,
+    ): CreditLedgerEntry {
+        return $this->billing->charge(
+            user: $user,
+            action: $action,
+            vendor: BillingVendor::TikHub,
+            cogsUsd: $cogsUsd,
+            meta: $meta,
+            idempotencyKey: $idempotencyKey,
+        );
     }
 
     /**
