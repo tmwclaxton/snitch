@@ -118,14 +118,14 @@ class AnalysisEmbeddingService
     }
 
     /**
-     * Rank posts by cosine similarity to the query vector.
+     * Score posts by cosine similarity to the query vector.
      *
      * @param  Collection<int, Post>  $posts
      * @param  list<float>  $queryVector
      * @param  list<int>  $boostedPostIds  Always kept (e.g. exact custom_tag matches) with score 1.0
-     * @return list<int> Ordered post IDs
+     * @return array<int, float> post id => similarity (or 1.0 when boosted)
      */
-    public function rankPostIds(Collection $posts, array $queryVector, array $boostedPostIds = []): array
+    public function scorePosts(Collection $posts, array $queryVector, array $boostedPostIds = []): array
     {
         $minSimilarity = (float) config('snitch.embeddings.min_similarity', 0.22);
         $boosted = array_fill_keys($boostedPostIds, true);
@@ -156,10 +156,26 @@ class AnalysisEmbeddingService
         }
 
         foreach ($boostedPostIds as $postId) {
+            $postId = (int) $postId;
             if (! isset($scored[$postId])) {
                 $scored[$postId] = 1.0;
             }
         }
+
+        return $scored;
+    }
+
+    /**
+     * Rank posts by cosine similarity to the query vector.
+     *
+     * @param  Collection<int, Post>  $posts
+     * @param  list<float>  $queryVector
+     * @param  list<int>  $boostedPostIds  Always kept (e.g. exact custom_tag matches) with score 1.0
+     * @return list<int> Ordered post IDs
+     */
+    public function rankPostIds(Collection $posts, array $queryVector, array $boostedPostIds = []): array
+    {
+        $scored = $this->scorePosts($posts, $queryVector, $boostedPostIds);
 
         uasort($scored, function (float $a, float $b): int {
             if ($a === $b) {

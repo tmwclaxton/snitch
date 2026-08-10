@@ -10,6 +10,7 @@ use App\Models\AnalysisTerm;
 use App\Models\Post;
 use App\Services\Analysis\AnalysisEmbeddingService;
 use App\Services\Analysis\AnalysisTermCatalogue;
+use App\Services\Analysis\ExploreMixService;
 use App\Services\Billing\PlanEntitlementService;
 use App\Support\PlatformEmbed;
 use Illuminate\Database\Eloquent\Builder;
@@ -24,6 +25,7 @@ class ExploreController extends Controller
     public function __construct(
         private AnalysisTermCatalogue $catalogue,
         private AnalysisEmbeddingService $embeddings,
+        private ExploreMixService $exploreMix,
         private PlanEntitlementService $entitlements,
     ) {}
 
@@ -69,6 +71,7 @@ class ExploreController extends Controller
 
         $semanticQuery = $customTag ?? $queryText;
         $posts = null;
+        $mixSeed = $this->exploreMix->seedFor((int) $user->id);
 
         if ($semanticQuery !== null) {
             $posts = $this->paginateSemanticOrFallback(
@@ -77,10 +80,11 @@ class ExploreController extends Controller
                 $semanticQuery,
                 $customTag,
                 $queryText,
+                $mixSeed,
             );
         }
 
-        $posts ??= $query->paginate(24)->withQueryString();
+        $posts ??= $this->paginateQualityMix($request, $query, $mixSeed);
 
         $posts->getCollection()->transform(function (Post $post): Post {
             $post->setAttribute(
@@ -144,12 +148,39 @@ class ExploreController extends Controller
      * @param  Builder<Post>  $query
      * @return LengthAwarePaginator<int, Post>
      */
+    private function paginateQualityMix(Request $request, Builder $query, int $mixSeed): LengthAwarePaginator
+    {
+        $maxCandidates = max(1, (int) config('snitch.explore.max_candidates', 500));
+        $candidates = (clone $query)
+            ->with('winnerInsight')
+            ->limit($maxCandidates)
+            ->get();
+
+        $scored = [];
+        foreach ($candidates as $post) {
+            $scored[(int) $post->id] = $this->exploreMix->qualityScore($post);
+        }
+
+        $rankedIds = $this->exploreMix->mix($scored, $mixSeed);
+
+        if ($rankedIds === []) {
+            return $query->paginate(24)->withQueryString();
+        }
+
+        return $this->paginateByIds($request, $rankedIds);
+    }
+
+    /**
+     * @param  Builder<Post>  $query
+     * @return LengthAwarePaginator<int, Post>
+     */
     private function paginateSemanticOrFallback(
         Request $request,
         Builder $query,
         string $semanticQuery,
         ?string $customTag,
         ?string $queryText,
+        int $mixSeed,
     ): LengthAwarePaginator {
         $exactIds = $customTag !== null
             ? $this->exactCustomTagPostIds(clone $query, $customTag)
@@ -164,9 +195,11 @@ class ExploreController extends Controller
                 ->limit($maxCandidates)
                 ->get();
 
-            $rankedIds = $this->embeddings->rankPostIds($candidates, $queryVector, $exactIds);
+            $scored = $this->embeddings->scorePosts($candidates, $queryVector, $exactIds);
 
-            if ($rankedIds !== []) {
+            if ($scored !== []) {
+                $rankedIds = $this->exploreMix->mixSemantic($scored, $exactIds, $mixSeed);
+
                 return $this->paginateByIds($request, $rankedIds);
             }
         }
@@ -179,7 +212,7 @@ class ExploreController extends Controller
             $this->constrainByLikeSearch($fallback, $queryText);
         }
 
-        return $fallback->paginate(24)->withQueryString();
+        return $this->paginateQualityMix($request, $fallback, $mixSeed);
     }
 
     /**
