@@ -6,6 +6,7 @@ use App\Enums\Platform;
 use App\Enums\PostType;
 use App\Services\Apify\Contracts\PlatformAdapter;
 use App\Services\TikHub\TikHubClient;
+use App\Support\SocialDateParser;
 use Carbon\CarbonImmutable;
 
 abstract class AbstractTikHubAdapter implements PlatformAdapter
@@ -318,25 +319,7 @@ abstract class AbstractTikHubAdapter implements PlatformAdapter
 
     protected function normalizeDate(mixed $value): ?string
     {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        try {
-            if (is_numeric($value)) {
-                $timestamp = (int) $value;
-
-                if ($timestamp > 10_000_000_000) {
-                    $timestamp = (int) floor($timestamp / 1000);
-                }
-
-                return CarbonImmutable::createFromTimestamp($timestamp)->toIso8601String();
-            }
-
-            return CarbonImmutable::parse((string) $value)->toIso8601String();
-        } catch (\Throwable) {
-            return null;
-        }
+        return SocialDateParser::toIso8601($value);
     }
 
     /**

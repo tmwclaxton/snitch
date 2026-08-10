@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\AnalysisStatus;
 use App\Enums\MediaAvailability;
+use App\Enums\Platform;
 use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Models\Post;
@@ -74,25 +75,42 @@ class AnalyzePostJob implements ShouldQueue
         }
 
         // Shorts often have page URLs or IP-bound googlevideo links; persist a public MP4 first.
-        if ($youtubeMedia->needsHydration($post->media_url)) {
-            $downloadUrl = $youtubeMedia->resolveDownloadUrl(
-                url: $post->url,
-                videoId: $post->external_id,
-                existingMediaUrl: $post->media_url,
-            );
+        // channel_shorts also often returns empty published_time; backfill from web_v2 metadata.
+        if ($post->platform === Platform::Youtube) {
+            $youtubeUpdates = [];
 
-            if ($downloadUrl === null) {
-                $this->markAnalysisFailed(
-                    $post,
-                    'YouTube Shorts analysis needs a downloadable MP4; actor returned a page URL.',
+            if ($youtubeMedia->needsHydration($post->media_url)) {
+                $downloadUrl = $youtubeMedia->resolveDownloadUrl(
+                    url: $post->url,
+                    videoId: $post->external_id,
+                    existingMediaUrl: $post->media_url,
                 );
 
-                return;
+                if ($downloadUrl === null) {
+                    $this->markAnalysisFailed(
+                        $post,
+                        'YouTube Shorts analysis needs a downloadable MP4; actor returned a page URL.',
+                    );
+
+                    return;
+                }
+
+                $youtubeUpdates['media_url'] = $downloadUrl;
             }
 
-            $post->forceFill(['media_url' => $downloadUrl])->save();
-            $charger->chargePulledTikHubRuns($owner, 'analyze.post');
-            $post->refresh();
+            if ($post->posted_at === null) {
+                $postedAt = $youtubeMedia->resolvePostedAt($post->external_id, $post->url);
+
+                if ($postedAt !== null) {
+                    $youtubeUpdates['posted_at'] = $postedAt;
+                }
+            }
+
+            if ($youtubeUpdates !== []) {
+                $post->forceFill($youtubeUpdates)->save();
+                $charger->chargePulledTikHubRuns($owner, 'analyze.post');
+                $post->refresh();
+            }
         }
 
         try {

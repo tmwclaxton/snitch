@@ -140,4 +140,57 @@ class YoutubeMediaHydratorTest extends TestCase
 
         $this->assertSame([], $posts);
     }
+
+    public function test_extract_posted_at_prefers_date_text_when_publish_date_blank(): void
+    {
+        $hydrator = app(YoutubeMediaHydrator::class);
+
+        $iso = $hydrator->extractPostedAt([
+            'data' => [
+                'publish_date' => '',
+                'upload_date' => '',
+                'date_text' => '2026年1月5日',
+                'relative_date_text' => '7个月前',
+            ],
+        ]);
+
+        $this->assertSame('2026-01-05T00:00:00+00:00', $iso);
+    }
+
+    public function test_hydrate_posts_backfills_null_posted_at_from_metadata(): void
+    {
+        config([
+            'snitch.tikhub.api_key' => 'tikhub-test',
+            'app.url' => 'https://www.snitchsocial.net',
+        ]);
+
+        $client = Mockery::mock(TikHubClient::class);
+        $client->shouldReceive('configured')->andReturn(true);
+        $client->shouldReceive('get')
+            ->once()
+            ->with('/api/v1/youtube/web_v2/get_video_info', ['video_id' => 'abc123XYZ'], 'youtube')
+            ->andReturn([
+                'code' => 200,
+                'data' => [
+                    'publish_date' => '',
+                    'date_text' => '2026年1月7日',
+                ],
+            ]);
+
+        $hydrator = new YoutubeMediaHydrator($client);
+
+        $posts = $hydrator->hydratePosts([[
+            'external_id' => 'abc123XYZ',
+            'url' => 'https://www.youtube.com/shorts/abc123XYZ',
+            'posted_at' => null,
+            'type' => 'reel',
+            'caption' => 'Short',
+            'media_url' => 'https://www.snitchsocial.net/storage/youtube-media/abc123XYZ.mp4',
+            'metrics' => [],
+            'raw_payload' => [],
+        ]]);
+
+        $this->assertCount(1, $posts);
+        $this->assertSame('2026-01-07T00:00:00+00:00', $posts[0]['posted_at']);
+    }
 }

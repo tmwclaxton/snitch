@@ -190,7 +190,10 @@ class YoutubeAdapter extends AbstractTikHubAdapter
             'posted_at' => $this->normalizeDate(
                 $item['publishedAt']
                 ?? $item['publish_date']
+                ?? $item['upload_date']
                 ?? $item['published_time']
+                ?? $item['date_text']
+                ?? $item['relative_date_text']
                 ?? $item['date']
                 ?? null,
             ),

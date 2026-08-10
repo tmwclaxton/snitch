@@ -205,7 +205,10 @@ return [
                 'channel_info' => '/api/v1/youtube/web/get_channel_id',
                 'channel_videos' => '/api/v1/youtube/web/get_channel_videos_v2',
                 'channel_shorts' => '/api/v1/youtube/web/get_channel_short_videos',
+                // Player/stream payload (MP4 URLs). Often lacks publish dates.
                 'video_info' => '/api/v1/youtube/web/get_video_info_v2',
+                // Formatted metadata; carries date_text when publish_date is empty.
+                'video_metadata' => '/api/v1/youtube/web_v2/get_video_info',
                 'search' => '/api/v1/youtube/web/search_channel',
             ],
             'linkedin' => [

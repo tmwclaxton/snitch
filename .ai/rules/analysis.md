@@ -15,7 +15,7 @@ Persist concept, topics, how_to_copy, hook, idea, visual, music/SFX, and CTA as 
 Models often return `hook_window.end_sec` under 3s. `VideoAnalysisResult::fromModelPayload` floors to `snitch.video_analysis.success.min_hook_window_end_seconds` (default 3) before evaluate/persist so short opens do not burn AnalyzePostJob retries.
 
 ## Empty CTA floors to a sentinel
-`require_cta_field` is true, but many posts have no ask. `fromModelPayload` floors blank `cta` to `No explicit CTA` (prompt asks for the same). Do not tell the model to return an empty string. Checklist failures already mark the analysis Failed; `AnalyzePostJob` must not rethrow those for another retry.
+`require_cta_field` is true, but many posts have no ask. `fromModelPayload` floors blank `cta` to `No explicit CTA` (prompt asks for the same). Do not tell the model to return an empty string. Checklist failures already mark the analysis Failed; `AnalyzePostJob` must not rethrow those for another retry. Rows that failed with `cta missing` before this floor need a soft requeue (`AnalyzePostJob` / next sync) - the error is stale, not a live evaluator reject of the sentinel.
 
 ## Analysis output is English only
 Prompts require UK English for every JSON string (concept, idea, topics, how_to_copy, visual, cta, labels). Spoken-word quotes in hook may keep the source language. Evaluator rejects Han/CJK prose so Qwen and similar models cannot persist Chinese analysis fields.

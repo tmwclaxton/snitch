@@ -32,7 +32,7 @@ Known external_ids are not updateOrCreate'd. Soft-retry Failed analysis for exis
 TikTok listRecentPosts sets shouldDownloadVideos=false. hydrateMediaUrls runs a second actor call with postURLs + shouldDownloadVideos=true only for new analysis candidates missing media_url. Do not download videos for the full profile list.
 
 ## YouTube Shorts hydrate via TikHub video_info_v2
-YouTube adapters leave `media_url` null when only a Shorts page URL exists, then `YoutubeMediaHydrator` fills a googlevideo MP4 in hydrateMediaUrls (and AnalyzePostJob for legacy rows). Requires `TIKHUB_API_KEY`. Facebook/LinkedIn reject platform page hosts as media_url; Instagram drops items without a video file URL (no page fallback).
+YouTube adapters leave `media_url` null when only a Shorts page URL exists, then `YoutubeMediaHydrator` fills a googlevideo MP4 in hydrateMediaUrls (and AnalyzePostJob for legacy rows). Requires `TIKHUB_API_KEY`. Facebook/LinkedIn reject platform page hosts as media_url; Instagram drops items without a video file URL (no page fallback). Null `posted_at` is backfilled from `web_v2/get_video_info` (`date_text` etc.) during hydrate/analyze - channel shorts list dates are often blank.
 
 ## Platform fetch multipliers replace blanket 3x
 snitch.sync.fetch_multipliers controls over-fetch (instagram 2.5, facebook/linkedin 2, tiktok 1.25, youtube 1). Do not hard-code limit*3 in adapters.

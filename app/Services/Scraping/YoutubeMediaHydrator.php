@@ -3,6 +3,7 @@
 namespace App\Services\Scraping;
 
 use App\Services\TikHub\TikHubClient;
+use App\Support\SocialDateParser;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -53,6 +54,15 @@ class YoutubeMediaHydrator
 
         foreach ($posts as $post) {
             $mediaUrl = $post['media_url'] ?? null;
+            $videoId = isset($post['external_id']) ? (string) $post['external_id'] : null;
+            $url = (string) ($post['url'] ?? '');
+
+            if (blank($post['posted_at'] ?? null)) {
+                $postedAt = $this->resolvePostedAt($videoId, $url);
+                if ($postedAt !== null) {
+                    $post['posted_at'] = $postedAt;
+                }
+            }
 
             if ($this->isPubliclyFetchableMediaUrl($mediaUrl)) {
                 $hydrated[] = $post;
@@ -61,8 +71,8 @@ class YoutubeMediaHydrator
             }
 
             $downloadUrl = $this->resolveDownloadUrl(
-                url: (string) ($post['url'] ?? ''),
-                videoId: isset($post['external_id']) ? (string) $post['external_id'] : null,
+                url: $url,
+                videoId: $videoId,
                 existingMediaUrl: is_string($mediaUrl) ? $mediaUrl : null,
             );
 
@@ -75,6 +85,60 @@ class YoutubeMediaHydrator
         }
 
         return $hydrated;
+    }
+
+    public function resolvePostedAt(?string $videoId = null, ?string $url = null): ?string
+    {
+        $id = $this->extractVideoId($videoId, $url);
+
+        if ($id === null || ! $this->configured()) {
+            return null;
+        }
+
+        try {
+            $payload = $this->client->get($this->metadataEndpoint(), [
+                'video_id' => $id,
+            ], 'youtube');
+        } catch (Throwable $e) {
+            Log::info('YoutubeMediaHydrator TikHub metadata failed', [
+                'video_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        return $this->extractPostedAt($payload);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    public function extractPostedAt(array $payload): ?string
+    {
+        $data = is_array($payload['data'] ?? null) ? $payload['data'] : $payload;
+
+        if (! is_array($data)) {
+            return null;
+        }
+
+        foreach ([
+            'publish_date',
+            'upload_date',
+            'publishedAt',
+            'published_time',
+            'date_text',
+            'relative_date_text',
+            'date',
+        ] as $key) {
+            $iso = SocialDateParser::toIso8601($data[$key] ?? null);
+
+            if ($iso !== null) {
+                return $iso;
+            }
+        }
+
+        return null;
     }
 
     public function resolveDownloadUrl(
@@ -307,6 +371,14 @@ class YoutubeMediaHydrator
         return (string) config(
             'snitch.tikhub.endpoints.youtube.video_info',
             '/api/v1/youtube/web/get_video_info_v2',
+        );
+    }
+
+    private function metadataEndpoint(): string
+    {
+        return (string) config(
+            'snitch.tikhub.endpoints.youtube.video_metadata',
+            '/api/v1/youtube/web_v2/get_video_info',
         );
     }
 }
