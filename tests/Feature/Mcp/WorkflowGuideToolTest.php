@@ -51,6 +51,19 @@ class WorkflowGuideToolTest extends TestCase
             ->assertSee('wait_seconds');
     }
 
+    public function test_workflow_guide_accepts_topic_alias(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        SnitchServer::tool(WorkflowGuideTool::class, [
+            'topic' => 'brand',
+        ])
+            ->assertOk()
+            ->assertSee('"workflow":"brand"')
+            ->assertSee('start_brand_autofill');
+    }
+
     public function test_workflow_guide_influencers_mentions_latest_run_pointer(): void
     {
         $guide = WorkflowGuide::for('influencers');
