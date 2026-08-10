@@ -225,7 +225,7 @@ const xLabels = computed(() => {
                 <img
                     :src="vendorIconSrc(vendor.key)"
                     alt=""
-                    class="snitch-platform-logo size-3.5 shrink-0"
+                    class="snitch-platform-logo size-3.5 shrink-0 object-contain"
                     width="14"
                     height="14"
                 >

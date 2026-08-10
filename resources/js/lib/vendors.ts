@@ -9,6 +9,20 @@ const VENDOR_LABELS: Record<string, string> = {
     topup: 'Top up',
 };
 
+/**
+ * Vendor mark filenames under /images/vendors/.
+ * Third-party marks are official brand assets (see commit notes for URLs).
+ * bonus/topup are internal ledger labels, not external brands.
+ */
+const VENDOR_ICON_FILES: Record<string, string> = {
+    apify: 'apify.svg',
+    nanogpt: 'nanogpt.svg',
+    firecrawl: 'firecrawl.svg',
+    tikhub: 'tikhub.png',
+    bonus: 'bonus.svg',
+    topup: 'topup.svg',
+};
+
 /** SVG fill utilities for stacked spend stipple segments (must stay unique per vendor). */
 export const VENDOR_CHART_FILL: Record<SpendVendorKey, string> = {
     apify: 'fill-snitch-ink/75',
@@ -44,7 +58,9 @@ export function vendorLabel(vendor: string): string {
 }
 
 export function vendorIconSrc(vendor: string): string {
-    return `/images/vendors/${vendor}.svg`;
+    const file = VENDOR_ICON_FILES[vendor] ?? `${vendor}.svg`;
+
+    return `/images/vendors/${file}`;
 }
 
 export function isSpendVendor(vendor: string): vendor is SpendVendorKey {

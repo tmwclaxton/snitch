@@ -216,7 +216,7 @@ function vendorAccent(key: SpendVendorKey): string {
                                 <img
                                     :src="vendorIconSrc(key)"
                                     alt=""
-                                    class="snitch-platform-logo size-3.5 shrink-0"
+                                    class="snitch-platform-logo size-3.5 shrink-0 object-contain"
                                     width="14"
                                     height="14"
                                 >
@@ -316,7 +316,7 @@ function vendorAccent(key: SpendVendorKey): string {
                                     <img
                                         :src="vendorIconSrc(row.vendor)"
                                         alt=""
-                                        class="snitch-platform-logo size-3.5 shrink-0"
+                                        class="snitch-platform-logo size-3.5 shrink-0 object-contain"
                                         width="14"
                                         height="14"
                                     >

@@ -281,7 +281,7 @@ function paginationLabel(label: string): string {
                                         <img
                                             :src="vendorIconSrc(row.vendor)"
                                             alt=""
-                                            class="snitch-platform-logo size-3.5 shrink-0"
+                                            class="snitch-platform-logo size-3.5 shrink-0 object-contain"
                                             width="14"
                                             height="14"
                                         >

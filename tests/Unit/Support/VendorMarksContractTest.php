@@ -19,8 +19,19 @@ class VendorMarksContractTest extends TestCase
 
         foreach (['apify', 'nanogpt', 'firecrawl', 'tikhub'] as $vendor) {
             $this->assertStringContainsString("{$vendor}:", $source);
-            $this->assertFileExists(public_path("images/vendors/{$vendor}.svg"));
         }
+
+        $this->assertFileExists(public_path('images/vendors/apify.svg'));
+        $this->assertFileExists(public_path('images/vendors/nanogpt.svg'));
+        $this->assertFileExists(public_path('images/vendors/firecrawl.svg'));
+        $this->assertFileExists(public_path('images/vendors/tikhub.png'));
+        $this->assertStringContainsString("tikhub: 'tikhub.png'", $source);
+
+        // Official / brand-sourced marks should not be the tiny handmade placeholders.
+        $this->assertGreaterThan(500, filesize(public_path('images/vendors/apify.svg')));
+        $this->assertGreaterThan(500, filesize(public_path('images/vendors/nanogpt.svg')));
+        $this->assertGreaterThan(500, filesize(public_path('images/vendors/firecrawl.svg')));
+        $this->assertGreaterThan(1000, filesize(public_path('images/vendors/tikhub.png')));
 
         foreach (['bonus', 'topup'] as $vendor) {
             $this->assertFileExists(public_path("images/vendors/{$vendor}.svg"));
