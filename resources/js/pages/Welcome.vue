@@ -59,8 +59,9 @@ function preloadHeroImage(src: string): Promise<void> {
 }
 
 /**
- * Mobile browser chrome makes 100dvh unreliable. Measure the visible viewport
- * and lock the poster to that pixel height.
+ * Mobile browser chrome makes 100dvh unreliable. Measure once and lock - do
+ * not follow visualViewport/URL-bar changes while scrolling (that resizes the
+ * poster mid-scroll and feels jarring).
  */
 function measureVisibleViewportHeight(): number {
     const visualHeight = window.visualViewport?.height;
@@ -75,7 +76,8 @@ function measureVisibleViewportHeight(): number {
 
 onMounted(() => {
     const desktopQuery = window.matchMedia('(min-width: 768px)');
-    let lastMobileHeroHeight = 0;
+    let lockedMobileHeroHeight = 0;
+    let lastViewportWidth = window.innerWidth;
 
     const syncDesktopHero = (): void => {
         if (!desktopQuery.matches) {
@@ -95,44 +97,66 @@ onMounted(() => {
         });
     };
 
-    const syncMobileHeroHeight = (): void => {
+    const applyMobileHeroHeight = (force = false): void => {
         const el = mobileHeroEl.value;
 
         if (!el || desktopQuery.matches) {
             el?.style.removeProperty('--snitch-mobile-hero-height');
-            lastMobileHeroHeight = 0;
+            lockedMobileHeroHeight = 0;
 
+            return;
+        }
+
+        if (!force && lockedMobileHeroHeight > 0) {
             return;
         }
 
         const height = measureVisibleViewportHeight();
 
-        if (height <= 0 || Math.abs(height - lastMobileHeroHeight) < 2) {
+        if (height <= 0) {
             return;
         }
 
-        lastMobileHeroHeight = height;
+        lockedMobileHeroHeight = height;
         el.style.setProperty('--snitch-mobile-hero-height', `${height}px`);
     };
 
+    const onBreakpointChange = (): void => {
+        applyMobileHeroHeight(true);
+    };
+
+    const onViewportWidthChange = (): void => {
+        const width = window.innerWidth;
+
+        // Ignore height-only resizes from mobile browser chrome show/hide.
+        if (Math.abs(width - lastViewportWidth) < 2) {
+            return;
+        }
+
+        lastViewportWidth = width;
+        applyMobileHeroHeight(true);
+    };
+
+    const onOrientationChange = (): void => {
+        window.setTimeout(() => {
+            lastViewportWidth = window.innerWidth;
+            applyMobileHeroHeight(true);
+        }, 250);
+    };
+
     syncDesktopHero();
-    syncMobileHeroHeight();
+    applyMobileHeroHeight(true);
 
     desktopQuery.addEventListener('change', syncDesktopHero);
-    desktopQuery.addEventListener('change', syncMobileHeroHeight);
-    window.addEventListener('resize', syncMobileHeroHeight);
-    window.addEventListener('orientationchange', syncMobileHeroHeight);
-    window.visualViewport?.addEventListener('resize', syncMobileHeroHeight);
+    desktopQuery.addEventListener('change', onBreakpointChange);
+    window.addEventListener('resize', onViewportWidthChange);
+    window.addEventListener('orientationchange', onOrientationChange);
 
     onUnmounted(() => {
         desktopQuery.removeEventListener('change', syncDesktopHero);
-        desktopQuery.removeEventListener('change', syncMobileHeroHeight);
-        window.removeEventListener('resize', syncMobileHeroHeight);
-        window.removeEventListener('orientationchange', syncMobileHeroHeight);
-        window.visualViewport?.removeEventListener(
-            'resize',
-            syncMobileHeroHeight,
-        );
+        desktopQuery.removeEventListener('change', onBreakpointChange);
+        window.removeEventListener('resize', onViewportWidthChange);
+        window.removeEventListener('orientationchange', onOrientationChange);
         mobileHeroEl.value?.style.removeProperty('--snitch-mobile-hero-height');
     });
 });

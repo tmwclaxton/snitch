@@ -319,7 +319,13 @@ class PublicPagesTest extends TestCase
         $this->assertStringContainsString('mobileHeroEl', $welcome);
         $this->assertStringContainsString('measureVisibleViewportHeight', $welcome);
         $this->assertStringContainsString('--snitch-mobile-hero-height', $welcome);
-        $this->assertStringContainsString('visualViewport', $welcome);
+        $this->assertStringContainsString('lockedMobileHeroHeight', $welcome);
+        $this->assertStringContainsString('orientationchange', $welcome);
+        $this->assertStringNotContainsString(
+            "visualViewport?.addEventListener('resize'",
+            $welcome,
+            'Do not remeasure on visualViewport resize - URL bar show/hide would resize the hero while scrolling',
+        );
         $this->assertStringContainsString(
             'class="snitch-hero relative hidden h-dvh w-full overflow-hidden md:block"',
             $welcome,
