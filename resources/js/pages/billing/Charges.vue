@@ -5,6 +5,7 @@ import { computed } from 'vue';
 import { charges as billingCharges, index as billingIndex } from '@/actions/App/Http/Controllers/Settings/BillingController';
 import PaperSelect from '@/components/PaperSelect.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { vendorIconSrc, vendorLabel } from '@/lib/vendors';
 
 type ChargeRow = {
     id: number;
@@ -45,20 +46,12 @@ defineOptions({
     layout: AppLayout,
 });
 
-const vendorLabels: Record<string, string> = {
-    apify: 'Apify',
-    nanogpt: 'NanoGPT',
-    firecrawl: 'Firecrawl',
-    tikhub: 'TikHub',
-    bonus: 'Bonus',
-    topup: 'Top up',
-};
-
 const vendorOptions = computed(() => [
     { value: 'all', label: 'All vendors' },
     ...props.vendors.map((vendor) => ({
         value: vendor,
-        label: vendorLabels[vendor] ?? vendor,
+        label: vendorLabel(vendor),
+        iconSrc: vendorIconSrc(vendor),
     })),
 ]);
 
@@ -284,7 +277,16 @@ function paginationLabel(label: string): string {
                                     {{ formatWhen(row.created_at) }}
                                 </td>
                                 <td class="py-2.5 pr-3">
-                                    <span class="snitch-ink-label">{{ row.vendor }}</span>
+                                    <span class="snitch-ink-label inline-flex items-center gap-1.5">
+                                        <img
+                                            :src="vendorIconSrc(row.vendor)"
+                                            alt=""
+                                            class="snitch-platform-logo size-3.5 shrink-0"
+                                            width="14"
+                                            height="14"
+                                        >
+                                        {{ vendorLabel(row.vendor) }}
+                                    </span>
                                 </td>
                                 <td class="py-2.5 pr-3 text-snitch-ink/80">
                                     {{ row.action }}

@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import StippleBar from '@/components/dashboard/StippleBar.vue';
+import {
+    SPEND_VENDORS,
+    VENDOR_CHART_FILL,
+    VENDOR_CHART_SWATCH,
+    vendorIconSrc,
+    vendorLabel,
+} from '@/lib/vendors';
+import type { SpendVendorKey } from '@/lib/vendors';
 
 export type SpendGrain = 'day' | 'week' | 'month';
 
@@ -14,14 +22,17 @@ export type SpendPoint = {
     total: number;
 };
 
-type VendorKey = 'apify' | 'nanogpt' | 'firecrawl' | 'tikhub';
-
-const vendors: Array<{ key: VendorKey; label: string; fillClass: string }> = [
-    { key: 'apify', label: 'Apify', fillClass: 'fill-snitch-ink/75' },
-    { key: 'nanogpt', label: 'NanoGPT', fillClass: 'fill-snitch-stipple-spot' },
-    { key: 'firecrawl', label: 'Firecrawl', fillClass: 'fill-snitch-teal' },
-    { key: 'tikhub', label: 'TikHub', fillClass: 'fill-snitch-stipple-spot' },
-];
+const vendors: Array<{
+    key: SpendVendorKey;
+    label: string;
+    fillClass: string;
+    swatchClass: string;
+}> = SPEND_VENDORS.map((key) => ({
+    key,
+    label: vendorLabel(key),
+    fillClass: VENDOR_CHART_FILL[key],
+    swatchClass: VENDOR_CHART_SWATCH[key],
+}));
 
 const props = withDefaults(
     defineProps<{
@@ -124,11 +135,11 @@ type Segment = {
     fillClass: string;
     title: string;
     seed: number;
-    delayOffset: number;
 };
 
 const segments = computed((): Segment[] => {
     const result: Segment[] = [];
+    const plotSpan = chartHeight - plotTop;
 
     props.points.forEach((point, index) => {
         if (point.total <= 0) {
@@ -136,17 +147,20 @@ const segments = computed((): Segment[] => {
         }
 
         const x = leftPad + index * (barWidth.value + barGap);
+        const active = vendors.filter((vendor) => point[vendor.key] > 0);
         let cursorY = chartHeight;
 
-        vendors.forEach((vendor, vendorIndex) => {
+        active.forEach((vendor, vendorIndex) => {
             const pence = point[vendor.key];
+            const rawHeight = (pence / maxTotal.value) * plotSpan;
+            // Only pad tiny solo bars; stacked mins inflate and leave hollow gaps mid-column.
+            const height =
+                active.length === 1 ? Math.max(rawHeight, 3) : Math.max(rawHeight, 0);
 
-            if (pence <= 0) {
+            if (height <= 0) {
                 return;
             }
 
-            const rawHeight = (pence / maxTotal.value) * (chartHeight - plotTop);
-            const height = Math.max(rawHeight, 3);
             cursorY -= height;
 
             result.push({
@@ -158,7 +172,6 @@ const segments = computed((): Segment[] => {
                 fillClass: vendor.fillClass,
                 title: `${point.label}: ${vendor.label} ${formatPence(pence)}`,
                 seed: index * 10 + vendorIndex + 1,
-                delayOffset: index * 18 + vendorIndex * 8,
             });
         });
     });
@@ -209,14 +222,16 @@ const xLabels = computed(() => {
                 :key="vendor.key"
                 class="inline-flex items-center gap-1.5"
             >
+                <img
+                    :src="vendorIconSrc(vendor.key)"
+                    alt=""
+                    class="snitch-platform-logo size-3.5 shrink-0"
+                    width="14"
+                    height="14"
+                >
                 <span
                     class="size-2.5 shrink-0 rounded-[1px]"
-                    :class="{
-                        'bg-snitch-ink/75': vendor.key === 'apify',
-                        'bg-snitch-stipple-spot': vendor.key === 'nanogpt',
-                        'bg-snitch-teal': vendor.key === 'firecrawl',
-                        'bg-snitch-stipple-spot': vendor.key === 'tikhub',
-                    }"
+                    :class="vendor.swatchClass"
                     aria-hidden="true"
                 />
                 {{ vendor.label }}
@@ -258,9 +273,7 @@ const xLabels = computed(() => {
                 :width="segment.width"
                 :height="segment.height"
                 variant="dots"
-                grow-from="bottom"
-                :delay-offset="segment.delayOffset"
-                :step-ms="16"
+                :animate="false"
                 :seed="segment.seed"
                 :step="stippleStep"
                 :radius="stippleRadius"

@@ -12,6 +12,13 @@ import type {
     SpendPoint,
 } from '@/components/billing/VendorSpendStackedChart.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import {
+    SPEND_VENDORS,
+    VENDOR_ACCENT_BORDER,
+    vendorIconSrc,
+    vendorLabel,
+} from '@/lib/vendors';
+import type { SpendVendorKey } from '@/lib/vendors';
 import { pricing } from '@/routes';
 
 type VendorUsage = {
@@ -110,19 +117,11 @@ function formatMoney(pence: number): string {
     }).format(pence / 100);
 }
 
-const vendorLabels: Record<string, string> = {
-    apify: 'Apify',
-    nanogpt: 'NanoGPT',
-    firecrawl: 'Firecrawl',
-    tikhub: 'TikHub',
-};
+const spendVendors = SPEND_VENDORS;
 
-const vendorAccent: Record<string, string> = {
-    apify: 'border-l-snitch-ink/70',
-    nanogpt: 'border-l-snitch-spot',
-    firecrawl: 'border-l-snitch-teal',
-    tikhub: 'border-l-snitch-marker',
-};
+function vendorAccent(key: SpendVendorKey): string {
+    return VENDOR_ACCENT_BORDER[key];
+}
 </script>
 
 <template>
@@ -206,14 +205,23 @@ const vendorAccent: Record<string, string> = {
                         Charged {{ formatMoney(usage.period_spend_pence) }} this month ·
                         {{ formatMoney(usage.all_time_spend_pence) }} all time
                     </p>
-                    <div class="grid gap-3 sm:grid-cols-3">
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         <div
-                            v-for="(label, key) in vendorLabels"
+                            v-for="key in spendVendors"
                             :key="key"
                             class="border border-snitch-ink/10 border-l-4 bg-snitch-paper/60 p-3"
-                            :class="vendorAccent[key]"
+                            :class="vendorAccent(key)"
                         >
-                            <p class="snitch-ink-label">{{ label }}</p>
+                            <p class="snitch-ink-label inline-flex items-center gap-1.5">
+                                <img
+                                    :src="vendorIconSrc(key)"
+                                    alt=""
+                                    class="snitch-platform-logo size-3.5 shrink-0"
+                                    width="14"
+                                    height="14"
+                                >
+                                {{ vendorLabel(key) }}
+                            </p>
                             <p class="snitch-display text-2xl text-snitch-ink">
                                 {{ formatMoney(usage.vendors[key]?.spend_pence ?? 0) }}
                             </p>
@@ -304,7 +312,16 @@ const vendorAccent: Record<string, string> = {
                             class="flex items-center justify-between gap-3 py-2"
                         >
                             <span class="min-w-0">
-                                <span class="snitch-ink-label mr-2">{{ row.vendor }}</span>
+                                <span class="snitch-ink-label mr-2 inline-flex items-center gap-1.5">
+                                    <img
+                                        :src="vendorIconSrc(row.vendor)"
+                                        alt=""
+                                        class="snitch-platform-logo size-3.5 shrink-0"
+                                        width="14"
+                                        height="14"
+                                    >
+                                    {{ vendorLabel(row.vendor) }}
+                                </span>
                                 <span class="text-snitch-ink/80">{{ row.action }}</span>
                             </span>
                             <span class="shrink-0 tabular-nums text-snitch-ink">

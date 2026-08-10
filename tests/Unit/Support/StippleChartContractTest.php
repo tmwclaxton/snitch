@@ -63,12 +63,19 @@ class StippleChartContractTest extends TestCase
     public function billing_vendor_spend_chart_uses_stacked_dot_stipple_bars(): void
     {
         $source = file_get_contents(base_path('resources/js/components/billing/VendorSpendStackedChart.vue'));
+        $vendors = file_get_contents(base_path('resources/js/lib/vendors.ts'));
 
         $this->assertIsString($source);
+        $this->assertIsString($vendors);
         $this->assertStringContainsString('<StippleBar', $source);
         $this->assertStringContainsString('variant="dots"', $source);
-        $this->assertStringContainsString('fill-snitch-stipple-spot', $source);
-        $this->assertStringContainsString('fill-snitch-teal', $source);
+        $this->assertStringContainsString(':animate="false"', $source);
+        $this->assertStringContainsString('vendor.swatchClass', $source);
+        $this->assertStringContainsString('vendorIconSrc', $source);
+        $this->assertStringContainsString("nanogpt: 'fill-snitch-stipple-spot'", $vendors);
+        $this->assertStringContainsString("nanogpt: 'bg-snitch-stipple-spot'", $vendors);
+        $this->assertStringContainsString("tikhub: 'fill-snitch-ink/40'", $vendors);
+        $this->assertStringContainsString("firecrawl: 'fill-snitch-teal'", $vendors);
         $this->assertStringNotContainsString('<rect', $source);
     }
 

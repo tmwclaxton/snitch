@@ -1,0 +1,64 @@
+<?php
+
+namespace Tests\Unit\Support;
+
+use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
+
+class VendorMarksContractTest extends TestCase
+{
+    #[Test]
+    public function vendor_helper_exposes_labels_icons_and_distinct_chart_colours(): void
+    {
+        $source = file_get_contents(base_path('resources/js/lib/vendors.ts'));
+
+        $this->assertIsString($source);
+        $this->assertStringContainsString('export function vendorLabel', $source);
+        $this->assertStringContainsString('export function vendorIconSrc', $source);
+        $this->assertStringContainsString('/images/vendors/', $source);
+
+        foreach (['apify', 'nanogpt', 'firecrawl', 'tikhub'] as $vendor) {
+            $this->assertStringContainsString("{$vendor}:", $source);
+            $this->assertFileExists(public_path("images/vendors/{$vendor}.svg"));
+        }
+
+        foreach (['bonus', 'topup'] as $vendor) {
+            $this->assertFileExists(public_path("images/vendors/{$vendor}.svg"));
+        }
+
+        $fills = [];
+        preg_match_all("/(apify|nanogpt|firecrawl|tikhub): '(fill-[^']+)'/", $source, $matches);
+        foreach ($matches[1] as $index => $vendor) {
+            $fills[$vendor] = $matches[2][$index];
+        }
+
+        $this->assertCount(4, $fills);
+        $this->assertCount(4, array_unique(array_values($fills)));
+
+        $swatches = [];
+        preg_match_all("/(apify|nanogpt|firecrawl|tikhub): '(bg-[^']+)'/", $source, $swatchMatches);
+        foreach ($swatchMatches[1] as $index => $vendor) {
+            $swatches[$vendor] = $swatchMatches[2][$index];
+        }
+
+        $this->assertCount(4, $swatches);
+        $this->assertCount(4, array_unique(array_values($swatches)));
+        $this->assertSame('bg-snitch-stipple-spot', $swatches['nanogpt']);
+    }
+
+    #[Test]
+    public function billing_pages_render_vendor_icons_beside_names(): void
+    {
+        $index = file_get_contents(base_path('resources/js/pages/billing/Index.vue'));
+        $charges = file_get_contents(base_path('resources/js/pages/billing/Charges.vue'));
+
+        $this->assertIsString($index);
+        $this->assertIsString($charges);
+
+        foreach ([$index, $charges] as $source) {
+            $this->assertStringContainsString('vendorIconSrc', $source);
+            $this->assertStringContainsString('vendorLabel', $source);
+            $this->assertStringContainsString('snitch-platform-logo', $source);
+        }
+    }
+}
