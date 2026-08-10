@@ -9,6 +9,7 @@ use App\Enums\PostType;
 use App\Models\Post;
 use App\Models\PostAnalysis;
 use App\Services\SnitchAnalyticsService;
+use App\Support\PublicDiskMedia;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
@@ -105,7 +106,8 @@ SYSTEM,
                 throw new RuntimeException('Post type is not reel/video; analysis skipped.');
             }
 
-            $result = $this->analyzeUrl($mediaUrl, 'video', $post->caption);
+            // Local APP_URL storage links are not fetchable by NanoGPT; inline bytes.
+            $result = $this->analyzeUrl(PublicDiskMedia::analyzableUrl($mediaUrl), 'video', $post->caption);
             $evaluation = $this->evaluator->evaluate($result, $post->caption);
 
             if (! $evaluation['passed']) {

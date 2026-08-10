@@ -14,6 +14,7 @@ use App\Services\Billing\UsageBillingService;
 use App\Services\Billing\VendorUsageCharger;
 use App\Services\Scraping\YoutubeMediaHydrator;
 use App\Services\Winners\WinnerScorer;
+use App\Support\PublicDiskMedia;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Http;
@@ -168,6 +169,13 @@ class AnalyzePostJob implements ShouldQueue
 
         if ($mediaUrl === '' || ! str_starts_with($mediaUrl, 'http')) {
             return true;
+        }
+
+        // App-owned public-disk copies (YouTube hydrate) must not depend on
+        // HTTP HEAD against APP_URL. Missing public/storage symlink returns 403
+        // and was falsely marking Shorts unavailable before NanoGPT ran.
+        if (PublicDiskMedia::relativePathFromUrl($mediaUrl) !== null) {
+            return ! PublicDiskMedia::existsOnPublicDisk($mediaUrl);
         }
 
         // YouTube page URLs are not HEAD-checkable the same way; skip probe.
