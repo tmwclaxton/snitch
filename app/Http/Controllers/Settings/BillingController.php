@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Enums\BillingVendor;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Settings\ListBillingChargesRequest;
 use App\Models\User;
 use App\Services\Billing\PlanEntitlementService;
 use App\Services\Billing\UsageBillingService;
@@ -25,6 +27,11 @@ class BillingController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
+        $data = $request->validate([
+            'grain' => ['sometimes', 'nullable', 'string', Rule::in(['day', 'week', 'month'])],
+        ]);
+        $grain = is_string($data['grain'] ?? null) ? $data['grain'] : 'day';
+
         $packs = collect(config('billing.credit_packs', []))
             ->map(fn (array $pack, string $key): array => [
                 'key' => $key,
@@ -39,12 +46,31 @@ class BillingController extends Controller
         return Inertia::render('billing/Index', [
             'subscription' => $this->entitlements->summary($user),
             'usage' => $this->usage->summary($user),
-            'spendSeries' => $this->usage->dailySpendSeries($user, 30),
+            'spendSeries' => $this->usage->spendSeries($user, $grain),
             'creditPacks' => $packs,
             'platform' => [
                 'fee_pence' => (int) config('billing.platform_fee_pence', 1900),
                 'bonus_pence' => (int) config('billing.subscription_bonus_pence', 3000),
                 'has_checkout' => filled(config('billing.platform_stripe_price')),
+            ],
+        ]);
+    }
+
+    public function charges(ListBillingChargesRequest $request): Response
+    {
+        $user = $request->user();
+        $filters = $request->filters();
+
+        return Inertia::render('billing/Charges', [
+            'charges' => $this->usage->paginatedCharges($user, $filters),
+            'filters' => $filters,
+            'vendors' => collect(BillingVendor::cases())
+                ->map(fn (BillingVendor $vendor): string => $vendor->value)
+                ->values()
+                ->all(),
+            'actions' => $this->usage->ledgerActionOptions(),
+            'usage' => [
+                'balance_pence' => $this->usage->balancePence($user),
             ],
         ]);
     }

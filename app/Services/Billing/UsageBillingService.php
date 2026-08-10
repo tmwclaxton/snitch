@@ -9,11 +9,16 @@ use App\Models\CreditBalance;
 use App\Models\CreditLedgerEntry;
 use App\Models\User;
 use Carbon\CarbonInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class UsageBillingService
 {
+    public const RECENT_PREVIEW_LIMIT = 8;
+
+    public const CHARGES_PER_PAGE = 25;
+
     public function balancePence(User $user): int
     {
         return (int) ($this->balanceRow($user)->balance_pence ?? 0);
@@ -182,9 +187,11 @@ class UsageBillingService
     }
 
     /**
-     * Daily charged usage (Apify / NanoGPT / Firecrawl) for stacked spend charts.
+     * Daily charged usage (Apify / NanoGPT / Firecrawl / TikHub) for stacked spend charts.
      *
      * @return array{
+     *     grain: string,
+     *     period_count: int,
      *     days: int,
      *     from: string,
      *     to: string,
@@ -193,9 +200,39 @@ class UsageBillingService
      */
     public function dailySpendSeries(User $user, int $days = 30): array
     {
-        $days = max(7, min(90, $days));
-        $from = now()->subDays($days - 1)->startOfDay();
+        return $this->spendSeries($user, 'day', $days);
+    }
+
+    /**
+     * Charged usage aggregated by day, week, or month for the billing spend chart.
+     *
+     * @param  'day'|'week'|'month'  $grain
+     * @return array{
+     *     grain: string,
+     *     period_count: int,
+     *     days: int,
+     *     from: string,
+     *     to: string,
+     *     points: list<array{date: string, label: string, apify: int, nanogpt: int, firecrawl: int, tikhub: int, total: int}>
+     * }
+     */
+    public function spendSeries(User $user, string $grain = 'day', ?int $periods = null): array
+    {
+        $grain = in_array($grain, ['day', 'week', 'month'], true) ? $grain : 'day';
+
+        $periodCount = match ($grain) {
+            'week' => max(4, min(26, $periods ?? 12)),
+            'month' => max(3, min(24, $periods ?? 12)),
+            default => max(7, min(90, $periods ?? 30)),
+        };
+
         $to = now()->endOfDay();
+        $from = match ($grain) {
+            'week' => now()->startOfWeek()->subWeeks($periodCount - 1)->startOfDay(),
+            'month' => now()->startOfMonth()->subMonthsNoOverflow($periodCount - 1)->startOfDay(),
+            default => now()->subDays($periodCount - 1)->startOfDay(),
+        };
+
         $vendorKeys = [
             BillingVendor::Apify->value,
             BillingVendor::NanoGpt->value,
@@ -206,12 +243,20 @@ class UsageBillingService
         /** @var array<string, array{date: string, label: string, apify: int, nanogpt: int, firecrawl: int, tikhub: int, total: int}> $buckets */
         $buckets = [];
 
-        for ($offset = 0; $offset < $days; $offset++) {
-            $day = $from->copy()->addDays($offset);
-            $key = $day->toDateString();
+        for ($offset = 0; $offset < $periodCount; $offset++) {
+            $cursor = match ($grain) {
+                'week' => $from->copy()->addWeeks($offset)->startOfWeek(),
+                'month' => $from->copy()->addMonthsNoOverflow($offset)->startOfMonth(),
+                default => $from->copy()->addDays($offset)->startOfDay(),
+            };
+            $key = $cursor->toDateString();
             $buckets[$key] = [
                 'date' => $key,
-                'label' => $day->format('j M'),
+                'label' => match ($grain) {
+                    'week' => $cursor->format('j M'),
+                    'month' => $cursor->format('M Y'),
+                    default => $cursor->format('j M'),
+                },
                 'apify' => 0,
                 'nanogpt' => 0,
                 'firecrawl' => 0,
@@ -229,9 +274,17 @@ class UsageBillingService
             ->get(['vendor', 'amount_pence', 'created_at']);
 
         foreach ($entries as $entry) {
-            $key = $entry->created_at?->toDateString();
+            if ($entry->created_at === null) {
+                continue;
+            }
 
-            if ($key === null || ! isset($buckets[$key])) {
+            $key = match ($grain) {
+                'week' => $entry->created_at->copy()->startOfWeek()->toDateString(),
+                'month' => $entry->created_at->copy()->startOfMonth()->toDateString(),
+                default => $entry->created_at->toDateString(),
+            };
+
+            if (! isset($buckets[$key])) {
                 continue;
             }
 
@@ -249,7 +302,9 @@ class UsageBillingService
         }
 
         return [
-            'days' => $days,
+            'grain' => $grain,
+            'period_count' => $periodCount,
+            'days' => (int) $from->diffInDays($to) + 1,
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
             'points' => array_values($buckets),
@@ -265,7 +320,9 @@ class UsageBillingService
      *     vendors: array<string, array{spend_pence: int, entries: int}>,
      *     period_spend_pence: int,
      *     all_time_spend_pence: int,
-     *     recent: list<array<string, mixed>>
+     *     recent: list<array<string, mixed>>,
+     *     recent_total: int,
+     *     recent_has_more: bool
      * }
      */
     public function summary(User $user, ?CarbonInterface $from = null, ?CarbonInterface $to = null): array
@@ -310,20 +367,19 @@ class UsageBillingService
             ->whereIn('vendor', $vendorKeys)
             ->sum(DB::raw('ABS(amount_pence)'));
 
-        $recent = CreditLedgerEntry::query()
+        $recentVendors = [...$vendorKeys, BillingVendor::Bonus->value, BillingVendor::Topup->value];
+
+        $recentQuery = CreditLedgerEntry::query()
             ->where('user_id', $user->id)
-            ->whereIn('vendor', [...$vendorKeys, BillingVendor::Bonus->value, BillingVendor::Topup->value])
+            ->whereIn('vendor', $recentVendors);
+
+        $recentTotal = (clone $recentQuery)->count();
+
+        $recent = (clone $recentQuery)
             ->orderByDesc('id')
-            ->limit(40)
+            ->limit(self::RECENT_PREVIEW_LIMIT)
             ->get()
-            ->map(fn (CreditLedgerEntry $entry): array => [
-                'id' => $entry->id,
-                'action' => $entry->action,
-                'vendor' => $entry->vendor instanceof BillingVendor ? $entry->vendor->value : (string) $entry->vendor,
-                'amount_pence' => $entry->amount_pence,
-                'created_at' => $entry->created_at?->toIso8601String(),
-                'meta' => $entry->meta ?? [],
-            ])
+            ->map(fn (CreditLedgerEntry $entry): array => $this->mapLedgerEntry($entry))
             ->all();
 
         return [
@@ -338,7 +394,91 @@ class UsageBillingService
             'period_spend_pence' => $periodSpend,
             'all_time_spend_pence' => $allTimeSpend,
             'recent' => $recent,
+            'recent_total' => $recentTotal,
+            'recent_has_more' => $recentTotal > self::RECENT_PREVIEW_LIMIT,
         ];
+    }
+
+    /**
+     * Paginated credit ledger for the billing charges breakdown page.
+     *
+     * @param  array{vendor?: string|null, action?: string|null, days?: int|null}  $filters
+     * @return LengthAwarePaginator<int, array{
+     *     id: int,
+     *     action: string,
+     *     vendor: string,
+     *     amount_pence: int,
+     *     balance_after_pence: int,
+     *     created_at: string|null
+     * }>
+     */
+    public function paginatedCharges(User $user, array $filters = [], int $perPage = self::CHARGES_PER_PAGE): LengthAwarePaginator
+    {
+        $query = CreditLedgerEntry::query()
+            ->where('user_id', $user->id)
+            ->orderByDesc('id');
+
+        $vendor = $filters['vendor'] ?? null;
+        if (is_string($vendor) && $vendor !== '') {
+            $query->where('vendor', $vendor);
+        }
+
+        $action = $filters['action'] ?? null;
+        if (is_string($action) && $action !== '') {
+            $query->where('action', $action);
+        }
+
+        $days = $filters['days'] ?? null;
+        if (is_int($days) && $days > 0) {
+            $query->where('created_at', '>=', now()->subDays($days)->startOfDay());
+        }
+
+        return $query
+            ->paginate(max(1, min(100, $perPage)))
+            ->withQueryString()
+            ->through(fn (CreditLedgerEntry $entry): array => $this->mapLedgerEntry($entry, includeBalance: true));
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function ledgerActionOptions(): array
+    {
+        $configured = array_keys(config('billing.actions', []));
+
+        return array_values(array_unique([
+            ...$configured,
+            'claim_bonus',
+            'subscription_bonus',
+            'credits.topup',
+        ]));
+    }
+
+    /**
+     * @return array{
+     *     id: int,
+     *     action: string,
+     *     vendor: string,
+     *     amount_pence: int,
+     *     balance_after_pence?: int,
+     *     created_at: string|null
+     * }
+     */
+    private function mapLedgerEntry(CreditLedgerEntry $entry, bool $includeBalance = false): array
+    {
+        $mapped = [
+            'id' => $entry->id,
+            'action' => $entry->action,
+            'vendor' => $entry->vendor instanceof BillingVendor ? $entry->vendor->value : (string) $entry->vendor,
+            'amount_pence' => $entry->amount_pence,
+            'created_at' => $entry->created_at?->toIso8601String(),
+        ];
+
+        if ($includeBalance) {
+            $mapped['balance_after_pence'] = $entry->balance_after_pence;
+        }
+
+        return $mapped;
     }
 
     public function pricePenceFromCogs(string $action, BillingVendor $vendor, ?float $cogsUsd): int

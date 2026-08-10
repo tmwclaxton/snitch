@@ -2,6 +2,8 @@
 import { computed } from 'vue';
 import StippleBar from '@/components/dashboard/StippleBar.vue';
 
+export type SpendGrain = 'day' | 'week' | 'month';
+
 export type SpendPoint = {
     date: string;
     label: string;
@@ -21,10 +23,18 @@ const vendors: Array<{ key: VendorKey; label: string; fillClass: string }> = [
     { key: 'tikhub', label: 'TikHub', fillClass: 'fill-snitch-marker' },
 ];
 
-const props = defineProps<{
-    points: SpendPoint[];
-    days: number;
-}>();
+const props = withDefaults(
+    defineProps<{
+        points: SpendPoint[];
+        days: number;
+        periodCount?: number;
+        grain?: SpendGrain;
+    }>(),
+    {
+        periodCount: undefined,
+        grain: 'day',
+    },
+);
 
 const money = new Intl.NumberFormat('en-GB', {
     style: 'currency',
@@ -35,6 +45,30 @@ const money = new Intl.NumberFormat('en-GB', {
 function formatPence(pence: number): string {
     return money.format(pence / 100);
 }
+
+const bucketCount = computed(() => props.periodCount ?? props.points.length);
+
+const grainLabel = computed(() => {
+    switch (props.grain) {
+        case 'week':
+            return 'weekly';
+        case 'month':
+            return 'monthly';
+        default:
+            return 'daily';
+    }
+});
+
+const windowLabel = computed(() => {
+    switch (props.grain) {
+        case 'week':
+            return `last ${bucketCount.value} weeks`;
+        case 'month':
+            return `last ${bucketCount.value} months`;
+        default:
+            return `last ${props.days} days`;
+    }
+});
 
 const maxTotal = computed(() =>
     Math.max(1, ...props.points.map((point) => point.total)),
@@ -50,7 +84,11 @@ const leftPad = 44;
 const chartHeight = 160;
 const plotTop = 10;
 const barGap = 4;
-const plotWidth = computed(() => Math.max(320, props.points.length * 22));
+const plotWidth = computed(() => {
+    const minWidth = props.grain === 'day' ? 320 : 280;
+
+    return Math.max(minWidth, props.points.length * (props.grain === 'day' ? 22 : 36));
+});
 const chartWidth = computed(() => leftPad + plotWidth.value);
 const barWidth = computed(() => {
     const n = Math.max(props.points.length, 1);
@@ -129,7 +167,16 @@ const segments = computed((): Segment[] => {
 });
 
 const xLabels = computed(() => {
-    const every = props.days <= 14 ? 2 : props.days <= 31 ? 5 : 7;
+    const every =
+        props.grain === 'day'
+            ? props.days <= 14
+                ? 2
+                : props.days <= 31
+                  ? 5
+                  : 7
+            : props.grain === 'week'
+              ? 2
+              : 1;
 
     return props.points
         .map((point, index) => ({ ...point, index }))
@@ -148,7 +195,7 @@ const xLabels = computed(() => {
             <div>
                 <p class="snitch-ink-label">Spend over time</p>
                 <p class="mt-1 text-sm text-snitch-ink/65">
-                    Stacked daily charges by vendor · last {{ days }} days
+                    Stacked {{ grainLabel }} charges by vendor · {{ windowLabel }}
                 </p>
             </div>
             <p class="tabular-nums text-xs text-snitch-ink/55">
@@ -181,7 +228,7 @@ const xLabels = computed(() => {
             class="mt-3 w-full overflow-visible"
             :viewBox="`0 0 ${chartWidth} ${chartHeight + 28}`"
             role="img"
-            :aria-label="`Daily usage spend by vendor, ${formatPence(seriesTotal)} over ${days} days`"
+            :aria-label="`${grainLabel} usage spend by vendor, ${formatPence(seriesTotal)} over ${windowLabel}`"
         >
             <g v-for="tick in yTicks" :key="`y-${tick.value}`">
                 <line
@@ -235,7 +282,7 @@ const xLabels = computed(() => {
         </svg>
 
         <p v-else class="mt-4 text-sm text-snitch-ink/55">
-            No vendor charges in the last {{ days }} days yet. Sync, analyse, or run discovery to see spend here.
+            No vendor charges in the {{ windowLabel }} yet. Sync, analyse, or run discovery to see spend here.
         </p>
     </div>
 </template>

@@ -33,8 +33,12 @@ Agent MCP `create_account` starts at £0. Claiming/confirming (WorkOS bind or we
 ## Vendors
 Ledger rows are per vendor: `apify`, `nanogpt`, `firecrawl`, `tikhub` (plus `bonus`/`topup`). Apify prefers exact `usageTotalUsd` from run API; NanoGPT/Firecrawl/TikHub use catalog estimates / floors. Billing page and MCP `billing_status` show spend by those four vendors.
 
+## NanoGPT analyze.post
+Prefer real `usage.prompt_tokens` / `usage.completion_tokens` from the NanoGPT chat response (via `VideoAnalysisService` → `estimateNanoGptChatUsd`). When tokens are missing or negligible, the `video_analysis` / `analyze.post` floor is **0.0045 USD** (~0.5p after `usd_to_gbp` × `price_multiplier`; ledger ceils to 1p). Do not show markup/COGS in UI.
+
 ## Surfaces
-- Authenticated `/billing` - balance, platform subscribe, credit packs, vendor usage, and a stacked stipple chart of daily Apify/NanoGPT/Firecrawl/TikHub spend (`UsageBillingService::dailySpendSeries`)
+- Authenticated `/billing` - balance, platform subscribe, credit packs, vendor usage, stacked stipple chart of Apify/NanoGPT/Firecrawl/TikHub spend (`UsageBillingService::spendSeries`) with `grain=day|week|month` (default day), and a short recent-charges preview (8 rows) with link to the full list
+- Authenticated `/billing/charges` (`billing.charges`) - paginated ledger breakdown (`UsageBillingService::paginatedCharges`, 25/page) with vendor / action / days filters; amounts only (no COGS/markup)
 - Public + auth `/agents` (MCP connect docs; auth also mints/rotates Sanctum token). `/for-agents` redirects to `/agents`
 - MCP register `/mcp/register` (create_account); authenticated `/mcp` (Sanctum bearer)
 - Claim `/claim/{token}` then WorkOS login

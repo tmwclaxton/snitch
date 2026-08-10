@@ -38,13 +38,35 @@ class BillingCheckoutTest extends TestCase
                 ->has('usage')
                 ->has('spendSeries')
                 ->has('spendSeries.points')
-                ->where('spendSeries.days', 30)
+                ->where('spendSeries.grain', 'day')
+                ->where('spendSeries.period_count', 30)
                 ->has('creditPacks')
                 ->has('platform')
                 ->where('subscription.subscribed', false)
                 ->where('usage.balance_pence', 0)
                 ->where('platform.fee_pence', 1900)
                 ->where('platform.bonus_pence', 3000));
+    }
+
+    public function test_billing_page_accepts_spend_grain(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('billing.edit', ['grain' => 'week']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('billing/Index')
+                ->where('spendSeries.grain', 'week')
+                ->where('spendSeries.period_count', 12)
+                ->has('spendSeries.points', 12));
+
+        $this->actingAs($user)
+            ->get(route('billing.edit', ['grain' => 'month']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('spendSeries.grain', 'month')
+                ->where('spendSeries.period_count', 12));
     }
 
     public function test_checkout_redirects_when_platform_price_missing(): void

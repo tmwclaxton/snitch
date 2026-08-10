@@ -2,9 +2,15 @@
 import { Form, Head, Link, usePage } from '@inertiajs/vue3';
 import { CreditCard, LoaderCircle } from '@lucide/vue';
 import { computed } from 'vue';
-import BillingController from '@/actions/App/Http/Controllers/Settings/BillingController';
+import BillingController, {
+    charges as billingCharges,
+    index as billingIndex,
+} from '@/actions/App/Http/Controllers/Settings/BillingController';
 import VendorSpendStackedChart from '@/components/billing/VendorSpendStackedChart.vue';
-import type { SpendPoint } from '@/components/billing/VendorSpendStackedChart.vue';
+import type {
+    SpendGrain,
+    SpendPoint,
+} from '@/components/billing/VendorSpendStackedChart.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { pricing } from '@/routes';
 
@@ -27,6 +33,8 @@ type UsageSummary = {
         amount_pence: number;
         created_at: string | null;
     }>;
+    recent_total: number;
+    recent_has_more: boolean;
 };
 
 type SubscriptionSummary = {
@@ -47,10 +55,12 @@ type CreditPack = {
     has_checkout: boolean;
 };
 
-defineProps<{
+const props = defineProps<{
     subscription: SubscriptionSummary;
     usage: UsageSummary;
     spendSeries: {
+        grain: SpendGrain;
+        period_count: number;
         days: number;
         from: string;
         to: string;
@@ -65,6 +75,20 @@ defineOptions({
 });
 
 const page = usePage();
+
+const grainOptions: Array<{ value: SpendGrain; label: string }> = [
+    { value: 'day', label: 'Daily' },
+    { value: 'week', label: 'Weekly' },
+    { value: 'month', label: 'Monthly' },
+];
+
+const selectedGrain = computed(() => props.spendSeries.grain ?? 'day');
+
+function grainHref(grain: SpendGrain): string {
+    return billingIndex.url({
+        query: grain === 'day' ? {} : { grain },
+    });
+}
 
 const checkoutStatus = computed(() => {
     if (page.url.includes('checkout=success') || page.url.includes('checkout=credits_success')) {
@@ -203,9 +227,29 @@ const vendorAccent: Record<string, string> = {
 
             <section class="snitch-scrap relative mt-4 p-5 pt-6 sm:p-6">
                 <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
+                <div
+                    class="snitch-seg mb-4 flex flex-wrap gap-1"
+                    role="group"
+                    aria-label="Spend period"
+                >
+                    <Link
+                        v-for="option in grainOptions"
+                        :key="option.value"
+                        :href="grainHref(option.value)"
+                        class="snitch-seg-item px-3 py-1.5 text-sm"
+                        :class="selectedGrain === option.value ? 'snitch-seg-item-active' : ''"
+                        :aria-current="selectedGrain === option.value ? 'true' : undefined"
+                        preserve-scroll
+                        preserve-state
+                    >
+                        {{ option.label }}
+                    </Link>
+                </div>
                 <VendorSpendStackedChart
                     :points="spendSeries.points"
                     :days="spendSeries.days"
+                    :period-count="spendSeries.period_count"
+                    :grain="spendSeries.grain"
                 />
             </section>
 
@@ -240,7 +284,16 @@ const vendorAccent: Record<string, string> = {
 
                 <section class="snitch-scrap relative space-y-3 p-5 pt-6 sm:p-6">
                     <span class="snitch-tape right-5 -top-2" aria-hidden="true" />
-                    <h2 class="snitch-display text-2xl text-snitch-ink">Recent charges</h2>
+                    <div class="flex flex-wrap items-baseline justify-between gap-2">
+                        <h2 class="snitch-display text-2xl text-snitch-ink">Recent charges</h2>
+                        <Link
+                            :href="billingCharges()"
+                            class="text-sm underline decoration-snitch-spot underline-offset-4"
+                            data-test="billing-charges-link"
+                        >
+                            {{ usage.recent_has_more ? 'View all charges' : 'Charge breakdown' }}
+                        </Link>
+                    </div>
                     <ul
                         v-if="usage.recent.length"
                         class="divide-y divide-snitch-ink/10 text-sm"
@@ -260,6 +313,12 @@ const vendorAccent: Record<string, string> = {
                         </li>
                     </ul>
                     <p v-else class="text-sm text-snitch-ink/60">No usage yet.</p>
+                    <p
+                        v-if="usage.recent_has_more"
+                        class="text-xs text-snitch-ink/50"
+                    >
+                        Showing latest {{ usage.recent.length }} of {{ usage.recent_total }}.
+                    </p>
                 </section>
             </div>
         </div>

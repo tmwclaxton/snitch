@@ -152,7 +152,8 @@ class UsageBillingServiceTest extends TestCase
 
         $series = $this->billing->dailySpendSeries($user, 14);
 
-        $this->assertSame(14, $series['days']);
+        $this->assertSame('day', $series['grain']);
+        $this->assertSame(14, $series['period_count']);
         $this->assertCount(14, $series['points']);
 
         $today = collect($series['points'])->firstWhere('date', now()->toDateString());
@@ -165,6 +166,113 @@ class UsageBillingServiceTest extends TestCase
             $today['apify'] + $today['nanogpt'] + $today['firecrawl'] + $today['tikhub'],
             $today['total'],
         );
+    }
+
+    public function test_spend_series_aggregates_by_week_and_month(): void
+    {
+        $user = User::factory()->create();
+        $this->subscribe($user);
+        $this->billing->creditFromTopUp($user, 10_000, 'topup:grain');
+
+        $thisWeekStart = now()->startOfWeek();
+        $sameWeek = $thisWeekStart->copy()->addDays(min(2, max(0, now()->dayOfWeekIso - 1)));
+        $priorWeekStart = $thisWeekStart->copy()->subWeek();
+        $priorWeekDay = $priorWeekStart->copy()->addDays(1);
+        $priorMonthDay = now()->startOfMonth()->subMonthNoOverflow()->addDays(3);
+
+        $first = $this->billing->charge($user, 'sync.account', BillingVendor::Apify, 0.05);
+        $first->forceFill(['created_at' => $thisWeekStart])->save();
+
+        $second = $this->billing->charge($user, 'sync.account', BillingVendor::Apify, 0.05);
+        $second->forceFill(['created_at' => $sameWeek])->save();
+
+        $third = $this->billing->charge($user, 'sync.account', BillingVendor::Apify, 0.05);
+        $third->forceFill(['created_at' => $priorWeekDay])->save();
+
+        $fourth = $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.04);
+        $fourth->forceFill(['created_at' => $priorMonthDay])->save();
+
+        $weekly = $this->billing->spendSeries($user, 'week', 12);
+
+        $this->assertSame('week', $weekly['grain']);
+        $this->assertSame(12, $weekly['period_count']);
+        $this->assertCount(12, $weekly['points']);
+
+        $thisWeek = collect($weekly['points'])->firstWhere('date', $thisWeekStart->toDateString());
+        $lastWeek = collect($weekly['points'])->firstWhere('date', $priorWeekStart->toDateString());
+
+        $this->assertNotNull($thisWeek);
+        $this->assertNotNull($lastWeek);
+        $this->assertSame(
+            abs($first->amount_pence) + abs($second->amount_pence),
+            $thisWeek['apify'],
+        );
+        $this->assertSame(abs($third->amount_pence), $lastWeek['apify']);
+
+        $monthly = $this->billing->spendSeries($user, 'month', 12);
+
+        $this->assertSame('month', $monthly['grain']);
+        $this->assertSame(12, $monthly['period_count']);
+        $this->assertCount(12, $monthly['points']);
+
+        $thisMonthKey = now()->startOfMonth()->toDateString();
+        $lastMonthKey = $priorMonthDay->copy()->startOfMonth()->toDateString();
+
+        $thisMonth = collect($monthly['points'])->firstWhere('date', $thisMonthKey);
+        $lastMonth = collect($monthly['points'])->firstWhere('date', $lastMonthKey);
+
+        $this->assertNotNull($thisMonth);
+        $this->assertNotNull($lastMonth);
+
+        $expectedThisMonthApify = collect([$first, $second, $third])
+            ->filter(fn ($entry) => $entry->fresh()->created_at?->format('Y-m') === now()->format('Y-m'))
+            ->sum(fn ($entry) => abs($entry->amount_pence));
+
+        $this->assertSame($expectedThisMonthApify, $thisMonth['apify']);
+        $this->assertSame(abs($fourth->amount_pence), $lastMonth['nanogpt']);
+    }
+
+    public function test_video_analysis_floor_is_about_half_a_penny_before_ceil(): void
+    {
+        config([
+            'billing.usd_to_gbp' => 0.79,
+            'billing.price_multiplier' => 1.4,
+            'billing.vendors.nanogpt.floors_usd.video_analysis' => 0.0045,
+        ]);
+
+        $cogs = $this->billing->estimateNanoGptChatUsd(
+            null,
+            null,
+            'deepseek/deepseek-v4-flash',
+            'video_analysis',
+        );
+
+        $this->assertSame(0.0045, $cogs);
+        $this->assertSame(1, $this->billing->pricePenceFromCogs('analyze.post', BillingVendor::NanoGpt, $cogs));
+    }
+
+    public function test_estimate_nanogpt_uses_tokens_when_above_video_analysis_floor(): void
+    {
+        config([
+            'billing.vendors.nanogpt.floors_usd.video_analysis' => 0.0045,
+        ]);
+
+        $tiny = $this->billing->estimateNanoGptChatUsd(
+            2000,
+            800,
+            'deepseek/deepseek-v4-flash',
+            'video_analysis',
+        );
+        $this->assertSame(0.0045, $tiny);
+
+        $large = $this->billing->estimateNanoGptChatUsd(
+            2_000_000,
+            500_000,
+            'deepseek/deepseek-v4-flash',
+            'video_analysis',
+        );
+        // 2M * 0.14/M + 0.5M * 0.28/M = 0.28 + 0.14 = 0.42
+        $this->assertEqualsWithDelta(0.42, $large, 0.000001);
     }
 
     private function subscribe(User $user): Subscription
