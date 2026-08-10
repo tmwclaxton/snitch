@@ -73,9 +73,13 @@ class AnalyzePostJob implements ShouldQueue
             return;
         }
 
-        // Shorts sync may store a page URL; resolve a downloadable MP4 via TikHub before analysis.
-        if ($post->youtubeMediaIsPageUrl()) {
-            $downloadUrl = $youtubeMedia->resolveDownloadUrl($post->url, $post->external_id);
+        // Shorts often have page URLs or IP-bound googlevideo links; persist a public MP4 first.
+        if ($youtubeMedia->needsHydration($post->media_url)) {
+            $downloadUrl = $youtubeMedia->resolveDownloadUrl(
+                url: $post->url,
+                videoId: $post->external_id,
+                existingMediaUrl: $post->media_url,
+            );
 
             if ($downloadUrl === null) {
                 $this->markAnalysisFailed(

@@ -4,11 +4,19 @@ namespace Tests\Unit\Services\Scraping;
 
 use App\Services\Scraping\YoutubeMediaHydrator;
 use App\Services\TikHub\TikHubClient;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Mockery;
 use Tests\TestCase;
 
 class YoutubeMediaHydratorTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Storage::fake('public');
+    }
+
     public function test_extracts_video_id_from_shorts_and_watch_urls(): void
     {
         $hydrator = app(YoutubeMediaHydrator::class);
@@ -25,6 +33,8 @@ class YoutubeMediaHydratorTest extends TestCase
         $this->assertFalse($hydrator->isDownloadableMediaUrl('https://www.youtube.com/shorts/abc123'));
         $this->assertTrue($hydrator->isDownloadableMediaUrl('https://cdn.example.com/clip.mp4'));
         $this->assertTrue($hydrator->isDownloadableMediaUrl('https://googlevideo.com/videoplayback?mime=video'));
+        $this->assertTrue($hydrator->needsHydration('https://googlevideo.com/videoplayback?id=1'));
+        $this->assertFalse($hydrator->needsHydration('https://cdn.example.com/clip.mp4'));
     }
 
     public function test_pick_download_url_prefers_muxed_progressive_mp4(): void
@@ -60,9 +70,16 @@ class YoutubeMediaHydratorTest extends TestCase
         $this->assertSame('https://googlevideo.com/muxed-720.mp4', $url);
     }
 
-    public function test_hydrate_posts_resolves_page_media_via_tikhub(): void
+    public function test_hydrate_posts_persists_public_copy_from_tikhub_stream(): void
     {
-        config(['snitch.tikhub.api_key' => 'tikhub-test']);
+        config([
+            'snitch.tikhub.api_key' => 'tikhub-test',
+            'app.url' => 'https://www.snitchsocial.net',
+        ]);
+
+        Http::fake([
+            'https://googlevideo.com/*' => Http::response('mp4-bytes', 200),
+        ]);
 
         $client = Mockery::mock(TikHubClient::class);
         $client->shouldReceive('configured')->andReturn(true);
@@ -96,7 +113,8 @@ class YoutubeMediaHydratorTest extends TestCase
         ]]);
 
         $this->assertCount(1, $posts);
-        $this->assertSame('https://googlevideo.com/short.mp4', $posts[0]['media_url']);
+        $this->assertStringEndsWith('/storage/youtube-media/abc123XYZ.mp4', (string) $posts[0]['media_url']);
+        Storage::disk('public')->assertExists('youtube-media/abc123XYZ.mp4');
     }
 
     public function test_hydrate_posts_drops_unresolved_page_media(): void

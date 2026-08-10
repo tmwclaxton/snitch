@@ -98,6 +98,7 @@ class AnalyzePostJobUnavailableTest extends TestCase
         $this->app->instance(VideoAnalysisService::class, $analysis);
 
         $hydrator = Mockery::mock(YoutubeMediaHydrator::class);
+        $hydrator->shouldReceive('needsHydration')->once()->andReturn(true);
         $hydrator->shouldReceive('resolveDownloadUrl')->once()->andReturn(null);
         $this->app->instance(YoutubeMediaHydrator::class, $hydrator);
 
@@ -112,7 +113,7 @@ class AnalyzePostJobUnavailableTest extends TestCase
     public function test_hydrates_youtube_page_media_then_analyzes(): void
     {
         Http::fake([
-            'https://googlevideo.com/*' => Http::response(null, 200),
+            'https://www.snitchsocial.net/storage/*' => Http::response(null, 200),
         ]);
 
         $user = User::factory()->create();
@@ -149,9 +150,10 @@ class AnalyzePostJobUnavailableTest extends TestCase
         $this->app->instance(VideoAnalysisService::class, $analysis);
 
         $hydrator = Mockery::mock(YoutubeMediaHydrator::class);
+        $hydrator->shouldReceive('needsHydration')->once()->andReturn(true);
         $hydrator->shouldReceive('resolveDownloadUrl')
             ->once()
-            ->andReturn('https://googlevideo.com/clip.mp4');
+            ->andReturn('https://www.snitchsocial.net/storage/youtube-media/abc123.mp4');
         $this->app->instance(YoutubeMediaHydrator::class, $hydrator);
 
         $scorer = Mockery::mock(WinnerScorer::class);
@@ -165,7 +167,10 @@ class AnalyzePostJobUnavailableTest extends TestCase
             app(YoutubeMediaHydrator::class),
         );
 
-        $this->assertSame('https://googlevideo.com/clip.mp4', $post->fresh()->media_url);
+        $this->assertSame(
+            'https://www.snitchsocial.net/storage/youtube-media/abc123.mp4',
+            $post->fresh()->media_url,
+        );
     }
 
     public function test_checklist_failures_do_not_rethrow_for_queue_retries(): void
