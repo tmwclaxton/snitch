@@ -46,6 +46,10 @@ class GenerateInfluencerBriefTool extends Tool
 
         $brief = $discovery->generateBrief($brand, $filters);
 
+        $brand->forceFill([
+            'influencer_brief' => $brief,
+        ])->save();
+
         return Response::json(['brief' => $brief]);
     }
 

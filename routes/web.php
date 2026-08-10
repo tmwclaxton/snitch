@@ -97,6 +97,8 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::post('/influencers/brief', [InfluencerController::class, 'generateBrief'])
             ->middleware('throttle:10,1')
             ->name('influencers.brief');
+        Route::patch('/influencers/brief', [InfluencerController::class, 'updateBrief'])
+            ->name('influencers.brief.update');
         Route::post('/influencers/search', [InfluencerController::class, 'search'])
             ->middleware('throttle:10,1')
             ->name('influencers.search');

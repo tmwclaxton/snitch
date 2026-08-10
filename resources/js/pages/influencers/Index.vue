@@ -21,6 +21,7 @@ import {
     keepMany,
     search,
     searchStatus,
+    updateBrief,
 } from '@/actions/App/Http/Controllers/InfluencerController';
 import BulkActionBar from '@/components/BulkActionBar.vue';
 import PaperSelect from '@/components/PaperSelect.vue';
@@ -155,6 +156,7 @@ const localDecisions = ref<Record<string, 'kept' | 'discarded'>>({ ...props.deci
 const searching = ref(!!props.searchRun);
 const searchMessage = ref(props.latestRun?.error ?? '');
 const generatingBrief = ref(false);
+const briefSaveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle');
 const decidingKey = ref<string | null>(null);
 const removeDialogOpen = ref(false);
 const accountToRemove = ref<KeptAccount | null>(null);
@@ -162,6 +164,9 @@ const selectedReview = ref<Record<string, boolean>>({});
 const selectedKept = ref<Record<number, boolean>>({});
 const bulkProcessing = ref(false);
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
+let briefSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let lastSavedBrief = props.filters.brief ?? '';
+const BRIEF_AUTOSAVE_MS = 500;
 
 const platformOptions = computed(() =>
     props.platforms.map((platform) => ({
@@ -258,24 +263,77 @@ function formatFollowers(value: number | null | undefined): string {
     return String(value);
 }
 
+function csrfToken(): string {
+    return (
+        (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? ''
+    );
+}
+
+function jsonHeaders(): Record<string, string> {
+    return {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': csrfToken(),
+    };
+}
+
+function clearBriefSaveTimer(): void {
+    if (briefSaveTimer !== null) {
+        clearTimeout(briefSaveTimer);
+        briefSaveTimer = null;
+    }
+}
+
+async function persistBrief(value: string): Promise<void> {
+    if (value === lastSavedBrief) {
+        return;
+    }
+
+    briefSaveState.value = 'saving';
+
+    try {
+        const response = await fetch(updateBrief.url(), {
+            method: 'PATCH',
+            headers: jsonHeaders(),
+            body: JSON.stringify({
+                influencer_brief: value,
+            }),
+        });
+
+        if (!response.ok) {
+            briefSaveState.value = 'error';
+
+            return;
+        }
+
+        lastSavedBrief = value;
+        briefSaveState.value = 'saved';
+    } catch {
+        briefSaveState.value = 'error';
+    }
+}
+
+function scheduleBriefSave(): void {
+    clearBriefSaveTimer();
+    briefSaveTimer = setTimeout(() => {
+        briefSaveTimer = null;
+        void persistBrief(form.brief);
+    }, BRIEF_AUTOSAVE_MS);
+}
+
 async function onGenerateBrief(): Promise<void> {
     if (generatingBrief.value || searching.value) {
         return;
     }
 
+    clearBriefSaveTimer();
     generatingBrief.value = true;
 
     try {
         const response = await fetch(generateBrief.url(), {
             method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN':
-                    (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ??
-                    '',
-            },
+            headers: jsonHeaders(),
             body: JSON.stringify({
                 platform: form.platform,
                 language: form.language,
@@ -293,6 +351,8 @@ async function onGenerateBrief(): Promise<void> {
         }
 
         form.brief = data.brief ?? '';
+        lastSavedBrief = form.brief;
+        briefSaveState.value = 'saved';
     } catch {
         toast.error('Could not generate brief.');
     } finally {
@@ -313,14 +373,7 @@ async function kickOffSearch(): Promise<void> {
     try {
         const response = await fetch(search.url(), {
             method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN':
-                    (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ??
-                    '',
-            },
+            headers: jsonHeaders(),
             body: JSON.stringify({
                 platform: form.platform,
                 language: form.language === 'any' ? null : form.language,
@@ -635,6 +688,17 @@ function bulkRemoveKept(): void {
 }
 
 watch(
+    () => form.brief,
+    () => {
+        if (generatingBrief.value) {
+            return;
+        }
+
+        scheduleBriefSave();
+    },
+);
+
+watch(
     () => props.suggestions,
     (rows) => {
         localSuggestions.value = [...rows];
@@ -669,6 +733,11 @@ onMounted(() => {
 
 onUnmounted(() => {
     clearPoll();
+    clearBriefSaveTimer();
+
+    if (form.brief !== lastSavedBrief) {
+        void persistBrief(form.brief);
+    }
 });
 </script>
 
@@ -743,7 +812,21 @@ onUnmounted(() => {
                     </div>
 
                     <label class="block text-sm">
-                        <span class="snitch-ink-label">Brief</span>
+                        <span class="flex items-baseline justify-between gap-3">
+                            <span class="snitch-ink-label">Brief</span>
+                            <span
+                                v-if="briefSaveState === 'saving'"
+                                class="text-xs text-snitch-ink/45"
+                            >Saving…</span>
+                            <span
+                                v-else-if="briefSaveState === 'saved'"
+                                class="text-xs text-snitch-ink/45"
+                            >Saved</span>
+                            <span
+                                v-else-if="briefSaveState === 'error'"
+                                class="text-xs text-snitch-ink/55"
+                            >Couldn't save</span>
+                        </span>
                         <textarea
                             v-model="form.brief"
                             rows="4"

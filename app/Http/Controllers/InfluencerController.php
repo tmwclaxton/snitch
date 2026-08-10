@@ -9,6 +9,7 @@ use App\Http\Requests\Influencers\BatchDestroyInfluencersRequest;
 use App\Http\Requests\Influencers\DecideInfluencerRequest;
 use App\Http\Requests\Influencers\GenerateInfluencerBriefRequest;
 use App\Http\Requests\Influencers\SearchInfluencersRequest;
+use App\Http\Requests\Influencers\UpdateInfluencerBriefRequest;
 use App\Jobs\FindInfluencersJob;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Models\TrackedAccount;
@@ -66,6 +67,22 @@ class InfluencerController extends Controller
         ])->save();
 
         return response()->json(['brief' => $brief]);
+    }
+
+    public function updateBrief(UpdateInfluencerBriefRequest $request): JsonResponse
+    {
+        $brand = $request->user()->brandProfile;
+        abort_unless($brand !== null, 404);
+
+        $brief = trim((string) ($request->validated('influencer_brief') ?? ''));
+
+        $brand->forceFill([
+            'influencer_brief' => $brief !== '' ? $brief : null,
+        ])->save();
+
+        return response()->json([
+            'brief' => $brand->influencer_brief ?? '',
+        ]);
     }
 
     public function search(SearchInfluencersRequest $request): JsonResponse
