@@ -224,6 +224,7 @@ class InfluencersFindTest extends TestCase
                     'display_name' => 'Keep Me',
                     'avatar' => null,
                     'followers' => 22000,
+                    'fit_reason' => 'Sneaker-forward feed that matches the DTC brief.',
                 ],
             ],
             'decisions' => [],
@@ -244,6 +245,7 @@ class InfluencersFindTest extends TestCase
             'platform' => 'instagram',
             'handle' => 'keepme',
             'display_name' => 'Keep Me',
+            'fit_reason' => 'Sneaker-forward feed that matches the DTC brief.',
         ]);
 
         Queue::assertPushed(SyncTrackedAccountJob::class);

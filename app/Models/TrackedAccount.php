@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'external_id',
     'avatar',
     'display_name',
+    'fit_reason',
     'last_synced_at',
     'last_sync_status',
     'last_sync_error',

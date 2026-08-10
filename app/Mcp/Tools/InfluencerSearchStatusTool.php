@@ -16,7 +16,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('influencer_search_status')]
-#[Description('Poll influencer search status and suggestions. Optional wait_seconds (max 45; default 0) blocks briefly for a terminal status. When suggestions appear, call keep_influencer for fits (queues sync) or discard_influencer. Status alone never tracks creators.')]
+#[Description('Poll influencer search status and suggestions (each row may include url + fit_reason for brand-deal fit). Optional wait_seconds (max 45; default 0) blocks briefly for a terminal status. When suggestions appear, call keep_influencer for fits (queues sync) or discard_influencer. Status alone never tracks creators.')]
 class InfluencerSearchStatusTool extends Tool
 {
     public function handle(Request $request): Response
@@ -61,13 +61,14 @@ class InfluencerSearchStatusTool extends Tool
         }
 
         if ($status === 'completed' || $suggestions !== []) {
-            $note = 'Creators are NOT tracked yet. Call keep_influencer for each fit (queues sync) or discard_influencer.';
+            $note = 'Creators are NOT tracked yet. Read each suggestion fit_reason and url, then call keep_influencer (prefer with run_id) or discard_influencer.';
             $nextStep = 'keep_influencer / discard_influencer for each suggestion before ending the session.';
         }
 
         return Response::json([
             'run_id' => $data['run_id'],
             'payload' => $payload,
+            'suggestions' => $suggestions,
             'waited_seconds' => $wait['waited_seconds'],
             'note' => $note,
             'next_step' => $nextStep,

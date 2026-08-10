@@ -327,6 +327,7 @@ class InfluencerDiscoveryServiceTest extends TestCase
                     'platform' => 'instagram',
                     'handle' => 'fundingfiona',
                     'source' => 'should-be-overwritten',
+                    'fit_reason' => 'Covers UK grant applications for early founders.',
                 ],
             ],
         ]));
@@ -351,6 +352,63 @@ class InfluencerDiscoveryServiceTest extends TestCase
         $this->assertSame('fundingfiona', $rows[0]['handle']);
         $this->assertSame('model-seed', $rows[0]['source']);
         $this->assertSame('model-seed', $rows[0]['seed']);
+        $this->assertSame('Covers UK grant applications for early founders.', $rows[0]['fit_reason']);
+    }
+
+    public function test_enrich_fit_reasons_fills_missing_via_nanogpt(): void
+    {
+        $user = User::factory()->create();
+        $brand = BrandProfile::factory()->for($user)->create([
+            'name' => 'Sneaker Co',
+            'description' => 'DTC sneakers',
+        ]);
+
+        $nano = $this->createMock(NanoGptClient::class);
+        $nano->expects($this->once())
+            ->method('chatJson')
+            ->willReturn([
+                'reasons' => [
+                    [
+                        'platform' => 'instagram',
+                        'handle' => 'streetkicks',
+                        'fit_reason' => 'Posts daily sneaker drops to an engaged mid-tier audience.',
+                    ],
+                ],
+            ]);
+
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.influencer_find.model' => 'test-model',
+        ]);
+
+        $rows = $this->service(nano: $nano)->enrichFitReasons($brand, [
+            'platforms' => ['instagram'],
+            'language' => 'English',
+            'min_followers' => 1000,
+            'max_followers' => 50000,
+            'brief' => 'Sneaker streetwear creators',
+        ], [
+            [
+                'platform' => 'instagram',
+                'handle' => 'streetkicks',
+                'display_name' => 'Street Kicks',
+                'followers' => 12000,
+                'fit_reason' => null,
+            ],
+            [
+                'platform' => 'instagram',
+                'handle' => 'alreadysaid',
+                'display_name' => 'Already Said',
+                'followers' => 8000,
+                'fit_reason' => 'Existing reason stays put.',
+            ],
+        ]);
+
+        $this->assertSame(
+            'Posts daily sneaker drops to an engaged mid-tier audience.',
+            $rows[0]['fit_reason'],
+        );
+        $this->assertSame('Existing reason stays put.', $rows[1]['fit_reason']);
     }
 
     public function test_instagram_adapter_search_and_resolve_use_details(): void

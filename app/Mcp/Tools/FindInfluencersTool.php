@@ -110,8 +110,9 @@ class FindInfluencersTool extends Tool
         if ($terminal || $suggestions !== []) {
             return Response::json([
                 ...$base,
+                'suggestions' => $suggestions,
                 'queued' => false,
-                'note' => 'Creators are NOT tracked yet. Call keep_influencer for each fit (queues sync) or discard_influencer.',
+                'note' => 'Creators are NOT tracked yet. Each suggestion may include fit_reason and url. Call keep_influencer for each fit (queues sync) or discard_influencer.',
                 'next_step' => 'keep_influencer / discard_influencer for each suggestion before ending the session.',
             ]);
         }

@@ -108,6 +108,11 @@ class InfluencerDiscoveryService
         }
 
         $verified = $this->verify($candidates, $brand, $filters, $platforms, $hits, $onProgress);
+        $verified = $this->enrichFitReasons($brand, $filters, $verified);
+
+        if ($onProgress !== null && $verified !== []) {
+            $onProgress($verified);
+        }
 
         $min = max(1, (int) config('snitch.influencer_find.min_suggestions', 6));
 
@@ -338,7 +343,7 @@ class InfluencerDiscoveryService
         $response = $this->nanoGpt->chat([
             [
                 'role' => 'system',
-                'content' => 'You find individual social creators and influencers a brand could partner with. Reply with JSON only: {"influencers":[{"name":"...","platform":"instagram|tiktok|youtube|linkedin|facebook","handle":"...","source":"short evidence"}]}. Ground every suggestion in the search hits. Prefer real people / creator accounts (UGC, lifestyle, niche experts), not brands, retailers, SaaS tools, apps, agencies, media publishers, marketplaces, cosmetics labels, incubators, foundations, or company pages (LinkedIn /in/ OK; skip /company). Reject product/tool pages (names like "simplest way to...", "create your brand", marketplaces). Reject handles that look like products or apps (*app, *hq, official brand accounts). Only keep creators whose primary content niche matches the brief. Never invent placeholder handles. Never suggest the brand itself. Extract handles from profile URLs in the hits whenever possible. Fill up to the requested count with niche-fit creators.',
+                'content' => 'You find individual social creators and influencers a brand could partner with. Reply with JSON only: {"influencers":[{"name":"...","platform":"instagram|tiktok|youtube|linkedin|facebook","handle":"...","source":"short evidence","fit_reason":"1-2 sentences on why they are a good brand-deal fit"}]}. Ground every suggestion in the search hits. Prefer real people / creator accounts (UGC, lifestyle, niche experts), not brands, retailers, SaaS tools, apps, agencies, media publishers, marketplaces, cosmetics labels, incubators, foundations, or company pages (LinkedIn /in/ OK; skip /company). Reject product/tool pages (names like "simplest way to...", "create your brand", marketplaces). Reject handles that look like products or apps (*app, *hq, official brand accounts). Only keep creators whose primary content niche matches the brief. Never invent placeholder handles. Never suggest the brand itself. Extract handles from profile URLs in the hits whenever possible. Fill up to the requested count with niche-fit creators. fit_reason must be plain UK English, specific to the brief, no hype.',
             ],
             [
                 'role' => 'user',
@@ -427,7 +432,7 @@ class InfluencerDiscoveryService
         $response = $this->nanoGpt->chat([
             [
                 'role' => 'system',
-                'content' => 'You list real public social creators a brand could partner with from your knowledge. Reply with JSON only: {"influencers":[{"name":"...","platform":"instagram|tiktok|youtube|linkedin|facebook","handle":"...","source":"model-seed"}]}. Prefer real people / creator accounts whose niche matches the brief. Do not invent placeholder handles (no user1, example, testcreator). Prefer handles you are confident are real public accounts. Never suggest brands, retailers, SaaS tools, apps, agencies, media publishers, marketplaces, cosmetics labels, incubators, foundations, or company pages (LinkedIn /in/ OK). Never suggest the brand itself. Fill up to the requested count.',
+                'content' => 'You list real public social creators a brand could partner with from your knowledge. Reply with JSON only: {"influencers":[{"name":"...","platform":"instagram|tiktok|youtube|linkedin|facebook","handle":"...","source":"model-seed","fit_reason":"1-2 sentences on why they are a good brand-deal fit"}]}. Prefer real people / creator accounts whose niche matches the brief. Do not invent placeholder handles (no user1, example, testcreator). Prefer handles you are confident are real public accounts. Never suggest brands, retailers, SaaS tools, apps, agencies, media publishers, marketplaces, cosmetics labels, incubators, foundations, or company pages (LinkedIn /in/ OK). Never suggest the brand itself. Fill up to the requested count. fit_reason must be plain UK English, specific to the brief, no hype.',
             ],
             [
                 'role' => 'user',
@@ -814,6 +819,10 @@ class InfluencerDiscoveryService
                         ? (string) $profile['display_name']
                         : ($item['candidate']['name'] !== '' ? $item['candidate']['name'] : $resolvedHandle);
 
+                    $fitReason = isset($item['candidate']['fit_reason']) && is_string($item['candidate']['fit_reason'])
+                        ? trim($item['candidate']['fit_reason'])
+                        : '';
+
                     $pending[$batchIndex] = [
                         'platform' => $platform,
                         'handle' => $resolvedHandle,
@@ -827,6 +836,7 @@ class InfluencerDiscoveryService
                         'seed' => $item['candidate']['seed'] ?? $this->inferSeedLabel($item['candidate']),
                         'followers' => $followers,
                         'language_hint' => filled($filters['language'] ?? null) ? (string) $filters['language'] : null,
+                        'fit_reason' => $fitReason !== '' ? Str::limit($fitReason, 280, '') : null,
                     ];
                 }
 
@@ -991,6 +1001,131 @@ class InfluencerDiscoveryService
         }
 
         return $this->nichePhrase($brand);
+    }
+
+    /**
+     * Fill missing fit_reason on verified suggestions via a batched NanoGPT call.
+     * Fail soft: keep rows and use a short fallback when the model is unavailable.
+     *
+     * @param  array{
+     *     platforms: list<string>,
+     *     language: string|null,
+     *     min_followers: int|null,
+     *     max_followers: int|null,
+     *     brief: string
+     * }  $filters
+     * @param  list<array<string, mixed>>  $suggestions
+     * @return list<array<string, mixed>>
+     */
+    public function enrichFitReasons(BrandProfile $brand, array $filters, array $suggestions): array
+    {
+        if ($suggestions === []) {
+            return [];
+        }
+
+        $missingIndexes = [];
+
+        foreach ($suggestions as $index => $row) {
+            $existing = isset($row['fit_reason']) && is_string($row['fit_reason'])
+                ? trim($row['fit_reason'])
+                : '';
+
+            if ($existing === '') {
+                $missingIndexes[] = $index;
+            } else {
+                $suggestions[$index]['fit_reason'] = Str::limit($existing, 280, '');
+            }
+        }
+
+        if ($missingIndexes === []) {
+            return array_values($suggestions);
+        }
+
+        $brief = trim((string) ($filters['brief'] ?? ''));
+        $reasons = [];
+
+        if ((string) config('snitch.nanogpt.api_key') !== '') {
+            $lines = [];
+
+            foreach ($missingIndexes as $i => $index) {
+                $row = $suggestions[$index];
+                $platform = (string) ($row['platform'] ?? '');
+                $handle = ltrim((string) ($row['handle'] ?? ''), '@');
+                $name = trim((string) ($row['display_name'] ?? $row['name'] ?? $handle));
+                $followers = $row['followers'] ?? null;
+                $followerLabel = is_numeric($followers) ? (string) (int) $followers : 'unknown';
+                $lines[] = ($i + 1).'. '.$platform.' @'.$handle.' | '.$name.' | followers:'.$followerLabel;
+            }
+
+            try {
+                $payload = $this->nanoGpt->chatJson([
+                    [
+                        'role' => 'system',
+                        'content' => 'You write short brand-deal fit blurbs for influencer outreach. Reply with JSON only: {"reasons":[{"platform":"instagram|tiktok|youtube|linkedin|facebook","handle":"...","fit_reason":"1-2 sentences"}]} . Each fit_reason explains why that creator is a good brand-deal fit for the brief. Plain UK English, specific, no hype, no invented metrics. Only use handles from the list.',
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => implode("\n", [
+                            "Brand: {$brand->name}",
+                            'Description: '.trim((string) ($brand->description ?? '')),
+                            'Brief: '.($brief !== '' ? $brief : '(none)'),
+                            'Creators:',
+                            ...$lines,
+                        ]),
+                    ],
+                ], (string) config('snitch.influencer_find.model'), [
+                    'temperature' => 0.3,
+                    'max_tokens' => 1200,
+                ]);
+
+                $rows = is_array($payload) && is_array($payload['reasons'] ?? null)
+                    ? $payload['reasons']
+                    : [];
+
+                foreach ($rows as $entry) {
+                    if (! is_array($entry)) {
+                        continue;
+                    }
+
+                    $platform = strtolower(trim((string) ($entry['platform'] ?? '')));
+                    $handle = ltrim(trim((string) ($entry['handle'] ?? '')), '@');
+                    $fitReason = isset($entry['fit_reason']) && is_string($entry['fit_reason'])
+                        ? trim($entry['fit_reason'])
+                        : '';
+
+                    if ($platform === '' || $handle === '' || $fitReason === '') {
+                        continue;
+                    }
+
+                    $reasons["{$platform}:{$handle}"] = Str::limit($fitReason, 280, '');
+                }
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
+
+        foreach ($missingIndexes as $index) {
+            $row = $suggestions[$index];
+            $platform = (string) ($row['platform'] ?? '');
+            $handle = ltrim((string) ($row['handle'] ?? ''), '@');
+            $key = "{$platform}:{$handle}";
+            $suggestions[$index]['fit_reason'] = $reasons[$key]
+                ?? $this->fallbackFitReason($row, $brief);
+        }
+
+        return array_values($suggestions);
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function fallbackFitReason(array $row, string $brief): string
+    {
+        $platform = (string) ($row['platform'] ?? 'social');
+        $handle = ltrim((string) ($row['handle'] ?? ''), '@');
+        $niche = $brief !== '' ? Str::limit($brief, 80, '') : 'your niche';
+
+        return "Creator @{$handle} on {$platform} looks relevant for brand deals around {$niche}.";
     }
 
     /**
@@ -1259,6 +1394,9 @@ class InfluencerDiscoveryService
             $source = isset($row['source']) && is_string($row['source'])
                 ? Str::limit(trim($row['source']), 160, '')
                 : null;
+            $fitReason = isset($row['fit_reason']) && is_string($row['fit_reason'])
+                ? Str::limit(trim($row['fit_reason']), 280, '')
+                : null;
 
             if (! isset($platformSet[$platform]) || $handle === null) {
                 continue;
@@ -1270,6 +1408,10 @@ class InfluencerDiscoveryService
                 'handle' => $handle,
                 'source' => $source,
             ];
+
+            if ($fitReason !== null && $fitReason !== '') {
+                $candidate['fit_reason'] = $fitReason;
+            }
 
             if ($platform === 'linkedin') {
                 $candidate['profile_kind'] = 'in';
@@ -1290,8 +1432,8 @@ class InfluencerDiscoveryService
      * Merge seed lists: dedupe by platform:handle (prefer known followers), interleave sources, cap resolves.
      *
      * @param  list<string>  $platforms
-     * @param  list<array{name: string, platform: string, handle: string, source?: string|null, seed?: string, profile_kind?: string, followers?: int|null}>  ...$sources
-     * @return list<array{name: string, platform: string, handle: string, source: string|null, seed?: string, profile_kind?: string, followers?: int|null}>
+     * @param  list<array{name: string, platform: string, handle: string, source?: string|null, seed?: string, profile_kind?: string, followers?: int|null, fit_reason?: string|null}>  ...$sources
+     * @return list<array{name: string, platform: string, handle: string, source: string|null, seed?: string, profile_kind?: string, followers?: int|null, fit_reason?: string|null}>
      */
     public function mergeCandidates(array $platforms, array ...$sources): array
     {
@@ -1329,6 +1471,10 @@ class InfluencerDiscoveryService
                     $incoming['profile_kind'] = $candidate['profile_kind'];
                 }
 
+                if (isset($candidate['fit_reason']) && is_string($candidate['fit_reason']) && trim($candidate['fit_reason']) !== '') {
+                    $incoming['fit_reason'] = Str::limit(trim($candidate['fit_reason']), 280, '');
+                }
+
                 if (! isset($byKey[$key])) {
                     $byKey[$key] = $incoming;
 
@@ -1339,7 +1485,12 @@ class InfluencerDiscoveryService
                 $incomingHas = array_key_exists('followers', $incoming);
 
                 if ($incomingHas && ! $existingHas) {
+                    if (! isset($incoming['fit_reason']) && isset($byKey[$key]['fit_reason'])) {
+                        $incoming['fit_reason'] = $byKey[$key]['fit_reason'];
+                    }
                     $byKey[$key] = $incoming;
+                } elseif (isset($incoming['fit_reason']) && ! isset($byKey[$key]['fit_reason'])) {
+                    $byKey[$key]['fit_reason'] = $incoming['fit_reason'];
                 }
             }
         }

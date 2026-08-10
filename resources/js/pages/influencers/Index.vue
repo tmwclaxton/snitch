@@ -2,6 +2,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import {
     Check,
+    ExternalLink,
     LoaderCircle,
     Search,
     Sparkles,
@@ -34,6 +35,7 @@ type Suggestion = {
     source?: string | null;
     followers?: number | null;
     language_hint?: string | null;
+    fit_reason?: string | null;
 };
 
 type KeptAccount = {
@@ -43,6 +45,7 @@ type KeptAccount = {
     display_name: string | null;
     avatar: string | null;
     url: string;
+    fit_reason?: string | null;
     posts_count?: number;
 };
 
@@ -571,9 +574,9 @@ onUnmounted(() => {
                     <li
                         v-for="item in pendingReview"
                         :key="suggestionKey(item)"
-                        class="snitch-cutout flex flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between"
+                        class="snitch-cutout flex flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-start sm:justify-between"
                     >
-                        <div class="flex min-w-0 items-center gap-3">
+                        <div class="flex min-w-0 items-start gap-3">
                             <SnitchAvatar
                                 :src="item.avatar"
                                 :name="item.display_name"
@@ -598,9 +601,27 @@ onUnmounted(() => {
                                     </span>
                                     <span>{{ formatFollowers(item.followers) }} followers</span>
                                 </p>
+                                <p
+                                    v-if="item.fit_reason"
+                                    class="mt-2 text-sm leading-snug text-snitch-ink/75"
+                                >
+                                    {{ item.fit_reason }}
+                                </p>
                             </div>
                         </div>
-                        <div class="flex shrink-0 gap-2">
+                        <div class="flex shrink-0 flex-wrap gap-2">
+                            <a
+                                v-if="item.url"
+                                :href="item.url"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
+                            >
+                                <span class="relative z-10 inline-flex items-center gap-1.5">
+                                    <ExternalLink class="size-3.5" aria-hidden="true" />
+                                    Profile
+                                </span>
+                            </a>
                             <button
                                 type="button"
                                 class="snitch-btn snitch-btn-spot px-3 py-1.5 text-sm"
@@ -645,37 +666,59 @@ onUnmounted(() => {
                     <li
                         v-for="account in keptAccounts"
                         :key="account.id"
-                        class="snitch-cutout flex flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between"
+                        class="snitch-cutout flex flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-start sm:justify-between"
                     >
-                        <Link
-                            :href="competitorShow(account.id)"
-                            class="flex min-w-0 items-center gap-3"
-                        >
-                            <SnitchAvatar
-                                :src="account.avatar"
-                                :name="account.display_name"
-                                :handle="account.handle"
-                                size="md"
-                            />
-                            <div class="min-w-0">
-                                <p class="snitch-display truncate text-base">
-                                    {{ account.display_name || account.handle }}
-                                </p>
-                                <p class="text-xs text-snitch-ink/60">
-                                    {{ platformLabel(account.platform) }} · @{{ account.handle }}
-                                </p>
-                            </div>
-                        </Link>
-                        <button
-                            type="button"
-                            class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
-                            @click="openRemove(account)"
-                        >
-                            <span class="relative z-10 inline-flex items-center gap-1.5">
-                                <Trash2 class="size-3.5" aria-hidden="true" />
-                                Remove
-                            </span>
-                        </button>
+                        <div class="flex min-w-0 items-start gap-3">
+                            <Link
+                                :href="competitorShow(account.id)"
+                                class="flex min-w-0 items-start gap-3"
+                            >
+                                <SnitchAvatar
+                                    :src="account.avatar"
+                                    :name="account.display_name"
+                                    :handle="account.handle"
+                                    size="md"
+                                />
+                                <div class="min-w-0">
+                                    <p class="snitch-display truncate text-base">
+                                        {{ account.display_name || account.handle }}
+                                    </p>
+                                    <p class="text-xs text-snitch-ink/60">
+                                        {{ platformLabel(account.platform) }} · @{{ account.handle }}
+                                    </p>
+                                    <p
+                                        v-if="account.fit_reason"
+                                        class="mt-2 text-sm leading-snug text-snitch-ink/75"
+                                    >
+                                        {{ account.fit_reason }}
+                                    </p>
+                                </div>
+                            </Link>
+                        </div>
+                        <div class="flex shrink-0 flex-wrap gap-2">
+                            <a
+                                v-if="account.url"
+                                :href="account.url"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
+                            >
+                                <span class="relative z-10 inline-flex items-center gap-1.5">
+                                    <ExternalLink class="size-3.5" aria-hidden="true" />
+                                    Profile
+                                </span>
+                            </a>
+                            <button
+                                type="button"
+                                class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
+                                @click="openRemove(account)"
+                            >
+                                <span class="relative z-10 inline-flex items-center gap-1.5">
+                                    <Trash2 class="size-3.5" aria-hidden="true" />
+                                    Remove
+                                </span>
+                            </button>
+                        </div>
                     </li>
                 </ul>
             </section>

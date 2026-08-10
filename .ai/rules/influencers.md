@@ -44,6 +44,9 @@ Influencer Keep creates `TrackedAccount` with `kind=influencer`. Competitor slot
 ## Keep / discard lock
 While undecided suggestions remain for a completed run, block a new search. Failed runs (including thin partials under `min_suggestions`) may start a new search without finishing Keep/Discard. Keep persists the profile and starts sync; Discard records the decision. Both update the poll cache so the UI can clear the card. UI may hint: "Last search found fewer than 6 - you can keep reviewing or search again."
 
+## fit_reason (brand-deal why)
+Suggestion rows carry `fit_reason` (1-2 sentences on brand-deal fit). NanoGPT propose/model-seed may include it; `enrichFitReasons` backfills missing reasons after verify (fail soft with a short fallback). Keep copies `fit_reason` onto `tracked_accounts.fit_reason`. UI shows it on Review queue + Kept cards with an external Profile link (`url`, new tab, `rel=noopener`). MCP: `find_influencers` / `influencer_search_status` expose suggestions with `fit_reason` + `url`; `keep_influencer` returns them; `list_influencers` lists kept rows including `fit_reason`.
+
 ## Quality-loop lessons (prompts / queries)
 - Prefer niche-led queries (`sneaker streetwear`, `cafe coffee food`, `belleza maquillaje`, `home workout fitness`, `startup grants`) over brand-name-only fishing.
 - Add per-platform query variants (`site:instagram.com`, `site:tiktok.com/@`, LinkedIn `/in`, YouTube `@` / Shorts) plus micro/mid-tier wording when a follower band is set.
