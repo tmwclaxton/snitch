@@ -11,6 +11,9 @@ QUEUE_CONNECTION=database. SyncTrackedAccountJob, AnalyzePostJob, and GenerateIn
 ## AnalyzePostJob must not HTTP-probe app public-disk media
 YouTube hydrate stores MP4s under `storage/app/public/youtube-media` and sets `media_url` to `{APP_URL}/storage/...`. Probe those with `PublicDiskMedia::existsOnPublicDisk` only. HTTP HEAD against localhost (or any host without `public/storage` linked) returns 403 and must not mark the post unavailable. Loopback analysis inlines (and may ffmpeg-compress) those files for NanoGPT; see adapters.md.
 
+## Backlog and sync drop posts outside recency after hydrate
+YouTube list payloads often omit `published_time`, so null `posted_at` passes the pre-import cutoff. Hydrate (or AnalyzePostJob) may then backfill a date years ago. Sync must re-check cutoff after `hydrateMediaUrls` and skip those payloads. `Post::analysisQueue` / `analysisFailed` / `analysisBacklog` use `withinAnalysisRecency` so `/backlog` never shows unanalyzable archive ghosts as Waiting forever.
+
 ## Redis retry_after must exceed longest job timeout
 Production uses redis queues. Keep `REDIS_QUEUE_RETRY_AFTER` / config `queue.connections.redis.retry_after` (default 660) greater than the longest `ShouldQueue` `$timeout` (`SuggestCompetitorsJob` is 600). If retry_after is shorter, Redis releases in-flight jobs and workers hit `MaxAttemptsExceeded` / duplicate `failed_jobs` uuid inserts.
 

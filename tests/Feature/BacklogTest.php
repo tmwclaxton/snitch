@@ -88,6 +88,33 @@ class BacklogTest extends TestCase
             );
     }
 
+    public function test_backlog_excludes_posts_outside_analysis_recency(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+
+        config(['snitch.sync.recency_days' => 30]);
+
+        Post::factory()->forAccount($account)->create([
+            'posted_at' => now()->subDays(60),
+        ]);
+
+        $recent = Post::factory()->forAccount($account)->create([
+            'posted_at' => now()->subDays(2),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('backlog.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('backlog/Index')
+                ->where('counts.queue', 1)
+                ->has('posts.data', 1)
+                ->where('posts.data.0.id', $recent->id)
+            );
+    }
+
     public function test_backlog_does_not_include_other_users_posts(): void
     {
         $user = User::factory()->create();

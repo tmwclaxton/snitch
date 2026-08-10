@@ -13,6 +13,7 @@ use App\Models\PostAnalysis;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Apify\ApifyClient;
+use App\Services\Apify\Contracts\PlatformAdapter;
 use App\Services\Apify\PlatformAdapterManager;
 use App\Services\Billing\VendorUsageCharger;
 use App\Services\SnitchAnalyticsService;
@@ -538,6 +539,93 @@ class SyncTrackedAccountJobTest extends TestCase
 
         $this->assertSame(1, Post::query()->count());
         $this->assertSame('older_reel', Post::query()->value('external_id'));
+    }
+
+    public function test_sync_drops_posts_whose_posted_at_is_filled_outside_recency_after_hydrate(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Youtube,
+            'handle' => 'Similarweb',
+            'external_id' => 'yt_1',
+            'url' => 'https://www.youtube.com/@Similarweb',
+            'display_name' => 'Similarweb',
+        ]);
+
+        config([
+            'snitch.sync.recency_days' => 30,
+            'snitch.sync.posts_limit' => 12,
+        ]);
+
+        $adapter = Mockery::mock(PlatformAdapter::class);
+        $adapter->shouldReceive('platform')->andReturn(Platform::Youtube);
+        $adapter->shouldReceive('resolveProfile')->once()->andReturn([
+            'platform' => Platform::Youtube,
+            'handle' => 'Similarweb',
+            'url' => 'https://www.youtube.com/@Similarweb',
+            'external_id' => 'yt_1',
+            'avatar' => null,
+            'display_name' => 'Similarweb',
+        ]);
+        $adapter->shouldReceive('listRecentPosts')->once()->andReturn([
+            [
+                'external_id' => 'archive_short',
+                'url' => 'https://www.youtube.com/shorts/archive_short',
+                'posted_at' => null,
+                'type' => PostType::Video->value,
+                'caption' => 'Old short with blank list date',
+                'media_url' => 'https://www.youtube.com/shorts/archive_short',
+                'metrics' => [],
+                'raw_payload' => [],
+            ],
+            [
+                'external_id' => 'fresh_short',
+                'url' => 'https://www.youtube.com/shorts/fresh_short',
+                'posted_at' => null,
+                'type' => PostType::Video->value,
+                'caption' => 'Recent short with blank list date',
+                'media_url' => 'https://www.youtube.com/shorts/fresh_short',
+                'metrics' => [],
+                'raw_payload' => [],
+            ],
+        ]);
+        $adapter->shouldReceive('hydrateMediaUrls')->once()->andReturnUsing(function (array $posts): array {
+            return array_map(function (array $post): array {
+                if ($post['external_id'] === 'archive_short') {
+                    $post['posted_at'] = now()->subYear()->toIso8601String();
+                    $post['media_url'] = 'http://localhost/storage/youtube-media/archive_short.mp4';
+                }
+
+                if ($post['external_id'] === 'fresh_short') {
+                    $post['posted_at'] = now()->subDays(2)->toIso8601String();
+                    $post['media_url'] = 'http://localhost/storage/youtube-media/fresh_short.mp4';
+                }
+
+                return $post;
+            }, $posts);
+        });
+
+        $adapters = Mockery::mock(PlatformAdapterManager::class);
+        $adapters->shouldReceive('driverFor')->andReturn('tikhub');
+        $adapters->shouldReceive('for')->with(Platform::Youtube)->andReturn($adapter);
+        $adapters->shouldReceive('tikHubAdapter')->never();
+
+        (new SyncTrackedAccountJob($account->id, force: true))->handle(
+            $adapters,
+            app(SnitchAnalyticsService::class),
+            app(VendorUsageCharger::class),
+        );
+
+        $this->assertSame(1, Post::query()->count());
+        $this->assertSame('fresh_short', Post::query()->value('external_id'));
+        Queue::assertPushed(AnalyzePostJob::class);
+        Queue::assertNotPushed(
+            AnalyzePostJob::class,
+            fn (AnalyzePostJob $job) => Post::query()->find($job->postId)?->external_id === 'archive_short',
+        );
     }
 
     public function test_tiktok_sync_hydrates_media_only_for_new_posts(): void

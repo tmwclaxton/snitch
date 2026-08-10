@@ -70,6 +70,26 @@ class Post extends Model
     }
 
     /**
+     * Posts still inside the sync/analyze recency window (or undated).
+     *
+     * YouTube list payloads often omit published_time; hydrate may later fill a
+     * historical date. Those rows must not sit in the analysis backlog forever.
+     *
+     * @param  Builder<Post>  $query
+     * @return Builder<Post>
+     */
+    public function scopeWithinAnalysisRecency(Builder $query): Builder
+    {
+        $recencyDays = max(1, (int) config('snitch.sync.recency_days', 30));
+        $cutoff = now()->subDays($recencyDays);
+
+        return $query->where(function (Builder $query) use ($cutoff): void {
+            $query->whereNull('posted_at')
+                ->orWhere('posted_at', '>=', $cutoff);
+        });
+    }
+
+    /**
      * Reels queued for analysis (synced, not yet completed).
      *
      * @param  Builder<Post>  $query
@@ -79,6 +99,7 @@ class Post extends Model
     {
         return $query
             ->mediaAvailable()
+            ->withinAnalysisRecency()
             ->where(function (Builder $query): void {
                 $query->whereDoesntHave('analysis')
                     ->orWhereHas('analysis', function (Builder $analysis): void {
@@ -100,6 +121,7 @@ class Post extends Model
     {
         return $query
             ->mediaAvailable()
+            ->withinAnalysisRecency()
             ->whereHas('analysis', function (Builder $analysis): void {
                 $analysis->where('status', AnalysisStatus::Failed);
             });
@@ -115,6 +137,7 @@ class Post extends Model
     {
         return $query
             ->mediaAvailable()
+            ->withinAnalysisRecency()
             ->where(function (Builder $query): void {
                 $query->whereDoesntHave('analysis')
                     ->orWhereHas('analysis', function (Builder $analysis): void {

@@ -170,6 +170,12 @@ class SyncTrackedAccountJob implements ShouldQueue
                     ? CarbonImmutable::parse((string) $payload['posted_at'])
                     : null;
 
+                // YouTube shorts often omit published_time until hydrate backfills
+                // it. Drop archive dates so they never become unanalyzable backlog ghosts.
+                if ($postedAt !== null && $postedAt->lt($cutoff)) {
+                    continue;
+                }
+
                 $post = Post::query()->create([
                     'tracked_account_id' => $account->id,
                     'external_id' => (string) $payload['external_id'],
