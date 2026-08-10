@@ -6,7 +6,7 @@ paths:
 # Jobs
 
 ## Queue worker required for async sync and analyze
-QUEUE_CONNECTION=database. SyncTrackedAccountJob and AnalyzePostJob are ShouldQueue; ConfirmSuggestions / UI sync need a running queue worker. Live probes may dispatchSync. Never assume sync/analyze finished because the HTTP request returned.
+QUEUE_CONNECTION=database. SyncTrackedAccountJob, AnalyzePostJob, and GenerateInfluencerBriefJob are ShouldQueue; ConfirmSuggestions / UI sync / onboarding brief need a running queue worker. Live probes may dispatchSync. Never assume sync/analyze/brief finished because the HTTP request returned.
 
 ## AnalyzePostJob must not HTTP-probe app public-disk media
 YouTube hydrate stores MP4s under `storage/app/public/youtube-media` and sets `media_url` to `{APP_URL}/storage/...`. Probe those with `PublicDiskMedia::existsOnPublicDisk` only. HTTP HEAD against localhost (or any host without `public/storage` linked) returns 403 and must not mark the post unavailable. Loopback analysis inlines (and may ffmpeg-compress) those files for NanoGPT; see adapters.md.

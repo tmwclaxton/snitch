@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\GenerateInfluencerBriefJob;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -55,6 +57,8 @@ class OnboardingTest extends TestCase
 
     public function test_user_can_save_brand_profile(): void
     {
+        Queue::fake();
+
         $user = User::factory()->create();
 
         $this->actingAs($user)
@@ -70,10 +74,16 @@ class OnboardingTest extends TestCase
             'user_id' => $user->id,
             'name' => 'Loaf Local',
         ]);
+
+        Queue::assertPushed(GenerateInfluencerBriefJob::class, function (GenerateInfluencerBriefJob $job) use ($user): bool {
+            return $job->userId === $user->id;
+        });
     }
 
     public function test_user_can_save_brand_profile_with_website_missing_scheme(): void
     {
+        Queue::fake();
+
         $user = User::factory()->create();
 
         $this->actingAs($user)
@@ -94,6 +104,8 @@ class OnboardingTest extends TestCase
 
     public function test_user_can_save_brand_profile_without_website(): void
     {
+        Queue::fake();
+
         $user = User::factory()->create();
 
         $this->actingAs($user)

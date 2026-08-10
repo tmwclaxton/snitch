@@ -150,6 +150,7 @@ return [
         'influencers.find' => ['vendor' => 'firecrawl', 'floor_usd' => 0.02],
         'competitors.suggest' => ['vendor' => 'firecrawl', 'floor_usd' => 0.02],
         'brand.autofill' => ['vendor' => 'firecrawl', 'floor_usd' => 0.005],
+        'influencer.brief' => ['vendor' => 'nanogpt', 'floor_usd' => 0.001],
         'winners.copy' => ['vendor' => 'nanogpt', 'floor_usd' => 0.002],
     ],
 

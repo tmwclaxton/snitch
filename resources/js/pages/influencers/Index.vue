@@ -75,6 +75,9 @@ type Filters = {
     brief: string;
 };
 
+const DEFAULT_MIN_FOLLOWERS = 1000;
+const DEFAULT_MAX_FOLLOWERS = 50000;
+
 const props = defineProps<{
     brand: { name: string; description: string | null } | null;
     platforms: string[];
@@ -134,8 +137,8 @@ function normalizeLanguage(value: string | null | undefined): string {
 const form = useForm({
     platform: props.filters.platform || props.platforms[0] || 'instagram',
     language: normalizeLanguage(props.filters.language),
-    min_followers: props.filters.min_followers as number | null,
-    max_followers: props.filters.max_followers as number | null,
+    min_followers: props.filters.min_followers ?? DEFAULT_MIN_FOLLOWERS,
+    max_followers: props.filters.max_followers ?? DEFAULT_MAX_FOLLOWERS,
     brief: props.filters.brief ?? '',
 });
 
@@ -477,7 +480,6 @@ onUnmounted(() => {
                                 v-model.number="form.min_followers"
                                 type="number"
                                 min="0"
-                                placeholder="Optional"
                                 class="mt-1.5 w-full border border-snitch-ink/20 bg-snitch-paper/80 px-3 py-2 text-snitch-ink"
                             />
                         </label>
@@ -487,7 +489,6 @@ onUnmounted(() => {
                                 v-model.number="form.max_followers"
                                 type="number"
                                 min="0"
-                                placeholder="Optional"
                                 class="mt-1.5 w-full border border-snitch-ink/20 bg-snitch-paper/80 px-3 py-2 text-snitch-ink"
                             />
                         </label>
@@ -498,7 +499,7 @@ onUnmounted(() => {
                         <textarea
                             v-model="form.brief"
                             rows="4"
-                            placeholder="Empty at first. Generate from your brand, or describe creators you want for partnerships."
+                            placeholder="Auto-filled after onboarding when possible. Generate from your brand, or describe creators you want for partnerships."
                             class="mt-1.5 w-full border border-snitch-ink/20 bg-snitch-paper/80 px-3 py-2 text-snitch-ink"
                         />
                     </label>

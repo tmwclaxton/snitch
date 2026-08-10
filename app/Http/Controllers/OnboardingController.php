@@ -6,6 +6,7 @@ use App\Enums\Platform;
 use App\Http\Requests\Onboarding\AutofillFromWebsiteRequest;
 use App\Http\Requests\Onboarding\StoreBrandProfileRequest;
 use App\Jobs\AutofillBrandFromWebsiteJob;
+use App\Jobs\GenerateInfluencerBriefJob;
 use App\Models\BrandProfile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -41,6 +42,8 @@ class OnboardingController extends Controller
                 'own_handles' => $request->validated('own_handles') ?? [],
             ],
         );
+
+        GenerateInfluencerBriefJob::dispatch($request->user()->id);
 
         Inertia::flash('toast', [
             'type' => 'success',

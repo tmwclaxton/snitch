@@ -48,15 +48,19 @@ class InfluencerController extends Controller
         try {
             $brief = $this->discovery->generateBrief($brand, [
                 'platforms' => [$data['platform']],
-                'language' => $data['language'] ?? null,
-                'min_followers' => $data['min_followers'] ?? null,
-                'max_followers' => $data['max_followers'] ?? null,
+                'language' => $data['language'] ?? (string) config('snitch.influencer_find.default_language', 'English'),
+                'min_followers' => $data['min_followers'] ?? (int) config('snitch.influencer_find.default_min_followers', 1000),
+                'max_followers' => $data['max_followers'] ?? (int) config('snitch.influencer_find.default_max_followers', 50000),
             ]);
         } catch (RuntimeException $exception) {
             return response()->json([
                 'message' => $exception->getMessage(),
             ], SymfonyResponse::HTTP_UNPROCESSABLE_ENTITY);
         }
+
+        $brand->forceFill([
+            'influencer_brief' => $brief,
+        ])->save();
 
         return response()->json(['brief' => $brief]);
     }
@@ -288,6 +292,8 @@ class InfluencerController extends Controller
             ->values();
 
         $defaultPlatform = (string) config('snitch.influencer_find.default_platform', 'instagram');
+        $defaultMinFollowers = (int) config('snitch.influencer_find.default_min_followers', 1000);
+        $defaultMaxFollowers = (int) config('snitch.influencer_find.default_max_followers', 50000);
         $runPlatforms = is_array($run['filters']['platforms'] ?? null)
             ? $run['filters']['platforms']
             : [];
@@ -296,19 +302,23 @@ class InfluencerController extends Controller
         $rawLanguage = is_array($run['filters'] ?? null)
             ? ($run['filters']['language'] ?? null)
             : null;
+        $rawMinFollowers = is_array($run['filters'] ?? null)
+            ? ($run['filters']['min_followers'] ?? null)
+            : null;
+        $rawMaxFollowers = is_array($run['filters'] ?? null)
+            ? ($run['filters']['max_followers'] ?? null)
+            : null;
+        $runBrief = is_array($run['filters'] ?? null)
+            ? trim((string) ($run['filters']['brief'] ?? ($run['brief'] ?? '')))
+            : '';
+        $brandBrief = trim((string) ($brand?->influencer_brief ?? ''));
 
         $filters = [
             'platform' => $selectedPlatform,
             'language' => $this->normalizeLanguageFilter($rawLanguage),
-            'min_followers' => is_array($run['filters'] ?? null)
-                ? ($run['filters']['min_followers'] ?? null)
-                : null,
-            'max_followers' => is_array($run['filters'] ?? null)
-                ? ($run['filters']['max_followers'] ?? null)
-                : null,
-            'brief' => is_array($run['filters'] ?? null)
-                ? ($run['filters']['brief'] ?? ($run['brief'] ?? ''))
-                : '',
+            'min_followers' => is_numeric($rawMinFollowers) ? (int) $rawMinFollowers : $defaultMinFollowers,
+            'max_followers' => is_numeric($rawMaxFollowers) ? (int) $rawMaxFollowers : $defaultMaxFollowers,
+            'brief' => $runBrief !== '' ? $runBrief : $brandBrief,
         ];
 
         $summary = $this->entitlements->summary($user);
@@ -349,12 +359,14 @@ class InfluencerController extends Controller
 
     /**
      * Map stored / free-text language values onto the influencers UI select options.
-     * Defaults to English so the Language control always has a real selection.
+     * Defaults to the configured language so the Language control always has a real selection.
      */
     private function normalizeLanguageFilter(mixed $language): string
     {
+        $default = (string) config('snitch.influencer_find.default_language', 'English');
+
         if (! is_string($language) || trim($language) === '') {
-            return 'English';
+            return $default;
         }
 
         $normalized = strtolower(trim($language));
@@ -365,7 +377,7 @@ class InfluencerController extends Controller
             'french', 'fr', 'fre', 'fra', 'fr-fr', 'fr_fr' => 'French',
             'german', 'de', 'ger', 'deu', 'de-de', 'de_de' => 'German',
             'any' => 'any',
-            default => 'English',
+            default => $default,
         };
     }
 

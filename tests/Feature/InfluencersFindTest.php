@@ -40,6 +40,9 @@ class InfluencersFindTest extends TestCase
                 ->where('canSearch', true)
                 ->where('filters.platform', 'instagram')
                 ->where('filters.language', 'English')
+                ->where('filters.min_followers', 1000)
+                ->where('filters.max_followers', 50000)
+                ->where('filters.brief', '')
                 ->has('influencerCap')
             );
     }

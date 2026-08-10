@@ -4,14 +4,23 @@ paths:
   - 'app/Http/Controllers/InfluencerController.php'
   - 'app/Http/Requests/Influencers/**'
   - 'app/Jobs/FindInfluencersJob.php'
+  - 'app/Jobs/GenerateInfluencerBriefJob.php'
+  - 'app/Http/Controllers/OnboardingController.php'
   - 'app/Console/Commands/ProbeInfluencerFindCommand.php'
   - 'app/Enums/TrackedAccountKind.php'
   - 'resources/js/pages/influencers/**'
   - 'tests/Feature/InfluencersFindTest.php'
+  - 'tests/Feature/GenerateInfluencerBriefJobTest.php'
   - 'tests/Unit/Services/Influencers/**'
 ---
 
 # Find influencers
+
+## Default filters
+UI defaults from `snitch.influencer_find`: platform `instagram`, language `English`, min followers `1000`, max followers `50000`. Normalize language codes like `en` onto select labels. Empty follower fields fall back to those defaults. Prefill brief from `brand_profiles.influencer_brief` when the latest run has no brief.
+
+## Onboarding brief job
+`OnboardingController::store` dispatches `GenerateInfluencerBriefJob` after the brand is saved. The job uses the default filters, writes `influencer_brief` on the brand, and charges NanoGPT (`influencer.brief`). Soft-skip when balance is below the billable floor or a brief already exists. Manual Generate on `/influencers` also persists `influencer_brief`.
 
 ## Multi-seed discovery
 Order: NanoGPT model seed + Firecrawl search/propose + vendor native platform search (Apify, or TikHub when `ApifyMonthlyCapGate` is exhausted) -> merge/dedupe -> platform resolve (require `external_id`) with follower extraction. Do not invent Keep-ready creators from LLM memory alone; model seeds always go through resolve verify. Fail clearly under `min_suggestions` via `InsufficientInfluencerSuggestionsException` (partial rows still returned for the UI). Probe locally with `php artisan snitch:probe-influencer-find --sync`.

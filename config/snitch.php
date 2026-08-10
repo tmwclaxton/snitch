@@ -99,6 +99,9 @@ return [
         ],
         'platforms' => ['instagram', 'tiktok', 'youtube', 'linkedin', 'facebook'],
         'default_platform' => 'instagram',
+        'default_language' => 'English',
+        'default_min_followers' => (int) env('SNITCH_INFLUENCER_FIND_DEFAULT_MIN_FOLLOWERS', 1000),
+        'default_max_followers' => (int) env('SNITCH_INFLUENCER_FIND_DEFAULT_MAX_FOLLOWERS', 50000),
     ],
 
     /*

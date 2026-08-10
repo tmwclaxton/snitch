@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'name', 'website', 'description', 'own_handles'])]
+#[Fillable(['user_id', 'name', 'website', 'description', 'influencer_brief', 'own_handles'])]
 class BrandProfile extends Model
 {
     /** @use HasFactory<BrandProfileFactory> */
