@@ -80,7 +80,7 @@ class SuggestCompetitorsJob implements ShouldQueue
                     'suggestions' => $partial,
                     'error' => null,
                 ]);
-            }, $this->filters);
+            }, $this->resolvedFilters());
         } catch (InsufficientCompetitorSuggestionsException $exception) {
             $this->chargeCompetitorSuggestVendors($user, $charger, $billing);
             $this->putStatus([
@@ -159,7 +159,7 @@ class SuggestCompetitorsJob implements ShouldQueue
      */
     private function putStatus(array $payload): void
     {
-        $payload['filters'] = $this->filters;
+        $payload['filters'] = $this->resolvedFilters();
 
         Cache::put($this->cacheKey(), $payload, now()->addHours(2));
 
@@ -170,6 +170,17 @@ class SuggestCompetitorsJob implements ShouldQueue
         if (in_array($payload['status'], ['completed', 'failed'], true)) {
             self::clearActive($this->userId, $this->suggestId);
         }
+    }
+
+    /**
+     * Jobs queued before the filters constructor arg existed can unserialize
+     * without initializing the typed property - never read it raw.
+     *
+     * @return array{platforms?: list<string>, brief?: string}
+     */
+    private function resolvedFilters(): array
+    {
+        return isset($this->filters) ? $this->filters : [];
     }
 
     public static function cacheKeyFor(int $userId, string $suggestId): string
