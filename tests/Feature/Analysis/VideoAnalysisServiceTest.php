@@ -212,6 +212,105 @@ class VideoAnalysisServiceTest extends TestCase
         });
     }
 
+    public function test_analyze_post_persists_transcript_when_model_returns_one(): void
+    {
+        $this->seed(AnalysisTermSeeder::class);
+
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'content' => json_encode([
+                            'concept' => 'Grant myth-bust hook then lead magnet gate',
+                            'hook' => 'Text overlay STOP DOING THIS on false grant advice',
+                            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+                            'visual_summary' => str_repeat('Split screen bold FALSE stamp with talking-head replies. ', 2),
+                            'idea' => 'Myth callout then exclusivity gate for the lead magnet.',
+                            'topics' => ['grants'],
+                            'hook_type_slugs' => ['pattern_interrupt'],
+                            'topic_slugs' => ['content_strategy'],
+                            'visual_craft_slugs' => ['talking_head'],
+                            'custom_tags' => [],
+                            'cta' => 'Comment MYTH for the guide',
+                            'how_to_copy' => "1. Cold open on the false claim\n2. Cut to your correction\n3. Gate the deeper answer",
+                            'transcript' => "Stop applying for grants like this.\nHere is what actually works.\nComment MYTH and I will send you the checklist.",
+                            'sfx' => [],
+                            'is_original_audio' => true,
+                        ]),
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+            'media_url' => 'https://cdn.example.com/reel.mp4',
+        ]);
+
+        $outcome = app(VideoAnalysisService::class)->analyzePost($post);
+
+        $this->assertSame(AnalysisStatus::Completed, $outcome['analysis']->status);
+        $this->assertSame(
+            "Stop applying for grants like this.\nHere is what actually works.\nComment MYTH and I will send you the checklist.",
+            $outcome['analysis']->transcript,
+        );
+    }
+
+    public function test_analyze_post_stores_null_transcript_when_reel_is_silent(): void
+    {
+        $this->seed(AnalysisTermSeeder::class);
+
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'content' => json_encode([
+                            'concept' => 'Silent product tease with printed text pack',
+                            'hook' => 'Bold FALSE stamp lands before the reveal',
+                            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+                            'visual_summary' => str_repeat('Riso paper backdrop with hand-drawn arrows and typography reveal. ', 2),
+                            'idea' => 'Curiosity from a silent typographic tease',
+                            'topics' => ['silent hook'],
+                            'hook_type_slugs' => ['silent_visual_hook'],
+                            'topic_slugs' => ['content_strategy'],
+                            'visual_craft_slugs' => ['sticker_pack_overlay'],
+                            'custom_tags' => [],
+                            'cta' => 'No explicit CTA',
+                            'how_to_copy' => "1. Print a bold stamp\n2. Reveal on the beat\n3. End on your product",
+                            'transcript' => '',
+                            'sfx' => [],
+                            'is_original_audio' => false,
+                        ]),
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+            'media_url' => 'https://cdn.example.com/silent.mp4',
+        ]);
+
+        $outcome = app(VideoAnalysisService::class)->analyzePost($post);
+
+        $this->assertSame(AnalysisStatus::Completed, $outcome['analysis']->status);
+        $this->assertNull($outcome['analysis']->transcript);
+    }
+
     public function test_analyze_post_infers_catalogue_terms_when_model_omits_slugs(): void
     {
         $this->seed(AnalysisTermSeeder::class);

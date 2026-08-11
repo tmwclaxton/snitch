@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
     'music',
     'cta',
     'how_to_copy',
+    'transcript',
     'concept',
     'topics',
     'custom_tags',

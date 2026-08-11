@@ -57,7 +57,7 @@ Return ONLY valid JSON matching the schema.
 Write every string value in English (UK), including concept, idea, topics, how_to_copy, visual_summary, cta, and labels.
 Do not use Chinese or other non-English prose. Spoken-word quotes in hook may keep the original language, but all explanation stays English.
 Prioritise reusable craft concepts and engagement mechanics.
-Never dump or paraphrase long stretches of spoken script or caption.
+Keep the concept-first fields (hook / concept / idea / visual_summary / how_to_copy) free of long transcript dumps or caption paraphrasing - put the verbatim spoken words in the separate transcript field instead.
 Never invent music or SFX that are not audible in the media. Prefer platform music metadata when provided over guessing a song title.
 Reject vague filler ("engaging", "relatable vibe", "great energy") - name the mechanic.
 Always fill hook_type_slugs, topic_slugs, and visual_craft_slugs from the controlled catalogue when they fit (e.g. myth_bust for myth-busting opens). Use custom_tags only when nothing fits.
@@ -176,6 +176,7 @@ SYSTEM,
                 ),
                 'cta' => $result->cta,
                 'how_to_copy' => $result->howToCopy,
+                'transcript' => $result->transcript !== '' ? $result->transcript : null,
                 'model' => $result->model,
                 'analyzed_at' => now(),
                 'error_message' => null,
@@ -253,7 +254,8 @@ Rules:
 - custom_tags = short freeform labels ONLY when the catalogue misses something important.
 - how_to_copy = 2-4 actionable remake steps for another brand applying the SAME concept (required, never empty). Put each step on its own line as a Markdown numbered list (e.g. "1. ...\\n2. ...\\n3. ..."). Never pack steps onto one line. Do not bury the post CTA inside how_to_copy - CTA has its own field.
 - cta = the post's ask / next action only (separate from remake steps). Always fill this string; use "No explicit CTA" when the post has no ask.
-- Do NOT dump the transcript or rewrite the caption.
+- transcript = verbatim spoken words in the reel (any language, keep original) as one plain string with line breaks between sentences/speakers. Do NOT paraphrase, translate, or add commentary. Empty string "" when silent or purely music/SFX. The transcript field is separate from the concept-first fields above and never counts as caption echo.
+- Do NOT reuse the transcript inside hook/concept/idea/visual_summary/how_to_copy - the transcript field is where spoken words live.
 - Keep hook/concept/idea short and specific; name the mechanic.
 
 {$catalogueBlock}
@@ -272,6 +274,7 @@ Return JSON with keys:
   "custom_tags": [],
   "cta": "string (post ask only)",
   "how_to_copy": "1. First remake step\\n2. Second step\\n3. Third step",
+  "transcript": "string (verbatim spoken words, original language, or empty when silent)",
   "sfx": [{"at_sec": 0.5, "label": "whoosh", "role": "transition"}],
   "music_title": "string|null",
   "music_artist": "string|null",

@@ -22,6 +22,7 @@ final readonly class VideoAnalysisResult
         public string $concept,
         public string $cta,
         public string $howToCopy,
+        public string $transcript,
         public array $sfx,
         public array $topics,
         public array $hookTypeSlugs,
@@ -99,6 +100,7 @@ final readonly class VideoAnalysisResult
             concept: $concept,
             cta: $cta,
             howToCopy: trim((string) ($payload['how_to_copy'] ?? '')),
+            transcript: self::normalizeTranscript($payload['transcript'] ?? null),
             sfx: $sfxItems,
             topics: $topics,
             hookTypeSlugs: $hookTypeSlugs,
@@ -131,6 +133,7 @@ final readonly class VideoAnalysisResult
             'concept' => $this->concept,
             'cta' => $this->cta,
             'how_to_copy' => $this->howToCopy,
+            'transcript' => $this->transcript,
             'topics' => $this->topics,
             'hook_type_slugs' => $this->hookTypeSlugs,
             'topic_slugs' => $this->topicSlugs,
@@ -150,6 +153,60 @@ final readonly class VideoAnalysisResult
             || $this->topicSlugs !== []
             || $this->visualCraftSlugs !== []
             || $this->customTags !== [];
+    }
+
+    /**
+     * Transcript may arrive as a plain string, a list of lines, or a list of
+     * timestamped entries. Normalize to a single string of spoken words,
+     * keeping timestamps only when the model provided them.
+     */
+    private static function normalizeTranscript(mixed $value): string
+    {
+        if (is_string($value)) {
+            return trim($value);
+        }
+
+        if (! is_array($value)) {
+            return '';
+        }
+
+        $lines = [];
+
+        foreach ($value as $item) {
+            if (is_string($item) || is_numeric($item)) {
+                $line = trim((string) $item);
+
+                if ($line !== '') {
+                    $lines[] = $line;
+                }
+
+                continue;
+            }
+
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $text = trim((string) ($item['text'] ?? $item['line'] ?? $item['speech'] ?? ''));
+
+            if ($text === '') {
+                continue;
+            }
+
+            $timestamp = $item['at_sec'] ?? $item['timestamp'] ?? $item['start'] ?? null;
+
+            if (is_numeric($timestamp)) {
+                $seconds = (float) $timestamp;
+                $formatted = sprintf('[%02d:%02d]', (int) floor($seconds / 60), (int) floor(fmod($seconds, 60)));
+                $lines[] = "{$formatted} {$text}";
+
+                continue;
+            }
+
+            $lines[] = $text;
+        }
+
+        return trim(implode("\n", $lines));
     }
 
     private static function nullableString(mixed $value): ?string

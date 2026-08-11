@@ -86,6 +86,67 @@ class VideoAnalysisResultTest extends TestCase
         $this->assertSame(4.0, $customFloor->hookWindowEndSeconds);
     }
 
+    public function test_from_model_payload_extracts_transcript_string(): void
+    {
+        $result = VideoAnalysisResult::fromModelPayload([
+            'concept' => 'Proof-first before CTA',
+            'hook' => 'Cold open on receipt',
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+            'visual_summary' => 'Tight crop on numbers then cut to face.',
+            'idea' => 'Status proof via specific dollar amount',
+            'topics' => ['social proof'],
+            'cta' => 'Apply today',
+            'how_to_copy' => 'Lead with a concrete number, then your brand offer.',
+            'transcript' => "  I closed on a $12k grant this month.\nHere is how.  ",
+            'sfx' => [],
+        ], 'qwen3.7-flash');
+
+        $this->assertSame(
+            "I closed on a \$12k grant this month.\nHere is how.",
+            $result->transcript,
+        );
+    }
+
+    public function test_from_model_payload_normalizes_timestamped_transcript_array(): void
+    {
+        $result = VideoAnalysisResult::fromModelPayload([
+            'concept' => 'Proof-first before CTA',
+            'hook' => 'Cold open on receipt',
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+            'visual_summary' => 'Tight crop on numbers then cut to face.',
+            'idea' => 'Status proof via specific dollar amount',
+            'cta' => 'Apply today',
+            'how_to_copy' => 'Lead with a concrete number, then your brand offer.',
+            'transcript' => [
+                ['at_sec' => 0.4, 'text' => 'Look what we got.'],
+                ['start' => 62, 'text' => 'Full breakdown in bio.'],
+                'Wrap it up.',
+            ],
+            'sfx' => [],
+        ], 'qwen3.7-flash');
+
+        $this->assertSame(
+            "[00:00] Look what we got.\n[01:02] Full breakdown in bio.\nWrap it up.",
+            $result->transcript,
+        );
+    }
+
+    public function test_from_model_payload_defaults_transcript_to_empty_string(): void
+    {
+        $result = VideoAnalysisResult::fromModelPayload([
+            'concept' => 'Proof-first before CTA',
+            'hook' => 'Cold open on receipt',
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+            'visual_summary' => 'Tight crop on numbers then cut to face.',
+            'idea' => 'Status proof via specific dollar amount',
+            'cta' => 'Apply today',
+            'how_to_copy' => 'Lead with a concrete number, then your brand offer.',
+            'sfx' => [],
+        ], 'qwen3.7-flash');
+
+        $this->assertSame('', $result->transcript);
+    }
+
     public function test_from_model_payload_floors_empty_cta(): void
     {
         $result = VideoAnalysisResult::fromModelPayload([

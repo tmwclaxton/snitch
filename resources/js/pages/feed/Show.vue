@@ -7,17 +7,19 @@ import {
     ExternalLink,
     Megaphone,
     Music,
+    ScrollText,
     Sparkles,
     Trophy,
     WandSparkles,
 } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feedIndex } from '@/actions/App/Http/Controllers/FeedController';
 import AnalysisTermChip from '@/components/AnalysisTermChip.vue';
 import MarkdownText from '@/components/MarkdownText.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
+import TranscriptModal from '@/components/TranscriptModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { analysisDimensionIcon, exploreHrefForTerm } from '@/lib/analysisTerms';
 import { metricIcon } from '@/lib/metricIcons';
@@ -44,6 +46,7 @@ type Analysis = {
     cta: string | null;
     how_to_copy: string | null;
     how_to_copy_html?: string | null;
+    transcript?: string | null;
     sfx: Array<{ at_sec?: number | null; label: string; role?: string | null }> | null;
     music: Record<string, unknown> | null;
     error_message?: string | null;
@@ -246,6 +249,18 @@ const termChips = computed(() => {
         maxLength: null,
     });
 });
+
+const transcript = computed(() => {
+    const raw = props.post.analysis?.transcript;
+
+    return typeof raw === 'string' ? raw.trim() : '';
+});
+
+const transcriptOpen = ref(false);
+
+function openTranscript(): void {
+    transcriptOpen.value = true;
+}
 </script>
 
 <template>
@@ -262,17 +277,34 @@ const termChips = computed(() => {
                     <ArrowLeft class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
                     <span class="relative z-10">Back to feed</span>
                 </Link>
-                <a
-                    v-if="post.url"
-                    :href="post.url"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
-                >
-                    <ExternalLink class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
-                    <span class="relative z-10">Open on {{ platformLabel(post.platform) }}</span>
-                </a>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button
+                        v-if="transcript"
+                        type="button"
+                        class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
+                        data-test="open-transcript-button"
+                        @click="openTranscript"
+                    >
+                        <ScrollText class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                        <span class="relative z-10">Transcript</span>
+                    </button>
+                    <a
+                        v-if="post.url"
+                        :href="post.url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
+                    >
+                        <ExternalLink class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                        <span class="relative z-10">Open on {{ platformLabel(post.platform) }}</span>
+                    </a>
+                </div>
             </div>
+
+            <TranscriptModal
+                v-model:open="transcriptOpen"
+                :transcript="transcript"
+            />
 
             <header class="mt-5 border-b border-snitch-ink/10 pb-5">
                 <p class="snitch-ink-label inline-flex flex-wrap items-center gap-1.5">

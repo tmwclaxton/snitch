@@ -148,6 +148,7 @@ class FeedTest extends TestCase
         PostAnalysis::factory()->for($post)->create([
             'concept' => 'Pattern interrupt then proof',
             'how_to_copy' => 'Open on the mess. Cut to the receipt. End on the ask.',
+            'transcript' => "Look at this mess.\nHere is the receipt.\nHere is the ask.",
             'topics' => ['interrupt', 'proof'],
         ]);
         WinnerInsight::factory()->forPost($post)->create([
@@ -168,6 +169,10 @@ class FeedTest extends TestCase
                 ->where(
                     'post.analysis.how_to_copy_html',
                     "<ol>\n<li>Open on the mess.</li>\n<li>Cut to the receipt.</li>\n<li>End on the ask.</li>\n</ol>",
+                )
+                ->where(
+                    'post.analysis.transcript',
+                    "Look at this mess.\nHere is the receipt.\nHere is the ask.",
                 )
                 ->where('post.analysis.topics.1', 'proof')
                 ->where('post.tracked_account.id', $account->id)
@@ -263,6 +268,37 @@ class FeedTest extends TestCase
                 ->component('feed/Show')
                 ->where('post.embed', null)
             );
+    }
+
+    public function test_post_detail_omits_transcript_when_analysis_has_none(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+        ]);
+        PostAnalysis::factory()->for($post)->create([
+            'transcript' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('feed.show', $post))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('feed/Show')
+                ->where('post.analysis.transcript', null)
+            );
+    }
+
+    public function test_feed_show_vue_wires_transcript_button_and_modal(): void
+    {
+        $showVue = file_get_contents(resource_path('js/pages/feed/Show.vue'));
+
+        $this->assertIsString($showVue);
+        $this->assertStringContainsString('Transcript', $showVue);
+        $this->assertStringContainsString('post.analysis?.transcript', $showVue);
+        $this->assertStringContainsString('TranscriptModal', $showVue);
     }
 
     public function test_feed_term_chips_link_to_explore_with_preselected_filters(): void
