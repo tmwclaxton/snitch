@@ -63,16 +63,42 @@ class ApifyMonthlyCapGateTest extends TestCase
         $this->assertFalse($gate->shouldUseTikHub(Platform::Facebook));
     }
 
-    public function test_empty_cap_disables_soft_switch(): void
+    public function test_zero_cap_soft_exhausts_and_uses_tikhub_when_supported(): void
     {
         config(['snitch.apify.monthly_cap_usd' => 0]);
-        $this->seedApifyCogs(100.0);
 
         $gate = app(ApifyMonthlyCapGate::class);
 
-        $this->assertFalse($gate->isApifyExhausted());
-        $this->assertFalse($gate->shouldUseTikHub(Platform::Instagram));
+        $this->assertTrue($gate->isApifyExhausted());
+        $this->assertTrue($gate->shouldUseTikHub(Platform::Instagram));
+        $this->assertTrue($gate->shouldUseTikHub(Platform::TikTok));
+        $this->assertTrue($gate->shouldUseTikHub(Platform::Youtube));
+        $this->assertTrue($gate->shouldUseTikHub(Platform::LinkedIn));
         $this->assertNull($gate->remainingUsd());
+    }
+
+    public function test_zero_cap_keeps_apify_for_facebook(): void
+    {
+        config(['snitch.apify.monthly_cap_usd' => 0]);
+
+        $gate = app(ApifyMonthlyCapGate::class);
+
+        $this->assertTrue($gate->isApifyExhausted());
+        $this->assertFalse($gate->shouldUseTikHub(Platform::Facebook));
+    }
+
+    public function test_zero_cap_without_tikhub_key_keeps_apify(): void
+    {
+        config([
+            'snitch.apify.monthly_cap_usd' => 0,
+            'snitch.tikhub.api_key' => '',
+        ]);
+
+        $gate = app(ApifyMonthlyCapGate::class);
+
+        $this->assertTrue($gate->isApifyExhausted());
+        $this->assertFalse($gate->shouldUseTikHub(Platform::Instagram));
+        $this->assertFalse($gate->shouldUseTikHub(Platform::Facebook));
     }
 
     public function test_hard_exhaust_uses_tikhub_when_supported_even_under_soft_cap(): void

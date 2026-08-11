@@ -64,8 +64,11 @@ class ApifyMonthlyCapGate
 
         $cap = $this->monthlyCapUsd();
 
+        // Cap 0 (or empty after cast) means soft-exhausted immediately: prefer
+        // TikHub wherever it can serve. Apify-only platforms still override via
+        // shouldUseTikHub() / tikHubSupports().
         if ($cap <= 0) {
-            return false;
+            return true;
         }
 
         return $this->monthToDateApifyCogsUsd() >= $cap;
