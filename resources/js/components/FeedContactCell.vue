@@ -139,8 +139,22 @@ const winnerScore = computed(() => {
 
 <template>
     <article class="snitch-contact-cell group">
-        <div class="snitch-contact-cell-frame">
+        <header class="snitch-contact-cell-header">
             <span class="snitch-contact-cell-index">{{ frameIndex }}</span>
+            <span class="snitch-contact-cell-platform">
+                <img
+                    :src="platformIconSrc(post.platform)"
+                    alt=""
+                    class="snitch-platform-logo"
+                    width="14"
+                    height="14"
+                    loading="lazy"
+                    decoding="async"
+                >
+                <span class="snitch-contact-cell-platform-text">
+                    {{ platformLabel(post.platform) }} · {{ postTypeLabel(post.type) }}
+                </span>
+            </span>
             <span
                 v-if="winnerScore"
                 class="snitch-glance-winner"
@@ -148,92 +162,86 @@ const winnerScore = computed(() => {
             >
                 ★ {{ winnerScore }}
             </span>
-            <PlatformEmbed
-                :embed="post.embed"
-                :media-url="post.media_url"
-                :post-url="post.url"
-                :platform="post.platform"
-                compact
-            />
+        </header>
+        <div class="snitch-contact-cell-window">
+            <div class="snitch-contact-cell-frame">
+                <PlatformEmbed
+                    :embed="post.embed"
+                    :media-url="post.media_url"
+                    :post-url="post.url"
+                    :platform="post.platform"
+                    compact
+                />
+            </div>
         </div>
-        <div class="snitch-contact-cell-meta">
+        <div class="snitch-contact-cell-body">
             <Link
                 :href="feedShow.url(post.id)"
-                class="snitch-contact-cell-meta-link block space-y-1"
+                class="snitch-contact-cell-body-link"
             >
-                <span class="snitch-ink-label inline-flex items-center gap-1.5">
-                    <img
-                        :src="platformIconSrc(post.platform)"
-                        alt=""
-                        class="snitch-platform-logo size-3.5 shrink-0"
-                        width="14"
-                        height="14"
-                        loading="lazy"
-                        decoding="async"
-                    >
-                    {{ platformLabel(post.platform) }} · {{ postTypeLabel(post.type) }}
-                </span>
-                <p class="snitch-annotation snitch-glance-title line-clamp-2">
+                <p class="snitch-glance-title line-clamp-2">
                     {{ primaryTitle }}
                 </p>
-                <p
-                    v-if="metrics.length"
-                    class="snitch-glance-metrics"
-                >
-                    <span
-                        v-for="metric in metrics"
-                        :key="metric.key"
-                        class="snitch-glance-metric"
-                    >
-                        <span class="tabular-nums">{{ metric.value }}</span>
-                        {{ metric.label.toLowerCase() }}
-                    </span>
-                </p>
-                <p
-                    v-if="hookLine"
-                    class="snitch-glance-hook line-clamp-2"
-                >
-                    {{ hookLine }}
-                </p>
-                <p
-                    v-else-if="statusStamp"
-                    class="snitch-glance-status inline-flex items-center gap-1"
-                >
-                    <component
-                        :is="statusStamp.icon"
-                        class="size-3 shrink-0 opacity-80"
-                        aria-hidden="true"
-                    />
-                    {{ statusStamp.label }}
-                </p>
             </Link>
-            <Link
-                v-if="accountHref && post.tracked_account"
-                :href="accountHref"
-                class="snitch-glance-account-link"
+            <ul
+                v-if="metrics.length"
+                class="snitch-glance-metrics"
             >
-                @{{ post.tracked_account.handle }}
-            </Link>
-            <span
-                v-else-if="post.tracked_account"
-                class="snitch-glance-account-link snitch-glance-account-link--static"
+                <li
+                    v-for="metric in metrics"
+                    :key="metric.key"
+                    class="snitch-glance-metric"
+                >
+                    <span class="snitch-glance-metric-value tabular-nums">{{ metric.value }}</span>
+                    <span class="snitch-glance-metric-label">{{ metric.label }}</span>
+                </li>
+            </ul>
+            <p
+                v-if="hookLine"
+                class="snitch-glance-hook line-clamp-2"
             >
-                @{{ post.tracked_account.handle }}
-            </span>
-            <div
-                v-if="tags.length"
-                class="snitch-glance-tags"
+                {{ hookLine }}
+            </p>
+            <p
+                v-else-if="statusStamp"
+                class="snitch-glance-status"
             >
-                <AnalysisTermChip
-                    v-for="tag in tags"
-                    :key="tag.key"
-                    variant="glance"
-                    :label="tag.label"
-                    :dimension="tag.dimension"
-                    :section="tag.section"
-                    :slug="tag.slug"
-                    :href="exploreHrefForTerm(tag)"
+                <component
+                    :is="statusStamp.icon"
+                    class="size-3 shrink-0 opacity-80"
+                    aria-hidden="true"
                 />
+                {{ statusStamp.label }}
+            </p>
+            <div class="snitch-contact-cell-footer">
+                <Link
+                    v-if="accountHref && post.tracked_account"
+                    :href="accountHref"
+                    class="snitch-glance-account-link"
+                >
+                    @{{ post.tracked_account.handle }}
+                </Link>
+                <span
+                    v-else-if="post.tracked_account"
+                    class="snitch-glance-account-link snitch-glance-account-link--static"
+                >
+                    @{{ post.tracked_account.handle }}
+                </span>
+                <div
+                    v-if="tags.length"
+                    class="snitch-glance-tags"
+                >
+                    <AnalysisTermChip
+                        v-for="tag in tags"
+                        :key="tag.key"
+                        variant="glance"
+                        :label="tag.label"
+                        :dimension="tag.dimension"
+                        :section="tag.section"
+                        :slug="tag.slug"
+                        :href="exploreHrefForTerm(tag)"
+                    />
+                </div>
             </div>
         </div>
     </article>

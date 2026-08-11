@@ -30,6 +30,21 @@ class EmbedLoadQueueContractTest extends TestCase
     }
 
     #[Test]
+    public function feed_contact_cell_uses_framed_proof_sheet_layout(): void
+    {
+        $source = file_get_contents(base_path('resources/js/components/FeedContactCell.vue'));
+
+        $this->assertIsString($source);
+        $this->assertStringContainsString('snitch-contact-cell-header', $source);
+        $this->assertStringContainsString('snitch-contact-cell-window', $source);
+        $this->assertStringContainsString('snitch-contact-cell-body', $source);
+        $this->assertStringContainsString('<ul', $source);
+        $this->assertStringContainsString('snitch-glance-metrics', $source);
+        $this->assertStringContainsString('snitch-glance-metric-value', $source);
+        $this->assertStringNotContainsString('snitch-contact-cell-meta', $source);
+    }
+
+    #[Test]
     public function platform_embed_defaults_to_lazy_and_uses_queue(): void
     {
         $source = file_get_contents(base_path('resources/js/components/PlatformEmbed.vue'));

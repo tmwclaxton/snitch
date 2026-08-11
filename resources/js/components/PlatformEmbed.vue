@@ -210,6 +210,7 @@ watch(
         ref="root"
         class="snitch-platform-embed"
         :class="compact ? 'snitch-platform-embed-compact' : 'snitch-platform-embed-detail'"
+        :data-embed-provider="embed?.provider"
         :style="embed && !embedFailed ? { aspectRatio: embed.aspect } : undefined"
     >
         <div
