@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import McpEndpoints from '@/components/agents/McpEndpoints.vue';
+import { useToastStore } from '@/stores/toastStore';
 
 type ClientGuide = {
     id: string;
@@ -31,6 +32,7 @@ const props = withDefaults(
     },
 );
 
+const toast = useToastStore();
 const tokenPlaceholder = 'YOUR_SNITCH_API_TOKEN';
 
 function withToken(snippet: string): string {
@@ -61,11 +63,16 @@ const activeClient = computed(
     () => options.value.find((client) => client.id === activeId.value) ?? options.value[0],
 );
 
-async function copyText(value: string): Promise<void> {
+async function copyText(value: string, label: string): Promise<void> {
+    if (!value.trim()) {
+        return;
+    }
+
     try {
         await navigator.clipboard.writeText(value);
+        toast.success(`${label} copied to clipboard.`);
     } catch {
-        // Clipboard can fail in insecure contexts; ignore.
+        toast.error('Could not access the clipboard.');
     }
 }
 </script>
@@ -120,9 +127,16 @@ async function copyText(value: string): Promise<void> {
                     </ol>
                     <p
                         v-if="apiToken"
-                        class="text-xs text-snitch-ink/55"
+                        class="flex flex-wrap items-center gap-2 text-xs text-snitch-ink/55"
                     >
-                        Preview includes your newly created token. Copy the config before you leave this page.
+                        <span>Preview includes your newly created token. Copy the config before you leave this page.</span>
+                        <button
+                            type="button"
+                            class="snitch-btn snitch-btn-ghost px-2 py-1 text-xs"
+                            @click="copyText(apiToken, 'Token')"
+                        >
+                            Copy token
+                        </button>
                     </p>
                 </div>
                 <div class="relative min-w-0">
@@ -130,7 +144,7 @@ async function copyText(value: string): Promise<void> {
                     <button
                         type="button"
                         class="snitch-btn snitch-btn-ghost absolute top-2 right-2 px-2 py-1 text-xs"
-                        @click="copyText(activeClient.snippet)"
+                        @click="copyText(activeClient.snippet, 'Config')"
                     >
                         Copy
                     </button>

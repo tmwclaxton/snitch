@@ -26,12 +26,11 @@ class McpConnectionGuide
                 [
                     'id' => 'cursor',
                     'name' => 'Cursor',
-                    'blurb' => 'Add Snitch under Cursor Settings → MCP, or merge into your project mcp.json.',
+                    'blurb' => 'Add Snitch in Cursor Settings → MCP, or merge into your project mcp.json.',
                     'steps' => [
-                        'Create or rotate an API token on the Agents page (or call create_account on the register endpoint).',
-                        'Open Cursor Settings → MCP.',
-                        'Add a server named snitch with the URL and Authorization header below.',
-                        'Reload MCP servers, then call whoami to confirm.',
+                        'Mint an API token on the Agents page.',
+                        'Open Cursor Settings → MCP and add snitch with the config below.',
+                        'Reload MCP servers, then call whoami.',
                     ],
                     'snippet' => self::jsonSnippet([
                         'mcpServers' => [
@@ -47,30 +46,25 @@ class McpConnectionGuide
                 [
                     'id' => 'claude',
                     'name' => 'Claude.ai',
-                    'blurb' => 'Connect Snitch as a custom MCP connector in Claude.ai with OAuth (no manual Client ID).',
+                    'blurb' => 'Custom connector with OAuth - paste the URL, sign in when prompted.',
                     'steps' => [
-                        'Sign in to Snitch in your browser (WorkOS) so the OAuth consent screen can bind your account.',
-                        'In Claude.ai, open Settings → Connectors → Add custom connector.',
-                        'Set the MCP server URL to the Snitch MCP endpoint below (URL only - Dynamic Client Registration supplies the rest).',
-                        'Complete the OAuth flow when Claude prompts you, then call whoami to confirm.',
+                        'In Claude.ai: Settings → Connectors → Add custom connector.',
+                        'Paste the Snitch MCP URL below and complete sign-in when prompted.',
+                        'Call whoami to confirm.',
                     ],
                     'snippet' => implode("\n", [
                         'Claude.ai custom connector URL:',
                         $mcpUrl,
-                        '',
-                        'No Client ID or secret required when Dynamic Client Registration is enabled.',
-                        'OAuth metadata: '.$origin.'/.well-known/oauth-authorization-server',
                     ]),
                 ],
                 [
                     'id' => 'claude-desktop',
                     'name' => 'Claude Desktop / Claude Code',
-                    'blurb' => 'HTTP MCP configs that accept a bearer token (same as Cursor).',
+                    'blurb' => 'HTTP MCP with a bearer token, same pattern as Cursor.',
                     'steps' => [
-                        'Create a Snitch API token on the Agents page.',
-                        'Add an HTTP MCP server pointing at the Snitch MCP URL.',
-                        'Pass Authorization: Bearer YOUR_SNITCH_API_TOKEN.',
-                        'Restart Claude and run whoami.',
+                        'Mint an API token on the Agents page.',
+                        'Add an HTTP MCP server with the config below.',
+                        'Restart Claude and call whoami.',
                     ],
                     'snippet' => self::jsonSnippet([
                         'mcpServers' => [
@@ -87,30 +81,25 @@ class McpConnectionGuide
                 [
                     'id' => 'codex',
                     'name' => 'Codex',
-                    'blurb' => 'Use any Codex / OpenAI agent harness that can attach a remote MCP server over HTTP.',
+                    'blurb' => 'Any Codex or OpenAI agent harness that supports remote HTTP MCP.',
                     'steps' => [
-                        'Create a Snitch API token.',
-                        'Register a remote MCP server with the Snitch URL.',
-                        'Attach the bearer token in request headers.',
-                        'Prefer tool calls like list_competitors, find_influencers, and analyze_post.',
+                        'Mint an API token on the Agents page.',
+                        'Register the Snitch MCP URL with the bearer header below.',
+                        'Call whoami, then workflow_guide for tool order.',
                     ],
                     'snippet' => implode("\n", [
                         'MCP server URL: '.$mcpUrl,
                         'Auth header: Authorization: Bearer YOUR_SNITCH_API_TOKEN',
-                        '',
-                        'Register (no auth): '.$registerUrl,
-                        'Tool: create_account',
                     ]),
                 ],
                 [
                     'id' => 'windsurf',
                     'name' => 'Windsurf',
-                    'blurb' => 'Same HTTP + bearer pattern as Cursor for Windsurf MCP settings.',
+                    'blurb' => 'Same HTTP + bearer pattern as Cursor.',
                     'steps' => [
-                        'Create a Snitch API token.',
-                        'Open Windsurf MCP settings.',
-                        'Add snitch with URL and Authorization header.',
-                        'Verify with whoami.',
+                        'Mint an API token on the Agents page.',
+                        'Open Windsurf MCP settings and add snitch with the config below.',
+                        'Call whoami to confirm.',
                     ],
                     'snippet' => self::jsonSnippet([
                         'mcpServers' => [
@@ -126,27 +115,22 @@ class McpConnectionGuide
             ],
             'general' => [
                 'title' => 'General MCP',
-                'blurb' => 'Any MCP client that speaks Streamable HTTP / JSON-RPC over HTTPS can connect.',
+                'blurb' => 'Any MCP client over HTTPS can connect to production Snitch.',
                 'steps' => [
-                    'Register at '.$registerUrl.' with create_account, or mint a token on the website Agents page.',
-                    'Claim the account in the browser if an agent created it (claim URL is returned).',
-                    'Call workflow_guide first for ordered tool steps, then whoami and confirm runtime.app_url matches the environment you intend (local vs production). Credits and brand data are not shared across environments.',
-                    'For local MCP, run php artisan queue:work (or composer run dev, which includes queue:listen) so autofill/suggest/find/sync/analyze jobs process.',
-                    'Local php artisan serve is single-threaded: one long MCP tools/call can block the dashboard until it returns. If the site hangs, wait for the tool, pause MCP in the client, or restart serve. Production php-fpm is fine.',
-                    'Subscribe to the platform plan and top up credits before billable tools.',
-                    'Call authenticated tools on '.$mcpUrl.' with Authorization: Bearer <token> (Cursor/agents) or OAuth (Claude.ai connector). Never paste tokens into public chats.',
+                    'Mint an API token on the Agents page, or call create_account on the register endpoint.',
+                    'Paste the config into your MCP client (see tabs above).',
+                    'Call whoami to confirm the connection.',
+                    'If an agent created the account, open the claim URL in your browser.',
+                    'Keep a balance above 20p before billable tools - subscribe for plan credits or top up.',
                 ],
                 'snippet' => implode("\n", [
                     'Register (public): '.$registerUrl,
-                    '  tools/call → create_account',
+                    '  Tool: create_account',
                     '',
                     'Authenticated: '.$mcpUrl,
                     '  Header: Authorization: Bearer YOUR_SNITCH_API_TOKEN',
                     '',
-                    'First calls: workflow_guide, whoami (runtime.app_url + brand_warnings), billing_status, get_brand',
-                    'Local async: php artisan queue:work (composer run dev includes queue:listen)',
-                    'Local note: artisan serve is single-request; long MCP calls can stall the browser UI',
-                    'Influencer loop: find_influencers → influencer_search_status → keep_influencer',
+                    'Starter calls: workflow_guide, whoami, billing_status, get_brand',
                 ]),
             ],
             'tools' => [

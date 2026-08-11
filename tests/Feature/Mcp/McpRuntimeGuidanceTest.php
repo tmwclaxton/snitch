@@ -157,14 +157,26 @@ class McpRuntimeGuidanceTest extends TestCase
         ));
     }
 
-    public function test_mcp_connection_guide_mentions_local_serve_blocking(): void
+    public function test_mcp_connection_guide_is_product_facing(): void
     {
-        $steps = collect(McpConnectionGuide::payload()['general']['steps']);
+        $payload = McpConnectionGuide::payload();
+        $steps = collect($payload['general']['steps']);
+        $allText = implode(' ', [
+            ...$steps->all(),
+            $payload['general']['snippet'],
+            $payload['general']['blurb'],
+        ]);
 
         $this->assertTrue($steps->contains(
-            fn (string $step): bool => str_contains($step, 'single-threaded')
-                || str_contains($step, 'single-request')
+            fn (string $step): bool => str_contains($step, 'whoami')
         ));
+        $this->assertTrue($steps->contains(
+            fn (string $step): bool => str_contains(strtolower($step), 'claim')
+        ));
+        $this->assertStringNotContainsString('queue:work', $allText);
+        $this->assertStringNotContainsString('artisan serve', $allText);
+        $this->assertStringNotContainsString('single-threaded', $allText);
+        $this->assertStringNotContainsString('runtime.app_url', $allText);
     }
 
     public function test_brand_context_blocks_when_website_blank(): void

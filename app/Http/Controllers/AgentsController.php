@@ -17,7 +17,7 @@ class AgentsController extends Controller
         if ($request->user() !== null) {
             return Inertia::render('agents/Index', [
                 ...$guide,
-                'has_mcp_token' => $request->user()->tokens()->where('name', 'mcp')->exists(),
+                'has_mcp_token' => $request->user()->sanctumTokens()->where('name', 'mcp')->exists(),
                 'plain_token' => $request->session()->pull('agents.plain_token'),
             ]);
         }
@@ -30,7 +30,7 @@ class AgentsController extends Controller
         $user = $request->user();
         abort_unless($user !== null, 403);
 
-        $user->tokens()->where('name', 'mcp')->delete();
+        $user->sanctumTokens()->where('name', 'mcp')->delete();
         $token = $user->createSanctumToken('mcp')->plainTextToken;
         $request->session()->flash('agents.plain_token', $token);
 
