@@ -51,11 +51,14 @@ class ExploreMixTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('explore/Index')
-                ->has('posts.data', 3)
                 ->where('filters.explore_seed', 42)
-                ->where('posts.data.0.id', fn ($id) => in_array((int) $id, [$strongA->id, $strongB->id], true))
-                ->where('posts.data.1.id', fn ($id) => in_array((int) $id, [$strongA->id, $strongB->id], true))
-                ->where('posts.data.2.id', $weak->id)
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 3)
+                    ->where('posts.data.0.id', fn ($id) => in_array((int) $id, [$strongA->id, $strongB->id], true))
+                    ->where('posts.data.1.id', fn ($id) => in_array((int) $id, [$strongA->id, $strongB->id], true))
+                    ->where('posts.data.2.id', $weak->id)
+                )
             );
     }
 
@@ -86,9 +89,12 @@ class ExploreMixTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('explore/Index')
-                ->has('posts.data', 2)
-                ->where('posts.data.0.id', $olderStrong->id)
-                ->where('posts.data.1.id', $newestWeak->id)
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 2)
+                    ->where('posts.data.0.id', $olderStrong->id)
+                    ->where('posts.data.1.id', $newestWeak->id)
+                )
             );
     }
 
@@ -120,20 +126,29 @@ class ExploreMixTest extends TestCase
         $this->assertCount(24, $pageOneIds);
         $this->assertSame($pageOneIds, $this->orderForSeed($user, $seed));
 
-        $pageTwo = $this->actingAs($user)
+        $pageTwoIds = [];
+
+        $this->actingAs($user)
             ->get(route('explore.index', ['explore_seed' => $seed, 'page' => 2]))
-            ->assertOk();
+            ->assertOk()
+            ->assertInertia(function (Assert $page) use ($seed, &$pageTwoIds) {
+                $page
+                    ->component('explore/Index')
+                    ->where('filters.explore_seed', $seed)
+                    ->missing('posts')
+                    ->loadDeferredProps('default', function (Assert $page) use (&$pageTwoIds) {
+                        $page
+                            ->has('posts.data', 6)
+                            ->where('posts.data', function ($posts) use (&$pageTwoIds): bool {
+                                $pageTwoIds = collect($posts)
+                                    ->pluck('id')
+                                    ->map(fn ($id) => (int) $id)
+                                    ->all();
 
-        $pageTwo->assertInertia(fn (Assert $page) => $page
-            ->component('explore/Index')
-            ->where('filters.explore_seed', $seed)
-            ->has('posts.data', 6)
-        );
-
-        $pageTwoIds = collect($pageTwo->inertiaProps('posts.data'))
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
+                                return true;
+                            });
+                    });
+            });
 
         $this->assertCount(6, $pageTwoIds);
         $this->assertEmpty(array_intersect($pageOneIds, $pageTwoIds));
@@ -235,20 +250,30 @@ class ExploreMixTest extends TestCase
      */
     private function orderForSeed(User $user, int $seed): array
     {
-        $response = $this->actingAs($user)
+        $ids = [];
+
+        $this->actingAs($user)
             ->get(route('explore.index', ['explore_seed' => $seed]))
-            ->assertOk();
+            ->assertOk()
+            ->assertInertia(function (Assert $page) use ($seed, &$ids) {
+                $page
+                    ->component('explore/Index')
+                    ->where('filters.explore_seed', $seed)
+                    ->missing('posts')
+                    ->loadDeferredProps('default', function (Assert $page) use (&$ids) {
+                        $page->where('posts.data', function ($posts) use (&$ids): bool {
+                            $ids = collect($posts)
+                                ->pluck('id')
+                                ->map(fn ($id) => (int) $id)
+                                ->values()
+                                ->all();
 
-        $response->assertInertia(fn (Assert $page) => $page
-            ->component('explore/Index')
-            ->where('filters.explore_seed', $seed)
-        );
+                            return true;
+                        });
+                    });
+            });
 
-        return collect($response->inertiaProps('posts.data'))
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->values()
-            ->all();
+        return $ids;
     }
 
     private function completedPost(TrackedAccount $account, mixed $postedAt): Post
