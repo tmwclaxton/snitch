@@ -436,6 +436,7 @@ class InfluencerController extends Controller
                 'display_name' => $account->display_name,
                 'avatar' => $account->avatar,
                 'url' => $account->url,
+                'followers' => $account->followers,
                 'fit_reason' => $account->fit_reason,
                 'posts_count' => $account->posts_count ?? 0,
             ])
@@ -641,6 +642,21 @@ class InfluencerController extends Controller
         $fitReason = isset($suggestion['fit_reason']) && is_string($suggestion['fit_reason'])
             ? trim($suggestion['fit_reason'])
             : '';
+        $followers = isset($suggestion['followers']) && is_numeric($suggestion['followers'])
+            ? max(0, (int) $suggestion['followers'])
+            : null;
+
+        $attributes = [
+            'kind' => TrackedAccountKind::Influencer,
+            'url' => (string) ($suggestion['url'] ?? $this->defaultUrl($platform, $handle)),
+            'display_name' => $suggestion['display_name'] ?? $handle,
+            'avatar' => $suggestion['avatar'] ?? null,
+            'fit_reason' => $fitReason !== '' ? Str::limit($fitReason, 280, '') : null,
+        ];
+
+        if ($followers !== null) {
+            $attributes['followers'] = $followers;
+        }
 
         $account = TrackedAccount::query()->updateOrCreate(
             [
@@ -648,13 +664,7 @@ class InfluencerController extends Controller
                 'platform' => $platform,
                 'handle' => $handle,
             ],
-            [
-                'kind' => TrackedAccountKind::Influencer,
-                'url' => (string) ($suggestion['url'] ?? $this->defaultUrl($platform, $handle)),
-                'display_name' => $suggestion['display_name'] ?? $handle,
-                'avatar' => $suggestion['avatar'] ?? null,
-                'fit_reason' => $fitReason !== '' ? Str::limit($fitReason, 280, '') : null,
-            ],
+            $attributes,
         );
 
         if ($this->billing->canRun($user)) {

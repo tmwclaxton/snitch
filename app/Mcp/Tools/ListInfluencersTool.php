@@ -13,7 +13,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('list_influencers')]
-#[Description('List kept influencer accounts (kind=influencer), including profile url and fit_reason when stored.')]
+#[Description('List kept influencer accounts (kind=influencer), including profile url, followers, and fit_reason when stored.')]
 class ListInfluencersTool extends Tool
 {
     public function handle(Request $request): Response
@@ -32,6 +32,7 @@ class ListInfluencersTool extends Tool
                 'handle',
                 'display_name',
                 'url',
+                'followers',
                 'fit_reason',
                 'last_synced_at',
                 'last_sync_status',

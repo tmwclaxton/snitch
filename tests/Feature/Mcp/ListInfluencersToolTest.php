@@ -29,6 +29,7 @@ class ListInfluencersToolTest extends TestCase
             'platform' => 'instagram',
             'handle' => 'dealmaker',
             'url' => 'https://www.instagram.com/dealmaker/',
+            'followers' => 12500,
             'fit_reason' => 'Strong mid-tier fashion audience for DTC collabs.',
         ]);
         $this->actingAs($user);
@@ -36,6 +37,7 @@ class ListInfluencersToolTest extends TestCase
         SnitchServer::tool(ListInfluencersTool::class)
             ->assertOk()
             ->assertSee('dealmaker')
+            ->assertSee('12500')
             ->assertSee('Strong mid-tier fashion audience for DTC collabs.')
             ->assertSee('https://www.instagram.com/dealmaker/');
     }
@@ -175,6 +177,7 @@ class ListInfluencersToolTest extends TestCase
             'user_id' => $user->id,
             'platform' => 'tiktok',
             'handle' => 'keepfit',
+            'followers' => 9000,
             'fit_reason' => 'Short-form fitness demos that suit product seeding.',
         ]);
 

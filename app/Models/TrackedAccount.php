@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'external_id',
     'avatar',
     'display_name',
+    'followers',
     'fit_reason',
     'last_synced_at',
     'last_sync_status',
@@ -95,6 +96,7 @@ class TrackedAccount extends Model
         return [
             'platform' => Platform::class,
             'kind' => TrackedAccountKind::class,
+            'followers' => 'integer',
             'last_synced_at' => 'datetime',
         ];
     }

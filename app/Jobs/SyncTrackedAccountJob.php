@@ -93,12 +93,14 @@ class SyncTrackedAccountJob implements ShouldQueue
 
             if ($this->shouldResolveProfile($account)) {
                 $profile = $adapter->resolveProfile($account->handle);
+                $followers = $this->followersFromProfile($profile);
 
                 $account->fill([
                     'url' => $profile['url'] ?: $account->url,
                     'external_id' => $profile['external_id'] ?? $account->external_id,
                     'avatar' => $profile['avatar'] ?? $account->avatar,
                     'display_name' => $profile['display_name'] ?? $account->display_name,
+                    ...($followers !== null ? ['followers' => $followers] : []),
                 ]);
             }
 
@@ -261,6 +263,18 @@ class SyncTrackedAccountJob implements ShouldQueue
         return blank($account->external_id)
             || blank($account->url)
             || blank($account->display_name);
+    }
+
+    /**
+     * @param  array<string, mixed>  $profile
+     */
+    private function followersFromProfile(array $profile): ?int
+    {
+        if (! isset($profile['followers']) || ! is_numeric($profile['followers'])) {
+            return null;
+        }
+
+        return max(0, (int) $profile['followers']);
     }
 
     private function syncSince(TrackedAccount $account, int $recencyDays): CarbonImmutable

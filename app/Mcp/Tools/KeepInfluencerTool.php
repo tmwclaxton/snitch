@@ -18,7 +18,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('keep_influencer')]
-#[Description('Keep a discovered influencer as a tracked account and queue sync (billable). Prefer passing run_id so fit_reason/url are copied from the find payload. Response includes fit_reason and profile url.')]
+#[Description('Keep a discovered influencer as a tracked account and queue sync (billable). Prefer passing run_id so fit_reason/url/followers are copied from the find payload. Response includes fit_reason, followers, and profile url.')]
 class KeepInfluencerTool extends Tool
 {
     public function handle(Request $request): Response
@@ -35,6 +35,7 @@ class KeepInfluencerTool extends Tool
             'external_id' => ['nullable', 'string', 'max:255'],
             'url' => ['nullable', 'string', 'max:2048'],
             'display_name' => ['nullable', 'string', 'max:255'],
+            'followers' => ['nullable', 'integer', 'min:0'],
             'fit_reason' => ['nullable', 'string', 'max:500'],
         ]);
 
@@ -85,6 +86,24 @@ class KeepInfluencerTool extends Tool
         $avatar = isset($suggestion['avatar']) && is_string($suggestion['avatar'])
             ? $suggestion['avatar']
             : null;
+        $followers = array_key_exists('followers', $data) && $data['followers'] !== null
+            ? max(0, (int) $data['followers'])
+            : (isset($suggestion['followers']) && is_numeric($suggestion['followers'])
+                ? max(0, (int) $suggestion['followers'])
+                : null);
+
+        $attributes = [
+            'kind' => TrackedAccountKind::Influencer,
+            'external_id' => $data['external_id'] ?? ($suggestion['external_id'] ?? null),
+            'url' => $url,
+            'display_name' => $displayName,
+            'avatar' => $avatar,
+            'fit_reason' => $fitReason !== '' ? Str::limit($fitReason, 280, '') : null,
+        ];
+
+        if ($followers !== null) {
+            $attributes['followers'] = $followers;
+        }
 
         $account = TrackedAccount::query()->updateOrCreate(
             [
@@ -92,14 +111,7 @@ class KeepInfluencerTool extends Tool
                 'platform' => $data['platform'],
                 'handle' => $handle,
             ],
-            [
-                'kind' => TrackedAccountKind::Influencer,
-                'external_id' => $data['external_id'] ?? ($suggestion['external_id'] ?? null),
-                'url' => $url,
-                'display_name' => $displayName,
-                'avatar' => $avatar,
-                'fit_reason' => $fitReason !== '' ? Str::limit($fitReason, 280, '') : null,
-            ],
+            $attributes,
         );
 
         SyncTrackedAccountJob::dispatch($account->id, true);
@@ -112,9 +124,10 @@ class KeepInfluencerTool extends Tool
                 'kind',
                 'url',
                 'display_name',
+                'followers',
                 'fit_reason',
             ]),
-            'note' => 'Influencer kept and sync queued. fit_reason explains brand-deal fit when present.',
+            'note' => 'Influencer kept and sync queued. fit_reason explains brand-deal fit when present; followers is popularity when known.',
         ]);
     }
 
@@ -128,6 +141,7 @@ class KeepInfluencerTool extends Tool
             'external_id' => $schema->string()->nullable(),
             'url' => $schema->string()->nullable(),
             'display_name' => $schema->string()->nullable(),
+            'followers' => $schema->integer()->nullable(),
             'fit_reason' => $schema->string()->nullable(),
         ];
     }

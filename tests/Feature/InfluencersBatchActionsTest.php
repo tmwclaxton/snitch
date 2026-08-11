@@ -85,12 +85,14 @@ class InfluencersBatchActionsTest extends TestCase
             'user_id' => $user->id,
             'platform' => 'instagram',
             'handle' => 'keepone',
+            'followers' => 12000,
             'fit_reason' => 'Strong sneaker fit.',
         ]);
         $this->assertDatabaseHas('tracked_accounts', [
             'user_id' => $user->id,
             'platform' => 'instagram',
             'handle' => 'keeptwo',
+            'followers' => 18000,
             'fit_reason' => 'Streetwear audience.',
         ]);
         $this->assertDatabaseMissing('tracked_accounts', [
@@ -201,6 +203,7 @@ class InfluencersBatchActionsTest extends TestCase
         TrackedAccount::factory()->influencer()->for($user)->create([
             'handle' => 'urlme',
             'url' => 'https://www.instagram.com/urlme/',
+            'followers' => 15400,
             'fit_reason' => 'Good brand-deal fit.',
         ]);
 
@@ -213,6 +216,7 @@ class InfluencersBatchActionsTest extends TestCase
                 ->loadDeferredProps('default', fn (Assert $page) => $page
                     ->has('keptAccounts', 1)
                     ->where('keptAccounts.0.url', 'https://www.instagram.com/urlme/')
+                    ->where('keptAccounts.0.followers', 15400)
                     ->where('keptAccounts.0.fit_reason', 'Good brand-deal fit.')
                 )
             );

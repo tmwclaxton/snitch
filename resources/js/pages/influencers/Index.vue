@@ -51,6 +51,7 @@ type KeptAccount = {
     display_name: string | null;
     avatar: string | null;
     url: string;
+    followers?: number | null;
     fit_reason?: string | null;
     posts_count?: number;
 };
@@ -1072,6 +1073,7 @@ onUnmounted(() => {
                                     </p>
                                     <p class="text-xs text-snitch-ink/60">
                                         {{ platformLabel(account.platform) }} · @{{ account.handle }}
+                                        · {{ formatFollowers(account.followers) }} followers
                                     </p>
                                     <p
                                         v-if="account.fit_reason"

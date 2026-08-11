@@ -245,6 +245,7 @@ class InfluencersFindTest extends TestCase
             'platform' => 'instagram',
             'handle' => 'keepme',
             'display_name' => 'Keep Me',
+            'followers' => 22000,
             'fit_reason' => 'Sneaker-forward feed that matches the DTC brief.',
         ]);
 
