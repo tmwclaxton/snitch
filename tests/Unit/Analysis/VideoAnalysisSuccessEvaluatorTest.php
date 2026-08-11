@@ -52,6 +52,28 @@ class VideoAnalysisSuccessEvaluatorTest extends TestCase
 
         $this->assertFalse($evaluation['passed']);
         $this->assertNotEmpty($evaluation['failures']);
+        $this->assertContains('analysis echoes caption/script too closely', $evaluation['failures']);
+    }
+
+    public function test_short_topic_caption_nouns_do_not_count_as_echo(): void
+    {
+        $caption = 'Story on how @thesamparr hustled from $0 in San Francisco with his Miracle Craigslist Roommate Finder Guide';
+        $result = VideoAnalysisResult::fromModelPayload([
+            'concept' => 'Founder origin story that turns a scrappy freebie into proof of hustle',
+            'hook' => 'Cold open on the zero-dollar starting line before the payoff',
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+            'visual_summary' => str_repeat('Talking-head cuts with on-screen proof docs and city b-roll. ', 2),
+            'idea' => 'Status-via-scarcity: name the Craigslist roommate guide as the concrete artifact that made the San Francisco grind believable.',
+            'cta' => 'No explicit CTA',
+            'how_to_copy' => "1. Open on the empty-bank-account beat.\n2. Show one named freebie as proof.\n3. Land on the lesson in one line.",
+            'sfx' => [],
+            'topics' => ['origin story', 'proof artifact'],
+        ], 'qwen3.7-flash');
+
+        $evaluation = app(VideoAnalysisSuccessEvaluator::class)->evaluate($result, $caption);
+
+        $this->assertTrue($evaluation['passed'], implode(', ', $evaluation['failures']));
+        $this->assertNotContains('analysis echoes caption/script too closely', $evaluation['failures']);
     }
 
     public function test_short_hook_window_is_clamped_before_evaluate(): void

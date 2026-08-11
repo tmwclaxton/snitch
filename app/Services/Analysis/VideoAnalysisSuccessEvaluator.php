@@ -128,13 +128,20 @@ class VideoAnalysisSuccessEvaluator
 
     private function looksLikeCaptionEcho(VideoAnalysisResult $result, string $caption, float $maxRatio): bool
     {
-        $captionTokens = $this->tokens($caption);
+        $captionTokens = $this->tokenSet($caption);
 
         if (count($captionTokens) < 8) {
             return false;
         }
 
-        $analysisTokens = $this->tokens(implode(' ', [
+        // Near-verbatim dumps of the caption into a primary field.
+        foreach ([$result->hook, $result->idea, $result->concept] as $field) {
+            if ($this->fieldEchoesCaption($field, $captionTokens)) {
+                return true;
+            }
+        }
+
+        $analysisTokens = $this->tokenSet(implode(' ', [
             $result->hook,
             $result->idea,
             $result->concept,
@@ -147,9 +154,37 @@ class VideoAnalysisSuccessEvaluator
         }
 
         $overlap = count(array_intersect($captionTokens, $analysisTokens));
-        $ratio = $overlap / max(1, count($captionTokens));
+        $captionCoverage = $overlap / count($captionTokens);
+        // Short topic-dense captions (proper nouns, product names) often appear in a
+        // good craft writeup. Only fail bag-of-words when the analysis itself is
+        // mostly caption tokens, not merely when it mentions the subject.
+        $analysisReuse = $overlap / count($analysisTokens);
 
-        return $ratio >= $maxRatio;
+        return $captionCoverage >= $maxRatio && $analysisReuse >= $maxRatio;
+    }
+
+    /**
+     * @param  list<string>  $captionTokens
+     */
+    private function fieldEchoesCaption(string $field, array $captionTokens): bool
+    {
+        $fieldTokens = $this->tokenSet($field);
+
+        if (count($fieldTokens) < 6) {
+            return false;
+        }
+
+        $overlap = count(array_intersect($fieldTokens, $captionTokens));
+
+        return ($overlap / count($fieldTokens)) >= 0.85;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function tokenSet(string $text): array
+    {
+        return array_values(array_unique($this->tokens($text)));
     }
 
     /**
