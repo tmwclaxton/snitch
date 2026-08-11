@@ -56,9 +56,9 @@ class SharedInertiaPropsTest extends TestCase
         });
 
         // Simulate an Inertia defer partial reload for the "activity" group only.
-        // The slim shared subscription should NOT fire its balance/subscription
-        // /count queries because Inertia skips unmatched shared props.
-        $this->actingAs($user)
+        // The slim shared subscription prop must stay lazy (not resolved). Controllers
+        // may still run a lightweight canAccessProduct check when omitting product data.
+        $response = $this->actingAs($user)
             ->withHeaders([
                 'X-Inertia' => 'true',
                 'X-Inertia-Version' => (string) app(Middleware::class)->version(request()),
@@ -68,16 +68,21 @@ class SharedInertiaPropsTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk();
 
-        $subscriptionRelated = array_filter($sharedQueries, function (string $sql): bool {
-            return str_contains($sql, 'credit_balances')
-                || str_contains($sql, 'credit_ledger_entries')
-                || str_contains($sql, 'subscriptions');
+        $props = $response->json('props') ?? [];
+        $this->assertArrayNotHasKey('subscription', $props);
+        $this->assertArrayHasKey('activity', $props);
+
+        // sharedSummary counts competitors/influencers by kind when not blocked.
+        // Those scoped counts must not run on a defer partial that omitted subscription.
+        $sharedSummaryUsage = array_filter($sharedQueries, function (string $sql): bool {
+            return str_contains($sql, 'tracked_accounts')
+                && str_contains($sql, 'kind');
         });
 
         $this->assertSame(
             [],
-            array_values($subscriptionRelated),
-            'Partial defer reload should not touch billing tables from shared props.'
+            array_values($sharedSummaryUsage),
+            'Partial defer reload should not resolve shared subscription usage counts.',
         );
     }
 }
