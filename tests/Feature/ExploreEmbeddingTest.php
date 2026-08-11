@@ -82,9 +82,12 @@ class ExploreEmbeddingTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('explore/Index')
                 ->where('filters.custom_tag', 'foundation_report_drop')
-                ->has('posts.data', 2)
-                ->where('posts.data.0.id', $exact->id)
-                ->where('posts.data.1.id', $related->id)
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 2)
+                    ->where('posts.data.0.id', $exact->id)
+                    ->where('posts.data.1.id', $related->id)
+                )
             );
     }
 
@@ -122,9 +125,12 @@ class ExploreEmbeddingTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('explore/Index')
-                ->has('posts.data', 1)
-                ->where('posts.data.0.id', $post->id)
                 ->where('filters.custom_tag', 'foundation_report_drop')
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 1)
+                    ->where('posts.data.0.id', $post->id)
+                )
             );
     }
 
@@ -172,8 +178,11 @@ class ExploreEmbeddingTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('explore/Index')
-                ->has('posts.data', 1)
-                ->where('posts.data.0.id', $match->id)
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 1)
+                    ->where('posts.data.0.id', $match->id)
+                )
             );
     }
 
