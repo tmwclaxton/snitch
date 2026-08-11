@@ -49,8 +49,11 @@ class BackfillAnalysisTermsCommandTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('explore/Index')
-                ->has('posts.data', 1)
-                ->where('posts.data.0.id', $post->id)
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 1)
+                    ->where('posts.data.0.id', $post->id)
+                )
             );
     }
 
