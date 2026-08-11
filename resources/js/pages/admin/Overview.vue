@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import VendorSpendStackedChart from '@/components/billing/VendorSpendStackedChart.vue';
 import type {
     SpendGrain,
@@ -12,6 +12,30 @@ import WeeklyVolumeChart from '@/components/dashboard/WeeklyVolumeChart.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatPenceAsGbp } from '@/lib/money';
 import { overview as adminOverview } from '@/routes/admin';
+
+type ProfitSeriesKey = 'charged' | 'cogs';
+
+type ProfitHit = {
+    key: string;
+    series: ProfitSeriesKey;
+    seriesLabel: string;
+    periodLabel: string;
+    amountLabel: string;
+    marginLabel: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+};
+
+type ProfitTip = {
+    seriesLabel: string;
+    amountLabel: string;
+    periodLabel: string;
+    marginLabel: string;
+    x: number;
+    y: number;
+};
 
 type Kpis = {
     users_total: number;
@@ -204,6 +228,104 @@ function profitBarY(gbp: number): number {
     return profitChartHeight - profitBarHeight(gbp);
 }
 
+const profitLegend = [
+    {
+        key: 'charged' as const,
+        label: 'Charged',
+        swatchClass: 'bg-snitch-ink/75',
+    },
+    {
+        key: 'cogs' as const,
+        label: 'COGS',
+        swatchClass: 'bg-snitch-spot',
+    },
+];
+
+const profitHits = computed((): ProfitHit[] => {
+    const hits: ProfitHit[] = [];
+
+    props.profit.points.forEach((point, index) => {
+        const groupX = profitGroupX(index);
+        const marginLabel = `Margin ${formatGbp(point.margin_gbp)}`;
+
+        if (point.charged_gbp > 0) {
+            hits.push({
+                key: `${point.date}-charged`,
+                series: 'charged',
+                seriesLabel: 'Charged',
+                periodLabel: point.label,
+                amountLabel: formatGbp(point.charged_gbp),
+                marginLabel,
+                x: groupX,
+                y: profitBarY(point.charged_gbp),
+                width: profitBarWidth.value,
+                height: Math.max(profitBarHeight(point.charged_gbp), 4),
+            });
+        }
+
+        if (point.cogs_gbp > 0) {
+            hits.push({
+                key: `${point.date}-cogs`,
+                series: 'cogs',
+                seriesLabel: 'COGS',
+                periodLabel: point.label,
+                amountLabel: formatGbp(point.cogs_gbp),
+                marginLabel,
+                x: groupX + profitBarWidth.value + profitPairGap,
+                y: profitBarY(point.cogs_gbp),
+                width: profitBarWidth.value,
+                height: Math.max(profitBarHeight(point.cogs_gbp), 4),
+            });
+        }
+    });
+
+    return hits;
+});
+
+const profitShell = ref<HTMLElement | null>(null);
+const profitTip = ref<ProfitTip | null>(null);
+
+function profitTipPosition(event: PointerEvent): { x: number; y: number } {
+    const shell = profitShell.value;
+
+    if (!shell) {
+        return { x: 0, y: 0 };
+    }
+
+    const bounds = shell.getBoundingClientRect();
+
+    return {
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top,
+    };
+}
+
+function showProfitTip(hit: ProfitHit, event: PointerEvent): void {
+    const { x, y } = profitTipPosition(event);
+
+    profitTip.value = {
+        seriesLabel: hit.seriesLabel,
+        amountLabel: hit.amountLabel,
+        periodLabel: hit.periodLabel,
+        marginLabel: hit.marginLabel,
+        x,
+        y,
+    };
+}
+
+function moveProfitTip(event: PointerEvent): void {
+    if (!profitTip.value) {
+        return;
+    }
+
+    const { x, y } = profitTipPosition(event);
+    profitTip.value = { ...profitTip.value, x, y };
+}
+
+function hideProfitTip(): void {
+    profitTip.value = null;
+}
+
 const mcpMax = computed(() =>
     Math.max(1, ...props.mcpTools.tools.map((row) => row.count)),
 );
@@ -334,7 +456,21 @@ function formatGbpAxis(value: number): string {
                     </span>
                 </p>
             </div>
-            <div class="overflow-x-auto">
+            <ul class="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-snitch-ink/70">
+                <li
+                    v-for="item in profitLegend"
+                    :key="item.key"
+                    class="inline-flex items-center gap-1.5"
+                >
+                    <span
+                        class="inline-block size-3 shrink-0 border border-snitch-ink/20"
+                        :class="item.swatchClass"
+                        aria-hidden="true"
+                    />
+                    {{ item.label }}
+                </li>
+            </ul>
+            <div ref="profitShell" class="relative overflow-x-auto">
                 <svg
                     class="mt-1 w-full overflow-visible"
                     :viewBox="`0 0 ${profitChartWidth} ${profitChartHeight + profitLabelPad}`"
@@ -371,8 +507,8 @@ function formatGbpAxis(value: number): string {
                             :width="profitBarWidth"
                             :height="profitBarHeight(point.charged_gbp)"
                             fill-class="fill-snitch-ink/70"
+                            :animate="false"
                             :seed="index * 3"
-                            :title="`${point.label} charged ${formatGbp(point.charged_gbp)}`"
                         />
                         <StippleBar
                             v-if="point.cogs_gbp > 0"
@@ -381,10 +517,23 @@ function formatGbpAxis(value: number): string {
                             :width="profitBarWidth"
                             :height="profitBarHeight(point.cogs_gbp)"
                             fill-class="fill-snitch-spot/90"
+                            :animate="false"
                             :seed="index * 3 + 1"
-                            :title="`${point.label} COGS ${formatGbp(point.cogs_gbp)}`"
                         />
                     </g>
+                    <rect
+                        v-for="hit in profitHits"
+                        :key="`profit-hit-${hit.key}`"
+                        class="snitch-vendor-spend-hit"
+                        :x="hit.x"
+                        :y="hit.y"
+                        :width="hit.width"
+                        :height="hit.height"
+                        fill="transparent"
+                        @pointerenter="showProfitTip(hit, $event)"
+                        @pointermove="moveProfitTip($event)"
+                        @pointerleave="hideProfitTip"
+                    />
                     <text
                         v-for="item in profitXLabels"
                         :key="`profit-x-${item.point.date}`"
@@ -402,9 +551,20 @@ function formatGbpAxis(value: number): string {
                         {{ item.point.label }}
                     </text>
                 </svg>
+                <div
+                    v-if="profitTip"
+                    class="snitch-vendor-spend-tip"
+                    role="tooltip"
+                    :style="{ left: `${profitTip.x}px`, top: `${profitTip.y}px` }"
+                >
+                    <p class="snitch-vendor-spend-tip-vendor">{{ profitTip.seriesLabel }}</p>
+                    <p class="snitch-vendor-spend-tip-amount tabular-nums">{{ profitTip.amountLabel }}</p>
+                    <p class="snitch-vendor-spend-tip-period">{{ profitTip.periodLabel }}</p>
+                    <p class="mt-0.5 text-[0.65rem] text-snitch-ink/55">{{ profitTip.marginLabel }}</p>
+                </div>
             </div>
             <p class="text-xs text-snitch-ink/55">
-                Charcoal = charged · mustard = COGS (admin only; never shown on user billing).
+                Admin only - COGS and markup are never shown on user billing.
             </p>
         </section>
 
