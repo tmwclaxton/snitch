@@ -8,6 +8,7 @@ use App\Enums\Platform;
 use App\Enums\PostType;
 use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\PlatformSubscriptionRequiredException;
+use App\Http\Controllers\Concerns\OmitsProductDataWhenPaywalled;
 use App\Models\AnalysisTerm;
 use App\Models\Post;
 use App\Models\User;
@@ -27,6 +28,8 @@ use Inertia\Response;
 
 class ExploreController extends Controller
 {
+    use OmitsProductDataWhenPaywalled;
+
     public function __construct(
         private AnalysisTermCatalogue $catalogue,
         private AnalysisEmbeddingService $embeddings,
@@ -46,6 +49,27 @@ class ExploreController extends Controller
         $platform = $this->nullableString($request->query('platform'));
         $queryText = $this->nullableString($request->query('q'));
         $customTag = $this->nullableString($request->query('custom_tag'));
+
+        if ($this->productAccessBlocked($user)) {
+            return Inertia::render('explore/Index', [
+                'posts' => $this->emptyProductPaginator(),
+                'filters' => [
+                    'q' => $queryText,
+                    'custom_tag' => $customTag,
+                    'hook_types' => $hookTypes,
+                    'topics' => $topics,
+                    'visual_crafts' => $visualCrafts,
+                    'platform' => $platform,
+                    'explore_seed' => null,
+                ],
+                'terms' => [
+                    'hook_type' => [],
+                    'topic' => [],
+                    'visual_craft' => [],
+                ],
+                'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
+            ]);
+        }
 
         if ($customTag !== null) {
             try {

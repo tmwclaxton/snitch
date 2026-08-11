@@ -23,6 +23,10 @@ class ListInfluencersTool extends Tool
             return $user;
         }
 
+        if ($blocked = McpAuth::requireProductAccess($user)) {
+            return $blocked;
+        }
+
         $rows = $user->trackedAccounts()
             ->where('kind', TrackedAccountKind::Influencer)
             ->orderBy('id')

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Billing;
 
 use App\Enums\BillingVendor;
+use App\Enums\PostType;
 use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Http\Middleware\EnsureMcpProductAccess;
@@ -13,6 +14,8 @@ use App\Mcp\Tools\CreateCreditCheckoutTool;
 use App\Mcp\Tools\ListCompetitorsTool;
 use App\Mcp\Tools\ListFeedTool;
 use App\Models\BrandProfile;
+use App\Models\Post;
+use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Billing\UsageBillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -173,6 +176,11 @@ class BillingPaywallTest extends TestCase
     public function test_dashboard_paywall_props_when_starter_exhausted(): void
     {
         $user = $this->paywalledUser();
+        $account = TrackedAccount::factory()->competitor()->for($user)->create(['handle' => 'secret-rival']);
+        Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+            'caption' => 'secret paywalled caption',
+        ]);
 
         $this->actingAs($user)
             ->get(route('dashboard'))
@@ -182,12 +190,25 @@ class BillingPaywallTest extends TestCase
                 ->where('subscription.paywall.blocked', true)
                 ->where('subscription.paywall.reason', 'subscribe')
                 ->where('subscription.paywall.can_top_up', false)
+                ->where('subscription.competitors_used', 0)
+                ->where('stats.tracked_accounts', 0)
+                ->where('stats.posts', 0)
+                ->where('stats.winners', 0)
+                ->where('recent_posts', [])
+                ->where('top_winners', [])
+                ->where('activity.heatmap', [])
+                ->missing('recent_posts.0')
             );
     }
 
-    public function test_feed_and_snitches_still_render_when_paywalled(): void
+    public function test_product_pages_omit_data_when_paywalled(): void
     {
         $user = $this->paywalledUser();
+        $account = TrackedAccount::factory()->competitor()->for($user)->create(['handle' => 'leaky-handle']);
+        Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+            'caption' => 'must-not-appear-in-inertia',
+        ]);
 
         $this->actingAs($user)
             ->get(route('feed.index'))
@@ -195,6 +216,9 @@ class BillingPaywallTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('subscription.paywall.blocked', true)
                 ->where('subscription.can_run_billable', false)
+                ->where('accounts', [])
+                ->where('posts.data', [])
+                ->where('posts.total', 0)
             );
 
         $this->actingAs($user)
@@ -203,7 +227,108 @@ class BillingPaywallTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('competitors/Index')
                 ->where('subscription.paywall.blocked', true)
+                ->where('accounts', [])
+                ->where('suggestions', [])
+                ->where('competitorBrief', '')
+                ->where('suggestRun', null)
             );
+
+        $this->actingAs($user)
+            ->get(route('explore.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('subscription.paywall.blocked', true)
+                ->where('posts.data', [])
+                ->where('posts.total', 0)
+                ->where('terms.hook_type', [])
+            );
+
+        $this->actingAs($user)
+            ->get(route('winners.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('subscription.paywall.blocked', true)
+                ->where('winners', [])
+                ->where('rescoreRun', null)
+            );
+
+        $this->actingAs($user)
+            ->get(route('influencers.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('subscription.paywall.blocked', true)
+                ->where('suggestions', [])
+                ->where('reviewQueue', [])
+                ->where('keptAccounts', [])
+            );
+
+        $this->actingAs($user)
+            ->get(route('backlog.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('subscription.paywall.blocked', true)
+                ->where('posts.data', [])
+                ->where('counts.queue', 0)
+            );
+
+        $this->actingAs($user)
+            ->get(route('competitors.show', $account))
+            ->assertRedirect(route('competitors.index'));
+    }
+
+    public function test_subscribed_user_still_receives_product_data(): void
+    {
+        $user = User::factory()->withoutStarterCredit()->create();
+        BrandProfile::factory()->for($user)->create();
+        $this->subscribe($user);
+        $this->billing->creditSubscriptionBonus($user, 'subscription_bonus:invoice:data');
+
+        $account = TrackedAccount::factory()->competitor()->for($user)->create(['handle' => 'visible-rival']);
+        Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+            'caption' => 'visible caption',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('competitors.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('subscription.paywall.blocked', false)
+                ->where('subscription.competitors_used', 1)
+            );
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('subscription.paywall.blocked', false)
+                ->where('stats.tracked_accounts', 1)
+                ->where('stats.posts', 1)
+            );
+
+        $this->actingAs($user)
+            ->get(route('competitors.show', $account))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('competitors/Show')
+                ->where('account.handle', 'visible-rival')
+            );
+    }
+
+    public function test_json_status_endpoints_return_402_when_paywalled(): void
+    {
+        $user = $this->paywalledUser();
+
+        $this->actingAs($user)
+            ->getJson(route('competitors.suggest.status', ['suggestId' => '00000000-0000-4000-8000-000000000001']))
+            ->assertStatus(402)
+            ->assertJsonPath('paywall.blocked', true)
+            ->assertJsonMissingPath('suggestions');
+
+        $this->actingAs($user)
+            ->getJson(route('winners.rescore.status', ['runId' => '00000000-0000-4000-8000-000000000002']))
+            ->assertStatus(402)
+            ->assertJsonPath('paywall.blocked', true);
     }
 
     public function test_billing_page_still_reachable_when_paywalled(): void
@@ -239,6 +364,10 @@ class BillingPaywallTest extends TestCase
 
         $blocked = McpAuth::requireProductAccess($user);
         $this->assertNotNull($blocked);
+
+        SnitchServer::tool(ListCompetitorsTool::class)
+            ->assertHasErrors()
+            ->assertSee('Subscribe');
     }
 
     public function test_unclaimed_agent_starts_without_product_access(): void

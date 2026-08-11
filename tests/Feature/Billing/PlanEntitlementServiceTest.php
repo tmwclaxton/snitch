@@ -96,6 +96,25 @@ class PlanEntitlementServiceTest extends TestCase
         $this->assertTrue($this->entitlements->sharedSummary($user->fresh())['can_run_billable']);
     }
 
+    public function test_shared_summary_zeros_seat_counts_when_paywalled(): void
+    {
+        $user = User::factory()->create();
+        $billing = app(UsageBillingService::class);
+        $billing->creditClaimBonus($user);
+        TrackedAccount::factory()->count(2)->competitor()->for($user)->create();
+
+        while ($billing->canAccessProduct($user)) {
+            $billing->charge($user, 'explore.search', BillingVendor::Snitch);
+        }
+
+        $this->entitlements->forgetSharedSummary($user);
+        $shared = $this->entitlements->sharedSummary($user->fresh());
+
+        $this->assertTrue($shared['paywall']['blocked']);
+        $this->assertSame(0, $shared['competitors_used']);
+        $this->assertSame(0, $shared['influencers_used']);
+    }
+
     public function test_shared_summary_is_memoized_per_user_within_request(): void
     {
         $user = User::factory()->create();

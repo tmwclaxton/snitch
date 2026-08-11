@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\Platform;
 use App\Enums\TrackedAccountKind;
+use App\Http\Controllers\Concerns\OmitsProductDataWhenPaywalled;
 use App\Http\Requests\Influencers\BatchDecideInfluencersRequest;
 use App\Http\Requests\Influencers\BatchDestroyInfluencersRequest;
 use App\Http\Requests\Influencers\DecideInfluencerRequest;
@@ -30,6 +31,8 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class InfluencerController extends Controller
 {
+    use OmitsProductDataWhenPaywalled;
+
     public function __construct(
         private PlanEntitlementService $entitlements,
         private InfluencerDiscoveryService $discovery,
@@ -323,6 +326,42 @@ class InfluencerController extends Controller
     private function pageProps(Request $request): array
     {
         $user = $request->user();
+        $summary = $this->entitlements->sharedSummary($user);
+        $platforms = array_map(fn (Platform $platform): string => $platform->value, Platform::cases());
+        $defaultPlatform = (string) config('snitch.influencer_find.default_platform', 'instagram');
+        $defaultMinFollowers = (int) config('snitch.influencer_find.default_min_followers', 1000);
+        $defaultMaxFollowers = (int) config('snitch.influencer_find.default_max_followers', 50000);
+        $influencerCap = [
+            'plan' => $summary['plan'],
+            'plan_name' => $summary['plan_name'],
+            'influencer_limit' => $summary['influencer_limit'],
+            'influencers_used' => $summary['influencers_used'],
+            'influencers_remaining' => $summary['influencers_remaining'],
+            'can_upgrade' => $summary['can_upgrade'],
+        ];
+
+        if ($this->productAccessBlocked($user)) {
+            return [
+                'brand' => null,
+                'platforms' => $platforms,
+                'filters' => [
+                    'platform' => $defaultPlatform,
+                    'language' => $this->normalizeLanguageFilter(null),
+                    'min_followers' => $defaultMinFollowers,
+                    'max_followers' => $defaultMaxFollowers,
+                    'brief' => '',
+                ],
+                'searchRun' => null,
+                'latestRun' => null,
+                'suggestions' => [],
+                'decisions' => [],
+                'reviewQueue' => [],
+                'keptAccounts' => [],
+                'canSearch' => false,
+                'influencerCap' => $influencerCap,
+            ];
+        }
+
         $brand = $user->brandProfile;
         $active = $this->activeRun($user->id);
         $latest = FindInfluencersJob::latestPayload($user->id);
@@ -347,9 +386,6 @@ class InfluencerController extends Controller
             }
         }
 
-        $defaultPlatform = (string) config('snitch.influencer_find.default_platform', 'instagram');
-        $defaultMinFollowers = (int) config('snitch.influencer_find.default_min_followers', 1000);
-        $defaultMaxFollowers = (int) config('snitch.influencer_find.default_max_followers', 50000);
         $runPlatforms = is_array($run['filters']['platforms'] ?? null)
             ? $run['filters']['platforms']
             : [];
@@ -377,14 +413,12 @@ class InfluencerController extends Controller
             'brief' => $runBrief !== '' ? $runBrief : $brandBrief,
         ];
 
-        $summary = $this->entitlements->sharedSummary($user);
-
         return [
             'brand' => $brand === null ? null : [
                 'name' => $brand->name,
                 'description' => $brand->description,
             ],
-            'platforms' => array_map(fn (Platform $platform): string => $platform->value, Platform::cases()),
+            'platforms' => $platforms,
             'filters' => $filters,
             'searchRun' => $active === null ? null : [
                 'id' => $active['id'],
@@ -402,14 +436,7 @@ class InfluencerController extends Controller
             'reviewQueue' => $reviewQueue,
             'keptAccounts' => Inertia::defer(fn () => $this->keptAccountsFor($user)),
             'canSearch' => $this->canStartSearch($user->id),
-            'influencerCap' => [
-                'plan' => $summary['plan'],
-                'plan_name' => $summary['plan_name'],
-                'influencer_limit' => $summary['influencer_limit'],
-                'influencers_used' => $summary['influencers_used'],
-                'influencers_remaining' => $summary['influencers_remaining'],
-                'can_upgrade' => $summary['can_upgrade'],
-            ],
+            'influencerCap' => $influencerCap,
         ];
     }
 

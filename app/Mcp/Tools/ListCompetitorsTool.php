@@ -23,6 +23,10 @@ class ListCompetitorsTool extends Tool
             return $user;
         }
 
+        if ($blocked = McpAuth::requireProductAccess($user)) {
+            return $blocked;
+        }
+
         $rows = $user->trackedAccounts()
             ->where('kind', TrackedAccountKind::Competitor)
             ->orderBy('id')

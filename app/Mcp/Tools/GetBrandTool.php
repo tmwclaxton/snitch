@@ -23,6 +23,10 @@ class GetBrandTool extends Tool
             return $user;
         }
 
+        if ($blocked = McpAuth::requireProductAccess($user)) {
+            return $blocked;
+        }
+
         $brand = $user->brandProfile;
         $warnings = BrandContext::warningsFor($user);
         $blocking = BrandContext::blockingErrorsFor($user);

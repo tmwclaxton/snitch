@@ -116,8 +116,12 @@ class PlanEntitlementService
         $subscribed = $this->hasPlatformSubscription($user);
         $usage = $this->usage->summary($user);
         $paywall = $this->usage->paywallState($user);
-        $competitorsUsed = $user->trackedAccounts()->competitors()->count();
-        $influencersUsed = $user->trackedAccounts()->influencers()->count();
+        $competitorsUsed = $paywall['blocked']
+            ? 0
+            : $user->trackedAccounts()->competitors()->count();
+        $influencersUsed = $paywall['blocked']
+            ? 0
+            : $user->trackedAccounts()->influencers()->count();
 
         return [
             'plan' => $subscribed ? 'platform' : 'none',
@@ -182,8 +186,12 @@ class PlanEntitlementService
         $paywall = $this->usage->paywallState($user);
         $balancePence = $this->usage->balancePence($user);
         $minRunBalancePence = $this->usage->minRunBalancePence();
-        $competitorsUsed = $user->trackedAccounts()->competitors()->count();
-        $influencersUsed = $user->trackedAccounts()->influencers()->count();
+        $competitorsUsed = $paywall['blocked']
+            ? 0
+            : $user->trackedAccounts()->competitors()->count();
+        $influencersUsed = $paywall['blocked']
+            ? 0
+            : $user->trackedAccounts()->influencers()->count();
 
         return $this->sharedSummaryCache[$user->id] = [
             'plan' => $subscribed ? 'platform' : 'none',

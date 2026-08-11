@@ -6,6 +6,7 @@ use App\Enums\Platform;
 use App\Enums\PostType;
 use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\PlatformSubscriptionRequiredException;
+use App\Http\Controllers\Concerns\OmitsProductDataWhenPaywalled;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
@@ -23,6 +24,8 @@ use Inertia\Response;
 
 class FeedController extends Controller
 {
+    use OmitsProductDataWhenPaywalled;
+
     public function __construct(
         private AnalysisTermCatalogue $catalogue,
         private PlanEntitlementService $entitlements,
@@ -34,17 +37,31 @@ class FeedController extends Controller
         $this->authorize('viewAny', Post::class);
 
         $user = $request->user();
+        $filters = [
+            'platform' => $request->string('platform')->toString() ?: null,
+            'type' => $request->string('type')->toString() ?: null,
+            'account' => $request->integer('account') ?: null,
+        ];
+        $platforms = collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values();
+        $types = collect(PostType::analyzable())->map(fn (PostType $t) => $t->value)->values();
+
+        if ($this->productAccessBlocked($user)) {
+            return Inertia::render('feed/Index', [
+                'posts' => $this->emptyProductPaginator(),
+                'filters' => $filters,
+                'platforms' => $platforms,
+                'types' => $types,
+                'accounts' => [],
+            ]);
+        }
+
         $inQuotaIds = $this->entitlements->inQuotaTrackedAccountIds($user);
 
         return Inertia::render('feed/Index', [
             'posts' => Inertia::defer(fn () => $this->paginatedPosts($request, $user, $inQuotaIds)),
-            'filters' => [
-                'platform' => $request->string('platform')->toString() ?: null,
-                'type' => $request->string('type')->toString() ?: null,
-                'account' => $request->integer('account') ?: null,
-            ],
-            'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
-            'types' => collect(PostType::analyzable())->map(fn (PostType $t) => $t->value)->values(),
+            'filters' => $filters,
+            'platforms' => $platforms,
+            'types' => $types,
             'accounts' => $user->trackedAccounts()
                 ->whereIn('id', $inQuotaIds === [] ? [-1] : $inQuotaIds)
                 ->orderBy('handle')
@@ -114,6 +131,11 @@ class FeedController extends Controller
         $this->authorize('view', $post);
 
         $user = $request->user();
+
+        if ($this->productAccessBlocked($user)) {
+            return redirect()->route('feed.index');
+        }
+
         $post->load([
             'socialAccount',
             'analysis.terms',

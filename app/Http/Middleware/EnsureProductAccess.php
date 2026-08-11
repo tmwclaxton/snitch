@@ -13,8 +13,12 @@ class EnsureProductAccess
     public function __construct(private UsageBillingService $usage) {}
 
     /**
-     * Block product mutations when paywalled. Billing / settings / onboarding stay open.
-     * GET pages still render so the UI can blur data and show the paywall modal.
+     * Gate product surfaces when paywalled.
+     *
+     * - Mutations redirect to Billing (or 402 for JSON).
+     * - Non-Inertia JSON/XHR (status polls, etc.) return 402 with no payload.
+     * - Safe Inertia GETs still render the page shell + paywall UI, but
+     *   controllers must omit product data (empty stubs only).
      *
      * @param  Closure(Request): Response  $next
      */
@@ -22,28 +26,29 @@ class EnsureProductAccess
     {
         $user = $request->user();
 
-        if ($user === null || $request->isMethodSafe()) {
-            return $next($request);
-        }
-
-        if ($this->usage->canAccessProduct($user)) {
+        if ($user === null || $this->usage->canAccessProduct($user)) {
             return $next($request);
         }
 
         $paywall = $this->usage->paywallState($user);
         $message = $paywall['message'] ?? 'Subscribe to a paid plan on the Billing page to continue.';
+        $isInertia = (bool) $request->header('X-Inertia');
 
-        Inertia::flash('toast', [
-            'type' => 'error',
-            'message' => $message,
-        ]);
-
-        if ($request->expectsJson() && ! $request->header('X-Inertia')) {
+        if ($request->expectsJson() && ! $isInertia) {
             return response()->json([
                 'message' => $message,
                 'paywall' => $paywall,
             ], 402);
         }
+
+        if ($request->isMethodSafe()) {
+            return $next($request);
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'error',
+            'message' => $message,
+        ]);
 
         return redirect()->route('billing.edit');
     }

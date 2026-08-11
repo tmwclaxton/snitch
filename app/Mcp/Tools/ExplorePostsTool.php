@@ -32,6 +32,10 @@ class ExplorePostsTool extends Tool
             return $user;
         }
 
+        if ($blocked = McpAuth::requireProductAccess($user)) {
+            return $blocked;
+        }
+
         $data = $request->validate([
             'platform' => ['nullable', 'string', 'in:instagram,tiktok,youtube,facebook,linkedin'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:50'],

@@ -29,6 +29,10 @@ class GetPostTool extends Tool
             return $user;
         }
 
+        if ($blocked = McpAuth::requireProductAccess($user)) {
+            return $blocked;
+        }
+
         $data = $request->validate([
             'post_id' => ['required', 'integer'],
         ]);

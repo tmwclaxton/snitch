@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\OmitsProductDataWhenPaywalled;
 use App\Jobs\ScoreWinnersJob;
 use App\Models\TrackedAccount;
 use App\Models\User;
@@ -20,16 +21,38 @@ use Inertia\Response;
 
 class WinnerController extends Controller
 {
+    use OmitsProductDataWhenPaywalled;
+
     public function __construct(private PlanEntitlementService $entitlements) {}
 
     public function index(Request $request, WinnerScorer $scorer): Response
     {
         $user = $request->user();
+        $presets = config('snitch.winners.presets');
+
+        if ($this->productAccessBlocked($user)) {
+            $balanced = is_array($presets['balanced'] ?? null) ? $presets['balanced'] : [];
+
+            return Inertia::render('winners/Index', [
+                'winners' => [],
+                'rule' => [
+                    'preset' => 'balanced',
+                    'min_engagement_rate' => (int) ($balanced['min_engagement_rate'] ?? 0),
+                    'min_views' => (int) ($balanced['min_views'] ?? 0),
+                    'min_likes' => (int) ($balanced['min_likes'] ?? 0),
+                    'recency_days' => (int) ($balanced['recency_days'] ?? 30),
+                    'weights' => is_array($balanced['weights'] ?? null) ? $balanced['weights'] : [],
+                    'advanced' => ['require_hook' => true, 'require_sfx' => false, 'min_score' => 40],
+                ],
+                'presets' => $presets,
+                'rescoreRun' => null,
+            ]);
+        }
 
         return Inertia::render('winners/Index', [
             'winners' => Inertia::defer(fn () => $this->winnersFor($user)),
             'rule' => $scorer->ruleFor($user),
-            'presets' => config('snitch.winners.presets'),
+            'presets' => $presets,
             'rescoreRun' => ScoreWinnersJob::activeRunFor($user->id),
         ]);
     }

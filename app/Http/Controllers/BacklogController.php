@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\OmitsProductDataWhenPaywalled;
 use App\Models\Post;
 use App\Models\User;
 use App\Support\PlatformEmbed;
@@ -14,6 +15,8 @@ use Inertia\Response;
 
 class BacklogController extends Controller
 {
+    use OmitsProductDataWhenPaywalled;
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', Post::class);
@@ -23,6 +26,17 @@ class BacklogController extends Controller
 
         if (! in_array($filter, ['queue', 'failed', 'all'], true)) {
             $filter = 'queue';
+        }
+
+        if ($this->productAccessBlocked($user)) {
+            return Inertia::render('backlog/Index', [
+                'posts' => $this->emptyProductPaginator(),
+                'filter' => $filter,
+                'counts' => [
+                    'queue' => 0,
+                    'failed' => 0,
+                ],
+            ]);
         }
 
         return Inertia::render('backlog/Index', [

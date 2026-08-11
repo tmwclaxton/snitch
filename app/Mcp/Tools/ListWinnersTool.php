@@ -22,6 +22,10 @@ class ListWinnersTool extends Tool
             return $user;
         }
 
+        if ($blocked = McpAuth::requireProductAccess($user)) {
+            return $blocked;
+        }
+
         $winners = $user->winnerInsights()
             ->with('post:id,url,platform,caption,posted_at')
             ->orderByDesc('score')

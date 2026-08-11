@@ -6,6 +6,7 @@ use App\Enums\Platform;
 use App\Enums\TrackedAccountKind;
 use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\PlatformSubscriptionRequiredException;
+use App\Http\Controllers\Concerns\OmitsProductDataWhenPaywalled;
 use App\Http\Requests\Competitors\BatchDestroyCompetitorsRequest;
 use App\Http\Requests\Competitors\BatchSyncCompetitorsRequest;
 use App\Http\Requests\Competitors\ConfirmSuggestionsRequest;
@@ -39,6 +40,8 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class CompetitorController extends Controller
 {
+    use OmitsProductDataWhenPaywalled;
+
     public function __construct(
         private PlanEntitlementService $entitlements,
         private UsageBillingService $billing,
@@ -50,7 +53,7 @@ class CompetitorController extends Controller
     {
         $this->authorize('viewAny', TrackedAccount::class);
 
-        $brand = $request->user()->brandProfile;
+        $user = $request->user();
         $suggestPlatforms = collect(config('snitch.competitor_suggest.platforms', []))
             ->filter(fn (mixed $platform): bool => is_string($platform) && Platform::tryFrom($platform) !== null)
             ->values()
@@ -60,23 +63,44 @@ class CompetitorController extends Controller
             $suggestPlatforms = collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values()->all();
         }
 
+        $platforms = collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values();
+
+        if ($this->productAccessBlocked($user)) {
+            return Inertia::render('competitors/Index', [
+                'accounts' => [],
+                'platforms' => $platforms,
+                'suggestPlatforms' => $suggestPlatforms,
+                'competitorBrief' => '',
+                'suggestions' => [],
+                'suggestRun' => null,
+                'suggestError' => null,
+                'competitorCap' => $this->entitlements->sharedSummary($user),
+            ]);
+        }
+
+        $brand = $user->brandProfile;
+
         return Inertia::render('competitors/Index', [
-            'accounts' => Inertia::defer(fn () => $this->accountsWithCounts($request->user())),
-            'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
+            'accounts' => Inertia::defer(fn () => $this->accountsWithCounts($user)),
+            'platforms' => $platforms,
             'suggestPlatforms' => $suggestPlatforms,
             'competitorBrief' => $brand?->competitor_brief ?? '',
             'suggestions' => Inertia::defer(fn () => $this->visibleSuggestions($request), 'suggestions'),
-            'suggestRun' => $this->activeSuggestRun($request->user()->id),
-            'suggestError' => $this->suggestError($request->user()->id),
-            'competitorCap' => $this->entitlements->sharedSummary($request->user()),
+            'suggestRun' => $this->activeSuggestRun($user->id),
+            'suggestError' => $this->suggestError($user->id),
+            'competitorCap' => $this->entitlements->sharedSummary($user),
         ]);
     }
 
-    public function show(Request $request, TrackedAccount $trackedAccount): Response
+    public function show(Request $request, TrackedAccount $trackedAccount): Response|RedirectResponse
     {
         $this->authorize('view', $trackedAccount);
 
         $user = $request->user();
+
+        if ($this->productAccessBlocked($user)) {
+            return redirect()->route('competitors.index');
+        }
 
         $trackedAccount->loadCount([
             'posts' => fn ($query) => $query->reelLike(),

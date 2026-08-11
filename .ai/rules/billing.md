@@ -35,7 +35,7 @@ Agent MCP `create_account` starts at £0. Claiming/confirming (WorkOS bind or we
 - Once starter is exhausted (`credit_balances.starter_allowance_exhausted`, set when claim remaining hits the floor), an **active paid platform subscription** is required for product use (web data screens + MCP tools). Top-up alone must not bypass this.
 - **Top-ups require a paid plan** (HTTP checkout, MCP `create_credit_checkout`, Stripe webhook ignores credit sessions without a plan).
 - With a plan, access needs spendable unexpired balance above `billing.min_run_balance_pence` (default 20p). Hitting the floor is the same blocked experience as over-monthly-spend.
-- UI: shared Inertia `subscription.paywall` + `BillingPaywall` blur/modal (billing routes exempt). Mutations under `EnsureProductAccess` redirect to Billing. MCP: `EnsureMcpProductAccess` allows only billing/auth tools when blocked.
+- UI: shared Inertia `subscription.paywall` + `BillingPaywall` blur/modal (billing routes exempt). Mutations under `EnsureProductAccess` redirect to Billing. Non-Inertia JSON/XHR under that middleware returns 402 with no product payload. Safe Inertia GETs may still render the shell + paywall UI, but controllers must omit product data (empty stubs / redirects for show pages) - security is server-side omission, not CSS. Shared `competitors_used` / `influencers_used` are zeroed when blocked. MCP: `EnsureMcpProductAccess` allows only billing/auth tools when blocked; product list/get tools also call `McpAuth::requireProductAccess`.
 
 ### Credit lot expiry (`expires_at` + `remaining_pence` on ledger credits)
 - `claim_bonus`: never expires (`expires_at` null).
