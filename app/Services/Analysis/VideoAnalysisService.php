@@ -21,13 +21,21 @@ class VideoAnalysisService
         private VideoAnalysisSuccessEvaluator $evaluator,
         private AnalysisTermCatalogue $catalogue,
         private AnalysisTermInferrer $inferrer,
+        private PlatformMusicExtractor $musicExtractor,
         private SnitchAnalyticsService $analytics,
     ) {}
 
-    public function analyzeUrl(string $mediaUrl, string $mediaKind = 'video', ?string $caption = null): VideoAnalysisResult
-    {
+    /**
+     * @param  array{title: string|null, artist: string|null, is_original_audio: bool|null, platform_id: string|null, source: string}|null  $platformMusic
+     */
+    public function analyzeUrl(
+        string $mediaUrl,
+        string $mediaKind = 'video',
+        ?string $caption = null,
+        ?array $platformMusic = null,
+    ): VideoAnalysisResult {
         $model = (string) config('snitch.video_analysis.model');
-        $prompt = $this->buildPrompt($mediaKind, $caption);
+        $prompt = $this->buildPrompt($mediaKind, $caption, $platformMusic);
 
         $content = [
             ['type' => 'text', 'text' => $prompt],
@@ -48,9 +56,10 @@ Write every string value in English (UK), including concept, idea, topics, how_t
 Do not use Chinese or other non-English prose. Spoken-word quotes in hook may keep the original language, but all explanation stays English.
 Prioritise reusable craft concepts and engagement mechanics.
 Never dump or paraphrase long stretches of spoken script or caption.
-Never invent music or SFX that are not audible in the media.
+Never invent music or SFX that are not audible in the media. Prefer platform music metadata when provided over guessing a song title.
 Reject vague filler ("engaging", "relatable vibe", "great energy") - name the mechanic.
 Always fill hook_type_slugs, topic_slugs, and visual_craft_slugs from the controlled catalogue when they fit (e.g. myth_bust for myth-busting opens). Use custom_tags only when nothing fits.
+When you see real VFX (particles, glitch/VHS, greenscreen keying, sticker packs, motion graphics, screen warp, light leaks, CapCut template FX, AI face filters), emit the matching Grade & effects visual_craft slugs. Do not call ordinary jump cuts, fades, or colour grade "VFX".
 For how_to_copy, always use a Markdown numbered list with a real newline before each step (1. / 2. / 3.). Never write steps inline on one line. Keep cta as the post's ask only - not inside how_to_copy.
 SYSTEM,
                 ],
@@ -106,8 +115,15 @@ SYSTEM,
                 throw new RuntimeException('Post type is not reel/video; analysis skipped.');
             }
 
+            $platformMusic = $this->musicExtractor->fromPost($post);
+
             // Local APP_URL storage links are not fetchable by NanoGPT; inline bytes.
-            $result = $this->analyzeUrl(PublicDiskMedia::analyzableUrl($mediaUrl), 'video', $post->caption);
+            $result = $this->analyzeUrl(
+                PublicDiskMedia::analyzableUrl($mediaUrl),
+                'video',
+                $post->caption,
+                $platformMusic,
+            );
             $evaluation = $this->evaluator->evaluate($result, $post->caption);
 
             if (! $evaluation['passed']) {
@@ -150,11 +166,12 @@ SYSTEM,
                 'custom_tags' => $result->customTags,
                 'format_notes' => null,
                 'sfx' => $result->sfx,
-                'music' => array_filter([
-                    'title' => $result->musicTitle,
-                    'artist' => $result->musicArtist,
-                    'is_original_audio' => $result->isOriginalAudio,
-                ], fn ($value) => $value !== null),
+                'music' => $this->musicExtractor->mergeForAnalysis(
+                    $platformMusic,
+                    $result->musicTitle,
+                    $result->musicArtist,
+                    $result->isOriginalAudio,
+                ),
                 'cta' => $result->cta,
                 'how_to_copy' => $result->howToCopy,
                 'model' => $result->model,
@@ -186,24 +203,30 @@ SYSTEM,
         }
     }
 
-    private function buildPrompt(string $mediaKind, ?string $caption): string
+    /**
+     * @param  array{title: string|null, artist: string|null, is_original_audio: bool|null, platform_id: string|null, source: string}|null  $platformMusic
+     */
+    private function buildPrompt(string $mediaKind, ?string $caption, ?array $platformMusic = null): string
     {
         $captionLine = $caption ? "Caption (context only, do not paraphrase as the analysis): {$caption}" : 'Caption: (none)';
         $catalogueBlock = $this->catalogue->promptBlock();
+        $musicLine = $this->platformMusicLine($platformMusic);
 
         return <<<PROMPT
 Analyse this {$mediaKind} short-form social post. Focus on craft concepts a creator can reuse.
 {$captionLine}
+{$musicLine}
 
 Rules:
 - Language = English (UK) only for all JSON string values (concept, idea, topics, how_to_copy, visual_summary, cta, sfx labels, custom_tags). No Chinese or mixed-language prose.
 - Core concept = the reusable game/pattern in one crisp sentence (not a caption summary).
 - Why it engages = name the mechanism (curiosity gap, proof, contrast, status, humor beat, etc.).
 - Hook = scroll-stop device + timing; quote spoken words only if the quote IS the device.
-- Visual cues = craft choices (composition, text-on-screen, cuts, framing).
-- Music/SFX = role in the concept when present; empty array / null when none. Do not invent.
+- Visual cues = craft choices (composition, text-on-screen, cuts, framing, grade, VFX). Name specific effects when present.
+- Music/SFX = role in the concept when present; empty array / null when none. Do not invent song titles. When platform music metadata is provided above, copy that title/artist/original flag into music_* fields (or leave null) - never invent a conflicting track name.
 - Topics = short craft/theme labels in English (formats, niche memes, cultural hooks), not keyword stuffing.
-- Taxonomy = ALWAYS pick catalogue slugs when they fit (required for filters). Prefer 1 hook_type_slug, 1-3 topic_slugs, 1-3 visual_craft_slugs. If topics mention myth-busting / pattern interrupt / etc., emit the matching slug.
+- Taxonomy = ALWAYS pick catalogue slugs when they fit (required for filters). Prefer 1 hook_type_slug, 1-3 topic_slugs, 1-4 visual_craft_slugs. If topics mention myth-busting / pattern interrupt / etc., emit the matching slug.
+- Visual craft: include Grade & effects slugs for real VFX (particle_fx, vhs_glitch, greenscreen, sticker_pack_overlay, emoji_bursts, motion_graphics, screen_distort, light_leak_flare, object_tracking, ai_face_filter, capcut_template_fx, film_grain, duotone_grade, neon_accent). Do NOT tag ordinary jump cuts, crossfades, mild colour correction, or platform chrome as VFX. Prefer those slugs over a freeform "vfx" custom_tag.
 - custom_tags = short freeform labels ONLY when the catalogue misses something important.
 - how_to_copy = 2-4 actionable remake steps for another brand applying the SAME concept (required, never empty). Put each step on its own line as a Markdown numbered list (e.g. "1. ...\\n2. ...\\n3. ..."). Never pack steps onto one line. Do not bury the post CTA inside how_to_copy - CTA has its own field.
 - cta = the post's ask / next action only (separate from remake steps). Always fill this string; use "No explicit CTA" when the post has no ask.
@@ -232,6 +255,25 @@ Return JSON with keys:
   "is_original_audio": false
 }
 PROMPT;
+    }
+
+    /**
+     * @param  array{title: string|null, artist: string|null, is_original_audio: bool|null, platform_id: string|null, source: string}|null  $platformMusic
+     */
+    private function platformMusicLine(?array $platformMusic): string
+    {
+        if ($platformMusic === null) {
+            return 'Platform music metadata: (none - do not invent a commercial track title)';
+        }
+
+        $title = $platformMusic['title'] ?? 'unknown';
+        $artist = $platformMusic['artist'] ?? 'unknown';
+        $original = array_key_exists('is_original_audio', $platformMusic) && $platformMusic['is_original_audio'] !== null
+            ? ($platformMusic['is_original_audio'] ? 'yes' : 'no')
+            : 'unknown';
+        $id = $platformMusic['platform_id'] ?? 'unknown';
+
+        return "Platform music metadata (authoritative): title={$title}; artist={$artist}; original_audio={$original}; id={$id}";
     }
 
     private function extractJson(string $text): string

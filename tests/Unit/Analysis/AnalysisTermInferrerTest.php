@@ -42,4 +42,26 @@ class AnalysisTermInferrerTest extends TestCase
 
         $this->assertNotContains('cta_first', $slugs['hook_type']);
     }
+
+    public function test_infers_vfx_slugs_from_visual_summary_and_custom_tags(): void
+    {
+        $this->seed(AnalysisTermSeeder::class);
+
+        $slugs = app(AnalysisTermInferrer::class)->inferSlugs([
+            'hook' => 'Glitch hit then reveal',
+            'concept' => 'Stacked CapCut template FX for novelty retention',
+            'idea' => 'Novelty of the effect pack',
+            'visual_summary' => 'RGB split glitch frames with particle FX sparkles and a greenscreen cutout.',
+            'topics' => ['effect pack'],
+            'custom_tags' => ['vfx'],
+        ]);
+
+        $this->assertContains('vhs_glitch', $slugs['visual_craft']);
+        $this->assertContains('particle_fx', $slugs['visual_craft']);
+        $this->assertTrue(
+            in_array('greenscreen', $slugs['visual_craft'], true)
+            || in_array('vfx_composite', $slugs['visual_craft'], true)
+            || in_array('capcut_template_fx', $slugs['visual_craft'], true),
+        );
+    }
 }

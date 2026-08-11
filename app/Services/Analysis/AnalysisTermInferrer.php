@@ -15,7 +15,32 @@ class AnalysisTermInferrer
     private const LIMITS = [
         'hook_type' => 2,
         'topic' => 4,
-        'visual_craft' => 3,
+        // VFX-heavy posts often stack effects + a layout/cam craft; 3 was dropping glitch/particles.
+        'visual_craft' => 4,
+    ];
+
+    /**
+     * Extra freeform phrases that should map to catalogue slugs.
+     * Short aliases (3+ chars) are allowed here; generated aliases still require 4+.
+     *
+     * @var array<string, list<string>>
+     */
+    private const EXTRA_ALIASES = [
+        'vhs_glitch' => ['glitch', 'vhs', 'datamosh', 'rgb split', 'vhs glitch'],
+        'greenscreen' => ['green screen', 'chroma key', 'greenscreen'],
+        'particle_fx' => ['particles', 'particle fx', 'sparkle fx', 'confetti fx', 'particle effect'],
+        'motion_graphics' => ['motion graphic', 'animated graphic', 'mg animation', 'motion graphics'],
+        'screen_distort' => ['screen warp', 'screen distort', 'liquid warp', 'warp effect'],
+        'light_leak_flare' => ['light leak', 'lens flare', 'light leak flare'],
+        'object_tracking' => ['object track', 'tracking overlay', 'motion track', 'tracked overlay'],
+        'ai_face_filter' => ['face filter', 'beauty filter', 'ai filter', 'ai face'],
+        'capcut_template_fx' => ['capcut', 'template fx', 'effect pack', 'capcut effect'],
+        'vfx_composite' => ['vfx', 'visual effects', 'visual effect', 'compositing', 'composite vfx'],
+        'sticker_pack_overlay' => ['sticker overlay', 'sticker pack', 'animated stickers'],
+        'emoji_bursts' => ['emoji burst', 'emoji rain', 'emoji overlay'],
+        'film_grain' => ['film grain', 'grain overlay'],
+        'duotone_grade' => ['duotone'],
+        'neon_accent' => ['neon lighting', 'neon accent'],
     ];
 
     public function __construct(
@@ -106,6 +131,7 @@ class AnalysisTermInferrer
                 $fields['visual_summary'] ?? null,
                 $fields['concept'] ?? null,
                 ...($fields['topics'] ?? []),
+                ...($fields['custom_tags'] ?? []),
             ]),
         ];
 
@@ -394,9 +420,12 @@ class AnalysisTermInferrer
     private function matchScore(string $haystack, string $slug, string $label): int
     {
         $best = 0;
+        $extra = self::EXTRA_ALIASES[$slug] ?? [];
 
         foreach ($this->aliases($slug, $label) as $alias) {
-            if ($alias === '' || strlen($alias) < 4) {
+            $minLength = in_array($alias, $extra, true) ? 3 : 4;
+
+            if ($alias === '' || strlen($alias) < $minLength) {
                 continue;
             }
 
@@ -432,6 +461,7 @@ class AnalysisTermInferrer
             $slugHyphen.'ing',
             $compact.'ing',
             str_replace(' ', '', $slugSpaces).'ing',
+            ...(self::EXTRA_ALIASES[$slug] ?? []),
         ];
 
         // "myth bust" also matches "myth busting" / "myth-busting" via -ing forms above.

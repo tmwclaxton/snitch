@@ -142,6 +142,76 @@ class VideoAnalysisServiceTest extends TestCase
         );
     }
 
+    public function test_analyze_post_prefers_platform_music_metadata(): void
+    {
+        $this->seed(AnalysisTermSeeder::class);
+
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'content' => json_encode([
+                            'concept' => 'Trend audio under a process montage',
+                            'hook' => 'Beat drop on first cut',
+                            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+                            'visual_summary' => str_repeat('Quick cuts of hands shaping dough under neon accent lighting. ', 2),
+                            'idea' => 'Familiar trend audio lifts retention',
+                            'topics' => ['process montage'],
+                            'hook_type_slugs' => ['trend_audio_open'],
+                            'topic_slugs' => ['content_strategy'],
+                            'visual_craft_slugs' => ['quick_cuts_montage'],
+                            'custom_tags' => [],
+                            'cta' => 'No explicit CTA',
+                            'how_to_copy' => "1. Open on the beat\n2. Cut on downbeats\n3. End on product",
+                            'sfx' => [],
+                            'music_title' => 'Wrong Guess',
+                            'music_artist' => 'Hallucinated',
+                            'is_original_audio' => false,
+                        ]),
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+            'media_url' => 'https://cdn.example.com/music.mp4',
+            'raw_payload' => [
+                'normalized_music' => [
+                    'musicName' => 'Sometimes',
+                    'musicAuthor' => 'Fleetwood Mac',
+                    'musicOriginal' => false,
+                    'musicId' => 'fleet-1',
+                ],
+            ],
+        ]);
+
+        $outcome = app(VideoAnalysisService::class)->analyzePost($post);
+
+        $this->assertSame(AnalysisStatus::Completed, $outcome['analysis']->status);
+        $this->assertSame('Sometimes', $outcome['analysis']->music['title']);
+        $this->assertSame('Fleetwood Mac', $outcome['analysis']->music['artist']);
+        $this->assertSame('platform', $outcome['analysis']->music['source']);
+        $this->assertSame('fleet-1', $outcome['analysis']->music['platform_id']);
+        $this->assertFalse($outcome['analysis']->music['is_original_audio']);
+
+        Http::assertSent(function ($request): bool {
+            $encoded = json_encode($request->data());
+
+            return is_string($encoded)
+                && str_contains($encoded, 'Platform music metadata (authoritative)')
+                && str_contains($encoded, 'Sometimes')
+                && str_contains($encoded, 'particle_fx');
+        });
+    }
+
     public function test_analyze_post_infers_catalogue_terms_when_model_omits_slugs(): void
     {
         $this->seed(AnalysisTermSeeder::class);

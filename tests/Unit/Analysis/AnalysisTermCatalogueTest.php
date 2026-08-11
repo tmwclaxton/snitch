@@ -8,11 +8,11 @@ use Tests\TestCase;
 
 class AnalysisTermCatalogueTest extends TestCase
 {
-    public function test_catalogue_has_about_250_unique_dimension_slugs(): void
+    public function test_catalogue_has_unique_dimension_slugs(): void
     {
         $definitions = (new AnalysisTermCatalogue)->definitions();
 
-        $this->assertCount(250, $definitions);
+        $this->assertCount(258, $definitions);
 
         $keys = [];
         foreach ($definitions as $row) {
@@ -23,7 +23,7 @@ class AnalysisTermCatalogueTest extends TestCase
             $keys[] = $row['dimension'].':'.$row['slug'];
         }
 
-        $this->assertCount(250, array_unique($keys));
+        $this->assertCount(258, array_unique($keys));
         $this->assertGreaterThan(5, count(array_unique(array_column($definitions, 'section'))));
     }
 
