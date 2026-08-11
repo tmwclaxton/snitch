@@ -65,13 +65,13 @@ class UsageBillingServiceTest extends TestCase
     public function test_charge_works_without_subscription_when_balance_above_floor(): void
     {
         $user = User::factory()->create();
-        $this->billing->creditFromTopUp($user, 1000, 'topup:test');
+        $this->billing->creditClaimBonus($user);
 
         $entry = $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.04);
 
         $this->assertLessThan(0, $entry->amount_pence);
         $this->assertSame(BillingVendor::NanoGpt, $entry->vendor);
-        $this->assertSame(1000 + $entry->amount_pence, $this->billing->balancePence($user));
+        $this->assertSame(500 + $entry->amount_pence, $this->billing->balancePence($user));
     }
 
     public function test_charge_deducts_credits_when_subscribed(): void
@@ -90,6 +90,7 @@ class UsageBillingServiceTest extends TestCase
     public function test_assert_can_run_rejects_balance_at_or_below_20p(): void
     {
         $user = User::factory()->create();
+        $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 20, 'topup:floor');
 
         try {
@@ -98,14 +99,13 @@ class UsageBillingServiceTest extends TestCase
         } catch (InsufficientCreditsException $exception) {
             $this->assertSame(20.0, $exception->balancePence);
             $this->assertStringContainsString('more than 20p', $exception->getMessage());
-            $this->assertStringContainsString('Subscribe', $exception->getMessage());
-            $this->assertStringContainsString('top up', $exception->getMessage());
         }
     }
 
     public function test_assert_can_run_allows_balance_above_20p(): void
     {
         $user = User::factory()->create();
+        $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 21, 'topup:above-floor');
 
         $this->billing->assertCanRun($user);
@@ -116,6 +116,7 @@ class UsageBillingServiceTest extends TestCase
     public function test_insufficient_credits_throws_when_balance_is_zero(): void
     {
         $user = User::factory()->create();
+        $this->subscribe($user);
 
         $this->expectException(InsufficientCreditsException::class);
 
@@ -261,11 +262,11 @@ class UsageBillingServiceTest extends TestCase
         $this->assertSame(0.05, $this->billing->pricePenceFromCogs('analyze.post', BillingVendor::NanoGpt, $cogs));
 
         $user = User::factory()->create();
-        $this->billing->creditFromTopUp($user, 1000, 'topup:nanogpt-floor');
+        $this->billing->creditClaimBonus($user);
         $entry = $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, $cogs);
 
         $this->assertSame(-0.05, $entry->amount_pence);
-        $this->assertSame(999.95, $this->billing->balancePence($user));
+        $this->assertSame(499.95, $this->billing->balancePence($user));
     }
 
     public function test_vendors_round_to_centipence_without_minimum(): void
@@ -287,6 +288,7 @@ class UsageBillingServiceTest extends TestCase
     public function test_charge_skips_ledger_when_amount_rounds_to_zero(): void
     {
         $user = User::factory()->create();
+        $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 1000, 'topup:zero-skip');
 
         $entry = $this->billing->charge(
@@ -309,6 +311,7 @@ class UsageBillingServiceTest extends TestCase
     public function test_recent_and_charges_hide_zero_amount_rows(): void
     {
         $user = User::factory()->create();
+        $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 1000, 'topup:hide-zero');
         $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.04);
 

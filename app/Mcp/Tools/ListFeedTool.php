@@ -23,6 +23,10 @@ class ListFeedTool extends Tool
             return $user;
         }
 
+        if ($blocked = McpAuth::requireProductAccess($user)) {
+            return $blocked;
+        }
+
         $data = $request->validate([
             'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);

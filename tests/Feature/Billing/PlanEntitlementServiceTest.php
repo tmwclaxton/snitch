@@ -2,10 +2,11 @@
 
 namespace Tests\Feature\Billing;
 
-use App\Models\CreditBalance;
+use App\Enums\BillingVendor;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\UsageBillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Laravel\Cashier\Subscription;
@@ -56,10 +57,7 @@ class PlanEntitlementServiceTest extends TestCase
     public function test_shared_summary_returns_flat_payload_without_usage_aggregates(): void
     {
         $user = User::factory()->create();
-        CreditBalance::query()->create([
-            'user_id' => $user->id,
-            'balance_pence' => 5000,
-        ]);
+        app(UsageBillingService::class)->creditClaimBonus($user);
         TrackedAccount::factory()->count(2)->competitor()->for($user)->create();
         TrackedAccount::factory()->count(1)->influencer()->for($user)->create();
 
@@ -70,8 +68,9 @@ class PlanEntitlementServiceTest extends TestCase
         $this->assertTrue($shared['can_upgrade']);
         $this->assertSame(2, $shared['competitors_used']);
         $this->assertSame(1, $shared['influencers_used']);
-        $this->assertSame(5000.0, $shared['balance_pence']);
+        $this->assertSame(500.0, $shared['balance_pence']);
         $this->assertTrue($shared['can_run_billable']);
+        $this->assertFalse($shared['paywall']['blocked']);
         $this->assertArrayNotHasKey('usage', $shared);
         $this->assertArrayNotHasKey('recent', $shared);
         $this->assertArrayNotHasKey('vendors', $shared);
@@ -81,18 +80,20 @@ class PlanEntitlementServiceTest extends TestCase
     public function test_shared_summary_can_run_billable_gates_on_min_run_balance(): void
     {
         $user = User::factory()->create();
+        $billing = app(UsageBillingService::class);
+        $billing->creditClaimBonus($user);
 
-        $balance = CreditBalance::query()->create([
-            'user_id' => $user->id,
-            'balance_pence' => 20,
-        ]);
+        while ($billing->canAccessProduct($user)) {
+            $billing->charge($user, 'explore.search', BillingVendor::Snitch);
+        }
 
         $this->assertFalse($this->entitlements->sharedSummary($user)['can_run_billable']);
 
-        $balance->update(['balance_pence' => 21]);
+        $this->createSubscription($user, 'price_platform_test');
+        $billing->creditFromTopUp($user, 21, 'topup:restore');
 
-        $freshEntitlements = app(PlanEntitlementService::class);
-        $this->assertTrue($freshEntitlements->sharedSummary($user)['can_run_billable']);
+        $this->entitlements->forgetSharedSummary($user);
+        $this->assertTrue($this->entitlements->sharedSummary($user->fresh())['can_run_billable']);
     }
 
     public function test_shared_summary_is_memoized_per_user_within_request(): void
@@ -115,10 +116,7 @@ class PlanEntitlementServiceTest extends TestCase
     public function test_shared_summary_avoids_the_heavy_ledger_queries_from_summary(): void
     {
         $user = User::factory()->create();
-        CreditBalance::query()->create([
-            'user_id' => $user->id,
-            'balance_pence' => 100,
-        ]);
+        app(UsageBillingService::class)->creditClaimBonus($user);
 
         DB::connection()->enableQueryLog();
         app(PlanEntitlementService::class)->sharedSummary($user);
@@ -129,9 +127,10 @@ class PlanEntitlementServiceTest extends TestCase
         $fullQueries = DB::connection()->getQueryLog();
         DB::connection()->disableQueryLog();
 
-        $ledgerFromShared = array_filter(
+        $heavyFromShared = array_filter(
             $sharedQueries,
-            fn (array $q): bool => str_contains($q['query'], 'credit_ledger_entries'),
+            fn (array $q): bool => str_contains($q['query'], 'SUM(ABS(amount_pence))')
+                || str_contains($q['query'], 'group by'),
         );
         $ledgerFromSummary = array_filter(
             $fullQueries,
@@ -140,8 +139,8 @@ class PlanEntitlementServiceTest extends TestCase
 
         $this->assertSame(
             [],
-            array_values($ledgerFromShared),
-            'sharedSummary must not query credit_ledger_entries.',
+            array_values($heavyFromShared),
+            'sharedSummary must not run heavy spend rollup aggregates.',
         );
         $this->assertNotEmpty(
             $ledgerFromSummary,

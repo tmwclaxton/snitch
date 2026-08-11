@@ -10,12 +10,14 @@ class CreditBalance extends Model
     protected $fillable = [
         'user_id',
         'balance_pence',
+        'starter_allowance_exhausted',
     ];
 
     protected function casts(): array
     {
         return [
             'balance_pence' => 'float',
+            'starter_allowance_exhausted' => 'boolean',
         ];
     }
 

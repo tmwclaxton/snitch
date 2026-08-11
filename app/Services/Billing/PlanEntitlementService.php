@@ -24,6 +24,17 @@ class PlanEntitlementService
 
     public function __construct(private UsageBillingService $usage) {}
 
+    public function forgetSharedSummary(?User $user = null): void
+    {
+        if ($user === null) {
+            $this->sharedSummaryCache = [];
+
+            return;
+        }
+
+        unset($this->sharedSummaryCache[$user->id]);
+    }
+
     public function hasPlatformSubscription(User $user): bool
     {
         return $this->usage->hasPlatformSubscription($user);
@@ -96,6 +107,7 @@ class PlanEntitlementService
      *     min_run_balance_pence: int,
      *     can_run_billable: bool,
      *     platform_fee_pence: int,
+     *     paywall: array{blocked: bool, reason: string|null, message: string|null, starter_allowance_exhausted: bool, can_top_up: bool},
      *     usage: array<string, mixed>
      * }
      */
@@ -103,6 +115,7 @@ class PlanEntitlementService
     {
         $subscribed = $this->hasPlatformSubscription($user);
         $usage = $this->usage->summary($user);
+        $paywall = $this->usage->paywallState($user);
         $competitorsUsed = $user->trackedAccounts()->competitors()->count();
         $influencersUsed = $user->trackedAccounts()->influencers()->count();
 
@@ -124,8 +137,9 @@ class PlanEntitlementService
             'can_upgrade' => ! $subscribed,
             'balance_pence' => $usage['balance_pence'],
             'min_run_balance_pence' => $this->usage->minRunBalancePence(),
-            'can_run_billable' => $this->usage->canRun($user),
+            'can_run_billable' => ! $paywall['blocked'],
             'platform_fee_pence' => $usage['platform_fee_pence'],
+            'paywall' => $paywall,
             'usage' => $usage,
         ];
     }
@@ -154,7 +168,8 @@ class PlanEntitlementService
      *     balance_pence: float,
      *     min_run_balance_pence: int,
      *     can_run_billable: bool,
-     *     platform_fee_pence: int
+     *     platform_fee_pence: int,
+     *     paywall: array{blocked: bool, reason: string|null, message: string|null, starter_allowance_exhausted: bool, can_top_up: bool}
      * }
      */
     public function sharedSummary(User $user): array
@@ -164,6 +179,7 @@ class PlanEntitlementService
         }
 
         $subscribed = $this->hasPlatformSubscription($user);
+        $paywall = $this->usage->paywallState($user);
         $balancePence = $this->usage->balancePence($user);
         $minRunBalancePence = $this->usage->minRunBalancePence();
         $competitorsUsed = $user->trackedAccounts()->competitors()->count();
@@ -187,8 +203,9 @@ class PlanEntitlementService
             'can_upgrade' => ! $subscribed,
             'balance_pence' => $balancePence,
             'min_run_balance_pence' => $minRunBalancePence,
-            'can_run_billable' => $balancePence > $minRunBalancePence,
+            'can_run_billable' => ! $paywall['blocked'],
             'platform_fee_pence' => (int) config('billing.platform_fee_pence', 1900),
+            'paywall' => $paywall,
         ];
     }
 

@@ -3,6 +3,7 @@
 namespace App\Mcp\Support;
 
 use App\Models\User;
+use App\Services\Billing\UsageBillingService;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 
@@ -17,6 +18,21 @@ final class McpAuth
         }
 
         return $user;
+    }
+
+    public static function requireProductAccess(User $user): ?Response
+    {
+        $usage = app(UsageBillingService::class);
+
+        if ($usage->canAccessProduct($user)) {
+            return null;
+        }
+
+        $paywall = $usage->paywallState($user);
+
+        return Response::error(
+            $paywall['message'] ?? 'Subscribe to a paid plan to continue using Snitch MCP.',
+        );
     }
 
     /**

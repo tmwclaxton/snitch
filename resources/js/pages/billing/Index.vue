@@ -143,8 +143,9 @@ function vendorAccent(key: SpendVendorKey): string {
                         Billing
                     </h1>
                     <p class="mt-1.5 max-w-2xl text-sm text-snitch-ink/65 sm:text-base">
-                        Keep more than 20p of usage credit to run sync, analysis, and discovery. Subscribe for
-                        monthly plan value, or top up packs anytime.
+                        Keep more than 20p of usage credit to run sync, analysis, and discovery. After
+                        your free £5 starter, a paid plan is required. Plan credits expire at month end;
+                        top-ups expire after 3 months; starter credit never expires.
                     </p>
                 </div>
                 <Link
@@ -278,6 +279,14 @@ function vendorAccent(key: SpendVendorKey): string {
                 <section class="snitch-scrap relative space-y-4 p-5 pt-6 sm:p-6">
                     <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
                     <h2 class="snitch-display text-2xl text-snitch-ink">Top up credits</h2>
+                    <p
+                        v-if="!subscription.subscribed"
+                        class="text-sm text-snitch-ink/70"
+                        data-test="topup-requires-plan"
+                    >
+                        Top-ups require an active paid plan. Subscribe first, then buy credit packs.
+                        Top-up credits expire 3 months after purchase.
+                    </p>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <Form
                             v-for="pack in creditPacks"
@@ -294,7 +303,7 @@ function vendorAccent(key: SpendVendorKey): string {
                             <button
                                 type="submit"
                                 class="snitch-btn"
-                                :disabled="!pack.has_checkout"
+                                :disabled="!pack.has_checkout || !subscription.subscribed"
                                 :data-test="`topup-${pack.key}`"
                             >
                                 Buy {{ formatCatalogMoney(pack.price_pence) }}

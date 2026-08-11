@@ -18,6 +18,8 @@ class CreditLedgerEntry extends Model
         'balance_after_pence',
         'meta',
         'idempotency_key',
+        'expires_at',
+        'remaining_pence',
     ];
 
     protected function casts(): array
@@ -28,7 +30,9 @@ class CreditLedgerEntry extends Model
             'multiplier' => 'float',
             'amount_pence' => 'float',
             'balance_after_pence' => 'float',
+            'remaining_pence' => 'float',
             'meta' => 'array',
+            'expires_at' => 'datetime',
         ];
     }
 

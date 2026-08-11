@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\BrandProfile;
-use App\Models\CreditBalance;
 use App\Models\User;
+use App\Services\Billing\UsageBillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Inertia\Middleware;
@@ -19,10 +19,7 @@ class SharedInertiaPropsTest extends TestCase
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
-        CreditBalance::query()->create([
-            'user_id' => $user->id,
-            'balance_pence' => 500,
-        ]);
+        app(UsageBillingService::class)->creditClaimBonus($user);
 
         $this->actingAs($user)
             ->get(route('dashboard'))
@@ -33,6 +30,7 @@ class SharedInertiaPropsTest extends TestCase
                     ->where('can_run_billable', true)
                     ->where('balance_pence', 500)
                     ->where('min_run_balance_pence', 20)
+                    ->where('paywall.blocked', false)
                     ->has('plan')
                     ->has('plan_name')
                     ->has('competitors_used')
@@ -50,10 +48,7 @@ class SharedInertiaPropsTest extends TestCase
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
-        CreditBalance::query()->create([
-            'user_id' => $user->id,
-            'balance_pence' => 500,
-        ]);
+        app(UsageBillingService::class)->creditClaimBonus($user);
 
         $sharedQueries = [];
         DB::listen(function ($query) use (&$sharedQueries): void {

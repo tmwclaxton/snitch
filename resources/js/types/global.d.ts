@@ -13,6 +13,14 @@ declare module 'vite/client' {
     }
 }
 
+export type PaywallState = {
+    blocked: boolean;
+    reason: 'subscribe' | 'credits' | null;
+    message: string | null;
+    starter_allowance_exhausted: boolean;
+    can_top_up: boolean;
+};
+
 export type SubscriptionSummary = {
     plan: string;
     plan_name: string;
@@ -33,6 +41,7 @@ export type SubscriptionSummary = {
     min_run_balance_pence?: number;
     can_run_billable?: boolean;
     platform_fee_pence?: number;
+    paywall?: PaywallState;
 } | null;
 
 export type SeoProps = {

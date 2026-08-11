@@ -26,15 +26,19 @@ class BillingStatusTool extends Tool
 
         $summary = $usage->summary($user);
         $runtime = McpRuntime::snapshot();
+        $paywall = $usage->paywallState($user);
 
         $nextStep = 'Balance OK for billable tools.';
-        if (! $usage->canRun($user)) {
-            $nextStep = 'Balance at or below 20p. Call create_credit_checkout or create_platform_checkout before sync/suggest/find/analyze.';
+        if ($paywall['blocked']) {
+            $nextStep = $paywall['reason'] === 'subscribe'
+                ? 'Free starter used up. Call create_platform_checkout before product tools.'
+                : 'Usage allowance spent. Call create_credit_checkout (requires paid plan) before product tools.';
         }
 
         return Response::json(array_merge($summary, [
             'runtime' => $runtime,
-            'can_run_billable' => $usage->canRun($user),
+            'can_run_billable' => ! $paywall['blocked'],
+            'paywall' => $paywall,
             'next_step' => $nextStep,
         ]));
     }

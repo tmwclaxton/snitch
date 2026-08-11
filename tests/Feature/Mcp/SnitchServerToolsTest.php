@@ -41,6 +41,7 @@ class SnitchServerToolsTest extends TestCase
     public function test_explore_posts_tool_returns_posts_payload(): void
     {
         $user = User::factory()->create();
+        app(UsageBillingService::class)->creditClaimBonus($user);
         $this->actingAs($user);
 
         $response = SnitchServer::tool(ExplorePostsTool::class, [
@@ -83,7 +84,7 @@ class SnitchServerToolsTest extends TestCase
         Queue::fake();
 
         $user = User::factory()->create();
-        app(UsageBillingService::class)->creditFromTopUp($user, 500, 'topup:mcp-sync-alias');
+        app(UsageBillingService::class)->creditClaimBonus($user);
         $account = TrackedAccount::factory()->create([
             'user_id' => $user->id,
             'kind' => TrackedAccountKind::Competitor,

@@ -15,6 +15,7 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\Settings\WinnerRuleController;
 use App\Http\Controllers\WinnerController;
 use App\Http\Middleware\EnsureBrandProfile;
+use App\Http\Middleware\EnsureProductAccess;
 use App\Support\Seo;
 use Illuminate\Support\Facades\Route;
 use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
@@ -75,7 +76,7 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         ->middleware('throttle:10,1')
         ->name('agents.token');
 
-    Route::middleware([EnsureBrandProfile::class])->group(function () {
+    Route::middleware([EnsureBrandProfile::class, EnsureProductAccess::class])->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
 
         Route::get('/snitches', [CompetitorController::class, 'index'])->name('competitors.index');

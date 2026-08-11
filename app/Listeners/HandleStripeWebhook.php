@@ -62,6 +62,15 @@ class HandleStripeWebhook
             return;
         }
 
+        if (! $this->usage->hasPlatformSubscription($user)) {
+            Log::warning('Stripe credit top-up ignored: user has no paid plan', [
+                'user_id' => $userId,
+                'session' => $sessionId,
+            ]);
+
+            return;
+        }
+
         $this->usage->creditFromTopUp(
             user: $user,
             creditsPence: $creditsPence,

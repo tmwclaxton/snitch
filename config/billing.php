@@ -24,11 +24,23 @@ return [
     'claim_bonus_pence' => (int) env('SNITCH_CLAIM_BONUS_PENCE', 500),
 
     /*
-    | Billable runs require balance strictly greater than this (GBP pence).
-    | At or below: ask the user to subscribe for plan value or top up credits.
-    | Platform subscription is not required to run when balance clears this floor.
+    | Billable runs and product data access require balance strictly greater
+    | than this (GBP pence). At or below: blocked (same as monthly overage).
+    |
+    | Free starter: claim_bonus (£5) may be spent without a platform plan.
+    | Once that starter allowance is exhausted (denormalized on credit_balances),
+    | an active paid platform subscription is required. Credit top-ups are only
+    | allowed for subscribed users - top-up alone cannot bypass the paywall.
     */
     'min_run_balance_pence' => (int) env('SNITCH_MIN_RUN_BALANCE_PENCE', 20),
+
+    /*
+    | Credit lot expiry
+    | - claim_bonus (starter £5): never expires (expires_at null)
+    | - subscription_bonus: expires at end of the calendar month it was granted
+    | - credits.topup: expires this many months after purchase
+    */
+    'topup_expiry_months' => (int) env('SNITCH_TOPUP_EXPIRY_MONTHS', 3),
 
     /*
     | Internal price multiplier on vendor COGS (1.3 = 30% over provider).

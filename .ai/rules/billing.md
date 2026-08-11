@@ -28,7 +28,22 @@ paths:
 Platform fee (£19/mo via `STRIPE_PRICE_PLATFORM`) plus prepaid usage credits (packs in `config/billing.php`). Seat caps for competitors/influencers are retired - money is the limit. Internal price uses vendor COGS × `price_multiplier` (default 1.3); never show markup/COGS/"30%" in UI or MCP copy - only charged GBP amounts.
 
 ## Credits
-Agent MCP `create_account` starts at £0. Claiming/confirming (WorkOS bind or web signup) grants `claim_bonus_pence` (£5) once (`idempotency_key` `claim_bonus:{user_id}`). Each paid platform subscription invoice grants `subscription_bonus_pence` (£30) once per invoice (`idempotency_key` `subscription_bonus:invoice:{invoice_id}`) via Stripe `invoice.paid`. Billable jobs require balance strictly greater than `billing.min_run_balance_pence` (default 20p) - platform subscription is optional value (monthly credits), not a hard gate. At/below the floor, throw `InsufficientCreditsException` asking to subscribe for plan value or top up. Manual sync HTTP/MCP endpoints must assert this before `markSyncRunning()` / dispatch so the UI never shows Syncing as in progress when blocked. Shared Inertia `subscription.can_run_billable` drives Sync button disabled state.
+Agent MCP `create_account` starts at £0. Claiming/confirming (WorkOS bind or web signup) grants `claim_bonus_pence` (£5) once (`idempotency_key` `claim_bonus:{user_id}`). Each paid platform subscription invoice grants `subscription_bonus_pence` (£30) once per invoice (`idempotency_key` `subscription_bonus:invoice:{invoice_id}`) via Stripe `invoice.paid`.
+
+### Paywall (after free starter)
+- Free starter (£5 claim bonus) may be spent without a platform plan. Unsubscribed product access counts **only** claim_bonus remaining (never expires).
+- Once starter is exhausted (`credit_balances.starter_allowance_exhausted`, set when claim remaining hits the floor), an **active paid platform subscription** is required for product use (web data screens + MCP tools). Top-up alone must not bypass this.
+- **Top-ups require a paid plan** (HTTP checkout, MCP `create_credit_checkout`, Stripe webhook ignores credit sessions without a plan).
+- With a plan, access needs spendable unexpired balance above `billing.min_run_balance_pence` (default 20p). Hitting the floor is the same blocked experience as over-monthly-spend.
+- UI: shared Inertia `subscription.paywall` + `BillingPaywall` blur/modal (billing routes exempt). Mutations under `EnsureProductAccess` redirect to Billing. MCP: `EnsureMcpProductAccess` allows only billing/auth tools when blocked.
+
+### Credit lot expiry (`expires_at` + `remaining_pence` on ledger credits)
+- `claim_bonus`: never expires (`expires_at` null).
+- `subscription_bonus`: expires at end of the calendar month granted (no month-to-month rollover).
+- `credits.topup`: expires `billing.topup_expiry_months` (default 3) after purchase.
+- Charges FIFO-consume unexpired lots (soonest expiry first). `balancePence` syncs by zeroing expired remaining.
+
+Billable jobs / MCP product tools use `UsageBillingService::assertCanAccessProduct` / `canRun`. Manual sync HTTP/MCP endpoints must assert before `markSyncRunning()` / dispatch. Shared Inertia `subscription.can_run_billable` is `!paywall.blocked`.
 
 ## Vendors
 Ledger rows are per vendor: `apify`, `nanogpt`, `firecrawl`, `tikhub`, `snitch` (plus `bonus`/`topup`). Apify prefers exact `usageTotalUsd` from run API; NanoGPT/Firecrawl/TikHub use catalog estimates / floors. Spend chart / "Usage this period" include the four scrape/LLM vendors plus `snitch` product fees (`UsageBillingService::spendVendorKeys`). Snitch legend / usage row mark must be `/images/brand/mascot-mark.png` (same as favicon / `AppLogoIcon`), not a separate vendors/snitch.svg.

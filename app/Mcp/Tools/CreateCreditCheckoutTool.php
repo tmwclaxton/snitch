@@ -2,8 +2,10 @@
 
 namespace App\Mcp\Tools;
 
+use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Mcp\Support\McpAuth;
 use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\UsageBillingService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Mcp\Request;
@@ -13,14 +15,20 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('create_credit_checkout')]
-#[Description('Create a Stripe Checkout URL to top up usage credits (pack_10, pack_25, pack_50, pack_100).')]
+#[Description('Create a Stripe Checkout URL to top up usage credits (pack_10, pack_25, pack_50, pack_100). Requires an active paid platform plan - top-ups are not available on the free starter alone.')]
 class CreateCreditCheckoutTool extends Tool
 {
-    public function handle(Request $request, PlanEntitlementService $entitlements): Response
+    public function handle(Request $request, PlanEntitlementService $entitlements, UsageBillingService $usage): Response
     {
         $user = McpAuth::user($request);
         if ($user instanceof Response) {
             return $user;
+        }
+
+        try {
+            $usage->assertCanTopUp($user);
+        } catch (PlatformSubscriptionRequiredException $exception) {
+            return Response::error($exception->getMessage());
         }
 
         $data = $request->validate([

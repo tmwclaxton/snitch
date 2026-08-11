@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Enums\BillingVendor;
+use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ListBillingChargesRequest;
 use App\Models\User;
@@ -168,6 +169,17 @@ class BillingController extends Controller
             Inertia::flash('toast', [
                 'type' => 'error',
                 'message' => __('Choose a credit pack.'),
+            ]);
+
+            return redirect()->route('billing.edit');
+        }
+
+        try {
+            $this->usage->assertCanTopUp($user);
+        } catch (PlatformSubscriptionRequiredException $exception) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => $exception->getMessage(),
             ]);
 
             return redirect()->route('billing.edit');

@@ -25,6 +25,8 @@ class UsageBillingService
 
     public function balancePence(User $user): float
     {
+        $this->syncExpiredLots($user);
+
         return $this->roundPence((float) ($this->balanceRow($user)->balance_pence ?? 0));
     }
 
@@ -41,34 +43,173 @@ class UsageBillingService
         return max(0, (int) config('billing.min_run_balance_pence', 20));
     }
 
-    public function canRun(User $user, float $estimatedPence = 1): bool
+    public function starterAllowanceExhausted(User $user): bool
+    {
+        return (bool) $this->balanceRow($user)->starter_allowance_exhausted;
+    }
+
+    public function markStarterAllowanceExhausted(User $user): void
+    {
+        $row = $this->balanceRow($user);
+
+        if ($row->starter_allowance_exhausted) {
+            return;
+        }
+
+        $row->forceFill(['starter_allowance_exhausted' => true])->save();
+    }
+
+    /**
+     * Balance that counts for product access. Unsubscribed users may only spend
+     * never-expiring claim_bonus (starter £5). Subscribed users use all unexpired lots.
+     */
+    public function accessibleBalancePence(User $user): float
+    {
+        $this->syncExpiredLots($user);
+
+        if ($this->hasPlatformSubscription($user)) {
+            return $this->sumUnexpiredRemaining($user);
+        }
+
+        return $this->claimBonusRemainingPence($user);
+    }
+
+    public function claimBonusRemainingPence(User $user): float
+    {
+        return $this->roundPence((float) CreditLedgerEntry::query()
+            ->where('user_id', $user->id)
+            ->where('action', 'claim_bonus')
+            ->where('amount_pence', '>', 0)
+            ->where(function ($query): void {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
+            ->sum(DB::raw('COALESCE(remaining_pence, 0)')));
+    }
+
+    /**
+     * @return array{
+     *     blocked: bool,
+     *     reason: 'subscribe'|'credits'|null,
+     *     message: string|null,
+     *     starter_allowance_exhausted: bool,
+     *     can_top_up: bool
+     * }
+     */
+    public function paywallState(User $user): array
+    {
+        $subscribed = $this->hasPlatformSubscription($user);
+        $starterExhausted = $this->starterAllowanceExhausted($user);
+        $accessible = $this->accessibleBalancePence($user);
+        $minExclusive = $this->minRunBalancePence();
+        $hasBalance = $accessible > $minExclusive;
+
+        if ($subscribed) {
+            if ($hasBalance) {
+                return [
+                    'blocked' => false,
+                    'reason' => null,
+                    'message' => null,
+                    'starter_allowance_exhausted' => $starterExhausted,
+                    'can_top_up' => true,
+                ];
+            }
+
+            return [
+                'blocked' => true,
+                'reason' => 'credits',
+                'message' => 'This month\'s usage allowance is spent. Top up credits on the Billing page to continue.',
+                'starter_allowance_exhausted' => $starterExhausted,
+                'can_top_up' => true,
+            ];
+        }
+
+        if (! $starterExhausted && $hasBalance) {
+            return [
+                'blocked' => false,
+                'reason' => null,
+                'message' => null,
+                'starter_allowance_exhausted' => false,
+                'can_top_up' => false,
+            ];
+        }
+
+        if (! $hasBalance) {
+            $this->markStarterAllowanceExhausted($user);
+        }
+
+        return [
+            'blocked' => true,
+            'reason' => 'subscribe',
+            'message' => 'Your free £5 starter credit is used up. Subscribe to a paid plan on the Billing page to continue. Top-ups are available after you have a plan.',
+            'starter_allowance_exhausted' => true,
+            'can_top_up' => false,
+        ];
+    }
+
+    public function canAccessProduct(User $user, float $estimatedPence = 1): bool
     {
         try {
-            $this->assertCanRun($user, $estimatedPence);
+            $this->assertCanAccessProduct($user, $estimatedPence);
 
             return true;
-        } catch (InsufficientCreditsException) {
+        } catch (InsufficientCreditsException|PlatformSubscriptionRequiredException) {
             return false;
         }
     }
 
-    public function assertCanRun(User $user, float $estimatedPence = 1): void
+    public function assertCanAccessProduct(User $user, float $estimatedPence = 1): void
     {
-        $balance = $this->balancePence($user);
+        $subscribed = $this->hasPlatformSubscription($user);
+        $accessible = $this->accessibleBalancePence($user);
         $minExclusive = $this->minRunBalancePence();
         $estimate = max(0.01, $estimatedPence);
         $required = max($minExclusive + 1, $estimate);
+        $hasBalance = $accessible > $minExclusive && $accessible >= $estimate;
 
-        if ($balance <= $minExclusive || $balance < $estimate) {
+        if (! $subscribed) {
+            if ($this->starterAllowanceExhausted($user) || ! $hasBalance) {
+                if (! $hasBalance) {
+                    $this->markStarterAllowanceExhausted($user);
+                }
+
+                throw new PlatformSubscriptionRequiredException(
+                    'Your free £5 starter credit is used up. Subscribe to a paid plan on the Billing page to continue. Top-ups are available after you have a plan.',
+                );
+            }
+
+            return;
+        }
+
+        if (! $hasBalance) {
             throw new InsufficientCreditsException(
                 requiredPence: $required,
-                balancePence: $balance,
+                balancePence: $accessible,
                 message: sprintf(
-                    'Your balance must be more than %dp to run this. Subscribe to the platform plan for monthly credit value, or top up on the Billing page.',
+                    'Your balance must be more than %dp to continue. This month\'s usage allowance is spent - top up credits on the Billing page.',
                     $minExclusive,
                 ),
             );
         }
+    }
+
+    public function assertCanTopUp(User $user): void
+    {
+        if (! $this->hasPlatformSubscription($user)) {
+            throw new PlatformSubscriptionRequiredException(
+                'Credit top-ups require an active paid plan. Subscribe on the Billing page first.',
+            );
+        }
+    }
+
+    public function canRun(User $user, float $estimatedPence = 1): bool
+    {
+        return $this->canAccessProduct($user, $estimatedPence);
+    }
+
+    public function assertCanRun(User $user, float $estimatedPence = 1): void
+    {
+        $this->assertCanAccessProduct($user, $estimatedPence);
     }
 
     /**
@@ -100,7 +241,7 @@ class UsageBillingService
             return null;
         }
 
-        $this->assertCanRun($user, max(0.01, abs($amountPence)));
+        $this->assertCanAccessProduct($user, max(0.01, abs($amountPence)));
 
         $multiplier = $fixedPence !== null
             ? null
@@ -141,6 +282,7 @@ class UsageBillingService
             idempotencyKey: $idempotencyKey,
             requirePlatform: false,
             requireCredits: false,
+            expiresAt: now()->addMonthsNoOverflow(max(1, (int) config('billing.topup_expiry_months', 3))),
         );
     }
 
@@ -163,6 +305,7 @@ class UsageBillingService
             idempotencyKey: 'claim_bonus:'.$user->id,
             requirePlatform: false,
             requireCredits: false,
+            expiresAt: null,
         );
     }
 
@@ -193,6 +336,7 @@ class UsageBillingService
             idempotencyKey: $idempotencyKey,
             requirePlatform: false,
             requireCredits: false,
+            expiresAt: now()->endOfMonth(),
         );
     }
 
@@ -617,6 +761,7 @@ class UsageBillingService
         ?string $idempotencyKey,
         bool $requirePlatform,
         bool $requireCredits,
+        ?CarbonInterface $expiresAt = null,
     ): CreditLedgerEntry {
         $amountPence = $this->roundPence($amountPence);
 
@@ -639,48 +784,153 @@ class UsageBillingService
             $idempotencyKey,
             $requirePlatform,
             $requireCredits,
+            $expiresAt,
         ): CreditLedgerEntry {
             $balance = CreditBalance::query()->lockForUpdate()->firstOrCreate(
                 ['user_id' => $user->id],
-                ['balance_pence' => 0],
+                ['balance_pence' => 0, 'starter_allowance_exhausted' => false],
             );
+
+            $this->syncExpiredLots($user, $balance);
 
             if ($requirePlatform && ! $this->hasPlatformSubscription($user)) {
                 throw new PlatformSubscriptionRequiredException;
             }
 
-            $current = $this->roundPence((float) $balance->balance_pence);
-            $next = $this->roundPence($current + $amountPence);
+            $current = $this->sumUnexpiredRemaining($user);
 
-            if ($requireCredits && $amountPence < 0 && $next < 0) {
-                throw new InsufficientCreditsException(
-                    requiredPence: abs($amountPence),
-                    balancePence: $current,
-                    message: 'Not enough credits for this charge. Subscribe to the platform plan for monthly credit value, or top up on the Billing page.',
-                );
+            if ($requireCredits && $amountPence < 0) {
+                $needed = abs($amountPence);
+                if ($current < $needed) {
+                    throw new InsufficientCreditsException(
+                        requiredPence: $needed,
+                        balancePence: $current,
+                        message: 'Not enough credits for this charge. Subscribe to the platform plan for monthly credit value, or top up on the Billing page.',
+                    );
+                }
+
+                $this->consumeCreditLots($user, $needed);
             }
 
-            $balance->forceFill(['balance_pence' => max(0, $next)])->save();
+            $remainingPence = $amountPence > 0 ? $amountPence : null;
 
-            return CreditLedgerEntry::query()->create([
+            $entry = CreditLedgerEntry::query()->create([
                 'user_id' => $user->id,
                 'action' => $action,
                 'vendor' => $vendor,
                 'cogs_usd' => $cogsUsd,
                 'multiplier' => $multiplier,
                 'amount_pence' => $amountPence,
-                'balance_after_pence' => $this->roundPence((float) $balance->balance_pence),
+                'balance_after_pence' => 0,
                 'meta' => $meta === [] ? null : $meta,
                 'idempotency_key' => $idempotencyKey ?? (string) Str::uuid(),
+                'expires_at' => $amountPence > 0 ? $expiresAt : null,
+                'remaining_pence' => $remainingPence,
             ]);
+
+            $next = $this->sumUnexpiredRemaining($user);
+            $balance->forceFill(['balance_pence' => max(0, $next)])->save();
+            $entry->forceFill(['balance_after_pence' => $this->roundPence((float) $balance->balance_pence)])->save();
+
+            if (! $this->hasPlatformSubscription($user) && $this->claimBonusRemainingPence($user) <= $this->minRunBalancePence()) {
+                $balance->forceFill(['starter_allowance_exhausted' => true])->save();
+            }
+
+            return $entry->refresh();
         });
+    }
+
+    private function syncExpiredLots(User $user, ?CreditBalance $lockedBalance = null): void
+    {
+        $expired = CreditLedgerEntry::query()
+            ->where('user_id', $user->id)
+            ->where('amount_pence', '>', 0)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<=', now())
+            ->where('remaining_pence', '>', 0)
+            ->get();
+
+        if ($expired->isEmpty()) {
+            if ($lockedBalance !== null) {
+                $lockedBalance->forceFill([
+                    'balance_pence' => max(0, $this->sumUnexpiredRemaining($user)),
+                ])->save();
+            }
+
+            return;
+        }
+
+        foreach ($expired as $lot) {
+            $lot->forceFill(['remaining_pence' => 0])->save();
+        }
+
+        $balance = $lockedBalance ?? CreditBalance::query()->firstOrCreate(
+            ['user_id' => $user->id],
+            ['balance_pence' => 0, 'starter_allowance_exhausted' => false],
+        );
+
+        $balance->forceFill([
+            'balance_pence' => max(0, $this->sumUnexpiredRemaining($user)),
+        ])->save();
+    }
+
+    private function sumUnexpiredRemaining(User $user): float
+    {
+        return $this->roundPence((float) CreditLedgerEntry::query()
+            ->where('user_id', $user->id)
+            ->where('amount_pence', '>', 0)
+            ->where(function ($query): void {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
+            ->sum(DB::raw('COALESCE(remaining_pence, 0)')));
+    }
+
+    private function consumeCreditLots(User $user, float $neededPence): void
+    {
+        $needed = $this->roundPence($neededPence);
+
+        $lots = CreditLedgerEntry::query()
+            ->where('user_id', $user->id)
+            ->where('amount_pence', '>', 0)
+            ->where('remaining_pence', '>', 0)
+            ->where(function ($query): void {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
+            ->orderByRaw('CASE WHEN expires_at IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('expires_at')
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($lots as $lot) {
+            if ($needed <= 0) {
+                break;
+            }
+
+            $available = $this->roundPence((float) ($lot->remaining_pence ?? 0));
+            $take = min($available, $needed);
+            $lot->forceFill([
+                'remaining_pence' => $this->roundPence($available - $take),
+            ])->save();
+            $needed = $this->roundPence($needed - $take);
+        }
+
+        if ($needed > 0.001) {
+            throw new InsufficientCreditsException(
+                requiredPence: $neededPence,
+                balancePence: $this->sumUnexpiredRemaining($user),
+                message: 'Not enough credits for this charge. Subscribe to the platform plan for monthly credit value, or top up on the Billing page.',
+            );
+        }
     }
 
     private function balanceRow(User $user): CreditBalance
     {
         return CreditBalance::query()->firstOrCreate(
             ['user_id' => $user->id],
-            ['balance_pence' => 0],
+            ['balance_pence' => 0, 'starter_allowance_exhausted' => false],
         );
     }
 
