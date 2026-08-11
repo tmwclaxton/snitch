@@ -116,22 +116,35 @@ const profitMax = computed(() =>
 const profitLeftPad = 52;
 const profitChartHeight = 160;
 const profitPlotTop = 10;
-const profitBarGap = 6;
 const profitPairGap = 2;
+const profitSlotWidth = computed(() => {
+    switch (props.grain) {
+        case 'month':
+            return 58;
+        case 'week':
+            return 46;
+        default:
+            return 26;
+    }
+});
+const profitMaxBarWidth = computed(() => {
+    switch (props.grain) {
+        case 'month':
+            return 10;
+        case 'week':
+            return 9;
+        default:
+            return 8;
+    }
+});
+const profitLabelPad = computed(() => (props.grain === 'month' ? 40 : 28));
 const profitPlotWidth = computed(() =>
-    Math.max(
-        props.grain === 'day' ? 360 : 300,
-        props.profit.points.length * (props.grain === 'day' ? 28 : 40),
-    ),
+    Math.max(profitSlotWidth.value, props.profit.points.length * profitSlotWidth.value),
 );
 const profitChartWidth = computed(() => profitLeftPad + profitPlotWidth.value);
-const profitGroupWidth = computed(() => {
-    const n = Math.max(props.profit.points.length, 1);
-
-    return (profitPlotWidth.value - profitBarGap * (n - 1)) / n;
-});
-const profitBarWidth = computed(() =>
-    Math.max(4, (profitGroupWidth.value - profitPairGap) / 2),
+const profitBarWidth = computed(() => profitMaxBarWidth.value);
+const profitGroupWidth = computed(
+    () => profitBarWidth.value * 2 + profitPairGap,
 );
 
 const profitYTicks = computed(() => {
@@ -147,6 +160,7 @@ const profitYTicks = computed(() => {
 });
 
 const profitXLabels = computed(() => {
+    const n = props.profit.points.length;
     const every =
         props.grain === 'day'
             ? props.days <= 14
@@ -155,19 +169,27 @@ const profitXLabels = computed(() => {
                   ? 5
                   : 7
             : props.grain === 'week'
-              ? 2
-              : 1;
+              ? n > 16
+                  ? 2
+                  : 1
+              : n > 18
+                ? 2
+                : 1;
 
     return props.profit.points
         .map((point, index) => ({ point, index }))
         .filter(
             ({ index }) =>
-                index % every === 0 || index === props.profit.points.length - 1,
+                index === 0 || index === n - 1 || index % every === 0,
         );
 });
 
 function profitGroupX(index: number): number {
-    return profitLeftPad + index * (profitGroupWidth.value + profitBarGap);
+    return (
+        profitLeftPad
+        + index * profitSlotWidth.value
+        + (profitSlotWidth.value - profitGroupWidth.value) / 2
+    );
 }
 
 function profitBarHeight(gbp: number): number {
@@ -282,7 +304,12 @@ function formatGbpAxis(value: number): string {
 
         <section class="snitch-scrap space-y-3 p-4">
             <h2 class="font-display text-xl text-snitch-ink">Signups</h2>
-            <WeeklyVolumeChart :weeks="usersSeries" />
+            <WeeklyVolumeChart
+                :weeks="usersSeries"
+                title="New users"
+                :subtitle="`${usersSeries.reduce((sum, row) => sum + row.count, 0)} · ${periodLabel}`"
+                :dense-labels="grain === 'month' || grain === 'week'"
+            />
         </section>
 
         <section class="snitch-scrap space-y-3 p-4">
@@ -309,8 +336,8 @@ function formatGbpAxis(value: number): string {
             </div>
             <div class="overflow-x-auto">
                 <svg
-                    class="mt-1 w-full min-w-[20rem] overflow-visible"
-                    :viewBox="`0 0 ${profitChartWidth} ${profitChartHeight + 28}`"
+                    class="mt-1 w-full overflow-visible"
+                    :viewBox="`0 0 ${profitChartWidth} ${profitChartHeight + profitLabelPad}`"
                     role="img"
                     aria-label="Charge versus COGS stipple chart with GBP axis"
                 >
@@ -362,10 +389,15 @@ function formatGbpAxis(value: number): string {
                         v-for="item in profitXLabels"
                         :key="`profit-x-${item.point.date}`"
                         :x="profitGroupX(item.index) + profitGroupWidth / 2"
-                        :y="profitChartHeight + 16"
-                        text-anchor="middle"
+                        :y="profitChartHeight + (grain === 'month' ? 22 : 16)"
+                        :text-anchor="grain === 'month' ? 'end' : 'middle'"
                         class="fill-snitch-ink/45"
-                        style="font-size: 9px"
+                        :font-size="grain === 'month' ? 8 : 9"
+                        :transform="
+                            grain === 'month'
+                                ? `rotate(-32 ${profitGroupX(item.index) + profitGroupWidth / 2} ${profitChartHeight + 22})`
+                                : undefined
+                        "
                     >
                         {{ item.point.label }}
                     </text>

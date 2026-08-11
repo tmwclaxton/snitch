@@ -87,18 +87,39 @@ const hasSpend = computed(() => seriesTotal.value > 0);
 const leftPad = 44;
 const chartHeight = 160;
 const plotTop = 10;
-const barGap = 4;
-const plotWidth = computed(() => {
-    const minWidth = props.grain === 'day' ? 320 : 280;
-
-    return Math.max(minWidth, props.points.length * (props.grain === 'day' ? 22 : 36));
+/** Fixed slot per bucket so week/month do not inflate into fat bars. */
+const slotWidth = computed(() => {
+    switch (props.grain) {
+        case 'month':
+            return 58;
+        case 'week':
+            return 46;
+        default:
+            return 22;
+    }
 });
+const maxBarWidth = computed(() => {
+    switch (props.grain) {
+        case 'month':
+            return 20;
+        case 'week':
+            return 18;
+        default:
+            return 14;
+    }
+});
+const labelPad = computed(() => (props.grain === 'month' ? 40 : 28));
+const plotWidth = computed(() =>
+    Math.max(slotWidth.value, props.points.length * slotWidth.value),
+);
 const chartWidth = computed(() => leftPad + plotWidth.value);
-const barWidth = computed(() => {
-    const n = Math.max(props.points.length, 1);
+const barWidth = computed(() =>
+    Math.min(maxBarWidth.value, Math.max(4, slotWidth.value - 10)),
+);
 
-    return (plotWidth.value - barGap * (n - 1)) / n;
-});
+function barX(index: number): number {
+    return leftPad + index * slotWidth.value + (slotWidth.value - barWidth.value) / 2;
+}
 
 const stippleStep = computed(() => (barWidth.value < 12 ? 3.2 : 3.8));
 const stippleRadius = computed(() => (barWidth.value < 12 ? 0.95 : 1.15));
@@ -152,7 +173,7 @@ const segments = computed((): Segment[] => {
             return;
         }
 
-        const x = leftPad + index * (barWidth.value + barGap);
+        const x = barX(index);
         const active = vendors.filter((vendor) => point[vendor.key] > 0);
         let cursorY = chartHeight;
 
@@ -188,6 +209,7 @@ const segments = computed((): Segment[] => {
 });
 
 const xLabels = computed(() => {
+    const n = props.points.length;
     const every =
         props.grain === 'day'
             ? props.days <= 14
@@ -196,15 +218,19 @@ const xLabels = computed(() => {
                   ? 5
                   : 7
             : props.grain === 'week'
-              ? 2
-              : 1;
+              ? n > 16
+                  ? 2
+                  : 1
+              : n > 18
+                ? 2
+                : 1;
 
     return props.points
         .map((point, index) => ({ ...point, index }))
         .filter(
             (point) =>
                 point.index === 0 ||
-                point.index === props.points.length - 1 ||
+                point.index === n - 1 ||
                 point.index % every === 0,
         );
 });
@@ -289,7 +315,7 @@ function hideTip(): void {
         <svg
             v-if="hasSpend"
             class="mt-3 w-full overflow-visible"
-            :viewBox="`0 0 ${chartWidth} ${chartHeight + 28}`"
+            :viewBox="`0 0 ${chartWidth} ${chartHeight + labelPad}`"
             role="img"
             :aria-label="`${grainLabel} usage spend by vendor, ${formatPence(seriesTotal)} over ${windowLabel}`"
         >
@@ -346,11 +372,16 @@ function hideTip(): void {
             <text
                 v-for="point in xLabels"
                 :key="`x-${point.date}`"
-                :x="leftPad + point.index * (barWidth + barGap) + barWidth / 2"
-                :y="chartHeight + 16"
-                text-anchor="middle"
+                :x="barX(point.index) + barWidth / 2"
+                :y="chartHeight + (grain === 'month' ? 22 : 16)"
+                :text-anchor="grain === 'month' ? 'end' : 'middle'"
                 class="fill-snitch-ink/45"
-                style="font-size: 9px"
+                :font-size="grain === 'month' ? 8 : 9"
+                :transform="
+                    grain === 'month'
+                        ? `rotate(-32 ${barX(point.index) + barWidth / 2} ${chartHeight + 22})`
+                        : undefined
+                "
             >
                 {{ point.label }}
             </text>

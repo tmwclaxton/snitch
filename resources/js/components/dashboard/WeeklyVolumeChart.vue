@@ -8,9 +8,20 @@ export type WeeklyBucket = {
     count: number;
 };
 
-const props = defineProps<{
-    weeks: WeeklyBucket[];
-}>();
+const props = withDefaults(
+    defineProps<{
+        weeks: WeeklyBucket[];
+        title?: string;
+        subtitle?: string;
+        /** Widen slots and angle labels for month-style axes. */
+        denseLabels?: boolean;
+    }>(),
+    {
+        title: 'Weekly volume',
+        subtitle: undefined,
+        denseLabels: false,
+    },
+);
 
 const maxCount = computed(() =>
     Math.max(1, ...props.weeks.map((week) => week.count)),
@@ -37,14 +48,16 @@ const total = computed(() =>
 const leftPad = 28;
 const chartHeight = 120;
 const plotTop = 8;
-const barGap = 6;
-const plotWidth = computed(() => Math.max(240, props.weeks.length * 28));
+const slotWidth = computed(() => (props.denseLabels ? 48 : 32));
+const maxBarWidth = 16;
+const labelPad = computed(() => (props.denseLabels ? 40 : 28));
+const plotWidth = computed(() =>
+    Math.max(slotWidth.value, props.weeks.length * slotWidth.value),
+);
 const chartWidth = computed(() => leftPad + plotWidth.value);
-const barWidth = computed(() => {
-    const n = Math.max(props.weeks.length, 1);
-
-    return (plotWidth.value - barGap * (n - 1)) / n;
-});
+const barWidth = computed(() =>
+    Math.min(maxBarWidth, Math.max(4, slotWidth.value - 12)),
+);
 
 const yTicks = computed(() => {
     const max = maxCount.value;
@@ -57,6 +70,28 @@ const yTicks = computed(() => {
     }));
 });
 
+const xLabelIndexes = computed(() => {
+    const n = props.weeks.length;
+    const every = props.denseLabels ? (n > 18 ? 2 : 1) : 2;
+    const indexes: number[] = [];
+
+    for (let index = 0; index < n; index++) {
+        if (index === 0 || index === n - 1 || index % every === 0) {
+            indexes.push(index);
+        }
+    }
+
+    return indexes;
+});
+
+const summaryLabel = computed(() => {
+    if (props.subtitle) {
+        return props.subtitle;
+    }
+
+    return `${total.value} · ${props.weeks.length} buckets`;
+});
+
 function barHeight(count: number): number {
     return (count / maxCount.value) * (chartHeight - plotTop);
 }
@@ -66,7 +101,7 @@ function drawnHeight(count: number): number {
 }
 
 function barX(index: number): number {
-    return leftPad + index * (barWidth.value + barGap);
+    return leftPad + index * slotWidth.value + (slotWidth.value - barWidth.value) / 2;
 }
 
 function barY(count: number): number {
@@ -77,17 +112,17 @@ function barY(count: number): number {
 <template>
     <div class="snitch-volume-chart">
         <div class="flex items-baseline justify-between gap-3">
-            <p class="snitch-ink-label">Weekly volume</p>
+            <p class="snitch-ink-label">{{ title }}</p>
             <p class="tabular-nums text-xs text-snitch-ink/55">
-                {{ total }} posts · 12 wks
+                {{ summaryLabel }}
             </p>
         </div>
 
         <svg
             class="mt-3 w-full overflow-visible"
-            :viewBox="`0 0 ${chartWidth} ${chartHeight + 28}`"
+            :viewBox="`0 0 ${chartWidth} ${chartHeight + labelPad}`"
             role="img"
-            :aria-label="`Weekly snitch posts, ${total} over 12 weeks`"
+            :aria-label="`${title}, ${total} over ${weeks.length} periods`"
         >
             <g v-for="tick in yTicks" :key="`y-${tick.value}`">
                 <line
@@ -127,17 +162,23 @@ function barY(count: number): number {
                     "
                     :title="`${week.label}: ${week.count}`"
                 />
-                <text
-                    v-if="index % 2 === 0 || index === weeks.length - 1"
-                    :x="barX(index) + barWidth / 2"
-                    :y="chartHeight + 16"
-                    text-anchor="middle"
-                    class="fill-snitch-ink/45"
-                    style="font-size: 9px"
-                >
-                    {{ week.label }}
-                </text>
             </g>
+            <text
+                v-for="index in xLabelIndexes"
+                :key="`x-${weeks[index]!.week_start}`"
+                :x="barX(index) + barWidth / 2"
+                :y="chartHeight + (denseLabels ? 22 : 16)"
+                :text-anchor="denseLabels ? 'end' : 'middle'"
+                class="fill-snitch-ink/45"
+                :font-size="denseLabels ? 8 : 9"
+                :transform="
+                    denseLabels
+                        ? `rotate(-32 ${barX(index) + barWidth / 2} ${chartHeight + 22})`
+                        : undefined
+                "
+            >
+                {{ weeks[index]!.label }}
+            </text>
         </svg>
     </div>
 </template>
