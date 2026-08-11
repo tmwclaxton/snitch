@@ -15,7 +15,21 @@ class McpOAuthTest extends TestCase
     {
         parent::setUp();
 
+        $this->ensurePassportKeys();
+
         app(ClientRepository::class)->createPersonalAccessGrantClient('MCP Tests', 'users');
+    }
+
+    protected function ensurePassportKeys(): void
+    {
+        $privateKey = storage_path('oauth-private.key');
+        $publicKey = storage_path('oauth-public.key');
+
+        if (is_file($privateKey) && is_file($publicKey)) {
+            return;
+        }
+
+        $this->artisan('passport:keys', ['--force' => true]);
     }
 
     public function test_oauth_authorization_server_metadata_is_exposed(): void

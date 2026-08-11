@@ -45,7 +45,7 @@ class AgentsPageTest extends TestCase
             ->post(route('agents.token'))
             ->assertRedirect();
 
-        $this->assertTrue($user->tokens()->where('name', 'mcp')->exists());
+        $this->assertTrue($user->sanctumTokens()->where('name', 'mcp')->exists());
 
         $this->actingAs($user)
             ->get(route('agents'))
