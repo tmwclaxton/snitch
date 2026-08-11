@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import VendorSpendStackedChart from '@/components/billing/VendorSpendStackedChart.vue';
 import type {
@@ -92,24 +92,95 @@ defineOptions({
     layout: AppLayout,
 });
 
-const grains: SpendGrain[] = ['day', 'week', 'month'];
+const grainOptions: Array<{ value: SpendGrain; label: string }> = [
+    { value: 'day', label: 'Daily' },
+    { value: 'week', label: 'Weekly' },
+    { value: 'month', label: 'Monthly' },
+];
 
-function setGrain(grain: SpendGrain): void {
-    router.get(
-        adminOverview.url({ query: { grain } }),
-        {},
-        { preserveState: true, preserveScroll: true },
-    );
+function grainHref(grain: SpendGrain): string {
+    return adminOverview.url({
+        query: grain === 'day' ? {} : { grain },
+    });
 }
 
 const profitMax = computed(() =>
     Math.max(
         0.0001,
         ...props.profit.points.map((p) =>
-            Math.max(p.charged_gbp, p.cogs_gbp, Math.abs(p.margin_gbp)),
+            Math.max(p.charged_gbp, p.cogs_gbp),
         ),
     ),
 );
+
+const profitLeftPad = 52;
+const profitChartHeight = 160;
+const profitPlotTop = 10;
+const profitBarGap = 6;
+const profitPairGap = 2;
+const profitPlotWidth = computed(() =>
+    Math.max(
+        props.grain === 'day' ? 360 : 300,
+        props.profit.points.length * (props.grain === 'day' ? 28 : 40),
+    ),
+);
+const profitChartWidth = computed(() => profitLeftPad + profitPlotWidth.value);
+const profitGroupWidth = computed(() => {
+    const n = Math.max(props.profit.points.length, 1);
+
+    return (profitPlotWidth.value - profitBarGap * (n - 1)) / n;
+});
+const profitBarWidth = computed(() =>
+    Math.max(4, (profitGroupWidth.value - profitPairGap) / 2),
+);
+
+const profitYTicks = computed(() => {
+    const max = profitMax.value;
+    const mid = max / 2;
+    const values = max <= 0.01 ? [0, max] : [0, mid, max];
+
+    return values.map((value) => ({
+        value,
+        label: formatGbpAxis(value),
+        y: profitPlotTop + (1 - value / max) * (profitChartHeight - profitPlotTop),
+    }));
+});
+
+const profitXLabels = computed(() => {
+    const every =
+        props.grain === 'day'
+            ? props.days <= 14
+                ? 2
+                : props.days <= 31
+                  ? 5
+                  : 7
+            : props.grain === 'week'
+              ? 2
+              : 1;
+
+    return props.profit.points
+        .map((point, index) => ({ point, index }))
+        .filter(
+            ({ index }) =>
+                index % every === 0 || index === props.profit.points.length - 1,
+        );
+});
+
+function profitGroupX(index: number): number {
+    return profitLeftPad + index * (profitGroupWidth.value + profitBarGap);
+}
+
+function profitBarHeight(gbp: number): number {
+    if (gbp <= 0) {
+        return 0;
+    }
+
+    return Math.max(3, (gbp / profitMax.value) * (profitChartHeight - profitPlotTop));
+}
+
+function profitBarY(gbp: number): number {
+    return profitChartHeight - profitBarHeight(gbp);
+}
 
 const mcpMax = computed(() =>
     Math.max(1, ...props.mcpTools.tools.map((row) => row.count)),
@@ -134,6 +205,23 @@ function formatGbp(value: number): string {
         maximumFractionDigits: 4,
     }).format(value);
 }
+
+function formatGbpAxis(value: number): string {
+    if (value === 0) {
+        return '£0';
+    }
+
+    if (value < 0.01) {
+        return formatGbp(value);
+    }
+
+    return new Intl.NumberFormat('en-GB', {
+        style: 'currency',
+        currency: 'GBP',
+        minimumFractionDigits: value < 1 ? 2 : 0,
+        maximumFractionDigits: value < 1 ? 2 : 0,
+    }).format(value);
+}
 </script>
 
 <template>
@@ -149,17 +237,21 @@ function formatGbp(value: number): string {
                     {{ from }} → {{ to }}.
                 </p>
             </div>
-            <div class="snitch-seg" role="group" aria-label="Period grain">
-                <button
-                    v-for="g in grains"
-                    :key="g"
-                    type="button"
-                    class="snitch-seg__btn"
-                    :class="{ 'is-active': grain === g }"
-                    @click="setGrain(g)"
+            <div
+                class="snitch-seg flex flex-wrap gap-1"
+                role="group"
+                aria-label="Period grain"
+            >
+                <Link
+                    v-for="option in grainOptions"
+                    :key="option.value"
+                    :href="grainHref(option.value)"
+                    class="snitch-seg-item px-3 py-1.5 text-sm"
+                    :class="grain === option.value ? 'snitch-seg-item-active' : ''"
+                    preserve-scroll
                 >
-                    {{ g }}
-                </button>
+                    {{ option.label }}
+                </Link>
             </div>
         </header>
 
@@ -210,38 +302,73 @@ function formatGbp(value: number): string {
                     Charged {{ formatGbp(profit.charged_gbp) }}
                     · COGS {{ formatGbp(profit.cogs_gbp) }}
                     · Margin {{ formatGbp(profit.margin_gbp) }}
+                    <span v-if="profit.margin_pct != null">
+                        ({{ profit.margin_pct }}%)
+                    </span>
                 </p>
             </div>
             <div class="overflow-x-auto">
                 <svg
-                    :viewBox="`0 0 ${Math.max(320, profit.points.length * 36)} 140`"
-                    class="h-36 w-full min-w-[20rem]"
+                    class="mt-1 w-full min-w-[20rem] overflow-visible"
+                    :viewBox="`0 0 ${profitChartWidth} ${profitChartHeight + 28}`"
                     role="img"
-                    aria-label="Charge versus COGS stipple chart"
+                    aria-label="Charge versus COGS stipple chart with GBP axis"
                 >
+                    <g v-for="tick in profitYTicks" :key="`profit-y-${tick.value}`">
+                        <line
+                            :x1="profitLeftPad"
+                            :x2="profitChartWidth"
+                            :y1="tick.y"
+                            :y2="tick.y"
+                            class="stroke-snitch-ink/15"
+                            stroke-width="1"
+                        />
+                        <text
+                            :x="profitLeftPad - 6"
+                            :y="tick.y + 3"
+                            text-anchor="end"
+                            class="fill-snitch-ink/55"
+                            style="font-size: 9px"
+                        >
+                            {{ tick.label }}
+                        </text>
+                    </g>
                     <g
                         v-for="(point, index) in profit.points"
                         :key="point.date"
                     >
                         <StippleBar
-                            :x="28 + index * 34"
-                            :y="120 - (point.charged_gbp / profitMax) * 100"
-                            :width="12"
-                            :height="Math.max(2, (point.charged_gbp / profitMax) * 100)"
+                            v-if="point.charged_gbp > 0"
+                            :x="profitGroupX(index)"
+                            :y="profitBarY(point.charged_gbp)"
+                            :width="profitBarWidth"
+                            :height="profitBarHeight(point.charged_gbp)"
                             fill-class="fill-snitch-ink/70"
                             :seed="index * 3"
                             :title="`${point.label} charged ${formatGbp(point.charged_gbp)}`"
                         />
                         <StippleBar
-                            :x="42 + index * 34"
-                            :y="120 - (point.cogs_gbp / profitMax) * 100"
-                            :width="12"
-                            :height="Math.max(2, (point.cogs_gbp / profitMax) * 100)"
+                            v-if="point.cogs_gbp > 0"
+                            :x="profitGroupX(index) + profitBarWidth + profitPairGap"
+                            :y="profitBarY(point.cogs_gbp)"
+                            :width="profitBarWidth"
+                            :height="profitBarHeight(point.cogs_gbp)"
                             fill-class="fill-snitch-spot/90"
                             :seed="index * 3 + 1"
                             :title="`${point.label} COGS ${formatGbp(point.cogs_gbp)}`"
                         />
                     </g>
+                    <text
+                        v-for="item in profitXLabels"
+                        :key="`profit-x-${item.point.date}`"
+                        :x="profitGroupX(item.index) + profitGroupWidth / 2"
+                        :y="profitChartHeight + 16"
+                        text-anchor="middle"
+                        class="fill-snitch-ink/45"
+                        style="font-size: 9px"
+                    >
+                        {{ item.point.label }}
+                    </text>
                 </svg>
             </div>
             <p class="text-xs text-snitch-ink/55">
