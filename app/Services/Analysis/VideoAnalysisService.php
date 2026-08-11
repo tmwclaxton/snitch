@@ -8,6 +8,7 @@ use App\Enums\AnalysisTermDimension;
 use App\Enums\PostType;
 use App\Models\Post;
 use App\Models\PostAnalysis;
+use App\Services\Music\MusicRecognitionService;
 use App\Services\SnitchAnalyticsService;
 use App\Support\PublicDiskMedia;
 use Illuminate\Support\Facades\Log;
@@ -22,11 +23,12 @@ class VideoAnalysisService
         private AnalysisTermCatalogue $catalogue,
         private AnalysisTermInferrer $inferrer,
         private PlatformMusicExtractor $musicExtractor,
+        private MusicRecognitionService $musicRecognition,
         private SnitchAnalyticsService $analytics,
     ) {}
 
     /**
-     * @param  array{title: string|null, artist: string|null, is_original_audio: bool|null, platform_id: string|null, source: string}|null  $platformMusic
+     * @param  array<string, mixed>|null  $platformMusic
      */
     public function analyzeUrl(
         string $mediaUrl,
@@ -115,14 +117,14 @@ SYSTEM,
                 throw new RuntimeException('Post type is not reel/video; analysis skipped.');
             }
 
-            $platformMusic = $this->musicExtractor->fromPost($post);
+            $recognizedMusic = $this->resolveAuthoritativeMusic($post);
 
             // Local APP_URL storage links are not fetchable by NanoGPT; inline bytes.
             $result = $this->analyzeUrl(
                 PublicDiskMedia::analyzableUrl($mediaUrl),
                 'video',
                 $post->caption,
-                $platformMusic,
+                $recognizedMusic,
             );
             $evaluation = $this->evaluator->evaluate($result, $post->caption);
 
@@ -167,7 +169,7 @@ SYSTEM,
                 'format_notes' => null,
                 'sfx' => $result->sfx,
                 'music' => $this->musicExtractor->mergeForAnalysis(
-                    $platformMusic,
+                    $recognizedMusic,
                     $result->musicTitle,
                     $result->musicArtist,
                     $result->isOriginalAudio,
@@ -204,7 +206,28 @@ SYSTEM,
     }
 
     /**
-     * @param  array{title: string|null, artist: string|null, is_original_audio: bool|null, platform_id: string|null, source: string}|null  $platformMusic
+     * Prefer platform music metadata; when absent, fall back to AcoustID +
+     * chromaprint and then AudD via MusicRecognitionService. Failures are
+     * swallowed so recognition never blocks a working analysis.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function resolveAuthoritativeMusic(Post $post): ?array
+    {
+        try {
+            return $this->musicRecognition->recognize($post);
+        } catch (Throwable $e) {
+            Log::info('Music recognition failed; continuing without provider song id.', [
+                'post_id' => $post->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $this->musicExtractor->fromPost($post);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $platformMusic
      */
     private function buildPrompt(string $mediaKind, ?string $caption, ?array $platformMusic = null): string
     {
@@ -258,12 +281,12 @@ PROMPT;
     }
 
     /**
-     * @param  array{title: string|null, artist: string|null, is_original_audio: bool|null, platform_id: string|null, source: string}|null  $platformMusic
+     * @param  array<string, mixed>|null  $platformMusic
      */
     private function platformMusicLine(?array $platformMusic): string
     {
         if ($platformMusic === null) {
-            return 'Platform music metadata: (none - do not invent a commercial track title)';
+            return 'Music metadata: (none - do not invent a commercial track title)';
         }
 
         $title = $platformMusic['title'] ?? 'unknown';
@@ -271,9 +294,15 @@ PROMPT;
         $original = array_key_exists('is_original_audio', $platformMusic) && $platformMusic['is_original_audio'] !== null
             ? ($platformMusic['is_original_audio'] ? 'yes' : 'no')
             : 'unknown';
-        $id = $platformMusic['platform_id'] ?? 'unknown';
+        $id = $platformMusic['platform_id'] ?? ($platformMusic['recording_id'] ?? 'unknown');
+        $source = $platformMusic['source'] ?? 'platform';
+        $sourceLabel = match ($source) {
+            'acoustid' => 'AcoustID fingerprint',
+            'audd' => 'AudD recognition',
+            default => 'platform metadata',
+        };
 
-        return "Platform music metadata (authoritative): title={$title}; artist={$artist}; original_audio={$original}; id={$id}";
+        return "Music metadata (authoritative via {$sourceLabel}): title={$title}; artist={$artist}; original_audio={$original}; id={$id}";
     }
 
     private function extractJson(string $text): string

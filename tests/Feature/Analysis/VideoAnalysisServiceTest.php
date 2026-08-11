@@ -206,7 +206,7 @@ class VideoAnalysisServiceTest extends TestCase
             $encoded = json_encode($request->data());
 
             return is_string($encoded)
-                && str_contains($encoded, 'Platform music metadata (authoritative)')
+                && str_contains($encoded, 'Music metadata (authoritative via platform metadata)')
                 && str_contains($encoded, 'Sometimes')
                 && str_contains($encoded, 'particle_fx');
         });

@@ -125,28 +125,27 @@ class PlatformMusicExtractor
     }
 
     /**
-     * Merge platform metadata over model guesses for persistence.
+     * Merge an authoritative music payload (platform metadata or an external
+     * provider recognition) over the model's song guess for persistence.
      *
-     * @return array{
-     *     title?: string,
-     *     artist?: string,
-     *     is_original_audio?: bool,
-     *     platform_id?: string,
-     *     source?: string
-     * }
+     * `$recognized` shape matches what MusicRecognitionService::recognize()
+     * returns: at least `source`, plus optional title/artist/provider/confidence
+     * and other metadata (isrc, album, recording_id, media_hash, identified_at).
+     * The model song guess is only used when nothing authoritative was found.
+     *
+     * @param  array<string, mixed>|null  $recognized
+     * @return array<string, mixed>
      */
-    public function mergeForAnalysis(?array $platform, ?string $modelTitle, ?string $modelArtist, bool $modelIsOriginal): array
+    public function mergeForAnalysis(?array $recognized, ?string $modelTitle, ?string $modelArtist, bool $modelIsOriginal): array
     {
-        if ($platform !== null) {
-            $merged = array_filter([
-                'title' => $platform['title'],
-                'artist' => $platform['artist'],
-                'is_original_audio' => $platform['is_original_audio'] ?? $modelIsOriginal,
-                'platform_id' => $platform['platform_id'],
-                'source' => 'platform',
-            ], static fn ($value) => $value !== null);
+        if ($recognized !== null) {
+            $recognized['is_original_audio'] = $recognized['is_original_audio'] ?? $modelIsOriginal;
 
-            return $merged;
+            if (! isset($recognized['source']) || $recognized['source'] === null) {
+                $recognized['source'] = 'platform';
+            }
+
+            return array_filter($recognized, static fn ($value) => $value !== null);
         }
 
         return array_filter([

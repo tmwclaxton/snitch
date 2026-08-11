@@ -21,7 +21,7 @@ RUN apt-get update && apt-get upgrade -y \
         libcap2-bin libzip-dev libicu-dev libpq-dev \
         default-libmysqlclient-dev libsqlite3-dev \
         libfreetype6-dev libjpeg62-turbo-dev libpng-dev libwebp-dev \
-        ffmpeg nano dnsutils fswatch python3 librsvg2-bin \
+        ffmpeg libchromaprint-tools nano dnsutils fswatch python3 librsvg2-bin \
         default-mysql-client postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 

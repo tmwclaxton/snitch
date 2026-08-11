@@ -91,6 +91,8 @@ RUN apt-get update && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
         gnupg gosu curl ca-certificates zip unzip supervisor libcap2-bin \
         nginx \
+        ffmpeg \
+        libchromaprint-tools \
         default-libmysqlclient-dev \
         libicu-dev \
         libpq-dev \

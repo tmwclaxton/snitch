@@ -110,6 +110,45 @@ const musicLine = computed(() => {
     return role ? `${head || 'Track'} (${role})` : head;
 });
 
+const musicSourceLabel = computed(() => {
+    const source = props.post.analysis?.music?.source;
+
+    if (typeof source !== 'string' || source === '') {
+        return null;
+    }
+
+    switch (source) {
+        case 'platform':
+            return 'Platform metadata';
+        case 'acoustid':
+            return 'AcoustID fingerprint';
+        case 'audd':
+            return 'AudD recognition';
+        case 'model':
+            return 'Model guess';
+        default:
+            return source.charAt(0).toUpperCase() + source.slice(1);
+    }
+});
+
+const musicConfidencePct = computed(() => {
+    const raw = props.post.analysis?.music?.confidence;
+
+    if (typeof raw !== 'number' || !Number.isFinite(raw)) {
+        return null;
+    }
+
+    const pct = Math.round(Math.max(0, Math.min(1, raw)) * 100);
+
+    return pct > 0 ? `${pct}%` : null;
+});
+
+const musicIsrc = computed(() => {
+    const raw = props.post.analysis?.music?.isrc;
+
+    return typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : null;
+});
+
 const postedLabel = computed(() => {
     if (!props.post.posted_at) {
         return null;
@@ -405,6 +444,20 @@ const termChips = computed(() => {
                                     class="mt-1 text-sm text-snitch-ink/85"
                                 >
                                     {{ musicLine }}
+                                </p>
+                                <p
+                                    v-if="musicLine && (musicSourceLabel || musicConfidencePct || musicIsrc)"
+                                    class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-snitch-ink/55"
+                                >
+                                    <span v-if="musicSourceLabel" class="snitch-ink-label">
+                                        {{ musicSourceLabel }}
+                                    </span>
+                                    <span v-if="musicConfidencePct" class="snitch-ink-label">
+                                        {{ musicConfidencePct }} match
+                                    </span>
+                                    <span v-if="musicIsrc" class="snitch-ink-label">
+                                        ISRC {{ musicIsrc }}
+                                    </span>
                                 </p>
                                 <ul
                                     v-if="post.analysis.sfx?.length"

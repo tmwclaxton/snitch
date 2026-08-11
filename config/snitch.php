@@ -127,6 +127,40 @@ return [
         ],
     ],
 
+    /*
+    | Music recognition: platform metadata (in PostAnalysis.music via
+    | PlatformMusicExtractor) beats provider lookups. When platform music is
+    | absent, MusicRecognitionService tries AcoustID (with a chromaprint
+    | fingerprint from fpcalc) and then AudD as a short-clip fallback. A missing
+    | key or binary degrades that step gracefully so analysis keeps working.
+    */
+    'music_recognition' => [
+        'enabled' => filter_var(env('SNITCH_MUSIC_RECOGNITION_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+        // Cache recognized tracks by media hash so re-analysis / duplicates skip vendor calls.
+        'cache_ttl_seconds' => (int) env('SNITCH_MUSIC_RECOGNITION_CACHE_TTL', 60 * 60 * 24 * 30),
+        // Minimum provider score to accept (AcoustID 0..1; AudD 0..100 normalized).
+        'min_confidence' => (float) env('SNITCH_MUSIC_RECOGNITION_MIN_CONFIDENCE', 0.55),
+        // Seconds of audio to extract for AudD (clip cost matters, keep <= 20s).
+        'clip_seconds' => (int) env('SNITCH_MUSIC_RECOGNITION_CLIP_SECONDS', 12),
+        // Skip recognition when the extracted clip mean volume falls below this
+        // (rough silence gate; keeps AudD credits from burning on silent clips).
+        'silence_dbfs' => (float) env('SNITCH_MUSIC_RECOGNITION_SILENCE_DBFS', -45.0),
+        'fpcalc_binary' => env('SNITCH_FPCALC_BINARY', 'fpcalc'),
+        'ffmpeg_binary' => env('SNITCH_FFMPEG_BINARY', 'ffmpeg'),
+        'acoustid' => [
+            'api_key' => env('ACOUSTID_API_KEY'),
+            'base_url' => rtrim((string) env('ACOUSTID_BASE_URL', 'https://api.acoustid.org/v2'), '/'),
+            'timeout' => (int) env('ACOUSTID_TIMEOUT', 20),
+        ],
+        'audd' => [
+            'api_key' => env('AUDD_API_KEY'),
+            'base_url' => rtrim((string) env('AUDD_BASE_URL', 'https://api.audd.io'), '/'),
+            'timeout' => (int) env('AUDD_TIMEOUT', 30),
+            // Approximate provider COGS per successful recognition (USD).
+            'cogs_usd' => (float) env('AUDD_COGS_USD', 0.005),
+        ],
+    ],
+
     'video_analysis' => [
         'model' => env('SNITCH_VIDEO_ANALYSIS_MODEL', 'qwen3.7-flash'),
         'max_tokens' => (int) env('SNITCH_VIDEO_ANALYSIS_MAX_TOKENS', 1800),
