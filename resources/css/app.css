@@ -1106,6 +1106,8 @@
         z-index: 1;
         display: flex;
         flex-direction: column;
+        min-width: 0;
+        overflow: hidden;
         background: color-mix(in oklab, var(--snitch-paper) 92%, var(--snitch-lift));
         border: 1px solid color-mix(in oklab, var(--snitch-ink) 14%, transparent);
         color: var(--snitch-ink);
@@ -1263,6 +1265,7 @@
         display: flex;
         flex-direction: column;
         gap: 0.55rem;
+        min-width: 0;
         padding: 0.7rem 0.6rem 0.75rem;
         color: var(--snitch-ink);
     }
@@ -1361,17 +1364,27 @@
         align-items: center;
         justify-content: space-between;
         gap: 0.35rem 0.6rem;
+        min-width: 0;
+        width: 100%;
     }
 
     .snitch-glance-tags {
         display: flex;
         flex-wrap: wrap;
+        align-content: flex-start;
         gap: 0.25rem;
+        min-width: 0;
+        flex: 1 1 100%;
+        max-width: 100%;
+        overflow: hidden;
+        max-height: calc(2 * (0.58rem * 1.35 + 0.2rem) + 0.25rem);
     }
 
     .snitch-glance-tag {
         display: inline-flex;
+        min-width: 0;
         max-width: 100%;
+        flex: 0 1 auto;
         align-items: center;
         gap: 0.2rem;
         overflow: hidden;
@@ -1400,6 +1413,11 @@
 
     .snitch-glance-account-link {
         display: inline-block;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         font-size: 0.78rem;
         letter-spacing: 0.01em;
         color: var(--snitch-ink);

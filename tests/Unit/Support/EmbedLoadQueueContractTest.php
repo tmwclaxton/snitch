@@ -41,6 +41,7 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('<ul', $source);
         $this->assertStringContainsString('snitch-glance-metrics', $source);
         $this->assertStringContainsString('snitch-glance-metric-value', $source);
+        $this->assertStringContainsString('snitch-glance-tags', $source);
         $this->assertStringNotContainsString('snitch-contact-cell-meta', $source);
     }
 
