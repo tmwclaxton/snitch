@@ -5,7 +5,13 @@ namespace Tests\Feature\Billing;
 use App\Enums\BillingVendor;
 use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\PlatformSubscriptionRequiredException;
+use App\Http\Middleware\EnsureMcpProductAccess;
+use App\Mcp\Servers\SnitchServer;
 use App\Mcp\Support\McpAuth;
+use App\Mcp\Tools\BillingStatusTool;
+use App\Mcp\Tools\CreateCreditCheckoutTool;
+use App\Mcp\Tools\ListCompetitorsTool;
+use App\Mcp\Tools\ListFeedTool;
 use App\Models\BrandProfile;
 use App\Models\User;
 use App\Services\Billing\UsageBillingService;
@@ -78,7 +84,7 @@ class BillingPaywallTest extends TestCase
 
     public function test_subscribed_user_with_balance_can_access(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->subscribe($user);
         $this->billing->creditSubscriptionBonus($user, 'subscription_bonus:invoice:in_access');
 
@@ -88,7 +94,7 @@ class BillingPaywallTest extends TestCase
 
     public function test_subscribed_user_blocked_when_monthly_allowance_spent(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 21, 'topup:thin');
 
@@ -104,7 +110,7 @@ class BillingPaywallTest extends TestCase
 
     public function test_claim_bonus_never_expires(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $entry = $this->billing->creditClaimBonus($user);
 
         $this->assertNotNull($entry);
@@ -121,7 +127,7 @@ class BillingPaywallTest extends TestCase
     {
         $this->travelTo(now()->startOfMonth()->addDays(2)->setTime(12, 0));
 
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->subscribe($user);
         $entry = $this->billing->creditSubscriptionBonus($user, 'subscription_bonus:invoice:in_month');
 
@@ -137,7 +143,7 @@ class BillingPaywallTest extends TestCase
 
     public function test_top_up_credits_expire_after_three_months(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->subscribe($user);
         $entry = $this->billing->creditFromTopUp($user, 1000, 'topup:expiry');
 
@@ -166,13 +172,7 @@ class BillingPaywallTest extends TestCase
 
     public function test_dashboard_paywall_props_when_starter_exhausted(): void
     {
-        $user = User::factory()->create();
-        BrandProfile::factory()->for($user)->create();
-        $this->billing->creditClaimBonus($user);
-
-        while ($this->billing->canAccessProduct($user)) {
-            $this->billing->charge($user, 'explore.search', BillingVendor::Snitch);
-        }
+        $user = $this->paywalledUser();
 
         $this->actingAs($user)
             ->get(route('dashboard'))
@@ -185,10 +185,44 @@ class BillingPaywallTest extends TestCase
             );
     }
 
+    public function test_feed_and_snitches_still_render_when_paywalled(): void
+    {
+        $user = $this->paywalledUser();
+
+        $this->actingAs($user)
+            ->get(route('feed.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('subscription.paywall.blocked', true)
+                ->where('subscription.can_run_billable', false)
+            );
+
+        $this->actingAs($user)
+            ->get(route('competitors.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('competitors/Index')
+                ->where('subscription.paywall.blocked', true)
+            );
+    }
+
+    public function test_billing_page_still_reachable_when_paywalled(): void
+    {
+        $user = $this->paywalledUser();
+
+        $this->actingAs($user)
+            ->get(route('billing.edit'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('billing/Index')
+                ->where('subscription.paywall.blocked', true)
+                ->where('subscription.paywall.can_top_up', false)
+            );
+    }
+
     public function test_product_mutation_redirects_when_paywalled(): void
     {
-        $user = User::factory()->create();
-        BrandProfile::factory()->for($user)->create();
+        $user = $this->paywalledUser();
 
         $this->actingAs($user)
             ->post(route('competitors.suggest'), [
@@ -200,21 +234,155 @@ class BillingPaywallTest extends TestCase
 
     public function test_mcp_list_feed_blocked_when_paywalled(): void
     {
-        $user = User::factory()->create();
+        $user = $this->paywalledUser();
         $this->actingAs($user);
 
         $blocked = McpAuth::requireProductAccess($user);
         $this->assertNotNull($blocked);
     }
 
+    public function test_unclaimed_agent_starts_without_product_access(): void
+    {
+        $user = User::factory()->unclaimedAgent()->create();
+
+        $this->assertFalse($this->billing->canAccessProduct($user));
+        $this->assertSame(0.0, $this->billing->balancePence($user));
+    }
+
+    public function test_mcp_http_blocks_product_tools_with_402_when_paywalled(): void
+    {
+        $user = $this->paywalledUser();
+        $token = $user->createSanctumToken('mcp')->plainTextToken;
+
+        foreach (['list_feed', 'list_competitors', 'analyze_post'] as $tool) {
+            $this->withToken($token)
+                ->postJson('/mcp', $this->mcpToolCall($tool, $tool === 'analyze_post' ? ['post_id' => 1] : []))
+                ->assertStatus(402)
+                ->assertJsonPath('error.code', -32001)
+                ->assertJsonPath('error.data.paywall.blocked', true)
+                ->assertJsonPath('error.data.paywall.reason', 'subscribe');
+        }
+    }
+
+    public function test_mcp_http_allows_billing_tools_when_paywalled(): void
+    {
+        $user = $this->paywalledUser();
+        $token = $user->createSanctumToken('mcp')->plainTextToken;
+
+        foreach (EnsureMcpProductAccess::ALLOWED_TOOLS as $tool) {
+            $params = $tool === 'create_credit_checkout' ? ['pack' => 'pack_10'] : [];
+
+            $response = $this->withToken($token)
+                ->postJson('/mcp', $this->mcpToolCall($tool, $params));
+
+            $this->assertNotSame(
+                402,
+                $response->status(),
+                "Allowlisted MCP tool [{$tool}] should not return HTTP 402 when paywalled.",
+            );
+        }
+    }
+
+    public function test_mcp_tools_work_with_starter_credit(): void
+    {
+        $user = User::factory()->create();
+        $this->billing->creditClaimBonus($user);
+        $this->actingAs($user);
+
+        SnitchServer::tool(ListFeedTool::class, ['limit' => 5])->assertOk();
+        SnitchServer::tool(ListCompetitorsTool::class)->assertOk()->assertSee('competitors');
+        SnitchServer::tool(BillingStatusTool::class)
+            ->assertOk()
+            ->assertSee('"can_run_billable":true')
+            ->assertSee('"blocked":false');
+    }
+
+    public function test_mcp_create_credit_checkout_errors_without_paid_plan(): void
+    {
+        $user = User::factory()->create();
+        $this->billing->creditClaimBonus($user);
+        $this->actingAs($user);
+
+        SnitchServer::tool(CreateCreditCheckoutTool::class, ['pack' => 'pack_10'])
+            ->assertHasErrors()
+            ->assertSee('active paid plan');
+    }
+
+    public function test_mcp_product_tools_restore_after_subscribe_with_balance(): void
+    {
+        $user = $this->paywalledUser();
+        $this->subscribe($user);
+        $this->billing->creditSubscriptionBonus($user, 'subscription_bonus:invoice:restore');
+        $token = $user->createSanctumToken('mcp')->plainTextToken;
+
+        $this->withToken($token)
+            ->postJson('/mcp', $this->mcpToolCall('list_feed', ['limit' => 5]))
+            ->assertSuccessful();
+
+        $this->actingAs($user);
+        SnitchServer::tool(ListCompetitorsTool::class)->assertOk();
+    }
+
+    public function test_subscribed_user_blocked_reason_is_credits_when_balance_floor_hit(): void
+    {
+        $user = User::factory()->withoutStarterCredit()->create();
+        $this->subscribe($user);
+        $this->billing->creditFromTopUp($user, 21, 'topup:floor');
+        $this->billing->charge($user, 'explore.search', BillingVendor::Snitch);
+
+        while ($this->billing->balancePence($user) > 20) {
+            $this->billing->charge($user, 'explore.view', BillingVendor::Snitch);
+        }
+
+        $state = $this->billing->paywallState($user);
+
+        $this->assertTrue($state['blocked']);
+        $this->assertSame('credits', $state['reason']);
+        $this->assertTrue($state['can_top_up']);
+    }
+
+    /**
+     * @param  array<string, mixed>  $arguments
+     * @return array{jsonrpc: string, id: int, method: string, params: array{name: string, arguments: array<string, mixed>}}
+     */
+    private function mcpToolCall(string $name, array $arguments = []): array
+    {
+        return [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => $name,
+                'arguments' => $arguments,
+            ],
+        ];
+    }
+
+    private function paywalledUser(): User
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $this->billing->creditClaimBonus($user);
+
+        while ($this->billing->canAccessProduct($user)) {
+            $this->billing->charge($user, 'explore.search', BillingVendor::Snitch);
+        }
+
+        return $user->fresh();
+    }
+
     private function subscribe(User $user): Subscription
     {
-        return $user->subscriptions()->create([
+        $subscription = $user->subscriptions()->create([
             'type' => 'default',
             'stripe_id' => 'sub_'.uniqid(),
             'stripe_status' => 'active',
             'stripe_price' => 'price_platform_test',
             'quantity' => 1,
         ]);
+
+        $user->unsetRelation('subscriptions');
+
+        return $subscription;
     }
 }

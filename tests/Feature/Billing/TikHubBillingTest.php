@@ -35,7 +35,7 @@ class TikHubBillingTest extends TestCase
         ]);
 
         $billing = app(UsageBillingService::class);
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->subscribe($user);
         $billing->creditFromTopUp($user, 5000, 'topup:tikhub');
 
@@ -67,7 +67,7 @@ class TikHubBillingTest extends TestCase
             'billing.vendors.tikhub.endpoints.instagram.floor_usd' => 0.002,
         ]);
 
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->enablePlatformBilling($user);
 
         CreditLedgerEntry::query()->create([

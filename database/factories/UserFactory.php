@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\User;
+use App\Services\Billing\UsageBillingService;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -11,6 +12,40 @@ use Illuminate\Support\Str;
  */
 class UserFactory extends Factory
 {
+    /**
+     * @var \WeakMap<User, true>
+     */
+    private static \WeakMap $skipStarterCredit;
+
+    /**
+     * Claimed web users get the £5 starter credit, matching claim/signup.
+     * Unclaimed MCP agents stay at £0 until claim.
+     */
+    public function configure(): static
+    {
+        self::$skipStarterCredit ??= new \WeakMap;
+
+        return $this->afterCreating(function (User $user): void {
+            if ($user->claimed_at === null || isset(self::$skipStarterCredit[$user])) {
+                return;
+            }
+
+            app(UsageBillingService::class)->creditClaimBonus($user);
+        });
+    }
+
+    /**
+     * Skip the automatic £5 claim bonus (for isolated billing / expiry tests).
+     */
+    public function withoutStarterCredit(): static
+    {
+        self::$skipStarterCredit ??= new \WeakMap;
+
+        return $this->afterMaking(function (User $user): void {
+            self::$skipStarterCredit[$user] = true;
+        });
+    }
+
     /**
      * Define the model's default state.
      *

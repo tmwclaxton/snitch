@@ -25,7 +25,7 @@ class SubscriptionBonusWebhookTest extends TestCase
 
     public function test_invoice_paid_grants_subscription_bonus_credits(): void
     {
-        $user = User::factory()->create([
+        $user = User::factory()->withoutStarterCredit()->create([
             'stripe_id' => 'cus_test_bonus',
         ]);
 
@@ -81,7 +81,7 @@ class SubscriptionBonusWebhookTest extends TestCase
 
     public function test_invoice_paid_ignores_non_platform_prices(): void
     {
-        $user = User::factory()->create([
+        $user = User::factory()->withoutStarterCredit()->create([
             'stripe_id' => 'cus_test_other',
         ]);
 

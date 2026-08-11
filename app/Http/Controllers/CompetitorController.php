@@ -330,7 +330,7 @@ class CompetitorController extends Controller
 
         try {
             $this->billing->assertCanRun($request->user());
-        } catch (InsufficientCreditsException $exception) {
+        } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $exception) {
             Inertia::flash('toast', [
                 'type' => 'error',
                 'message' => $exception->getMessage(),
@@ -359,7 +359,7 @@ class CompetitorController extends Controller
 
         try {
             $this->billing->assertCanRun($user);
-        } catch (InsufficientCreditsException $exception) {
+        } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $exception) {
             Inertia::flash('toast', [
                 'type' => 'error',
                 'message' => $exception->getMessage(),

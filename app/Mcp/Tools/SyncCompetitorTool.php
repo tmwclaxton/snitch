@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Exceptions\InsufficientCreditsException;
+use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Mcp\Support\McpAuth;
 use App\Models\TrackedAccount;
@@ -49,7 +50,7 @@ class SyncCompetitorTool extends Tool
 
         try {
             $billing->assertCanRun($user);
-        } catch (InsufficientCreditsException $exception) {
+        } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $exception) {
             return Response::error($exception->getMessage());
         }
 

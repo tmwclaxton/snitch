@@ -46,7 +46,7 @@ class ApifyBillingTest extends TestCase
             'snitch.sync.posts_limit' => 3,
         ]);
 
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->enablePlatformBilling($user);
 
         $account = TrackedAccount::factory()->for($user)->create([

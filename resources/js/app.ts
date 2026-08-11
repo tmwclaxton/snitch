@@ -25,6 +25,7 @@ createInertiaApp({
             case name.startsWith('blog/'):
             case name.startsWith('errors/'):
             case name.startsWith('onboarding/'):
+            case name.startsWith('claim/'):
                 return null;
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];

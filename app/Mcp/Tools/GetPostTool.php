@@ -5,6 +5,7 @@ namespace App\Mcp\Tools;
 use App\Enums\AnalysisStatus;
 use App\Enums\PostType;
 use App\Exceptions\InsufficientCreditsException;
+use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Mcp\Support\McpAuth;
 use App\Models\Post;
 use App\Services\Billing\ExploreBillingService;
@@ -55,7 +56,7 @@ class GetPostTool extends Tool
 
         try {
             $exploreBilling->chargeViewIfNeeded($user, $post);
-        } catch (InsufficientCreditsException $exception) {
+        } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $exception) {
             return Response::error($exception->getMessage());
         }
 

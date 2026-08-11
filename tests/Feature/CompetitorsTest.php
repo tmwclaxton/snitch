@@ -158,7 +158,7 @@ class CompetitorsTest extends TestCase
     {
         Queue::fake();
 
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         BrandProfile::factory()->for($user)->create();
 
         $this->actingAs($user)
@@ -166,11 +166,12 @@ class CompetitorsTest extends TestCase
                 'platform' => 'instagram',
                 'handle' => '@rivalbakery',
             ])
-            ->assertRedirect(route('competitors.index'));
+            ->assertRedirect(route('billing.edit'));
 
-        $account = TrackedAccount::query()->where('user_id', $user->id)->first();
-        $this->assertNotNull($account);
-        $this->assertNotSame('running', $account->last_sync_status);
+        $this->assertDatabaseMissing('tracked_accounts', [
+            'user_id' => $user->id,
+            'handle' => 'rivalbakery',
+        ]);
         Queue::assertNotPushed(SyncTrackedAccountJob::class);
     }
 
@@ -178,8 +179,9 @@ class CompetitorsTest extends TestCase
     {
         Queue::fake();
 
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         BrandProfile::factory()->for($user)->create();
+        $this->createPlatformSubscription($user);
         app(UsageBillingService::class)->creditFromTopUp($user, 20, 'topup:twenty');
         $account = TrackedAccount::factory()->for($user)->create([
             'last_synced_at' => now()->subDays(2),

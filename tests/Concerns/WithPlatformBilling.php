@@ -22,6 +22,7 @@ trait WithPlatformBilling
             'quantity' => 1,
         ]);
 
+        $user->unsetRelation('subscriptions');
         $user->refresh();
 
         if ($creditsPence > 0) {
@@ -35,12 +36,16 @@ trait WithPlatformBilling
 
     protected function createPlatformSubscription(User $user): Subscription
     {
-        return $user->subscriptions()->create([
+        $subscription = $user->subscriptions()->create([
             'type' => 'default',
             'stripe_id' => 'sub_'.uniqid(),
             'stripe_status' => 'active',
             'stripe_price' => (string) config('billing.platform_stripe_price', 'price_platform_test'),
             'quantity' => 1,
         ]);
+
+        $user->unsetRelation('subscriptions');
+
+        return $subscription;
     }
 }

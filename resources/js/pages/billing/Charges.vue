@@ -180,7 +180,7 @@ function paginationLabel(label: string): string {
                     </h1>
                     <p class="mt-1.5 max-w-2xl text-sm text-snitch-ink/65 sm:text-base">
                         Ledger history for usage charges, top-ups, and bonuses. Balance
-                        {{ formatMoney(usage.balance_pence) }}.
+                        {{ formatMoney(usage?.balance_pence ?? 0) }}.
                     </p>
                 </div>
                 <Link

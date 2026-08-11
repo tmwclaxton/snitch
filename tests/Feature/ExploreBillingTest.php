@@ -66,7 +66,8 @@ class ExploreBillingTest extends TestCase
         $this->assertCount(1, $entries);
         $this->assertSame(BillingVendor::Snitch, $entries->first()->vendor);
         $this->assertSame(-0.5, (float) $entries->first()->amount_pence);
-        $this->assertSame(999.5, $this->billing->balancePence($user));
+        // Factory claim bonus (£5) + top-up (£10) minus 0.5p search.
+        $this->assertSame(1499.5, $this->billing->balancePence($user));
     }
 
     public function test_viewing_non_tracked_competitor_reel_charges_tenth_penny_once(): void
@@ -128,7 +129,8 @@ class ExploreBillingTest extends TestCase
             ->where('user_id', $user->id)
             ->where('action', 'explore.view')
             ->count());
-        $this->assertSame(1000.0, $this->billing->balancePence($user));
+        // Factory claim bonus (£5) + top-up (£10); tracked snitch views are free.
+        $this->assertSame(1500.0, $this->billing->balancePence($user));
     }
 
     public function test_insufficient_credits_redirects_search_to_billing(): void
@@ -137,7 +139,10 @@ class ExploreBillingTest extends TestCase
 
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
-        $this->billing->creditFromTopUp($user, 10, 'topup:explore-low');
+
+        while ($this->billing->canAccessProduct($user)) {
+            $this->billing->charge($user, 'explore.search', BillingVendor::Snitch);
+        }
 
         $this->actingAs($user)
             ->get(route('explore.index', ['q' => 'anything']))

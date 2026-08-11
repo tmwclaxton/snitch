@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\Platform;
 use App\Enums\PostType;
 use App\Exceptions\InsufficientCreditsException;
+use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
@@ -121,7 +122,7 @@ class FeedController extends Controller
 
         try {
             $this->exploreBilling->chargeViewIfNeeded($user, $post);
-        } catch (InsufficientCreditsException $exception) {
+        } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $exception) {
             Inertia::flash('toast', [
                 'type' => 'error',
                 'message' => $exception->getMessage(),

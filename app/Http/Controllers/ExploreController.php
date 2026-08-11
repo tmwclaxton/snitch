@@ -7,6 +7,7 @@ use App\Enums\AnalysisTermDimension;
 use App\Enums\Platform;
 use App\Enums\PostType;
 use App\Exceptions\InsufficientCreditsException;
+use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Models\AnalysisTerm;
 use App\Models\Post;
 use App\Models\User;
@@ -49,13 +50,13 @@ class ExploreController extends Controller
         if ($customTag !== null) {
             try {
                 $this->exploreBilling->chargeSearch($user, $customTag, 'custom_tag');
-            } catch (InsufficientCreditsException $exception) {
+            } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $exception) {
                 return $this->redirectToBilling($exception);
             }
         } elseif ($queryText !== null) {
             try {
                 $this->exploreBilling->chargeSearch($user, $queryText, 'q');
-            } catch (InsufficientCreditsException $exception) {
+            } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $exception) {
                 return $this->redirectToBilling($exception);
             }
         }
@@ -463,7 +464,7 @@ class ExploreController extends Controller
         return $trimmed === '' ? null : $trimmed;
     }
 
-    private function redirectToBilling(InsufficientCreditsException $exception): RedirectResponse
+    private function redirectToBilling(PlatformSubscriptionRequiredException|InsufficientCreditsException $exception): RedirectResponse
     {
         Inertia::flash('toast', [
             'type' => 'error',

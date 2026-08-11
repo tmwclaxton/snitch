@@ -5,6 +5,7 @@ namespace App\Mcp\Tools;
 use App\Enums\AnalysisStatus;
 use App\Enums\PostType;
 use App\Exceptions\InsufficientCreditsException;
+use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Mcp\Support\McpAuth;
 use App\Models\AnalysisTerm;
 use App\Models\Post;
@@ -47,7 +48,7 @@ class ExplorePostsTool extends Tool
         if ($queryText !== '') {
             try {
                 $exploreBilling->chargeSearch($user, $queryText, 'q');
-            } catch (InsufficientCreditsException $exception) {
+            } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $exception) {
                 return Response::error($exception->getMessage());
             }
         }
@@ -112,7 +113,7 @@ class ExplorePostsTool extends Tool
 
         try {
             $exploreBilling->chargeViewIfNeeded($user, $post);
-        } catch (InsufficientCreditsException $exception) {
+        } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $exception) {
             return Response::error($exception->getMessage());
         }
 

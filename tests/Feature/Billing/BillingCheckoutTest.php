@@ -40,7 +40,7 @@ class BillingCheckoutTest extends TestCase
                 ->has('creditPacks')
                 ->has('platform')
                 ->where('subscription.subscribed', false)
-                ->where('usage.balance_pence', 0)
+                ->where('usage.balance_pence', 500)
                 ->where('platform.fee_pence', 1900)
                 ->where('platform.bonus_pence', 3000)
                 ->loadDeferredProps('chart', fn (Assert $chart) => $chart

@@ -53,7 +53,7 @@ class CompetitorsBatchActionsTest extends TestCase
     {
         Queue::fake();
 
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         BrandProfile::factory()->for($user)->create();
         $account = TrackedAccount::factory()->for($user)->create();
 
@@ -62,7 +62,7 @@ class CompetitorsBatchActionsTest extends TestCase
             ->post(route('competitors.batch-sync'), [
                 'ids' => [$account->id],
             ])
-            ->assertRedirect(route('competitors.index'));
+            ->assertRedirect(route('billing.edit'));
 
         Queue::assertNothingPushed();
         $this->assertNotSame('running', $account->fresh()?->last_sync_status);

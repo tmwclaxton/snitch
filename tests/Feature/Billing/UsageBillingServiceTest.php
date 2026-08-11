@@ -43,7 +43,7 @@ class UsageBillingServiceTest extends TestCase
 
     public function test_claim_bonus_is_idempotent(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
 
         $this->billing->creditClaimBonus($user);
         $this->billing->creditClaimBonus($user);
@@ -53,7 +53,7 @@ class UsageBillingServiceTest extends TestCase
 
     public function test_subscription_bonus_is_idempotent_per_invoice(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
 
         $this->billing->creditSubscriptionBonus($user, 'subscription_bonus:invoice:in_test_1');
         $this->billing->creditSubscriptionBonus($user, 'subscription_bonus:invoice:in_test_1');
@@ -64,7 +64,7 @@ class UsageBillingServiceTest extends TestCase
 
     public function test_charge_works_without_subscription_when_balance_above_floor(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->billing->creditClaimBonus($user);
 
         $entry = $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.04);
@@ -76,7 +76,7 @@ class UsageBillingServiceTest extends TestCase
 
     public function test_charge_deducts_credits_when_subscribed(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 1000, 'topup:test2');
 
@@ -89,7 +89,7 @@ class UsageBillingServiceTest extends TestCase
 
     public function test_assert_can_run_rejects_balance_at_or_below_20p(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 20, 'topup:floor');
 
@@ -104,7 +104,7 @@ class UsageBillingServiceTest extends TestCase
 
     public function test_assert_can_run_allows_balance_above_20p(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 21, 'topup:above-floor');
 
@@ -115,7 +115,7 @@ class UsageBillingServiceTest extends TestCase
 
     public function test_insufficient_credits_throws_when_balance_is_zero(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->subscribe($user);
 
         $this->expectException(InsufficientCreditsException::class);
@@ -125,7 +125,7 @@ class UsageBillingServiceTest extends TestCase
 
     public function test_usage_summary_groups_vendors(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 5000, 'topup:sum');
 
@@ -147,7 +147,7 @@ class UsageBillingServiceTest extends TestCase
 
     public function test_daily_spend_series_stacks_vendor_charges(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 5000, 'topup:series');
 
@@ -179,7 +179,7 @@ class UsageBillingServiceTest extends TestCase
 
     public function test_spend_series_aggregates_by_week_and_month(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 10_000, 'topup:grain');
 
@@ -261,7 +261,7 @@ class UsageBillingServiceTest extends TestCase
         $this->assertSame(0.0005, $cogs);
         $this->assertSame(0.05, $this->billing->pricePenceFromCogs('analyze.post', BillingVendor::NanoGpt, $cogs));
 
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->billing->creditClaimBonus($user);
         $entry = $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, $cogs);
 
@@ -287,7 +287,7 @@ class UsageBillingServiceTest extends TestCase
 
     public function test_charge_skips_ledger_when_amount_rounds_to_zero(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 1000, 'topup:zero-skip');
 
@@ -310,7 +310,7 @@ class UsageBillingServiceTest extends TestCase
 
     public function test_recent_and_charges_hide_zero_amount_rows(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutStarterCredit()->create();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 1000, 'topup:hide-zero');
         $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.04);
