@@ -47,7 +47,7 @@ class CompetitorController extends Controller
             'suggestions' => Inertia::defer(fn () => $this->visibleSuggestions($request), 'suggestions'),
             'suggestRun' => $this->activeSuggestRun($request->user()->id),
             'suggestError' => $this->suggestError($request->user()->id),
-            'competitorCap' => $this->entitlements->summary($request->user()),
+            'competitorCap' => $this->entitlements->sharedSummary($request->user()),
         ]);
     }
 

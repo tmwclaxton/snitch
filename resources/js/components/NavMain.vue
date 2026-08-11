@@ -27,7 +27,7 @@ const { isCurrentUrl } = useCurrentUrl();
                     :is-active="isCurrentUrl(item.href)"
                     :tooltip="item.title"
                 >
-                    <Link :href="item.href">
+                    <Link :href="item.href" prefetch="hover">
                         <component :is="item.icon" />
                         <span>{{ item.title }}</span>
                     </Link>

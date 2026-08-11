@@ -38,19 +38,21 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
-        $seo = Seo::forRequest($request);
 
+        // Closures are resolved lazily by Inertia's PropsResolver, so partial
+        // reloads (e.g. defer() group requests) skip the DB work below when
+        // the client did not ask for these keys.
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
                 'user' => $user,
             ],
-            'subscription' => $user !== null
-                ? app(PlanEntitlementService::class)->summary($user)
+            'subscription' => fn () => $user !== null
+                ? app(PlanEntitlementService::class)->sharedSummary($user)
                 : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
-            'seo' => $seo,
+            'seo' => fn () => Seo::forRequest($request),
         ];
     }
 }

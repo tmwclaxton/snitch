@@ -377,7 +377,7 @@ class InfluencerController extends Controller
             'brief' => $runBrief !== '' ? $runBrief : $brandBrief,
         ];
 
-        $summary = $this->entitlements->summary($user);
+        $summary = $this->entitlements->sharedSummary($user);
 
         return [
             'brand' => $brand === null ? null : [

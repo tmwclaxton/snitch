@@ -7,6 +7,7 @@ use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Billing\PlanEntitlementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -39,12 +40,15 @@ class CompetitorQuotaVisibilityTest extends TestCase
             ->get(route('competitors.index'));
 
         $response->assertOk();
-        $response->assertInertia(fn ($page) => $page
+        $response->assertInertia(fn (AssertableInertia $page) => $page
             ->component('competitors/Index')
-            ->has('accounts', 3)
+            ->missing('accounts')
             ->where('competitorCap.competitor_limit', null)
             ->where('competitorCap.competitors_remaining', null)
             ->where('competitorCap.over_quota_competitors', 0)
+            ->loadDeferredProps('default', fn (AssertableInertia $default) => $default
+                ->has('accounts', 3)
+            )
         );
 
         $content = $response->getContent() ?: '';

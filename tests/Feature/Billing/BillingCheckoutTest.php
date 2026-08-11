@@ -36,16 +36,20 @@ class BillingCheckoutTest extends TestCase
                 ->component('billing/Index')
                 ->has('subscription')
                 ->has('usage')
-                ->has('spendSeries')
-                ->has('spendSeries.points')
-                ->where('spendSeries.grain', 'day')
-                ->where('spendSeries.period_count', 30)
+                ->missing('spendSeries')
                 ->has('creditPacks')
                 ->has('platform')
                 ->where('subscription.subscribed', false)
                 ->where('usage.balance_pence', 0)
                 ->where('platform.fee_pence', 1900)
-                ->where('platform.bonus_pence', 3000));
+                ->where('platform.bonus_pence', 3000)
+                ->loadDeferredProps('chart', fn (Assert $chart) => $chart
+                    ->has('spendSeries')
+                    ->has('spendSeries.points')
+                    ->where('spendSeries.grain', 'day')
+                    ->where('spendSeries.period_count', 30)
+                )
+            );
     }
 
     public function test_billing_page_accepts_spend_grain(): void
@@ -57,16 +61,24 @@ class BillingCheckoutTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('billing/Index')
-                ->where('spendSeries.grain', 'week')
-                ->where('spendSeries.period_count', 12)
-                ->has('spendSeries.points', 12));
+                ->missing('spendSeries')
+                ->loadDeferredProps('chart', fn (Assert $chart) => $chart
+                    ->where('spendSeries.grain', 'week')
+                    ->where('spendSeries.period_count', 12)
+                    ->has('spendSeries.points', 12)
+                )
+            );
 
         $this->actingAs($user)
             ->get(route('billing.edit', ['grain' => 'month']))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('spendSeries.grain', 'month')
-                ->where('spendSeries.period_count', 12));
+                ->missing('spendSeries')
+                ->loadDeferredProps('chart', fn (Assert $chart) => $chart
+                    ->where('spendSeries.grain', 'month')
+                    ->where('spendSeries.period_count', 12)
+                )
+            );
     }
 
     public function test_checkout_redirects_when_platform_price_missing(): void

@@ -33,7 +33,6 @@ export type SubscriptionSummary = {
     min_run_balance_pence?: number;
     can_run_billable?: boolean;
     platform_fee_pence?: number;
-    usage?: Record<string, unknown>;
 } | null;
 
 export type SeoProps = {

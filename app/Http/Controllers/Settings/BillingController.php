@@ -44,7 +44,7 @@ class BillingController extends Controller
             ->all();
 
         return Inertia::render('billing/Index', [
-            'subscription' => $this->entitlements->summary($user),
+            'subscription' => $this->entitlements->sharedSummary($user),
             'usage' => $this->usage->summary($user),
             'spendSeries' => Inertia::defer(fn () => $this->usage->spendSeries($user, $grain), 'chart'),
             'creditPacks' => $packs,

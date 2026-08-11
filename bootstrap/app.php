@@ -55,7 +55,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 ],
                 'subscription' => null,
                 'sidebarOpen' => true,
-                'seo' => Seo::forRequest($request),
+                'seo' => fn () => Seo::forRequest($request),
             ]);
 
             return Inertia::render('errors/NotFound')
