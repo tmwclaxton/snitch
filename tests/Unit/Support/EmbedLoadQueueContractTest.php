@@ -46,6 +46,20 @@ class EmbedLoadQueueContractTest extends TestCase
     }
 
     #[Test]
+    public function glance_metric_views_underline_hugs_text_width(): void
+    {
+        $css = file_get_contents(base_path('resources/css/app.css'));
+
+        $this->assertIsString($css);
+        $this->assertStringContainsString(
+            '.snitch-glance-metric:first-child .snitch-glance-metric-value',
+            $css,
+        );
+        $this->assertStringContainsString('width: fit-content', $css);
+        $this->assertStringContainsString('display: inline-block', $css);
+    }
+
+    #[Test]
     public function contact_cell_tag_styles_constrain_long_glance_chips(): void
     {
         $css = file_get_contents(base_path('resources/css/app.css'));
