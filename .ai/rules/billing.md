@@ -18,6 +18,7 @@ paths:
   - 'resources/js/pages/agents/**'
   - 'resources/js/components/agents/**'
   - 'app/Http/Controllers/AgentsController.php'
+  - 'app/Http/Controllers/Marketing/PricingController.php'
   - 'app/Support/McpConnectionGuide.php'
   - 'resources/js/pages/claim/**'
 ---
@@ -57,6 +58,7 @@ Prefer real upstream usage (Apify `usageTotalUsd`, NanoGPT `usage.prompt_tokens`
 ## Surfaces
 - Authenticated `/billing` - balance, platform subscribe, credit packs, vendor usage, stacked stipple chart of Apify/NanoGPT/Firecrawl/TikHub/Snitch spend (`UsageBillingService::spendSeries`) with `grain=day|week|month` (default day). Chart bars use coloured stipple dots (`VENDOR_CHART_FILL`) with a paper hover tip naming the vendor (+ amount / period); legend uses mini vendor logos on paper plates (Snitch = mascot-mark). Short recent-charges preview (8 rows) links to the full list.
 - Authenticated `/billing/charges` (`billing.charges`) - paginated ledger breakdown (`UsageBillingService::paginatedCharges`, 25/page) with vendor / action / days filters; amounts only (no COGS/markup). Rows include derived `description` + optional `link` (see below).
+- Public `/pricing` (`PricingController`) - platform fee + credit packs copy, plus **live tool averages** from `UsageBillingService::globalVendorAverages()` (ledger mean charge per run per spend vendor across all users; same vendor keys as billing `summary()`). Display averages with `formatPenceAsGbp(..., { decimals: 4 })`. Do not invent a second catalog of fake averages.
 - Public + auth `/agents` (MCP connect docs; auth also mints/rotates Sanctum token). `/for-agents` redirects to `/agents`
 
 ## Charge descriptions and links

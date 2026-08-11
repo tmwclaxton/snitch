@@ -10,6 +10,7 @@ use App\Models\CreditLedgerEntry;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -367,6 +368,67 @@ class UsageBillingService
             BillingVendor::TikHub->value,
             BillingVendor::Snitch->value,
         ];
+    }
+
+    /**
+     * Platform-wide mean charge per ledger run for each spend vendor.
+     * Same rollup shape as billing {@see summary()} vendor totals
+     * (spend_pence / entries), but across all users.
+     *
+     * @return list<array{
+     *     vendor: string,
+     *     avg_pence: float,
+     *     spend_pence: float,
+     *     entries: int
+     * }>
+     */
+    public function globalVendorAverages(): array
+    {
+        $ttl = max(60, (int) config('billing.global_averages_cache_seconds', 300));
+
+        /** @var list<array{vendor: string, avg_pence: float, spend_pence: float, entries: int}> */
+        return Cache::remember('billing.global_vendor_averages', $ttl, function (): array {
+            $vendorKeys = self::spendVendorKeys();
+
+            /** @var array<string, array{vendor: string, avg_pence: float, spend_pence: float, entries: int}> $averages */
+            $averages = [];
+            foreach ($vendorKeys as $key) {
+                $averages[$key] = [
+                    'vendor' => $key,
+                    'avg_pence' => 0.0,
+                    'spend_pence' => 0.0,
+                    'entries' => 0,
+                ];
+            }
+
+            $rows = CreditLedgerEntry::query()
+                ->where('amount_pence', '<', 0)
+                ->whereIn('vendor', $vendorKeys)
+                ->selectRaw('vendor, SUM(ABS(amount_pence)) as spend_pence, COUNT(*) as entries')
+                ->groupBy('vendor')
+                ->get();
+
+            foreach ($rows as $row) {
+                $key = $row->vendor instanceof BillingVendor
+                    ? $row->vendor->value
+                    : (string) $row->vendor;
+
+                if (! array_key_exists($key, $averages)) {
+                    continue;
+                }
+
+                $spend = $this->roundPence((float) $row->spend_pence);
+                $entries = (int) $row->entries;
+                $averages[$key] = [
+                    'vendor' => $key,
+                    'avg_pence' => $entries > 0 ? $this->roundPence($spend / $entries) : 0.0,
+                    'spend_pence' => $spend,
+                    'entries' => $entries,
+                ];
+            }
+
+            return array_values($averages);
+        });
     }
 
     /**

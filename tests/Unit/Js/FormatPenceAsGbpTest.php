@@ -59,6 +59,21 @@ if (signed !== '+£0.0103') {
   process.exit(1);
 }
 
+const fixed4Cases = [
+  [0, '£0.0000'],
+  [1.03, '£0.0103'],
+  [103, '£1.0300'],
+  [1900, '£19.0000'],
+];
+
+for (const [pence, expected] of fixed4Cases) {
+  const actual = formatPenceAsGbp(pence, { decimals: 4 });
+  if (actual !== expected) {
+    console.error(JSON.stringify({ mode: 'fixed4', pence, expected, actual }));
+    process.exit(1);
+  }
+}
+
 console.log('ok');
 JS
             ]);

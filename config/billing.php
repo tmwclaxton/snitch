@@ -35,6 +35,11 @@ return [
     'min_run_balance_pence' => (int) env('SNITCH_MIN_RUN_BALANCE_PENCE', 20),
 
     /*
+    | Cache TTL for public pricing-page global vendor averages (ledger means).
+    */
+    'global_averages_cache_seconds' => (int) env('SNITCH_GLOBAL_AVERAGES_CACHE_SECONDS', 300),
+
+    /*
     | Credit lot expiry
     | - claim_bonus (starter £5): never expires (expires_at null)
     | - subscription_bonus: expires at end of the calendar month it was granted
