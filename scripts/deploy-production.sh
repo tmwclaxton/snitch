@@ -144,11 +144,27 @@ stop_app_workers() {
     compose exec -T "$service" supervisorctl stop queue-worker:* scheduler 2>/dev/null || true
 }
 
+ensure_passport_keys() {
+    local service="$1"
+
+    echo "Ensuring Passport OAuth keys on ${service}..."
+    compose exec -T "$service" sh -c '
+        if [ ! -f storage/oauth-private.key ] || [ ! -f storage/oauth-public.key ]; then
+            gosu sail php artisan passport:keys --force --no-interaction
+        fi
+        chown sail:sail storage/oauth-private.key storage/oauth-public.key 2>/dev/null || true
+        chmod 600 storage/oauth-private.key 2>/dev/null || true
+        chmod 640 storage/oauth-public.key 2>/dev/null || true
+    '
+}
+
 migrate_and_seed() {
     local service="$1"
 
     echo "Running migrations on ${service}..."
     compose exec -T "$service" php artisan migrate --force
+
+    ensure_passport_keys "$service"
 
     echo "Syncing analysis term catalogue on ${service}..."
     compose exec -T "$service" php artisan db:seed --class=AnalysisTermSeeder --force

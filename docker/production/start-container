@@ -21,6 +21,18 @@ if [ -d /var/www/html/storage ]; then
     mkdir -p /var/www/html/bootstrap/cache
     chown -R sail:sail /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
     chmod -R ug+rwx /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
+
+    # Passport keys must exist and be readable by PHP-FPM (sail). Deploy migrate steps
+    # sometimes create them as root via compose exec; normalize ownership on every boot.
+    if [ ! -f /var/www/html/storage/oauth-private.key ] || [ ! -f /var/www/html/storage/oauth-public.key ]; then
+        gosu sail /usr/local/bin/php /var/www/html/artisan passport:keys --force --no-interaction 2>/dev/null || true
+    fi
+
+    if [ -f /var/www/html/storage/oauth-private.key ]; then
+        chown sail:sail /var/www/html/storage/oauth-private.key /var/www/html/storage/oauth-public.key 2>/dev/null || true
+        chmod 600 /var/www/html/storage/oauth-private.key 2>/dev/null || true
+        chmod 640 /var/www/html/storage/oauth-public.key 2>/dev/null || true
+    fi
 fi
 
 if [ ! -d /.composer ]; then
