@@ -313,6 +313,17 @@ class FeedTest extends TestCase
         $this->assertStringContainsString('TranscriptModal', $showVue);
     }
 
+    public function test_feed_index_vue_omits_frame_and_exposure_count_meta(): void
+    {
+        $indexVue = file_get_contents(resource_path('js/pages/feed/Index.vue'));
+
+        $this->assertIsString($indexVue);
+        $this->assertStringContainsString('Proof sheet', $indexVue);
+        $this->assertStringNotContainsString('frameCount', $indexVue);
+        $this->assertStringNotContainsString('exposures', $indexVue);
+        $this->assertStringNotContainsString("'Frame' : 'Frames'", $indexVue);
+    }
+
     public function test_feed_show_marks_winners_with_compact_tag_not_sticker_section(): void
     {
         $showVue = file_get_contents(resource_path('js/pages/feed/Show.vue'));

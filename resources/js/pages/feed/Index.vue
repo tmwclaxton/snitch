@@ -85,7 +85,6 @@ const selectedAccount = computed(() =>
     props.filters.account != null ? String(props.filters.account) : 'all',
 );
 
-const frameCount = computed(() => props.posts?.data.length ?? 0);
 const postsLoaded = computed(() => props.posts != null);
 const paginationLinks = computed(() => props.posts?.links ?? []);
 
@@ -164,7 +163,7 @@ function paginationLabel(label: string): string {
         <div class="snitch-grain" aria-hidden="true" />
 
         <div class="relative z-10 mx-auto max-w-6xl">
-            <header class="flex flex-wrap items-end justify-between gap-4 border-b border-snitch-ink/10 pb-5">
+            <header class="border-b border-snitch-ink/10 pb-5">
                 <div class="min-w-0 max-w-xl">
                     <p class="snitch-ink-label">Snitch / Feed</p>
                     <h1 class="snitch-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
@@ -172,15 +171,6 @@ function paginationLabel(label: string): string {
                     </h1>
                     <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
                         Metrics, hooks, and craft tags at a glance - open a frame for the full dossier.
-                    </p>
-                </div>
-                <div class="text-right">
-                    <p class="snitch-display text-2xl tabular-nums text-snitch-ink sm:text-3xl">
-                        {{ frameCount }}
-                    </p>
-                    <p class="snitch-ink-label mt-0.5">
-                        {{ frameCount === 1 ? 'Frame' : 'Frames' }}
-                        <span v-if="hasActiveFilters"> filtered</span>
                     </p>
                 </div>
             </header>
@@ -262,7 +252,6 @@ function paginationLabel(label: string): string {
             >
                 <div class="snitch-contact-sheet-rail col-span-full">
                     <p>Proof sheet</p>
-                    <p>{{ frameCount }} exposures</p>
                 </div>
 
                 <FeedContactCell
