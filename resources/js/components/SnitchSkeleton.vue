@@ -44,7 +44,7 @@ const variantClass = computed(() => {
     <div
         role="status"
         :aria-label="label"
-        class="snitch-skeleton animate-pulse"
+        class="snitch-skeleton"
         :class="variantClass"
         :style="style"
     >
@@ -54,13 +54,26 @@ const variantClass = computed(() => {
 
 <style scoped>
 .snitch-skeleton {
-    background: color-mix(in oklab, var(--snitch-ink, #1c1b1a) 10%, transparent);
+    border: 1px solid color-mix(in oklab, var(--snitch-ink) 5%, transparent);
+    background-color: color-mix(in oklab, var(--snitch-fog) 38%, var(--snitch-paper));
     background-image: linear-gradient(
         135deg,
-        color-mix(in oklab, var(--snitch-ink, #1c1b1a) 4%, transparent) 25%,
-        color-mix(in oklab, var(--snitch-ink, #1c1b1a) 12%, transparent) 50%,
-        color-mix(in oklab, var(--snitch-ink, #1c1b1a) 4%, transparent) 75%
+        color-mix(in oklab, var(--snitch-ink) 2%, transparent) 20%,
+        color-mix(in oklab, var(--snitch-ink) 6%, transparent) 50%,
+        color-mix(in oklab, var(--snitch-ink) 2%, transparent) 80%
     );
+    animation: snitch-skeleton-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes snitch-skeleton-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.9;
+    }
 }
 
 .snitch-skeleton-line {
