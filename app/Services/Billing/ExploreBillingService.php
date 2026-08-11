@@ -33,7 +33,7 @@ class ExploreBillingService
             hash('sha256', $normalized),
         );
 
-        return $this->billing->charge(
+        $entry = $this->billing->charge(
             user: $user,
             action: self::ACTION_SEARCH,
             vendor: BillingVendor::Snitch,
@@ -44,6 +44,12 @@ class ExploreBillingService
             ],
             idempotencyKey: $idempotencyKey,
         );
+
+        if ($entry === null) {
+            throw new \RuntimeException('Explore search fee must not round to zero.');
+        }
+
+        return $entry;
     }
 
     /**

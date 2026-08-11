@@ -19,6 +19,7 @@ export type SpendPoint = {
     nanogpt: number;
     firecrawl: number;
     tikhub: number;
+    snitch: number;
     total: number;
 };
 

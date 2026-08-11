@@ -15,6 +15,9 @@ Product rule - "If we have to use Apify then that overrides the cap.": `shouldUs
 ## ApifyClient and TikHubClient are singletons
 Both clients buffer run costs in-process for `VendorUsageCharger::chargePulled*`. Register them as singletons in `AppServiceProvider` (same pattern as TikHub). A non-shared `ApifyClient` makes adapters record costs on one instance while the charger pulls an empty buffer from another - Snitch billing then shows Apify £0 even when Apify Console has runs. `SyncTrackedAccountJob` always pulls both Apify and TikHub buffers after a sync (empty Apify→TikHub fallback and YouTube TikHub hydrate can leave costs on either).
 
+## Refresh usageTotalUsd after waitForFinish
+Apify's first finished-run payload often has `usageTotalUsd: 0` before costs settle. `runActorDetailed` and the multi-job `runActors` pool path must refresh `/actor-runs/{id}` (brief delay) when usage is null or <= 0 before buffering costs for billing. Skipping this made influencer/competitor verify batches write hundreds of £0 Apify ledger rows while Console later showed real USD.
+
 ## Empty Apify sync falls back to TikHub
 `SyncTrackedAccountJob` retries `listRecentPosts` via TikHub when Apify returns `[]` and a TikHub adapter exists for that platform. Apify can finish with an empty dataset and `$0` usage without tripping the monthly cap - without this fallback, sync marks success and advances `last_synced_at` while backlog stays empty. Manual/`force` sync always uses the full `recency_days` window (not incremental `last_synced_at - 1 day`) so a prior empty scrape cannot hide real posts.
 

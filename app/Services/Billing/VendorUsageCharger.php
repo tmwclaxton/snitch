@@ -32,7 +32,7 @@ class VendorUsageCharger
         $entries = [];
 
         foreach ($this->apify->pullRunCosts() as $run) {
-            $entries[] = $this->billing->charge(
+            $entry = $this->billing->charge(
                 user: $user,
                 action: $action,
                 vendor: BillingVendor::Apify,
@@ -44,6 +44,10 @@ class VendorUsageCharger
                 ],
                 idempotencyKey: $run['runId'] !== null ? 'apify:'.$run['runId'] : null,
             );
+
+            if ($entry !== null) {
+                $entries[] = $entry;
+            }
         }
 
         return $entries;
@@ -60,7 +64,7 @@ class VendorUsageCharger
         $entries = [];
 
         foreach ($this->tikhub->pullRunCosts() as $run) {
-            $entries[] = $this->billing->charge(
+            $entry = $this->billing->charge(
                 user: $user,
                 action: $action,
                 vendor: BillingVendor::TikHub,
@@ -71,6 +75,10 @@ class VendorUsageCharger
                     'platform' => $meta['platform'] ?? $run['platform'],
                 ],
             );
+
+            if ($entry !== null) {
+                $entries[] = $entry;
+            }
         }
 
         return $entries;
@@ -85,7 +93,7 @@ class VendorUsageCharger
         ?float $cogsUsd = null,
         array $meta = [],
         ?string $idempotencyKey = null,
-    ): CreditLedgerEntry {
+    ): ?CreditLedgerEntry {
         return $this->billing->charge(
             user: $user,
             action: $action,
@@ -105,7 +113,7 @@ class VendorUsageCharger
         ?float $cogsUsd = null,
         array $meta = [],
         ?string $idempotencyKey = null,
-    ): CreditLedgerEntry {
+    ): ?CreditLedgerEntry {
         return $this->billing->charge(
             user: $user,
             action: $action,
@@ -125,7 +133,7 @@ class VendorUsageCharger
         ?float $cogsUsd = null,
         array $meta = [],
         ?string $idempotencyKey = null,
-    ): CreditLedgerEntry {
+    ): ?CreditLedgerEntry {
         return $this->billing->charge(
             user: $user,
             action: $action,

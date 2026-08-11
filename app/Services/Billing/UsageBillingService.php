@@ -73,6 +73,8 @@ class UsageBillingService
 
     /**
      * Charge the user for vendor usage. amount_pence is negative on the ledger.
+     * Returns null when the priced amount rounds to £0 so we do not write noise
+     * rows or burn Apify run idempotency keys on preliminary $0 usage.
      *
      * @param  array<string, mixed>  $meta
      */
@@ -83,7 +85,7 @@ class UsageBillingService
         ?float $cogsUsd = null,
         array $meta = [],
         ?string $idempotencyKey = null,
-    ): CreditLedgerEntry {
+    ): ?CreditLedgerEntry {
         $vendorEnum = $vendor instanceof BillingVendor ? $vendor : BillingVendor::from($vendor);
 
         if (in_array($vendorEnum, [BillingVendor::Bonus, BillingVendor::Topup], true)) {
@@ -91,7 +93,13 @@ class UsageBillingService
         }
 
         $fixedPence = $this->fixedPenceForAction($action);
-        $amountPence = $fixedPence ?? $this->pricePenceFromCogs($action, $vendorEnum, $cogsUsd);
+        $amountPence = $this->roundPence($fixedPence ?? $this->pricePenceFromCogs($action, $vendorEnum, $cogsUsd));
+
+        // No minimum charge, but a £0 debit is not useful audit - skip the write.
+        if ($amountPence === 0.0) {
+            return null;
+        }
+
         $this->assertCanRun($user, max(0.01, abs($amountPence)));
 
         $multiplier = $fixedPence !== null
@@ -201,7 +209,24 @@ class UsageBillingService
     }
 
     /**
-     * Daily charged usage (Apify / NanoGPT / Firecrawl / TikHub) for stacked spend charts.
+     * Vendors shown in period usage totals and the stacked spend chart
+     * (COGS vendors plus Snitch product fees).
+     *
+     * @return list<string>
+     */
+    public static function spendVendorKeys(): array
+    {
+        return [
+            BillingVendor::Apify->value,
+            BillingVendor::NanoGpt->value,
+            BillingVendor::Firecrawl->value,
+            BillingVendor::TikHub->value,
+            BillingVendor::Snitch->value,
+        ];
+    }
+
+    /**
+     * Daily charged usage (Apify / NanoGPT / Firecrawl / TikHub / Snitch) for stacked spend charts.
      *
      * @return array{
      *     grain: string,
@@ -209,7 +234,7 @@ class UsageBillingService
      *     days: int,
      *     from: string,
      *     to: string,
-     *     points: list<array{date: string, label: string, apify: float, nanogpt: float, firecrawl: float, tikhub: float, total: float}>
+     *     points: list<array{date: string, label: string, apify: float, nanogpt: float, firecrawl: float, tikhub: float, snitch: float, total: float}>
      * }
      */
     public function dailySpendSeries(User $user, int $days = 30): array
@@ -227,7 +252,7 @@ class UsageBillingService
      *     days: int,
      *     from: string,
      *     to: string,
-     *     points: list<array{date: string, label: string, apify: float, nanogpt: float, firecrawl: float, tikhub: float, total: float}>
+     *     points: list<array{date: string, label: string, apify: float, nanogpt: float, firecrawl: float, tikhub: float, snitch: float, total: float}>
      * }
      */
     public function spendSeries(User $user, string $grain = 'day', ?int $periods = null): array
@@ -247,14 +272,9 @@ class UsageBillingService
             default => now()->subDays($periodCount - 1)->startOfDay(),
         };
 
-        $vendorKeys = [
-            BillingVendor::Apify->value,
-            BillingVendor::NanoGpt->value,
-            BillingVendor::Firecrawl->value,
-            BillingVendor::TikHub->value,
-        ];
+        $vendorKeys = self::spendVendorKeys();
 
-        /** @var array<string, array{date: string, label: string, apify: float, nanogpt: float, firecrawl: float, tikhub: float, total: float}> $buckets */
+        /** @var array<string, array{date: string, label: string, apify: float, nanogpt: float, firecrawl: float, tikhub: float, snitch: float, total: float}> $buckets */
         $buckets = [];
 
         for ($offset = 0; $offset < $periodCount; $offset++) {
@@ -275,6 +295,7 @@ class UsageBillingService
                 'nanogpt' => 0.0,
                 'firecrawl' => 0.0,
                 'tikhub' => 0.0,
+                'snitch' => 0.0,
                 'total' => 0.0,
             ];
         }
@@ -344,12 +365,7 @@ class UsageBillingService
         $from ??= now()->startOfMonth();
         $to ??= now();
 
-        $vendorKeys = [
-            BillingVendor::Apify->value,
-            BillingVendor::NanoGpt->value,
-            BillingVendor::Firecrawl->value,
-            BillingVendor::TikHub->value,
-        ];
+        $vendorKeys = self::spendVendorKeys();
 
         $vendors = [];
         foreach ($vendorKeys as $key) {
@@ -383,14 +399,14 @@ class UsageBillingService
 
         $recentVendors = [
             ...$vendorKeys,
-            BillingVendor::Snitch->value,
             BillingVendor::Bonus->value,
             BillingVendor::Topup->value,
         ];
 
         $recentQuery = CreditLedgerEntry::query()
             ->where('user_id', $user->id)
-            ->whereIn('vendor', $recentVendors);
+            ->whereIn('vendor', $recentVendors)
+            ->where('amount_pence', '!=', 0);
 
         $recentTotal = (clone $recentQuery)->count();
 
@@ -435,6 +451,7 @@ class UsageBillingService
     {
         $query = CreditLedgerEntry::query()
             ->where('user_id', $user->id)
+            ->where('amount_pence', '!=', 0)
             ->orderByDesc('id');
 
         $vendor = $filters['vendor'] ?? null;

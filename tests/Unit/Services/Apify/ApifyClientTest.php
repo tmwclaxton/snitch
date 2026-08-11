@@ -78,4 +78,69 @@ class ApifyClientTest extends TestCase
 
         $this->assertSame(['fb' => []], $items);
     }
+
+    public function test_run_actors_refreshes_preliminary_zero_usage(): void
+    {
+        config([
+            'snitch.apify.token' => 'secret-apify-token',
+            'snitch.apify.base_url' => 'https://api.apify.test/v2',
+            'snitch.apify.timeout' => 30,
+        ]);
+
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.apify.test/v2/acts/*/runs*' => Http::sequence()
+                ->push([
+                    'data' => [
+                        'id' => 'run_a',
+                        'defaultDatasetId' => 'dataset_a',
+                        'usageTotalUsd' => 0,
+                    ],
+                ])
+                ->push([
+                    'data' => [
+                        'id' => 'run_b',
+                        'defaultDatasetId' => 'dataset_b',
+                        'usageTotalUsd' => 0,
+                    ],
+                ]),
+            'https://api.apify.test/v2/datasets/dataset_a/items*' => Http::response([['id' => 'a']]),
+            'https://api.apify.test/v2/datasets/dataset_b/items*' => Http::response([['id' => 'b']]),
+            'https://api.apify.test/v2/actor-runs/run_a' => Http::response([
+                'data' => [
+                    'id' => 'run_a',
+                    'defaultDatasetId' => 'dataset_a',
+                    'usageTotalUsd' => 0.0023,
+                ],
+            ]),
+            'https://api.apify.test/v2/actor-runs/run_b' => Http::response([
+                'data' => [
+                    'id' => 'run_b',
+                    'defaultDatasetId' => 'dataset_b',
+                    'usageTotalUsd' => 0.0041,
+                ],
+            ]),
+        ]);
+
+        $client = app(ApifyClient::class);
+        $items = $client->runActors([
+            'a' => [
+                'actorId' => 'apify/instagram-scraper',
+                'input' => ['directUrls' => ['https://instagram.com/a']],
+            ],
+            'b' => [
+                'actorId' => 'apify/instagram-scraper',
+                'input' => ['directUrls' => ['https://instagram.com/b']],
+            ],
+        ]);
+
+        $this->assertSame([['id' => 'a']], $items['a']);
+        $this->assertSame([['id' => 'b']], $items['b']);
+
+        $costs = $client->pullRunCosts();
+        $this->assertCount(2, $costs);
+        $byRun = collect($costs)->keyBy('runId');
+        $this->assertSame(0.0023, $byRun['run_a']['usageTotalUsd'] ?? null);
+        $this->assertSame(0.0041, $byRun['run_b']['usageTotalUsd'] ?? null);
+    }
 }

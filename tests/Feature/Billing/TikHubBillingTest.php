@@ -49,7 +49,7 @@ class TikHubBillingTest extends TestCase
         $this->assertNotNull($today);
         $this->assertGreaterThan(0, $today['tikhub']);
         $this->assertSame(
-            $today['apify'] + $today['nanogpt'] + $today['firecrawl'] + $today['tikhub'],
+            $today['apify'] + $today['nanogpt'] + $today['firecrawl'] + $today['tikhub'] + $today['snitch'],
             $today['total'],
         );
     }

@@ -4,6 +4,7 @@ namespace Tests\Feature\Billing;
 
 use App\Enums\BillingVendor;
 use App\Exceptions\InsufficientCreditsException;
+use App\Models\CreditLedgerEntry;
 use App\Models\User;
 use App\Services\Billing\UsageBillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -130,12 +131,16 @@ class UsageBillingServiceTest extends TestCase
         $this->billing->charge($user, 'sync.account', BillingVendor::Apify, 0.05);
         $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.04);
         $this->billing->charge($user, 'brand.autofill', BillingVendor::Firecrawl, 0.01);
+        $this->billing->charge($user, 'explore.search', BillingVendor::Snitch);
 
         $summary = $this->billing->summary($user);
 
         $this->assertGreaterThan(0, $summary['vendors']['apify']['spend_pence']);
         $this->assertGreaterThan(0, $summary['vendors']['nanogpt']['spend_pence']);
         $this->assertGreaterThan(0, $summary['vendors']['firecrawl']['spend_pence']);
+        $this->assertSame(0.5, $summary['vendors']['snitch']['spend_pence']);
+        $this->assertArrayHasKey('tikhub', $summary['vendors']);
+        $this->assertSame(0.0, $summary['vendors']['tikhub']['spend_pence']);
         $this->assertArrayNotHasKey('markup', $summary);
     }
 
@@ -149,6 +154,8 @@ class UsageBillingServiceTest extends TestCase
         $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.04);
         $this->billing->charge($user, 'brand.autofill', BillingVendor::Firecrawl, 0.01);
         $this->billing->charge($user, 'sync.account', BillingVendor::TikHub, 0.002);
+        $this->billing->charge($user, 'explore.search', BillingVendor::Snitch);
+        $this->billing->charge($user, 'explore.view', BillingVendor::Snitch);
 
         $series = $this->billing->dailySpendSeries($user, 14);
 
@@ -162,8 +169,9 @@ class UsageBillingServiceTest extends TestCase
         $this->assertGreaterThan(0, $today['nanogpt']);
         $this->assertGreaterThan(0, $today['firecrawl']);
         $this->assertGreaterThan(0, $today['tikhub']);
+        $this->assertSame(0.6, $today['snitch']);
         $this->assertSame(
-            $today['apify'] + $today['nanogpt'] + $today['firecrawl'] + $today['tikhub'],
+            $today['apify'] + $today['nanogpt'] + $today['firecrawl'] + $today['tikhub'] + $today['snitch'],
             $today['total'],
         );
     }
@@ -274,6 +282,54 @@ class UsageBillingServiceTest extends TestCase
         $this->assertSame(1.03, $this->billing->pricePenceFromCogs('apify.run', BillingVendor::Apify, 0.01));
 
         $this->assertSame(0.0, $this->billing->pricePenceFromCogs('analyze.post', BillingVendor::NanoGpt, 0.0));
+    }
+
+    public function test_charge_skips_ledger_when_amount_rounds_to_zero(): void
+    {
+        $user = User::factory()->create();
+        $this->billing->creditFromTopUp($user, 1000, 'topup:zero-skip');
+
+        $entry = $this->billing->charge(
+            $user,
+            'influencers.find',
+            BillingVendor::Apify,
+            0.0,
+            ['run_id' => 'run_zero'],
+            'apify:run_zero',
+        );
+
+        $this->assertNull($entry);
+        $this->assertSame(0, CreditLedgerEntry::query()->where('user_id', $user->id)->where('amount_pence', '<=', 0)->count());
+        $this->assertSame(1000.0, $this->billing->balancePence($user));
+        $this->assertFalse(
+            CreditLedgerEntry::query()->where('idempotency_key', 'apify:run_zero')->exists(),
+        );
+    }
+
+    public function test_recent_and_charges_hide_zero_amount_rows(): void
+    {
+        $user = User::factory()->create();
+        $this->billing->creditFromTopUp($user, 1000, 'topup:hide-zero');
+        $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.04);
+
+        CreditLedgerEntry::query()->create([
+            'user_id' => $user->id,
+            'action' => 'influencers.find',
+            'vendor' => BillingVendor::Apify,
+            'cogs_usd' => 0,
+            'multiplier' => 1.3,
+            'amount_pence' => 0,
+            'balance_after_pence' => 1000,
+            'meta' => ['run_id' => 'legacy_zero'],
+            'idempotency_key' => 'apify:legacy_zero',
+        ]);
+
+        $summary = $this->billing->summary($user);
+        $this->assertNotEmpty($summary['recent']);
+        $this->assertTrue(collect($summary['recent'])->every(fn (array $row): bool => $row['amount_pence'] != 0));
+
+        $charges = $this->billing->paginatedCharges($user);
+        $this->assertTrue(collect($charges->items())->every(fn (array $row): bool => $row['amount_pence'] != 0));
     }
 
     public function test_estimate_nanogpt_uses_token_math_without_floor_clamp(): void

@@ -53,21 +53,7 @@ class ApifyClient
 
         $runId = isset($run['id']) && is_string($run['id']) ? $run['id'] : null;
         $usageTotalUsd = $this->extractUsageTotalUsd($run);
-
-        // First response after finish can show preliminary costs; refresh once when possible.
-        if ($runId !== null && ($usageTotalUsd === null || $usageTotalUsd <= 0)) {
-            usleep(250_000);
-            $refreshed = $this->http()->get("/actor-runs/{$runId}");
-
-            if ($refreshed->successful()) {
-                $runBody = $refreshed->json('data') ?? $refreshed->json();
-
-                if (is_array($runBody)) {
-                    $usageTotalUsd = $this->extractUsageTotalUsd($runBody) ?? $usageTotalUsd;
-                    $run = $runBody;
-                }
-            }
-        }
+        [$run, $usageTotalUsd] = $this->refreshRunUsage($run, $runId, $usageTotalUsd);
 
         $datasetId = $run['defaultDatasetId'] ?? null;
 
@@ -143,6 +129,8 @@ class ApifyClient
         });
 
         $out = [];
+        /** @var list<array{actorId: string, usageTotalUsd: float|null, runId: string|null}> $pendingCosts */
+        $pendingCosts = [];
 
         foreach ($jobs as $key => $job) {
             $response = $responses[(string) $key] ?? null;
@@ -183,7 +171,7 @@ class ApifyClient
 
                 $out[$key] = $this->datasetItemsFromResponse($job['actorId'], $itemsResponse);
 
-                $this->runCosts[] = [
+                $pendingCosts[] = [
                     'actorId' => $job['actorId'],
                     'usageTotalUsd' => $usageTotalUsd,
                     'runId' => $runId,
@@ -191,6 +179,10 @@ class ApifyClient
             } catch (Throwable) {
                 $out[$key] = [];
             }
+        }
+
+        foreach ($this->refreshPendingRunCosts($pendingCosts) as $cost) {
+            $this->runCosts[] = $cost;
         }
 
         return $out;
@@ -205,6 +197,97 @@ class ApifyClient
         $this->runCosts = [];
 
         return $costs;
+    }
+
+    /**
+     * @param  array<string, mixed>  $run
+     * @return array{0: array<string, mixed>, 1: float|null}
+     */
+    private function refreshRunUsage(array $run, ?string $runId, ?float $usageTotalUsd): array
+    {
+        if ($runId === null || ($usageTotalUsd !== null && $usageTotalUsd > 0)) {
+            return [$run, $usageTotalUsd];
+        }
+
+        usleep(250_000);
+        $refreshed = $this->http()->get("/actor-runs/{$runId}");
+
+        if (! $refreshed->successful()) {
+            return [$run, $usageTotalUsd];
+        }
+
+        $runBody = $refreshed->json('data') ?? $refreshed->json();
+
+        if (! is_array($runBody)) {
+            return [$run, $usageTotalUsd];
+        }
+
+        return [$runBody, $this->extractUsageTotalUsd($runBody) ?? $usageTotalUsd];
+    }
+
+    /**
+     * Batch-refresh preliminary $0 / missing usage from waitForFinish responses.
+     *
+     * @param  list<array{actorId: string, usageTotalUsd: float|null, runId: string|null}>  $pendingCosts
+     * @return list<array{actorId: string, usageTotalUsd: float|null, runId: string|null}>
+     */
+    private function refreshPendingRunCosts(array $pendingCosts): array
+    {
+        if ($pendingCosts === []) {
+            return [];
+        }
+
+        $refreshIndexes = [];
+
+        foreach ($pendingCosts as $index => $cost) {
+            $usage = $cost['usageTotalUsd'];
+            $runId = $cost['runId'];
+
+            if ($runId !== null && ($usage === null || $usage <= 0)) {
+                $refreshIndexes[] = $index;
+            }
+        }
+
+        if ($refreshIndexes === []) {
+            return $pendingCosts;
+        }
+
+        usleep(250_000);
+
+        $token = (string) config('snitch.apify.token');
+        $baseUrl = (string) config('snitch.apify.base_url');
+        $timeout = (int) config('snitch.apify.timeout', 180);
+
+        $responses = Http::pool(function (Pool $pool) use ($pendingCosts, $refreshIndexes, $baseUrl, $token, $timeout): void {
+            foreach ($refreshIndexes as $index) {
+                $runId = $pendingCosts[$index]['runId'];
+                $pool->as((string) $index)
+                    ->baseUrl($baseUrl)
+                    ->withToken($token)
+                    ->acceptJson()
+                    ->timeout($timeout)
+                    ->get("/actor-runs/{$runId}");
+            }
+        });
+
+        foreach ($refreshIndexes as $index) {
+            $response = $responses[(string) $index] ?? null;
+
+            if (! $response instanceof Response || ! $response->successful()) {
+                continue;
+            }
+
+            $runBody = $response->json('data') ?? $response->json();
+
+            if (! is_array($runBody)) {
+                continue;
+            }
+
+            $pendingCosts[$index]['usageTotalUsd'] = $this->extractUsageTotalUsd($runBody)
+                ?? $pendingCosts[$index]['usageTotalUsd'];
+        }
+
+        return $pendingCosts;
     }
 
     /**

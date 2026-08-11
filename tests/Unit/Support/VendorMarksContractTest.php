@@ -17,7 +17,7 @@ class VendorMarksContractTest extends TestCase
         $this->assertStringContainsString('export function vendorIconSrc', $source);
         $this->assertStringContainsString('/images/vendors/', $source);
 
-        foreach (['apify', 'nanogpt', 'firecrawl', 'tikhub'] as $vendor) {
+        foreach (['apify', 'nanogpt', 'firecrawl', 'tikhub', 'snitch'] as $vendor) {
             $this->assertStringContainsString("{$vendor}:", $source);
         }
 
@@ -25,27 +25,30 @@ class VendorMarksContractTest extends TestCase
         $this->assertFileExists(public_path('images/vendors/nanogpt.svg'));
         $this->assertFileExists(public_path('images/vendors/firecrawl.svg'));
         $this->assertFileExists(public_path('images/vendors/tikhub.png'));
+        $this->assertFileExists(public_path('images/brand/mascot-mark.png'));
         $this->assertStringContainsString("tikhub: 'tikhub.png'", $source);
+        $this->assertStringContainsString("snitch: '/images/brand/mascot-mark.png'", $source);
 
         // Official / brand-sourced marks should not be the tiny handmade placeholders.
         $this->assertGreaterThan(500, filesize(public_path('images/vendors/apify.svg')));
         $this->assertGreaterThan(500, filesize(public_path('images/vendors/nanogpt.svg')));
         $this->assertGreaterThan(500, filesize(public_path('images/vendors/firecrawl.svg')));
         $this->assertGreaterThan(1000, filesize(public_path('images/vendors/tikhub.png')));
+        $this->assertGreaterThan(1000, filesize(public_path('images/brand/mascot-mark.png')));
 
         foreach (['bonus', 'topup'] as $vendor) {
             $this->assertFileExists(public_path("images/vendors/{$vendor}.svg"));
         }
 
         $fills = [];
-        preg_match_all("/(apify|nanogpt|firecrawl|tikhub): '(fill-[^']+)'/", $source, $matches);
+        preg_match_all("/(apify|nanogpt|firecrawl|tikhub|snitch): '(fill-[^']+)'/", $source, $matches);
         foreach ($matches[1] as $index => $vendor) {
             $fills[$vendor] = $matches[2][$index];
         }
 
-        $this->assertCount(4, $fills);
-        $this->assertCount(4, array_unique(array_values($fills)));
-        $this->assertSame('fill-snitch-stipple-spot', $fills['nanogpt']);
+        $this->assertCount(5, $fills);
+        $this->assertCount(5, array_unique(array_values($fills)));
+        $this->assertSame('fill-snitch-stipple-spot', $fills['snitch']);
         $this->assertStringNotContainsString('VENDOR_CHART_SWATCH', $source);
     }
 
