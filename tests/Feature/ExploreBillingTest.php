@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\Billing\UsageBillingService;
 use Database\Seeders\AnalysisTermSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class ExploreBillingTest extends TestCase
@@ -133,7 +134,7 @@ class ExploreBillingTest extends TestCase
         $this->assertSame(1500.0, $this->billing->balancePence($user));
     }
 
-    public function test_insufficient_credits_redirects_search_to_billing(): void
+    public function test_insufficient_credits_omits_explore_search_results(): void
     {
         $this->seed(AnalysisTermSeeder::class);
 
@@ -144,8 +145,30 @@ class ExploreBillingTest extends TestCase
             $this->billing->charge($user, 'explore.search', BillingVendor::Snitch);
         }
 
+        $searchChargesBefore = CreditLedgerEntry::query()
+            ->where('user_id', $user->id)
+            ->where('action', 'explore.search')
+            ->count();
+
+        // Hard paywall: safe GETs render the shell with empty product props
+        // instead of redirecting (security is server-side omission).
         $this->actingAs($user)
             ->get(route('explore.index', ['q' => 'anything']))
-            ->assertRedirect(route('billing.edit'));
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('explore/Index')
+                ->where('subscription.paywall.blocked', true)
+                ->where('posts.data', [])
+                ->where('posts.total', 0)
+                ->where('terms.hook_type', [])
+            );
+
+        $this->assertSame(
+            $searchChargesBefore,
+            CreditLedgerEntry::query()
+                ->where('user_id', $user->id)
+                ->where('action', 'explore.search')
+                ->count(),
+        );
     }
 }
