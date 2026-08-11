@@ -17,7 +17,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('suggest_competitors')]
-#[Description('Queue AI competitor suggestions (Firecrawl + NanoGPT + Apify; billable). Requires brand name + website. Optional wait_seconds (default 0, max 45) - omit or 0 to return immediately and poll suggest_competitors_status; pass wait_seconds for a blocking wait in Cursor/local. Does NOT track anyone - after status completed you MUST call confirm_competitor_suggestions (or dismiss).')]
+#[Description('Queue AI competitor suggestions (Firecrawl + NanoGPT + Apify; billable). Requires brand name, website, and description (niche-first search; weak names like Snitch are not used as the query). Optional wait_seconds (default 0, max 45) - omit or 0 to return immediately and poll suggest_competitors_status; pass wait_seconds for a blocking wait in Cursor/local. Does NOT track anyone - after status completed you MUST call confirm_competitor_suggestions (or dismiss).')]
 class SuggestCompetitorsTool extends Tool
 {
     public function handle(Request $request): Response

@@ -62,6 +62,12 @@ class CompetitorSuggestionService
             throw new RuntimeException('FIRECRAWL_API_KEY is not configured.');
         }
 
+        if ($this->nicheSearchPhrase($brand) === '') {
+            throw new RuntimeException(
+                'Competitor suggestion needs a brand description (update_brand or start_brand_autofill) so discovery can search the niche instead of an ambiguous name.',
+            );
+        }
+
         $limit = max(1, (int) config('snitch.competitor_suggest.search_limit', 8));
 
         return $this->firecrawl->searchMany($this->searchQueries($brand), ['limit' => $limit]);
@@ -95,7 +101,7 @@ class CompetitorSuggestionService
         $response = $this->nanoGpt->chat([
             [
                 'role' => 'system',
-                'content' => 'You normalise competitor organisations and social handles from web search evidence. Reply with JSON only. Ground every suggestion in the provided search hits (titles, urls, descriptions, or social links). Never invent placeholder handles like *_local, *tips, or slug-derived fakes. Never suggest the brand itself or its own handles. Prefer real public org pages. Omit a platform when unsure. Niche rivals only - not lifestyle, meme, or unrelated accounts. Multiple platforms per org are encouraged when the evidence supports them.',
+                'content' => 'You normalise competitor organisations and social handles from web search evidence. Reply with JSON only. Ground every suggestion in the provided search hits (titles, urls, descriptions, or social links). Never invent placeholder handles like *_local, *tips, or slug-derived fakes. Never suggest the brand itself or its own handles. Prefer real public org pages. Omit a platform when unsure. Niche rivals only - not lifestyle, meme, fashion-label name collisions, slang/gossip, or unrelated accounts. When the brand is a software/SaaS product, reject hits that only match the brand name as a word or homonym. Multiple platforms per org are encouraged when the evidence supports them.',
             ],
             [
                 'role' => 'user',
@@ -395,12 +401,8 @@ class CompetitorSuggestionService
         $niche = $this->nicheSearchPhrase($brand);
         $queries = [];
 
-        if ($name !== '') {
-            $queries[] = "{$name} competitors alternatives";
-            $queries[] = "{$name} vs similar tools brands";
-        }
-
-        if ($niche !== '' && strcasecmp($niche, $name) !== 0) {
+        // Niche-first: never lead Firecrawl with ambiguous brand names (e.g. "Snitch").
+        if ($niche !== '') {
             $queries[] = "{$niche} competitors alternatives software tools";
             $queries[] = "{$niche} influencers creators social media";
         }
@@ -409,18 +411,25 @@ class CompetitorSuggestionService
             $queries[] = "competitors alternatives related:{$host}";
         }
 
-        // Niche-led per-platform searches. Brand-name-only site: queries return junk TikToks.
-        $platformTopic = $niche !== '' ? $niche : $name;
+        if (
+            $name !== ''
+            && $niche !== ''
+            && ! $this->isWeakBrandName($name)
+        ) {
+            $queries[] = "{$name} competitors alternatives";
+            $queries[] = "{$name} vs similar tools brands";
+        }
 
-        if ($platformTopic !== '') {
+        // Niche-led per-platform searches only (never fall back to a weak brand name).
+        if ($niche !== '') {
             foreach ($this->configuredPlatforms() as $platform) {
                 $queries[] = match ($platform) {
-                    'instagram' => "{$platformTopic} site:instagram.com",
-                    'tiktok' => "{$platformTopic} site:tiktok.com",
-                    'youtube' => "{$platformTopic} Shorts OR channel site:youtube.com",
-                    'linkedin' => "{$platformTopic} (site:linkedin.com/company OR site:linkedin.com/in)",
-                    'facebook' => "{$platformTopic} site:facebook.com",
-                    default => "{$platformTopic} {$platform}",
+                    'instagram' => "{$niche} site:instagram.com",
+                    'tiktok' => "{$niche} site:tiktok.com",
+                    'youtube' => "{$niche} Shorts OR channel site:youtube.com",
+                    'linkedin' => "{$niche} (site:linkedin.com/company OR site:linkedin.com/in)",
+                    'facebook' => "{$niche} site:facebook.com",
+                    default => "{$niche} {$platform}",
                 };
             }
         }
@@ -428,20 +437,54 @@ class CompetitorSuggestionService
         return array_values(array_unique(array_filter($queries)));
     }
 
-    private function nicheSearchPhrase(BrandProfile $brand): string
+    /**
+     * Short / slang / dictionary-style names that collide in web search.
+     */
+    public function isWeakBrandName(string $name): bool
     {
-        $name = trim($brand->name);
+        $trimmed = trim($name);
+
+        if ($trimmed === '') {
+            return true;
+        }
+
+        $normalized = strtolower(preg_replace('/[^a-z0-9]+/i', '', $trimmed) ?? '');
+
+        /** @var list<string> $weakWords */
+        $weakWords = [
+            'snitch', 'spark', 'pulse', 'nova', 'orbit', 'pixel', 'echo', 'bolt',
+            'wave', 'bloom', 'craft', 'stack', 'shift', 'glide', 'flare', 'beacon',
+            'signal', 'whisper', 'shadow', 'ghost', 'cipher',
+        ];
+
+        if (in_array($normalized, $weakWords, true)) {
+            return true;
+        }
+
+        $spaced = preg_replace('/([a-z])([A-Z])/', '$1 $2', $trimmed) ?? $trimmed;
+        $tokens = array_values(array_filter(preg_split('/[^a-z0-9]+/i', $spaced) ?: []));
+
+        return count($tokens) <= 1 && strlen($normalized) <= 8;
+    }
+
+    public function nicheSearchPhrase(BrandProfile $brand): string
+    {
         $description = trim(preg_replace('/\s+/', ' ', (string) ($brand->description ?? '')) ?? '');
 
         if ($description === '') {
-            return $name;
+            return '';
         }
 
         // Prefer concrete niche nouns over the full marketing blurb / brand name echo.
-        if (preg_match_all('/\b(grants?|fundraising|nonprofit|non-profit|charit(?:y|ies)|founder|startup|scholarship|funding)\b/i', $description, $matches) >= 1) {
-            $tokens = array_values(array_unique(array_map(strtolower(...), $matches[0])));
+        $pattern = '/\b(grants?|fundraising|nonprofit|non-profit|charit(?:y|ies)|founder|startup|scholarship|funding|competitor(?:s)?|influencer(?:s)?|social\s+listening|social\s+media|analytics|marketing|discovery|tracking|intelligence|saas|software|platform|content|reels?|tiktok|instagram)\b/i';
 
-            return trim(implode(' ', array_slice($tokens, 0, 4)).' software');
+        if (preg_match_all($pattern, $description, $matches) >= 1) {
+            $tokens = array_values(array_unique(array_map(
+                fn (string $token): string => strtolower(preg_replace('/\s+/', ' ', $token) ?? $token),
+                $matches[0],
+            )));
+
+            return trim(implode(' ', array_slice($tokens, 0, 5)).' tools');
         }
 
         return Str::limit($description, 60, '');
@@ -1018,7 +1061,8 @@ Search evidence (ground every competitor in these hits; prefer orgs/domains/soci
 {$evidence}
 
 Suggest up to {$maxCandidates} distinct niche competitor organisations whose social content is worth tracking.
-Focus on direct rivals and adjacent tools in the same category as the brand.
+Focus on direct rivals and adjacent tools in the same category as the brand description - not accounts that merely share the brand name as a word.
+If the brand is a software / social intelligence / SaaS product, reject fashion labels, meme/gossip creators, and other name-collision junk even when the brand name appears in their title.
 Return a fair multi-platform mix when the evidence supports it (instagram, tiktok, youtube, linkedin, facebook).
 Prefer Instagram, TikTok, YouTube Shorts channels, LinkedIn company pages, and LinkedIn creator (/in/) profiles over flooding with Facebook-only rows.
 Return multiple platforms per org when the evidence supports real handles.

@@ -95,13 +95,13 @@ final class WorkflowGuide
     private static function brand(): array
     {
         return [
-            'summary' => 'Ensure brand name + website are set before competitor or influencer discovery.',
+            'summary' => 'Ensure brand name, website, and description are set before competitor or influencer discovery.',
             'prerequisites' => [
                 'whoami already called.',
             ],
             'do_not_skip' => [
-                'Brand name and website are required for suggest_competitors and find_influencers.',
-                'Empty description warns only; blank website/name hard-blocks discovery.',
+                'Brand name, website, and description are required for suggest_competitors and find_influencers.',
+                'Empty description hard-blocks discovery so niche search is not skipped for ambiguous names.',
                 'Switching brand does NOT clear tracked competitors/influencers - remove prior-niche accounts before discovery.',
             ],
             'steps' => [
@@ -135,7 +135,7 @@ final class WorkflowGuide
             'summary' => 'Discover competitors, then confirm selections. Suggestions are cache-only until confirmed.',
             'prerequisites' => [
                 'whoami + billing_status (can_run_billable).',
-                'Brand name + website ready (BrandContext).',
+                'Brand name + website + description ready (BrandContext).',
                 'Queue worker running for local async.',
             ],
             'do_not_skip' => [
@@ -146,7 +146,7 @@ final class WorkflowGuide
             'steps' => [
                 self::step(1, 'whoami', 'Check brand_warnings and runtime.'),
                 self::step(2, 'billing_status', 'Ensure balance above 20p.'),
-                self::step(3, 'get_brand', 'Confirm name + website before suggest.'),
+                self::step(3, 'get_brand', 'Confirm name + website + description before suggest.'),
                 self::step(4, 'suggest_competitors', 'Queue suggestions (default wait_seconds=0). Poll suggest_competitors_status until completed; Cursor/local may pass wait_seconds 8-22 on either tool.'),
                 self::step(5, 'suggest_competitors_status', 'Poll until completed/failed (suggest_id optional - omit for latest/active run). Default wait_seconds=0; pass 8-12 on local serve if needed.'),
                 self::step(6, 'confirm_competitor_suggestions', 'Pass suggest_id + selected handles (strings or {platform, handle}). Default dismiss_remainder=true. Or dismiss_competitor_suggestions + add_competitor when suggestions are off-niche.'),
@@ -176,7 +176,7 @@ final class WorkflowGuide
             'summary' => 'Find influencer candidates, then keep or discard. Find alone does not keep anyone.',
             'prerequisites' => [
                 'whoami + billing_status (can_run_billable).',
-                'Brand name + website ready.',
+                'Brand name + website + description ready.',
                 'Queue worker running for local async.',
             ],
             'do_not_skip' => [

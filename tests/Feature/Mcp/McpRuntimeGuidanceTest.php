@@ -197,7 +197,7 @@ class McpRuntimeGuidanceTest extends TestCase
         $this->assertTrue(collect($warnings)->contains(fn (string $w): bool => str_contains($w, 'website')));
     }
 
-    public function test_brand_context_warns_empty_description_without_blocking(): void
+    public function test_brand_context_blocks_empty_description(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->create([
@@ -207,7 +207,8 @@ class McpRuntimeGuidanceTest extends TestCase
             'description' => null,
         ]);
 
-        $this->assertSame([], BrandContext::blockingErrorsFor($user->fresh()));
+        $errors = BrandContext::blockingErrorsFor($user->fresh());
+        $this->assertTrue(collect($errors)->contains(fn (string $e): bool => str_contains($e, 'description')));
         $warnings = BrandContext::warningsFor($user->fresh());
         $this->assertTrue(collect($warnings)->contains(fn (string $w): bool => str_contains($w, 'description')));
     }

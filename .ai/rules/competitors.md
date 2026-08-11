@@ -25,6 +25,9 @@ Suggested rivals and tracked competitors use independent checkbox selection. Sha
 ## Competitor suggest is Firecrawl-first
 Discovery order: Firecrawl search -> NanoGPT normalize/dedupe grounded in hits -> Apify resolveProfile (require external_id). Do not invent rivals from LLM memory alone. Target 12-16 verified rows when possible; fail clearly under min_suggestions. Multi-platform mix including youtube.
 
+## Suggest is niche-first (not brand-name-first)
+Lead Firecrawl with niche phrase + website host queries. Weak / ambiguous brand names (short single tokens or slang like "Snitch") must not drive `"{$name} competitors"` searches. Empty brand description blocks suggest (MCP BrandContext + service gate) - agents must update_brand or start_brand_autofill first. Propose prompt rejects name-collision junk (fashion/meme/homonyms) when the brand is SaaS/software.
+
 ## Suggest must not starve non-Facebook platforms
 Run niche-led per-platform Firecrawl `site:` queries (instagram, tiktok, youtube, linkedin, facebook), not brand-name-only TikTok fishing. LinkedIn query covers company pages and `/in/` creators. Interleave candidates across platforms through merge and verify. Soft-cap any one platform (`max_per_platform`, default 3) while other platforms still have candidates; relax only to meet `min_suggestions`. Reject pure numeric Facebook handles (`@1000…`) unless Apify resolves a non-numeric vanity handle.
 

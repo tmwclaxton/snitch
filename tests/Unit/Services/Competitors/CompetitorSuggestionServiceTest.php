@@ -16,6 +16,7 @@ use App\Services\Firecrawl\FirecrawlClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Mockery;
+use RuntimeException;
 use Tests\TestCase;
 
 class CompetitorSuggestionServiceTest extends TestCase
@@ -113,12 +114,68 @@ class CompetitorSuggestionServiceTest extends TestCase
         $this->assertTrue(collect($queries)->contains(
             fn (string $q): bool => str_contains($q, 'grant') && str_contains($q, 'site:tiktok.com'),
         ));
+        $this->assertTrue(collect($queries)->contains('GrantGunner competitors alternatives'));
         $this->assertFalse(collect($queries)->contains(
             fn (string $q): bool => str_starts_with($q, 'GrantGunner site:tiktok.com'),
         ));
         $this->assertFalse(collect($queries)->contains(
             fn (string $q): bool => str_contains($q, 'site:linkedin.com/company OR site:instagram.com OR site:facebook.com'),
         ));
+    }
+
+    public function test_search_queries_skip_weak_brand_name_for_snitch(): void
+    {
+        config([
+            'snitch.competitor_suggest.platforms' => ['instagram', 'tiktok', 'youtube', 'linkedin', 'facebook'],
+        ]);
+
+        $user = User::factory()->create();
+        $brand = BrandProfile::factory()->for($user)->create([
+            'name' => 'Snitch',
+            'description' => 'Social media intelligence platform for tracking competitors and influencers',
+            'website' => 'https://www.snitchsocial.net',
+        ]);
+
+        $service = $this->makeService();
+
+        $this->assertTrue($service->isWeakBrandName('Snitch'));
+        $this->assertFalse($service->isWeakBrandName('GrantGunner'));
+        $this->assertFalse($service->isWeakBrandName('Brandwatch'));
+
+        $queries = $service->searchQueries($brand);
+
+        $this->assertFalse(collect($queries)->contains('Snitch competitors alternatives'));
+        $this->assertFalse(collect($queries)->contains('Snitch vs similar tools brands'));
+        $this->assertTrue(collect($queries)->contains(
+            fn (string $q): bool => str_contains($q, 'competitors alternatives software tools'),
+        ));
+        $this->assertTrue(collect($queries)->contains('competitors alternatives related:snitchsocial.net'));
+        $this->assertTrue(collect($queries)->contains(
+            fn (string $q): bool => str_contains($q, 'site:tiktok.com')
+                && ! str_starts_with($q, 'Snitch '),
+        ));
+        $this->assertNotSame('', $service->nicheSearchPhrase($brand));
+    }
+
+    public function test_search_requires_brand_description(): void
+    {
+        config(['snitch.firecrawl.api_key' => 'fc-test']);
+
+        $user = User::factory()->create();
+        $brand = BrandProfile::factory()->for($user)->create([
+            'name' => 'Snitch',
+            'description' => null,
+            'website' => 'https://www.snitchsocial.net',
+        ]);
+
+        $service = $this->makeService();
+
+        $this->assertSame('', $service->nicheSearchPhrase($brand));
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('brand description');
+
+        $service->search($brand);
     }
 
     public function test_verify_rejects_numeric_facebook_handles_even_if_resolved(): void

@@ -11,7 +11,7 @@ use Laravel\Mcp\Response;
 class BrandContext
 {
     /**
-     * Hard blockers for billable discovery (suggest / find). Empty description is warning-only.
+     * Hard blockers for billable discovery (suggest / find). Empty description blocks niche search.
      *
      * @return list<string>
      */
@@ -34,11 +34,15 @@ class BrandContext
             $errors[] = 'Brand name is blank. Set name via update_brand or start_brand_autofill before discovery.';
         }
 
+        if (blank($brand->description)) {
+            $errors[] = 'Brand description is blank. Set description via update_brand or start_brand_autofill so discovery searches the niche instead of an ambiguous name.';
+        }
+
         return $errors;
     }
 
     /**
-     * Block suggest/find when brand is missing or website/name blank.
+     * Block suggest/find when brand is missing or website/name/description blank.
      */
     public static function assertReady(User $user): ?Response
     {
@@ -77,7 +81,7 @@ class BrandContext
         }
 
         if (blank($brand->description)) {
-            $warnings[] = 'Brand description is empty. Autofill or update_brand with positioning so discovery briefs are on-niche.';
+            $warnings[] = 'Brand description is blank (also blocks suggest_competitors / find_influencers). Autofill or update_brand with positioning so discovery stays on-niche.';
         }
 
         if (
