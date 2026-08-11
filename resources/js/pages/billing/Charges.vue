@@ -4,6 +4,7 @@ import { FilterX } from '@lucide/vue';
 import { computed } from 'vue';
 import { charges as billingCharges, index as billingIndex } from '@/actions/App/Http/Controllers/Settings/BillingController';
 import PaperSelect from '@/components/PaperSelect.vue';
+import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { chargeLinkHref } from '@/lib/billingCharges';
 import type { ChargeRow } from '@/lib/billingCharges';
@@ -16,16 +17,18 @@ type PaginationLink = {
     active: boolean;
 };
 
+type ChargesPage = {
+    data: ChargeRow[];
+    links: PaginationLink[];
+    current_page: number;
+    last_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+};
+
 const props = defineProps<{
-    charges: {
-        data: ChargeRow[];
-        links: PaginationLink[];
-        current_page: number;
-        last_page: number;
-        total: number;
-        from: number | null;
-        to: number | null;
-    };
+    charges?: ChargesPage | null;
     filters: {
         vendor: string | null;
         action: string | null;
@@ -35,6 +38,10 @@ const props = defineProps<{
     actions: string[];
     usage: { balance_pence: number };
 }>();
+
+const chargesLoaded = computed(() => props.charges != null);
+const chargesData = computed<ChargeRow[]>(() => props.charges?.data ?? []);
+const chargesLinks = computed<PaginationLink[]>(() => props.charges?.links ?? []);
 
 defineOptions({
     layout: AppLayout,
@@ -236,15 +243,28 @@ function paginationLabel(label: string): string {
                 <div class="flex flex-wrap items-baseline justify-between gap-2">
                     <h2 class="snitch-display text-2xl text-snitch-ink">Ledger</h2>
                     <p
-                        v-if="charges.total > 0"
+                        v-if="chargesLoaded && charges!.total > 0"
                         class="text-xs uppercase tracking-wide text-snitch-ink/45"
                     >
-                        {{ charges.from }}-{{ charges.to }} of {{ charges.total }}
+                        {{ charges!.from }}-{{ charges!.to }} of {{ charges!.total }}
                     </p>
                 </div>
 
                 <div
-                    v-if="charges.data.length"
+                    v-if="!chargesLoaded"
+                    class="space-y-2.5"
+                    aria-live="polite"
+                    aria-label="Loading ledger"
+                >
+                    <SnitchSkeleton
+                        v-for="row in 6"
+                        :key="`charge-skel-${row}`"
+                        variant="scrap"
+                        height="2.5rem"
+                    />
+                </div>
+                <div
+                    v-else-if="chargesData.length"
                     class="overflow-x-auto"
                 >
                     <table class="w-full min-w-[36rem] text-left text-sm">
@@ -259,7 +279,7 @@ function paginationLabel(label: string): string {
                         </thead>
                         <tbody class="divide-y divide-snitch-ink/10">
                             <tr
-                                v-for="row in charges.data"
+                                v-for="row in chargesData"
                                 :key="row.id"
                             >
                                 <td class="py-2.5 pr-3 tabular-nums text-snitch-ink/70">
@@ -317,12 +337,12 @@ function paginationLabel(label: string): string {
             </section>
 
             <nav
-                v-if="charges.links.length > 3"
+                v-if="chargesLinks.length > 3"
                 class="mt-8 flex flex-wrap justify-center gap-2"
                 aria-label="Pagination"
             >
                 <template
-                    v-for="(link, index) in charges.links"
+                    v-for="(link, index) in chargesLinks"
                     :key="`${link.label}-${index}`"
                 >
                     <Link

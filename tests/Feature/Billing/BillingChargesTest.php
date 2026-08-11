@@ -10,6 +10,7 @@ use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Billing\UsageBillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Cashier\Subscription;
 use Tests\TestCase;
@@ -54,18 +55,23 @@ class BillingChargesTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('billing/Charges')
-                ->has('charges.data', UsageBillingService::CHARGES_PER_PAGE)
-                ->where('charges.total', 31)
-                ->where('charges.current_page', 1)
-                ->where('charges.last_page', 2)
+                ->missing('charges')
                 ->has('filters')
                 ->has('vendors')
                 ->has('actions')
-                ->where('usage.balance_pence', fn ($balance) => (float) $balance === $this->billing->balancePence($user)));
+                ->where('usage.balance_pence', fn ($balance) => (float) $balance === $this->billing->balancePence($user))
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('charges.data', UsageBillingService::CHARGES_PER_PAGE)
+                    ->where('charges.total', 31)
+                    ->where('charges.current_page', 1)
+                    ->where('charges.last_page', 2)
+                )
+            );
 
-        $pageTwo = $this->actingAs($user)
-            ->get(route('billing.charges', ['page' => 2]))
-            ->assertOk();
+        $pageTwo = $this->reloadCharges(
+            $user,
+            route('billing.charges', ['page' => 2]),
+        );
 
         $pageTwo->assertInertia(fn (Assert $page) => $page
             ->component('billing/Charges')
@@ -96,6 +102,8 @@ class BillingChargesTest extends TestCase
             ->withHeaders([
                 'X-Forwarded-Proto' => 'http',
                 'X-Forwarded-For' => '203.0.113.10',
+                'X-Inertia-Partial-Component' => 'billing/Charges',
+                'X-Inertia-Partial-Data' => 'charges',
             ])
             ->get('http://www.snitchsocial.net/billing/charges?page=2')
             ->assertOk();
@@ -126,30 +134,42 @@ class BillingChargesTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('filters.vendor', 'nanogpt')
-                ->where('charges.total', 2)
-                ->where('charges.data.0.vendor', 'nanogpt'));
+                ->missing('charges')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->where('charges.total', 2)
+                    ->where('charges.data.0.vendor', 'nanogpt')
+                )
+            );
 
         $this->actingAs($user)
             ->get(route('billing.charges', ['action' => 'sync.account']))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('filters.action', 'sync.account')
-                ->where('charges.total', 1)
-                ->where('charges.data.0.action', 'sync.account'));
+                ->missing('charges')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->where('charges.total', 1)
+                    ->where('charges.data.0.action', 'sync.account')
+                )
+            );
 
         $this->actingAs($user)
             ->get(route('billing.charges', ['days' => 30, 'vendor' => 'nanogpt']))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('filters.days', 30)
-                ->where('charges.total', 1));
+                ->missing('charges')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->where('charges.total', 1)
+                )
+            );
 
-        $filtered = $this->actingAs($user)
-            ->get(route('billing.charges', ['vendor' => 'nanogpt', 'page' => 1]))
-            ->assertOk();
+        $filtered = $this->reloadCharges(
+            $user,
+            route('billing.charges', ['vendor' => 'nanogpt', 'page' => 1]),
+        );
 
         $filtered->assertInertia(fn (Assert $page) => $page
-            ->where('filters.vendor', 'nanogpt')
             ->where('charges.path', '/billing/charges'));
 
         $this->assertPathOnlyChargeLinks(
@@ -176,9 +196,13 @@ class BillingChargesTest extends TestCase
             ->get(route('billing.charges', ['vendor' => 'nanogpt']))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('charges.data.0.vendor', 'nanogpt')
-                ->where('charges.data.0.amount_pence', -0.05)
-                ->where('charges.data.0.balance_after_pence', 999.95));
+                ->missing('charges')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->where('charges.data.0.vendor', 'nanogpt')
+                    ->where('charges.data.0.amount_pence', -0.05)
+                    ->where('charges.data.0.balance_after_pence', 999.95)
+                )
+            );
     }
 
     public function test_billing_index_recent_charges_are_preview_only(): void
@@ -247,16 +271,20 @@ class BillingChargesTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('billing/Charges')
-                ->where('charges.data.0.description', 'Suggested competitors')
-                ->where('charges.data.0.link.type', 'competitors')
-                ->where('charges.data.0.link.label', 'Competitors')
-                ->where('charges.data.1.description', 'Synced Instagram competitor @rival')
-                ->where('charges.data.1.link.type', 'tracked_account')
-                ->where('charges.data.1.link.id', 7)
-                ->where('charges.data.1.link.label', '@rival')
-                ->where('charges.data.2.description', 'Analyzed YouTube Short')
-                ->where('charges.data.2.link.type', 'post')
-                ->where('charges.data.2.link.id', 42));
+                ->missing('charges')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->where('charges.data.0.description', 'Suggested competitors')
+                    ->where('charges.data.0.link.type', 'competitors')
+                    ->where('charges.data.0.link.label', 'Competitors')
+                    ->where('charges.data.1.description', 'Synced Instagram competitor @rival')
+                    ->where('charges.data.1.link.type', 'tracked_account')
+                    ->where('charges.data.1.link.id', 7)
+                    ->where('charges.data.1.link.label', '@rival')
+                    ->where('charges.data.2.description', 'Analyzed YouTube Short')
+                    ->where('charges.data.2.link.type', 'post')
+                    ->where('charges.data.2.link.id', 42)
+                )
+            );
 
         $this->actingAs($user)
             ->get(route('billing.edit'))
@@ -281,9 +309,13 @@ class BillingChargesTest extends TestCase
             ->get(route('billing.charges'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('charges.data.0.description', 'Analyzed post')
-                ->where('charges.data.0.link', null)
-                ->where('charges.data.0.action', 'analyze.post'));
+                ->missing('charges')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->where('charges.data.0.description', 'Analyzed post')
+                    ->where('charges.data.0.link', null)
+                    ->where('charges.data.0.action', 'analyze.post')
+                )
+            );
     }
 
     public function test_legacy_embed_analysis_links_via_post_analysis_id(): void
@@ -310,11 +342,15 @@ class BillingChargesTest extends TestCase
             ->get(route('billing.charges'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('charges.data.0.description', 'Indexed post analysis')
-                ->where('charges.data.0.action', 'embed.analysis')
-                ->where('charges.data.0.link.type', 'post')
-                ->where('charges.data.0.link.id', $post->id)
-                ->where('charges.data.0.link.label', 'View post'));
+                ->missing('charges')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->where('charges.data.0.description', 'Indexed post analysis')
+                    ->where('charges.data.0.action', 'embed.analysis')
+                    ->where('charges.data.0.link.type', 'post')
+                    ->where('charges.data.0.link.id', $post->id)
+                    ->where('charges.data.0.link.label', 'View post')
+                )
+            );
     }
 
     public function test_invalid_charge_filters_are_rejected(): void
@@ -328,6 +364,23 @@ class BillingChargesTest extends TestCase
         $this->actingAs($user)
             ->get(route('billing.charges', ['days' => 14]))
             ->assertSessionHasErrors('days');
+    }
+
+    /**
+     * Partial reload that resolves the deferred `charges` prop for the billing charges page.
+     *
+     * Mirrors Inertia's ReloadRequest: sets only the partial component + partial-only
+     * headers (no X-Inertia) so the response comes back as a full page view we can
+     * pipe into `assertInertia()` / `inertiaProps()`.
+     */
+    private function reloadCharges(User $user, string $url): TestResponse
+    {
+        return $this->actingAs($user)
+            ->withHeaders([
+                'X-Inertia-Partial-Component' => 'billing/Charges',
+                'X-Inertia-Partial-Data' => 'charges',
+            ])
+            ->get($url);
     }
 
     /**

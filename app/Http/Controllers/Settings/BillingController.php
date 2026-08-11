@@ -46,7 +46,7 @@ class BillingController extends Controller
         return Inertia::render('billing/Index', [
             'subscription' => $this->entitlements->summary($user),
             'usage' => $this->usage->summary($user),
-            'spendSeries' => $this->usage->spendSeries($user, $grain),
+            'spendSeries' => Inertia::defer(fn () => $this->usage->spendSeries($user, $grain), 'chart'),
             'creditPacks' => $packs,
             'platform' => [
                 'fee_pence' => (int) config('billing.platform_fee_pence', 1900),
@@ -62,7 +62,7 @@ class BillingController extends Controller
         $filters = $request->filters();
 
         return Inertia::render('billing/Charges', [
-            'charges' => $this->usage->paginatedCharges($user, $filters),
+            'charges' => Inertia::defer(fn () => $this->usage->paginatedCharges($user, $filters)),
             'filters' => $filters,
             'vendors' => collect(BillingVendor::cases())
                 ->map(fn (BillingVendor $vendor): string => $vendor->value)

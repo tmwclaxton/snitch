@@ -11,6 +11,7 @@ import type {
     SpendGrain,
     SpendPoint,
 } from '@/components/billing/VendorSpendStackedChart.vue';
+import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { chargeLinkHref } from '@/lib/billingCharges';
 import type { ChargeRow } from '@/lib/billingCharges';
@@ -59,20 +60,24 @@ type CreditPack = {
     has_checkout: boolean;
 };
 
+type SpendSeries = {
+    grain: SpendGrain;
+    period_count: number;
+    days: number;
+    from: string;
+    to: string;
+    points: SpendPoint[];
+};
+
 const props = defineProps<{
     subscription: SubscriptionSummary;
     usage: UsageSummary;
-    spendSeries: {
-        grain: SpendGrain;
-        period_count: number;
-        days: number;
-        from: string;
-        to: string;
-        points: SpendPoint[];
-    };
+    spendSeries?: SpendSeries | null;
     creditPacks: CreditPack[];
     platform: { fee_pence: number; bonus_pence: number; has_checkout: boolean };
 }>();
+
+const spendSeriesLoaded = computed(() => props.spendSeries != null);
 
 defineOptions({
     layout: AppLayout,
@@ -86,7 +91,7 @@ const grainOptions: Array<{ value: SpendGrain; label: string }> = [
     { value: 'month', label: 'Monthly' },
 ];
 
-const selectedGrain = computed(() => props.spendSeries.grain ?? 'day');
+const selectedGrain = computed<SpendGrain>(() => props.spendSeries?.grain ?? 'day');
 
 function grainHref(grain: SpendGrain): string {
     return billingIndex.url({
@@ -254,11 +259,18 @@ function vendorAccent(key: SpendVendorKey): string {
                         {{ option.label }}
                     </Link>
                 </div>
+                <SnitchSkeleton
+                    v-if="!spendSeriesLoaded"
+                    variant="scrap"
+                    height="14rem"
+                    aria-label="Loading spend chart"
+                />
                 <VendorSpendStackedChart
-                    :points="spendSeries.points"
-                    :days="spendSeries.days"
-                    :period-count="spendSeries.period_count"
-                    :grain="spendSeries.grain"
+                    v-else
+                    :points="spendSeries!.points"
+                    :days="spendSeries!.days"
+                    :period-count="spendSeries!.period_count"
+                    :grain="spendSeries!.grain"
                 />
             </section>
 
