@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use App\Models\User;
 use App\Support\PlatformEmbed;
 use App\Support\PostAccountPresenter;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -22,7 +25,26 @@ class BacklogController extends Controller
             $filter = 'queue';
         }
 
-        $baseQuery = fn () => Post::query()
+        return Inertia::render('backlog/Index', [
+            'posts' => Inertia::defer(fn () => $this->paginatedPosts($user, $filter)),
+            'filter' => $filter,
+            'counts' => [
+                'queue' => $this->baseQuery($user)->analysisQueue()->count(),
+                'failed' => $this->baseQuery($user)->analysisFailed()->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * Shared query builder for the analyse backlog page.
+     *
+     * Eager-loads the relations the queue cards render and scopes to the user's posts,
+     * limited to reel-like content. Called from the deferred posts resolver and both
+     * queue/failed count queries so those never diverge.
+     */
+    private function baseQuery(User $user): Builder
+    {
+        return Post::query()
             ->forUser($user)
             ->reelLike()
             ->with([
@@ -30,14 +52,25 @@ class BacklogController extends Controller
                 'analysis',
                 'winnerInsight' => fn ($q) => $q->where('user_id', $user->id),
             ]);
+    }
 
-        $postsQuery = match ($filter) {
-            'failed' => $baseQuery()->analysisFailed(),
-            'all' => $baseQuery()->analysisBacklog(),
-            default => $baseQuery()->analysisQueue(),
+    /**
+     * Build the paginated posts list for the backlog page's deferred payload.
+     *
+     * Deferred so the queue shell (filter tabs + counts) paints before the
+     * heavier pagination + presenter + embed transforms run.
+     *
+     * @return LengthAwarePaginator<int, Post>
+     */
+    private function paginatedPosts(User $user, string $filter): LengthAwarePaginator
+    {
+        $query = match ($filter) {
+            'failed' => $this->baseQuery($user)->analysisFailed(),
+            'all' => $this->baseQuery($user)->analysisBacklog(),
+            default => $this->baseQuery($user)->analysisQueue(),
         };
 
-        $posts = $postsQuery
+        $posts = $query
             ->latest('posted_at')
             ->paginate(24)
             ->withQueryString();
@@ -52,13 +85,6 @@ class BacklogController extends Controller
             return $post;
         });
 
-        return Inertia::render('backlog/Index', [
-            'posts' => $posts,
-            'filter' => $filter,
-            'counts' => [
-                'queue' => $baseQuery()->analysisQueue()->count(),
-                'failed' => $baseQuery()->analysisFailed()->count(),
-            ],
-        ]);
+        return $posts;
     }
 }

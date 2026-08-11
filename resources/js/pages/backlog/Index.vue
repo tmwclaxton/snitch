@@ -6,6 +6,7 @@ import { index as backlogIndex } from '@/actions/App/Http/Controllers/BacklogCon
 import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import FeedContactCell from '@/components/FeedContactCell.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
+import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { PostMetrics } from '@/lib/metrics';
 import { dashboard } from '@/routes';
@@ -36,17 +37,25 @@ type BacklogPost = {
 
 type BacklogFilter = 'queue' | 'failed' | 'all';
 
+type BacklogPage = {
+    data: BacklogPost[];
+    links: Array<{ url: string | null; label: string; active: boolean }>;
+};
+
 const props = defineProps<{
-    posts: {
-        data: BacklogPost[];
-        links: Array<{ url: string | null; label: string; active: boolean }>;
-    };
+    posts?: BacklogPage | null;
     filter: BacklogFilter;
     counts: {
         queue: number;
         failed: number;
     };
 }>();
+
+const postsLoaded = computed<boolean>(() =>
+    Boolean(props.posts && Array.isArray(props.posts.data)),
+);
+const postsData = computed<BacklogPost[]>(() => props.posts?.data ?? []);
+const paginationLinks = computed<BacklogPage['links']>(() => props.posts?.links ?? []);
 
 defineOptions({
     layout: AppLayout,
@@ -178,16 +187,34 @@ onUnmounted(() => {
             </p>
 
             <div
-                v-if="posts.data.length"
+                v-if="!postsLoaded"
+                class="snitch-contact-sheet mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                aria-label="Loading analyse queue"
+            >
+                <div class="snitch-contact-sheet-rail col-span-full">
+                    <p>Analyse queue</p>
+                    <p>Loading…</p>
+                </div>
+                <div
+                    v-for="n in 8"
+                    :key="`backlog-skel-${n}`"
+                    class="p-2"
+                >
+                    <SnitchSkeleton variant="polaroid" />
+                </div>
+            </div>
+
+            <div
+                v-else-if="postsData.length"
                 class="snitch-contact-sheet snitch-contact-reveal mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
             >
                 <div class="snitch-contact-sheet-rail col-span-full">
                     <p>Analyse queue</p>
-                    <p>{{ posts.data.length }} on this page</p>
+                    <p>{{ postsData.length }} on this page</p>
                 </div>
 
                 <FeedContactCell
-                    v-for="(post, index) in posts.data"
+                    v-for="(post, index) in postsData"
                     :key="post.id"
                     :post="post"
                     :index="index"
@@ -224,12 +251,12 @@ onUnmounted(() => {
             </div>
 
             <nav
-                v-if="posts.links.length > 3"
+                v-if="postsLoaded && paginationLinks.length > 3"
                 class="mt-8 flex flex-wrap justify-center gap-2"
                 aria-label="Pagination"
             >
                 <template
-                    v-for="(link, index) in posts.links"
+                    v-for="(link, index) in paginationLinks"
                     :key="`${link.label}-${index}`"
                 >
                     <Link

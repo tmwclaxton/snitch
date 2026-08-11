@@ -55,8 +55,11 @@ class BacklogTest extends TestCase
                 ->where('filter', 'queue')
                 ->where('counts.queue', 2)
                 ->where('counts.failed', 0)
-                ->has('posts.data', 2)
-                ->has('posts.data.0.embed')
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 2)
+                    ->has('posts.data.0.embed')
+                )
             );
     }
 
@@ -83,8 +86,11 @@ class BacklogTest extends TestCase
                 ->where('filter', 'failed')
                 ->where('counts.queue', 1)
                 ->where('counts.failed', 1)
-                ->has('posts.data', 1)
-                ->where('posts.data.0.id', $failed->id)
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 1)
+                    ->where('posts.data.0.id', $failed->id)
+                )
             );
     }
 
@@ -110,8 +116,11 @@ class BacklogTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('backlog/Index')
                 ->where('counts.queue', 1)
-                ->has('posts.data', 1)
-                ->where('posts.data.0.id', $recent->id)
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 1)
+                    ->where('posts.data.0.id', $recent->id)
+                )
             );
     }
 
@@ -132,7 +141,10 @@ class BacklogTest extends TestCase
             ->get(route('backlog.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->has('posts.data', 1)
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 1)
+                )
             );
     }
 }
