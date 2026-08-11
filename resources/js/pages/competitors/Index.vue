@@ -26,6 +26,7 @@ import PlatformSelect from '@/components/PlatformSelect.vue';
 import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
+import SuggestCompetitorsModal from '@/components/SuggestCompetitorsModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import { lastSyncedLabel } from '@/lib/syncSchedule';
@@ -82,6 +83,8 @@ type CompetitorCap = {
 const props = defineProps<{
     accounts?: Account[] | null;
     platforms: string[];
+    suggestPlatforms?: string[];
+    competitorBrief?: string;
     suggestions?: Suggestion[] | null;
     suggestRun?: SuggestRun | null;
     suggestError?: string | null;
@@ -111,12 +114,19 @@ const localSuggestions = ref<Suggestion[]>([]);
 const suggesting = ref(false);
 const suggestMessage = ref(props.suggestError ?? '');
 const removeDialogOpen = ref(false);
+const suggestModalOpen = ref(false);
 const accountToRemove = ref<Account | null>(null);
 const accountsToRemove = ref<Account[]>([]);
 const batchWorking = ref(false);
 const syncingIds = ref<Record<number, boolean>>({});
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let syncPollTimer: ReturnType<typeof setInterval> | null = null;
+
+const suggestPlatformOptions = computed(() =>
+    props.suggestPlatforms && props.suggestPlatforms.length > 0
+        ? props.suggestPlatforms
+        : props.platforms,
+);
 
 const hasRunningSync = computed(() =>
     accountsList.value.some(
@@ -469,13 +479,25 @@ async function pollSuggestions(id: string, attempt = 0): Promise<void> {
     }, 1500);
 }
 
-async function requestSuggestions(): Promise<void> {
+function openSuggestModal(): void {
+    if (suggesting.value) {
+        return;
+    }
+
+    suggestModalOpen.value = true;
+}
+
+async function requestSuggestions(filters: {
+    platforms: string[];
+    brief: string;
+}): Promise<void> {
     if (suggesting.value) {
         return;
     }
 
     clearPoll();
     suggesting.value = true;
+    suggestModalOpen.value = false;
     suggestMessage.value = 'Finding…';
     localSuggestions.value = [];
     selected.value = {};
@@ -490,15 +512,24 @@ async function requestSuggestions(): Promise<void> {
                 'X-Requested-With': 'XMLHttpRequest',
             },
             credentials: 'same-origin',
-            body: JSON.stringify({}),
+            body: JSON.stringify({
+                platforms: filters.platforms,
+                brief: filters.brief,
+            }),
         });
 
         if (!response.ok) {
             const errorBody = (await response.json().catch(() => null)) as
-                | { message?: string }
+                | { message?: string; errors?: Record<string, string[]> }
                 | null;
 
-            throw new Error(errorBody?.message || 'Could not start competitor suggestions.');
+            const firstError = errorBody?.errors
+                ? Object.values(errorBody.errors).flat()[0]
+                : undefined;
+
+            throw new Error(
+                firstError || errorBody?.message || 'Could not start competitor suggestions.',
+            );
         }
 
         const payload = (await response.json()) as { id: string };
@@ -729,7 +760,7 @@ const syncSelectedTitle = computed(() => {
                         type="button"
                         class="snitch-btn snitch-btn-ghost w-full sm:w-auto"
                         :disabled="suggesting"
-                        @click="requestSuggestions"
+                        @click="openSuggestModal"
                     >
                         <LoaderCircle
                             v-if="suggesting"
@@ -1287,6 +1318,14 @@ const syncSelectedTitle = computed(() => {
             :account="accountToRemove"
             :accounts="accountsToRemove"
             @removed="onAccountsRemoved"
+        />
+
+        <SuggestCompetitorsModal
+            v-model:open="suggestModalOpen"
+            :platforms="suggestPlatformOptions"
+            :brief="competitorBrief ?? ''"
+            :busy="suggesting"
+            @submit="requestSuggestions"
         />
     </div>
 </template>

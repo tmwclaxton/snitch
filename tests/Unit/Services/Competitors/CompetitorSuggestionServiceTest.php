@@ -157,9 +157,33 @@ class CompetitorSuggestionServiceTest extends TestCase
         $this->assertNotSame('', $service->nicheSearchPhrase($brand));
     }
 
-    public function test_search_requires_brand_description(): void
+    public function test_search_requires_brand_description_or_brief(): void
     {
         config(['snitch.firecrawl.api_key' => 'fc-test']);
+
+        $user = User::factory()->create();
+        $brand = BrandProfile::factory()->for($user)->create([
+            'name' => 'Snitch',
+            'description' => null,
+            'competitor_brief' => null,
+            'website' => 'https://www.snitchsocial.net',
+        ]);
+
+        $service = $this->makeService();
+
+        $this->assertSame('', $service->nicheSearchPhrase($brand));
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('brand description or competitor brief');
+
+        $service->search($brand);
+    }
+
+    public function test_search_queries_honor_brief_and_platform_filters(): void
+    {
+        config([
+            'snitch.competitor_suggest.platforms' => ['instagram', 'tiktok', 'youtube', 'linkedin', 'facebook'],
+        ]);
 
         $user = User::factory()->create();
         $brand = BrandProfile::factory()->for($user)->create([
@@ -169,13 +193,29 @@ class CompetitorSuggestionServiceTest extends TestCase
         ]);
 
         $service = $this->makeService();
+        $filters = [
+            'platforms' => ['tiktok', 'instagram'],
+            'brief' => 'Social listening and competitor intelligence SaaS tools',
+        ];
 
-        $this->assertSame('', $service->nicheSearchPhrase($brand));
+        $this->assertNotSame('', $service->nicheSearchPhrase($brand, $filters));
+        $this->assertSame(['tiktok', 'instagram'], $service->platformsForRun($filters));
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('brand description');
+        $queries = $service->searchQueries($brand, $filters);
 
-        $service->search($brand);
+        $this->assertTrue(collect($queries)->contains(
+            fn (string $q): bool => str_contains($q, 'site:tiktok.com'),
+        ));
+        $this->assertTrue(collect($queries)->contains(
+            fn (string $q): bool => str_contains($q, 'site:instagram.com'),
+        ));
+        $this->assertFalse(collect($queries)->contains(
+            fn (string $q): bool => str_contains($q, 'site:facebook.com'),
+        ));
+        $this->assertFalse(collect($queries)->contains(
+            fn (string $q): bool => str_contains($q, 'site:linkedin.com'),
+        ));
+        $this->assertFalse(collect($queries)->contains('Snitch competitors alternatives'));
     }
 
     public function test_verify_rejects_numeric_facebook_handles_even_if_resolved(): void

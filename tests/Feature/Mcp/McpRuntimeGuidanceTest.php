@@ -197,7 +197,7 @@ class McpRuntimeGuidanceTest extends TestCase
         $this->assertTrue(collect($warnings)->contains(fn (string $w): bool => str_contains($w, 'website')));
     }
 
-    public function test_brand_context_blocks_empty_description(): void
+    public function test_brand_context_blocks_empty_niche(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->create([
@@ -205,12 +205,15 @@ class McpRuntimeGuidanceTest extends TestCase
             'name' => 'Opinly',
             'website' => 'https://opinly.ai',
             'description' => null,
+            'competitor_brief' => null,
         ]);
 
         $errors = BrandContext::blockingErrorsFor($user->fresh());
-        $this->assertTrue(collect($errors)->contains(fn (string $e): bool => str_contains($e, 'description')));
+        $this->assertTrue(collect($errors)->contains(fn (string $e): bool => str_contains($e, 'niche')));
         $warnings = BrandContext::warningsFor($user->fresh());
         $this->assertTrue(collect($warnings)->contains(fn (string $w): bool => str_contains($w, 'description')));
+
+        $this->assertSame([], BrandContext::blockingErrorsFor($user->fresh(), 'Social listening SaaS rivals'));
     }
 
     public function test_brand_context_soft_warns_when_name_unrelated_to_host(): void

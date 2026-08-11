@@ -77,6 +77,8 @@ return [
         'max_per_platform' => (int) env('SNITCH_COMPETITOR_SUGGEST_MAX_PER_PLATFORM', 3),
         // Multi-platform mix; Apify still must return external_id to keep a row.
         'platforms' => ['instagram', 'tiktok', 'youtube', 'linkedin', 'facebook'],
+        'brief_max_tokens' => (int) env('SNITCH_COMPETITOR_SUGGEST_BRIEF_MAX_TOKENS', 280),
+        'brief_temperature' => (float) env('SNITCH_COMPETITOR_SUGGEST_BRIEF_TEMPERATURE', 0.4),
     ],
 
     'influencer_find' => [

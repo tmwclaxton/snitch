@@ -27,9 +27,13 @@ class SuggestCompetitorsJob implements ShouldQueue
 
     public int $timeout = 600;
 
+    /**
+     * @param  array{platforms?: list<string>, brief?: string}  $filters
+     */
     public function __construct(
         public int $userId,
         public string $suggestId,
+        public array $filters = [],
     ) {}
 
     public function handle(
@@ -76,7 +80,7 @@ class SuggestCompetitorsJob implements ShouldQueue
                     'suggestions' => $partial,
                     'error' => null,
                 ]);
-            });
+            }, $this->filters);
         } catch (InsufficientCompetitorSuggestionsException $exception) {
             $this->chargeCompetitorSuggestVendors($user, $charger, $billing);
             $this->putStatus([
@@ -155,6 +159,8 @@ class SuggestCompetitorsJob implements ShouldQueue
      */
     private function putStatus(array $payload): void
     {
+        $payload['filters'] = $this->filters;
+
         Cache::put($this->cacheKey(), $payload, now()->addHours(2));
 
         if ($payload['status'] === 'completed') {
@@ -184,8 +190,10 @@ class SuggestCompetitorsJob implements ShouldQueue
     /**
      * Seed the poll cache + active pointer used by the Competitors page and MCP status tools.
      * Web and MCP must both call this so Inertia can show a running suggest job.
+     *
+     * @param  array{platforms?: list<string>, brief?: string}  $filters
      */
-    public static function beginRun(int $userId, string $suggestId): void
+    public static function beginRun(int $userId, string $suggestId, array $filters = []): void
     {
         self::clearLatest($userId);
 
@@ -193,6 +201,7 @@ class SuggestCompetitorsJob implements ShouldQueue
             'status' => 'pending',
             'suggestions' => null,
             'error' => null,
+            'filters' => $filters,
             'started_at' => now()->toIso8601String(),
         ], now()->addHours(2));
 

@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools;
 
+use App\Enums\Platform;
 use App\Jobs\SuggestCompetitorsJob;
 use App\Mcp\Support\BrandContext;
 use App\Mcp\Support\McpAuth;
@@ -10,6 +11,7 @@ use App\Mcp\Support\McpRuntime;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
@@ -17,7 +19,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('suggest_competitors')]
-#[Description('Queue AI competitor suggestions (Firecrawl + NanoGPT + Apify; billable). Requires brand name, website, and description (niche-first search; weak names like Snitch are not used as the query). Optional wait_seconds (default 0, max 45) - omit or 0 to return immediately and poll suggest_competitors_status; pass wait_seconds for a blocking wait in Cursor/local. Does NOT track anyone - after status completed you MUST call confirm_competitor_suggestions (or dismiss).')]
+#[Description('Queue AI competitor suggestions (Firecrawl + NanoGPT + Apify; billable). Niche-first search: requires brand description or optional brief. Optional platforms array (instagram/tiktok/youtube/linkedin/facebook) to bias discovery (e.g. reel-native). Optional wait_seconds (default 0, max 45). Does NOT track anyone - after status completed you MUST call confirm_competitor_suggestions (or dismiss).')]
 class SuggestCompetitorsTool extends Tool
 {
     public function handle(Request $request): Response
@@ -27,21 +29,47 @@ class SuggestCompetitorsTool extends Tool
             return $user;
         }
 
-        $blocked = BrandContext::assertReady($user);
+        $platforms = array_map(fn (Platform $platform): string => $platform->value, Platform::cases());
+
+        $data = $request->validate([
+            'wait_seconds' => ['nullable', 'integer', 'min:0', 'max:45'],
+            'platforms' => ['nullable', 'array', 'min:1'],
+            'platforms.*' => ['required', 'string', Rule::in($platforms)],
+            'brief' => ['nullable', 'string', 'min:8', 'max:5000'],
+        ]);
+
+        $brief = isset($data['brief']) ? trim((string) $data['brief']) : null;
+        if ($brief === '') {
+            $brief = null;
+        }
+
+        $blocked = BrandContext::assertReady($user, $brief);
         if ($blocked !== null) {
             return $blocked;
         }
 
-        $data = $request->validate([
-            'wait_seconds' => ['nullable', 'integer', 'min:0', 'max:45'],
-        ]);
+        $filters = [];
+
+        if (isset($data['platforms']) && is_array($data['platforms']) && $data['platforms'] !== []) {
+            $filters['platforms'] = array_values(array_unique($data['platforms']));
+        }
+
+        if ($brief !== null) {
+            $filters['brief'] = $brief;
+            $brand = $user->brandProfile;
+            if ($brand !== null) {
+                $brand->forceFill([
+                    'competitor_brief' => $brief,
+                ])->save();
+            }
+        }
 
         $suggestId = (string) Str::uuid();
         $brandWarnings = BrandContext::warningsFor($user);
         $runtime = McpRuntime::snapshot();
 
-        SuggestCompetitorsJob::beginRun($user->id, $suggestId);
-        SuggestCompetitorsJob::dispatch($user->id, $suggestId);
+        SuggestCompetitorsJob::beginRun($user->id, $suggestId, $filters);
+        SuggestCompetitorsJob::dispatch($user->id, $suggestId, $filters);
 
         $wait = McpJobWait::untilTerminal(
             SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId),
@@ -107,6 +135,8 @@ class SuggestCompetitorsTool extends Tool
     {
         return [
             'wait_seconds' => $schema->integer()->nullable(),
+            'platforms' => $schema->array()->nullable(),
+            'brief' => $schema->string()->nullable(),
         ];
     }
 }

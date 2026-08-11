@@ -45,6 +45,7 @@ class LedgerChargePresenter
             'competitors.suggest' => 'Suggested competitors',
             'influencers.find' => 'Suggested influencers',
             'influencer.brief' => 'Generated influencer brief',
+            'competitor.brief' => 'Generated competitor brief',
             'brand.autofill' => 'Brand autofill',
             'winners.copy' => 'Generated winner copy',
             'explore.search' => $this->exploreSearchDescription($meta),
@@ -86,7 +87,7 @@ class LedgerChargePresenter
         }
 
         return match ($action) {
-            'competitors.suggest' => [
+            'competitors.suggest', 'competitor.brief' => [
                 'type' => 'competitors',
                 'label' => 'Competitors',
             ],

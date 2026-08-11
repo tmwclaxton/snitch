@@ -25,8 +25,10 @@ class CompetitorsSuggestTest extends TestCase
 
     public function test_guest_cannot_start_suggest(): void
     {
-        $this->postJson(route('competitors.suggest'))
-            ->assertUnauthorized();
+        $this->postJson(route('competitors.suggest'), [
+            'platforms' => ['instagram'],
+            'brief' => 'Social listening SaaS rivals on Instagram',
+        ])->assertUnauthorized();
     }
 
     public function test_user_can_start_suggest_job(): void
@@ -37,7 +39,10 @@ class CompetitorsSuggestTest extends TestCase
         BrandProfile::factory()->for($user)->create();
 
         $response = $this->actingAs($user)
-            ->postJson(route('competitors.suggest'))
+            ->postJson(route('competitors.suggest'), [
+                'platforms' => ['instagram', 'tiktok'],
+                'brief' => 'Social listening SaaS rivals worth tracking',
+            ])
             ->assertAccepted()
             ->assertJsonStructure(['id', 'status']);
 
@@ -45,7 +50,10 @@ class CompetitorsSuggestTest extends TestCase
 
         $this->assertIsString($suggestId);
         Queue::assertPushed(SuggestCompetitorsJob::class, function (SuggestCompetitorsJob $job) use ($user, $suggestId): bool {
-            return $job->userId === $user->id && $job->suggestId === $suggestId;
+            return $job->userId === $user->id
+                && $job->suggestId === $suggestId
+                && $job->filters['platforms'] === ['instagram', 'tiktok']
+                && $job->filters['brief'] === 'Social listening SaaS rivals worth tracking';
         });
 
         $this->assertSame(
@@ -53,9 +61,38 @@ class CompetitorsSuggestTest extends TestCase
             Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId))['status'],
         );
         $this->assertSame(
+            ['instagram', 'tiktok'],
+            Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId))['filters']['platforms'],
+        );
+        $this->assertSame(
             $suggestId,
             Cache::get(SuggestCompetitorsJob::activeCacheKeyFor($user->id)),
         );
+        $this->assertSame(
+            'Social listening SaaS rivals worth tracking',
+            $user->fresh()->brandProfile?->competitor_brief,
+        );
+    }
+
+    public function test_suggest_requires_platforms_and_brief(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->postJson(route('competitors.suggest'), [])
+            ->assertUnprocessable();
+
+        $this->actingAs($user)
+            ->postJson(route('competitors.suggest'), [
+                'platforms' => [],
+                'brief' => 'Valid brief about rivals',
+            ])
+            ->assertUnprocessable();
+
+        Queue::assertNothingPushed();
     }
 
     public function test_competitors_index_includes_active_suggest_run(): void
@@ -76,6 +113,8 @@ class CompetitorsSuggestTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('competitors/Index')
+                ->has('suggestPlatforms')
+                ->where('competitorBrief', '')
                 ->where('suggestRun', [
                     'id' => $suggestId,
                     'status' => 'processing',
@@ -139,7 +178,10 @@ class CompetitorsSuggestTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->postJson(route('competitors.suggest'))
+            ->postJson(route('competitors.suggest'), [
+                'platforms' => ['instagram'],
+                'brief' => 'Social listening SaaS rivals worth tracking',
+            ])
             ->assertRedirect();
 
         Queue::assertNothingPushed();
@@ -182,6 +224,8 @@ class CompetitorsSuggestTest extends TestCase
             'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
             'snitch.apify.token' => 'apify-test',
             'snitch.apify.base_url' => 'https://api.apify.test/v2',
+            'snitch.apify.monthly_cap_usd' => 49,
+            'snitch.tikhub.api_key' => '',
             'snitch.competitor_suggest.platforms' => ['instagram'],
             'snitch.competitor_suggest.min_suggestions' => 1,
             'snitch.competitor_suggest.max_suggestions' => 8,
@@ -390,6 +434,8 @@ class CompetitorsSuggestTest extends TestCase
             'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
             'snitch.apify.token' => 'test-token',
             'snitch.apify.base_url' => 'https://api.apify.test/v2',
+            'snitch.apify.monthly_cap_usd' => 49,
+            'snitch.tikhub.api_key' => '',
             'snitch.competitor_suggest.min_suggestions' => 6,
             'snitch.competitor_suggest.max_suggestions' => 16,
             'snitch.competitor_suggest.platforms' => ['instagram'],
@@ -650,6 +696,8 @@ class CompetitorsSuggestTest extends TestCase
         $this->assertNotFalse($page);
         $this->assertStringContainsString('Suggest competitors', $page);
         $this->assertStringContainsString('Finding…', $page);
+        $this->assertStringContainsString('SuggestCompetitorsModal', $page);
+        $this->assertStringContainsString('openSuggestModal', $page);
         $this->assertStringContainsString('suggestStatus.url', $page);
         $this->assertStringContainsString('Scraping the neighborhood', $page);
         $this->assertStringContainsString('Searching the web for rivals', $page);

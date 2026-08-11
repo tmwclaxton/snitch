@@ -132,10 +132,10 @@ final class WorkflowGuide
     private static function competitors(): array
     {
         return [
-            'summary' => 'Discover competitors, then confirm selections. Suggestions are cache-only until confirmed.',
+            'summary' => 'Discover competitors with optional platforms + brief, then confirm selections. Suggestions are cache-only until confirmed.',
             'prerequisites' => [
                 'whoami + billing_status (can_run_billable).',
-                'Brand name + website + description ready (BrandContext).',
+                'Brand name + website + niche (description or brief) ready (BrandContext).',
                 'Queue worker running for local async.',
             ],
             'do_not_skip' => [
@@ -146,8 +146,8 @@ final class WorkflowGuide
             'steps' => [
                 self::step(1, 'whoami', 'Check brand_warnings and runtime.'),
                 self::step(2, 'billing_status', 'Ensure balance above 20p.'),
-                self::step(3, 'get_brand', 'Confirm name + website + description before suggest.'),
-                self::step(4, 'suggest_competitors', 'Queue suggestions (default wait_seconds=0). Poll suggest_competitors_status until completed; Cursor/local may pass wait_seconds 8-22 on either tool.'),
+                self::step(3, 'get_brand', 'Confirm name + website + description (or plan to pass brief) before suggest.'),
+                self::step(4, 'suggest_competitors', 'Optional platforms (e.g. instagram,tiktok) + brief to steer niche/reel-native search. Default wait_seconds=0; poll status.'),
                 self::step(5, 'suggest_competitors_status', 'Poll until completed/failed (suggest_id optional - omit for latest/active run). Default wait_seconds=0; pass 8-12 on local serve if needed.'),
                 self::step(6, 'confirm_competitor_suggestions', 'Pass suggest_id + selected handles (strings or {platform, handle}). Default dismiss_remainder=true. Or dismiss_competitor_suggestions + add_competitor when suggestions are off-niche.'),
                 self::step(7, 'list_competitors', 'Verify tracked accounts. Use dismiss_competitor_suggestions to clear without tracking.'),
@@ -157,6 +157,7 @@ final class WorkflowGuide
                 'Do not end the session with unconfirmed suggestions still pending.',
                 'Partial suggestions stream while processing - cherry-pick carefully or wait for completed.',
                 'Brand switch does not auto-clear rivals - remove_competitor for prior niche first.',
+                'Pass platforms + brief when the brand name is weak or you need TikTok/Instagram reels for the feed.',
             ],
         ];
     }

@@ -5,11 +5,15 @@ namespace App\Http\Controllers;
 use App\Enums\Platform;
 use App\Enums\TrackedAccountKind;
 use App\Exceptions\InsufficientCreditsException;
+use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Http\Requests\Competitors\BatchDestroyCompetitorsRequest;
 use App\Http\Requests\Competitors\BatchSyncCompetitorsRequest;
 use App\Http\Requests\Competitors\ConfirmSuggestionsRequest;
 use App\Http\Requests\Competitors\DismissSuggestionsRequest;
+use App\Http\Requests\Competitors\GenerateCompetitorBriefRequest;
 use App\Http\Requests\Competitors\StoreTrackedAccountRequest;
+use App\Http\Requests\Competitors\SuggestCompetitorsRequest;
+use App\Http\Requests\Competitors\UpdateCompetitorBriefRequest;
 use App\Jobs\SuggestCompetitorsJob;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Models\Post;
@@ -18,6 +22,8 @@ use App\Models\User;
 use App\Models\WinnerInsight;
 use App\Services\Billing\PlanEntitlementService;
 use App\Services\Billing\UsageBillingService;
+use App\Services\Billing\VendorUsageCharger;
+use App\Services\Competitors\CompetitorSuggestionService;
 use App\Support\PlatformEmbed;
 use App\Support\PostAccountPresenter;
 use Illuminate\Http\JsonResponse;
@@ -28,6 +34,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class CompetitorController extends Controller
@@ -35,15 +42,29 @@ class CompetitorController extends Controller
     public function __construct(
         private PlanEntitlementService $entitlements,
         private UsageBillingService $billing,
+        private CompetitorSuggestionService $suggestions,
+        private VendorUsageCharger $charger,
     ) {}
 
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', TrackedAccount::class);
 
+        $brand = $request->user()->brandProfile;
+        $suggestPlatforms = collect(config('snitch.competitor_suggest.platforms', []))
+            ->filter(fn (mixed $platform): bool => is_string($platform) && Platform::tryFrom($platform) !== null)
+            ->values()
+            ->all();
+
+        if ($suggestPlatforms === []) {
+            $suggestPlatforms = collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values()->all();
+        }
+
         return Inertia::render('competitors/Index', [
             'accounts' => Inertia::defer(fn () => $this->accountsWithCounts($request->user())),
             'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
+            'suggestPlatforms' => $suggestPlatforms,
+            'competitorBrief' => $brand?->competitor_brief ?? '',
             'suggestions' => Inertia::defer(fn () => $this->visibleSuggestions($request), 'suggestions'),
             'suggestRun' => $this->activeSuggestRun($request->user()->id),
             'suggestError' => $this->suggestError($request->user()->id),
@@ -99,23 +120,89 @@ class CompetitorController extends Controller
         return redirect()->route('competitors.index');
     }
 
-    public function suggest(Request $request): JsonResponse
+    public function suggest(SuggestCompetitorsRequest $request): JsonResponse
     {
-        $this->authorize('create', TrackedAccount::class);
-
         $brand = $request->user()->brandProfile;
         abort_unless($brand !== null, 404);
+
+        $data = $request->validated();
+        $filters = [
+            'platforms' => array_values(array_unique($data['platforms'])),
+            'brief' => trim($data['brief']),
+        ];
+
+        $brand->forceFill([
+            'competitor_brief' => $filters['brief'],
+        ])->save();
 
         $suggestId = (string) Str::uuid();
         $userId = $request->user()->id;
 
-        SuggestCompetitorsJob::beginRun($userId, $suggestId);
-        SuggestCompetitorsJob::dispatch($userId, $suggestId);
+        SuggestCompetitorsJob::beginRun($userId, $suggestId, $filters);
+        SuggestCompetitorsJob::dispatch($userId, $suggestId, $filters);
 
         return response()->json([
             'id' => $suggestId,
             'status' => 'pending',
         ], SymfonyResponse::HTTP_ACCEPTED);
+    }
+
+    public function generateBrief(GenerateCompetitorBriefRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        $brand = $user->brandProfile;
+        abort_unless($brand !== null, 404);
+
+        $platforms = array_values(array_unique($request->validated('platforms')));
+
+        try {
+            $this->charger->assertCanRun($user);
+            $brief = $this->suggestions->generateCompetitorBrief($brand, [
+                'platforms' => $platforms,
+            ]);
+        } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException|RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], SymfonyResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $brand->forceFill([
+            'competitor_brief' => $brief,
+        ])->save();
+
+        $this->charger->chargeNanoGpt(
+            user: $user,
+            action: 'competitor.brief',
+            cogsUsd: $this->billing->estimateNanoGptChatUsd(
+                null,
+                null,
+                (string) config('snitch.competitor_suggest.model'),
+            ),
+            meta: [
+                'kind' => 'manual',
+                'brand_profile_id' => $brand->id,
+                'platforms' => $platforms,
+            ],
+            idempotencyKey: 'competitor.brief:manual:'.$user->id.':'.md5($brief),
+        );
+
+        return response()->json(['brief' => $brief]);
+    }
+
+    public function updateBrief(UpdateCompetitorBriefRequest $request): JsonResponse
+    {
+        $brand = $request->user()->brandProfile;
+        abort_unless($brand !== null, 404);
+
+        $brief = trim((string) ($request->validated('competitor_brief') ?? ''));
+
+        $brand->forceFill([
+            'competitor_brief' => $brief !== '' ? $brief : null,
+        ])->save();
+
+        return response()->json([
+            'brief' => $brand->competitor_brief ?? '',
+        ]);
     }
 
     public function suggestStatus(Request $request, string $suggestId): JsonResponse

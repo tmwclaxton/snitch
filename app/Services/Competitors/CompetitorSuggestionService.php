@@ -26,18 +26,19 @@ class CompetitorSuggestionService
 
     /**
      * @param  (callable(list<array{platform: string, handle: string, url: string, display_name: string, avatar: string|null, source: string|null}>): void)|null  $onProgress
+     * @param  array{platforms?: list<string>, brief?: string}  $filters
      * @return list<array{platform: string, handle: string, url: string, display_name: string, avatar: string|null, source: string|null}>
      */
-    public function suggest(BrandProfile $brand, ?callable $onProgress = null): array
+    public function suggest(BrandProfile $brand, ?callable $onProgress = null, array $filters = []): array
     {
-        $hits = $this->search($brand);
+        $hits = $this->search($brand, $filters);
 
         if ($hits === []) {
             throw new RuntimeException('Firecrawl search returned no competitor leads.');
         }
 
-        $candidates = $this->propose($brand, $hits);
-        $verified = $this->verify($candidates, $brand, $hits, $onProgress);
+        $candidates = $this->propose($brand, $hits, $filters);
+        $verified = $this->verify($candidates, $brand, $hits, $onProgress, $filters);
 
         $min = max(1, (int) config('snitch.competitor_suggest.min_suggestions', 6));
 
@@ -54,30 +55,32 @@ class CompetitorSuggestionService
     }
 
     /**
+     * @param  array{platforms?: list<string>, brief?: string}  $filters
      * @return list<array{url: string, title: string, description: string}>
      */
-    public function search(BrandProfile $brand): array
+    public function search(BrandProfile $brand, array $filters = []): array
     {
         if ((string) config('snitch.firecrawl.api_key') === '') {
             throw new RuntimeException('FIRECRAWL_API_KEY is not configured.');
         }
 
-        if ($this->nicheSearchPhrase($brand) === '') {
+        if ($this->nicheSearchPhrase($brand, $filters) === '') {
             throw new RuntimeException(
-                'Competitor suggestion needs a brand description (update_brand or start_brand_autofill) so discovery can search the niche instead of an ambiguous name.',
+                'Competitor suggestion needs a brand description or competitor brief (update_brand, start_brand_autofill, or pass brief) so discovery can search the niche instead of an ambiguous name.',
             );
         }
 
         $limit = max(1, (int) config('snitch.competitor_suggest.search_limit', 8));
 
-        return $this->firecrawl->searchMany($this->searchQueries($brand), ['limit' => $limit]);
+        return $this->firecrawl->searchMany($this->searchQueries($brand, $filters), ['limit' => $limit]);
     }
 
     /**
      * @param  list<array{url: string, title: string, description: string}>  $hits
+     * @param  array{platforms?: list<string>, brief?: string}  $filters
      * @return list<array{name: string, platform: string, handle: string, source: string|null}>
      */
-    public function propose(BrandProfile $brand, array $hits = []): array
+    public function propose(BrandProfile $brand, array $hits = [], array $filters = []): array
     {
         if ((string) config('snitch.nanogpt.api_key') === '') {
             throw new RuntimeException('NANOGPT_API_KEY is not configured.');
@@ -88,7 +91,7 @@ class CompetitorSuggestionService
         }
 
         $maxCandidates = max(1, (int) config('snitch.competitor_suggest.max_candidates', 16));
-        $platforms = $this->configuredPlatforms();
+        $platforms = $this->platformsForRun($filters);
         $ownHandles = $this->normalizedOwnHandles($brand);
         $ownSummary = $ownHandles === []
             ? 'none'
@@ -105,7 +108,7 @@ class CompetitorSuggestionService
             ],
             [
                 'role' => 'user',
-                'content' => $this->proposeUserPrompt($brand, $ownSummary, $platforms, $maxCandidates, $hits),
+                'content' => $this->proposeUserPrompt($brand, $ownSummary, $platforms, $maxCandidates, $hits, $filters),
             ],
         ], (string) config('snitch.competitor_suggest.model'), [
             'temperature' => (float) config('snitch.competitor_suggest.temperature', 0.3),
@@ -123,16 +126,57 @@ class CompetitorSuggestionService
         $seeded = $this->candidatesFromSearchHits($hits, $platforms);
         $normalized = $this->normalizeCandidates($payload, $platforms, $maxCandidates, $hits);
 
-        return $this->mergeCandidates($seeded, $normalized);
+        return $this->mergeCandidates($seeded, $normalized, $platforms);
+    }
+
+    /**
+     * @param  array{platforms?: list<string>}  $filters
+     */
+    public function generateCompetitorBrief(BrandProfile $brand, array $filters = []): string
+    {
+        if ((string) config('snitch.nanogpt.api_key') === '') {
+            throw new RuntimeException('NANOGPT_API_KEY is not configured.');
+        }
+
+        $platforms = $this->platformsForRun($filters);
+        $description = trim((string) ($brand->description ?? ''));
+
+        $response = $this->nanoGpt->chat([
+            [
+                'role' => 'system',
+                'content' => 'You write short UK English competitor-discovery briefs for a brand looking to track rival companies on social media. Reply with plain text only (no markdown, no JSON). 2-4 sentences. Focus on product category, direct rivals, and which platforms matter. Do not invent specific handles.',
+            ],
+            [
+                'role' => 'user',
+                'content' => implode("\n", [
+                    "Brand name: {$brand->name}",
+                    'Brand description: '.($description !== '' ? $description : '(none provided - write a generic editable template)'),
+                    'Target platforms: '.($platforms !== [] ? implode(', ', $platforms) : 'any'),
+                    'Write a brief the brand can edit before searching for competitors.',
+                ]),
+            ],
+        ], (string) config('snitch.competitor_suggest.model'), [
+            'temperature' => (float) config('snitch.competitor_suggest.brief_temperature', 0.4),
+            'max_tokens' => (int) config('snitch.competitor_suggest.brief_max_tokens', 280),
+        ]);
+
+        $text = trim($this->nanoGpt->extractAssistantText($response));
+
+        if ($text === '') {
+            throw new RuntimeException('Brief generation returned empty text.');
+        }
+
+        return Str::limit($text, 1200, '');
     }
 
     /**
      * @param  list<array{name: string, platform: string, handle: string, source?: string|null}>  $candidates
      * @param  list<array{url: string, title: string, description: string}>  $hits
      * @param  (callable(list<array{platform: string, handle: string, url: string, display_name: string, avatar: string|null, source: string|null}>): void)|null  $onProgress
+     * @param  array{platforms?: list<string>, brief?: string}  $filters
      * @return list<array{platform: string, handle: string, url: string, display_name: string, avatar: string|null, source: string|null}>
      */
-    public function verify(array $candidates, BrandProfile $brand, array $hits = [], ?callable $onProgress = null): array
+    public function verify(array $candidates, BrandProfile $brand, array $hits = [], ?callable $onProgress = null, array $filters = []): array
     {
         $ownHandles = $this->normalizedOwnHandles($brand);
         $tracked = $this->trackedKeys($brand->user_id);
@@ -143,7 +187,7 @@ class CompetitorSuggestionService
         $min = max(1, (int) config('snitch.competitor_suggest.min_suggestions', 6));
         $softCap = max(1, (int) config('snitch.competitor_suggest.max_per_platform', 3));
         $concurrency = max(1, (int) config('snitch.competitor_suggest.resolve_concurrency', 4));
-        $platforms = $this->configuredPlatforms();
+        $platforms = $this->platformsForRun($filters);
         $ordered = $this->interleaveByPlatform($candidates, $platforms);
 
         // Soft-cap first for fair mix; only relax the cap to meet the minimum floor.
@@ -394,11 +438,15 @@ class CompetitorSuggestionService
     /**
      * @return list<string>
      */
-    public function searchQueries(BrandProfile $brand): array
+    /**
+     * @param  array{platforms?: list<string>, brief?: string}  $filters
+     * @return list<string>
+     */
+    public function searchQueries(BrandProfile $brand, array $filters = []): array
     {
         $name = trim($brand->name);
         $host = $this->websiteHost($brand->website);
-        $niche = $this->nicheSearchPhrase($brand);
+        $niche = $this->nicheSearchPhrase($brand, $filters);
         $queries = [];
 
         // Niche-first: never lead Firecrawl with ambiguous brand names (e.g. "Snitch").
@@ -422,7 +470,7 @@ class CompetitorSuggestionService
 
         // Niche-led per-platform searches only (never fall back to a weak brand name).
         if ($niche !== '') {
-            foreach ($this->configuredPlatforms() as $platform) {
+            foreach ($this->platformsForRun($filters) as $platform) {
                 $queries[] = match ($platform) {
                     'instagram' => "{$niche} site:instagram.com",
                     'tiktok' => "{$niche} site:tiktok.com",
@@ -467,18 +515,25 @@ class CompetitorSuggestionService
         return count($tokens) <= 1 && strlen($normalized) <= 8;
     }
 
-    public function nicheSearchPhrase(BrandProfile $brand): string
+    /**
+     * @param  array{platforms?: list<string>, brief?: string}  $filters
+     */
+    public function nicheSearchPhrase(BrandProfile $brand, array $filters = []): string
     {
+        $brief = trim(preg_replace('/\s+/', ' ', (string) ($filters['brief'] ?? '')) ?? '');
+        $storedBrief = trim(preg_replace('/\s+/', ' ', (string) ($brand->competitor_brief ?? '')) ?? '');
         $description = trim(preg_replace('/\s+/', ' ', (string) ($brand->description ?? '')) ?? '');
 
-        if ($description === '') {
+        $source = $brief !== '' ? $brief : ($storedBrief !== '' ? $storedBrief : $description);
+
+        if ($source === '') {
             return '';
         }
 
         // Prefer concrete niche nouns over the full marketing blurb / brand name echo.
         $pattern = '/\b(grants?|fundraising|nonprofit|non-profit|charit(?:y|ies)|founder|startup|scholarship|funding|competitor(?:s)?|influencer(?:s)?|social\s+listening|social\s+media|analytics|marketing|discovery|tracking|intelligence|saas|software|platform|content|reels?|tiktok|instagram)\b/i';
 
-        if (preg_match_all($pattern, $description, $matches) >= 1) {
+        if (preg_match_all($pattern, $source, $matches) >= 1) {
             $tokens = array_values(array_unique(array_map(
                 fn (string $token): string => strtolower(preg_replace('/\s+/', ' ', $token) ?? $token),
                 $matches[0],
@@ -487,7 +542,7 @@ class CompetitorSuggestionService
             return trim(implode(' ', array_slice($tokens, 0, 5)).' tools');
         }
 
-        return Str::limit($description, 60, '');
+        return Str::limit($source, 80, '');
     }
 
     private function websiteHost(?string $website): ?string
@@ -727,9 +782,10 @@ class CompetitorSuggestionService
     /**
      * @param  list<array{name: string, platform: string, handle: string, source: string|null}>  $seeded
      * @param  list<array{name: string, platform: string, handle: string, source: string|null}>  $normalized
+     * @param  list<string>  $platforms
      * @return list<array{name: string, platform: string, handle: string, source: string|null}>
      */
-    private function mergeCandidates(array $seeded, array $normalized): array
+    private function mergeCandidates(array $seeded, array $normalized, array $platforms): array
     {
         $merged = [];
         $seen = [];
@@ -749,7 +805,7 @@ class CompetitorSuggestionService
         $maxResolves = max(1, (int) config('snitch.competitor_suggest.max_resolves', 32));
 
         return array_slice(
-            $this->interleaveByPlatform($merged, $this->configuredPlatforms()),
+            $this->interleaveByPlatform($merged, $platforms),
             0,
             $maxResolves,
         );
@@ -1036,8 +1092,38 @@ class CompetitorSuggestionService
     }
 
     /**
+     * @param  array{platforms?: list<string>, brief?: string}  $filters
+     * @return list<string>
+     */
+    public function platformsForRun(array $filters = []): array
+    {
+        $requested = $filters['platforms'] ?? null;
+
+        if (! is_array($requested) || $requested === []) {
+            return $this->configuredPlatforms();
+        }
+
+        $normalized = [];
+
+        foreach ($requested as $platform) {
+            if (! is_string($platform)) {
+                continue;
+            }
+
+            $value = strtolower(trim($platform));
+
+            if (Platform::tryFrom($value) !== null && ! in_array($value, $normalized, true)) {
+                $normalized[] = $value;
+            }
+        }
+
+        return $normalized !== [] ? $normalized : $this->configuredPlatforms();
+    }
+
+    /**
      * @param  list<string>  $platforms
      * @param  list<array{url: string, title: string, description: string}>  $hits
+     * @param  array{platforms?: list<string>, brief?: string}  $filters
      */
     private function proposeUserPrompt(
         BrandProfile $brand,
@@ -1045,26 +1131,30 @@ class CompetitorSuggestionService
         array $platforms,
         int $maxCandidates,
         array $hits,
+        array $filters = [],
     ): string {
         $platformList = implode(', ', $platforms);
         $website = filled($brand->website) ? $brand->website : 'unknown';
         $description = filled($brand->description) ? $brand->description : 'unknown';
+        $brief = trim((string) ($filters['brief'] ?? $brand->competitor_brief ?? ''));
+        $briefLine = $brief !== '' ? $brief : '(none - use brand description)';
         $evidence = $this->formatSearchEvidence($hits);
 
         return <<<PROMPT
 Brand name: {$brand->name}
 Website: {$website}
 Description: {$description}
+Competitor discovery brief: {$briefLine}
 Own handles (do not suggest these): {$ownSummary}
 
 Search evidence (ground every competitor in these hits; prefer orgs/domains/social links found here):
 {$evidence}
 
 Suggest up to {$maxCandidates} distinct niche competitor organisations whose social content is worth tracking.
-Focus on direct rivals and adjacent tools in the same category as the brand description - not accounts that merely share the brand name as a word.
+Focus on direct rivals and adjacent tools in the same category as the brand description / discovery brief - not accounts that merely share the brand name as a word.
 If the brand is a software / social intelligence / SaaS product, reject fashion labels, meme/gossip creators, and other name-collision junk even when the brand name appears in their title.
-Return a fair multi-platform mix when the evidence supports it (instagram, tiktok, youtube, linkedin, facebook).
-Prefer Instagram, TikTok, YouTube Shorts channels, LinkedIn company pages, and LinkedIn creator (/in/) profiles over flooding with Facebook-only rows.
+Return a fair mix across only these platforms when the evidence supports it: {$platformList}.
+Prefer Instagram, TikTok, YouTube Shorts channels, LinkedIn company pages, and LinkedIn creator (/in/) profiles over flooding with Facebook-only rows when those platforms are allowed.
 Return multiple platforms per org when the evidence supports real handles.
 Omit unsure handles (use null). Do not invent TikTok or YouTube handles without evidence.
 Never return numeric Facebook IDs (e.g. 100081639724957); only vanity page handles.

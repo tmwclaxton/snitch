@@ -85,6 +85,11 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
             ->name('competitors.suggest');
         Route::get('/competitors/suggest/{suggestId}', [CompetitorController::class, 'suggestStatus'])
             ->name('competitors.suggest.status');
+        Route::post('/competitors/brief', [CompetitorController::class, 'generateBrief'])
+            ->middleware('throttle:20,1')
+            ->name('competitors.brief');
+        Route::patch('/competitors/brief', [CompetitorController::class, 'updateBrief'])
+            ->name('competitors.brief.update');
         Route::post('/competitors/confirm-suggestions', [CompetitorController::class, 'confirmSuggestions'])->name('competitors.confirm-suggestions');
         Route::post('/competitors/dismiss-suggestions', [CompetitorController::class, 'dismissSuggestions'])->name('competitors.dismiss-suggestions');
         Route::post('/competitors/batch-sync', [CompetitorController::class, 'batchSync'])->name('competitors.batch-sync');

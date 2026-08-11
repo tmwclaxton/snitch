@@ -154,6 +154,7 @@ return [
         'competitors.suggest' => ['vendor' => 'firecrawl', 'floor_usd' => 0.02],
         'brand.autofill' => ['vendor' => 'firecrawl', 'floor_usd' => 0.005],
         'influencer.brief' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0005],
+        'competitor.brief' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0005],
         'winners.copy' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0005],
         'explore.search' => ['vendor' => 'snitch', 'fixed_pence' => 0.5],
         'explore.view' => ['vendor' => 'snitch', 'fixed_pence' => 0.1],
