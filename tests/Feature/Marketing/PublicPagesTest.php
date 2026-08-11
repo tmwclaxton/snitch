@@ -381,6 +381,20 @@ class PublicPagesTest extends TestCase
         );
     }
 
+    public function test_public_nav_links_to_github_repository(): void
+    {
+        $nav = file_get_contents(resource_path('js/components/marketing/PublicNav.vue'));
+
+        $this->assertNotFalse($nav, 'Missing PublicNav.vue source');
+        $this->assertStringContainsString(
+            'https://github.com/tmwclaxton/snitch',
+            $nav,
+            'Guest header must link the GitHub icon to the public repo',
+        );
+        $this->assertStringContainsString("['fab', 'github']", $nav);
+        $this->assertStringContainsString('aria-label="Snitch on GitHub"', $nav);
+    }
+
     public function test_ghost_ticket_buttons_stroke_follows_clip_not_inset_shadow(): void
     {
         $css = file_get_contents(resource_path('css/app.css'));

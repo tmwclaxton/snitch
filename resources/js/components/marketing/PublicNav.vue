@@ -76,6 +76,16 @@ const links = [
             </nav>
 
             <div class="flex items-center gap-2">
+                <a
+                    href="https://github.com/tmwclaxton/snitch"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex size-9 items-center justify-center text-snitch-ink transition-colors hover:text-snitch-ink/80"
+                    aria-label="Snitch on GitHub"
+                    title="GitHub"
+                >
+                    <font-awesome-icon :icon="['fab', 'github']" class="size-5" aria-hidden="true" />
+                </a>
                 <template v-if="minimal">
                     <Link
                         v-if="isAuthenticated"
