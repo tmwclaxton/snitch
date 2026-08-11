@@ -313,6 +313,19 @@ class FeedTest extends TestCase
         $this->assertStringContainsString('TranscriptModal', $showVue);
     }
 
+    public function test_feed_show_marks_winners_with_compact_tag_not_sticker_section(): void
+    {
+        $showVue = file_get_contents(resource_path('js/pages/feed/Show.vue'));
+
+        $this->assertIsString($showVue);
+        $this->assertStringContainsString('post.winner_insight', $showVue);
+        $this->assertStringContainsString('Trophy', $showVue);
+        $this->assertStringContainsString('Winner', $showVue);
+        $this->assertStringNotContainsString('Winner ·', $showVue);
+        $this->assertStringNotContainsString('post.winner_insight.why', $showVue);
+        $this->assertStringNotContainsString('post.winner_insight.how_to_copy', $showVue);
+    }
+
     public function test_feed_term_chips_link_to_explore_with_preselected_filters(): void
     {
         $showVue = file_get_contents(resource_path('js/pages/feed/Show.vue'));

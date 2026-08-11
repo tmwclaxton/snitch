@@ -307,17 +307,30 @@ function openTranscript(): void {
             />
 
             <header class="mt-5 border-b border-snitch-ink/10 pb-5">
-                <p class="snitch-ink-label inline-flex flex-wrap items-center gap-1.5">
-                    <img
-                        :src="platformIconSrc(post.platform)"
-                        alt=""
-                        class="snitch-platform-logo size-3.5 shrink-0"
-                        width="14"
-                        height="14"
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <p class="snitch-ink-label inline-flex flex-wrap items-center gap-1.5">
+                        <img
+                            :src="platformIconSrc(post.platform)"
+                            alt=""
+                            class="snitch-platform-logo size-3.5 shrink-0"
+                            width="14"
+                            height="14"
+                        >
+                        {{ platformLabel(post.platform) }} · {{ postTypeLabel(post.type) }}
+                        <span v-if="postedLabel"> · {{ postedLabel }}</span>
+                    </p>
+                    <span
+                        v-if="post.winner_insight"
+                        class="inline-flex items-center gap-1 bg-snitch-spot/30 px-1.5 py-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-snitch-ink"
+                        :title="`Winner score ${post.winner_insight.score.toFixed(1)}`"
                     >
-                    {{ platformLabel(post.platform) }} · {{ postTypeLabel(post.type) }}
-                    <span v-if="postedLabel"> · {{ postedLabel }}</span>
-                </p>
+                        <Trophy
+                            class="size-3 shrink-0 opacity-80"
+                            aria-hidden="true"
+                        />
+                        Winner
+                    </span>
+                </div>
                 <h1 class="snitch-display mt-2 text-3xl text-snitch-ink sm:text-4xl">
                     {{ primaryTitle }}
                 </h1>
@@ -356,31 +369,6 @@ function openTranscript(): void {
             </header>
 
             <div class="mt-6 space-y-6">
-                <div
-                    v-if="post.winner_insight"
-                    class="snitch-sticker"
-                >
-                    <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
-                        <Trophy
-                            class="size-5 shrink-0 opacity-80"
-                            aria-hidden="true"
-                        />
-                        Winner · {{ post.winner_insight.score.toFixed(1) }}
-                    </p>
-                    <p class="mt-2 text-sm text-snitch-ink/85">
-                        {{ post.winner_insight.why }}
-                    </p>
-                    <div
-                        v-if="post.winner_insight.how_to_copy"
-                        class="mt-3 border-t border-dashed border-snitch-ink/15 pt-3"
-                    >
-                        <MarkdownText
-                            :html="post.winner_insight.how_to_copy_html"
-                            :source="post.winner_insight.how_to_copy"
-                        />
-                    </div>
-                </div>
-
                 <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] lg:gap-8">
                     <div>
                         <div
