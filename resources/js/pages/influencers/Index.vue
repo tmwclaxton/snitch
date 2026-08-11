@@ -27,6 +27,7 @@ import BulkActionBar from '@/components/BulkActionBar.vue';
 import PaperSelect from '@/components/PaperSelect.vue';
 import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
+import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import { useToastStore } from '@/stores/toastStore';
@@ -96,7 +97,7 @@ const props = defineProps<{
     suggestions: Suggestion[];
     decisions: Record<string, 'kept' | 'discarded'>;
     reviewQueue: Suggestion[];
-    keptAccounts: KeptAccount[];
+    keptAccounts?: KeptAccount[] | null;
     canSearch: boolean;
     influencerCap?: InfluencerCap | null;
 }>();
@@ -192,8 +193,11 @@ const selectedReviewItems = computed(() =>
     pendingReview.value.filter((item) => selectedReview.value[suggestionKey(item)]),
 );
 
+const keptAccountsList = computed<KeptAccount[]>(() => props.keptAccounts ?? []);
+const keptAccountsLoaded = computed(() => Array.isArray(props.keptAccounts));
+
 const selectedKeptItems = computed(() =>
-    props.keptAccounts.filter((account) => selectedKept.value[account.id]),
+    keptAccountsList.value.filter((account) => selectedKept.value[account.id]),
 );
 
 const allReviewSelected = computed(
@@ -204,8 +208,8 @@ const allReviewSelected = computed(
 
 const allKeptSelected = computed(
     () =>
-        props.keptAccounts.length > 0 &&
-        props.keptAccounts.every((account) => selectedKept.value[account.id]),
+        keptAccountsList.value.length > 0 &&
+        keptAccountsList.value.every((account) => selectedKept.value[account.id]),
 );
 
 const showReviewBar = computed(() => selectedReviewItems.value.length > 0);
@@ -481,7 +485,7 @@ function pruneReviewSelection(): void {
 function pruneKeptSelection(): void {
     const next: Record<number, boolean> = {};
 
-    for (const account of props.keptAccounts) {
+    for (const account of keptAccountsList.value) {
         if (selectedKept.value[account.id]) {
             next[account.id] = true;
         }
@@ -538,7 +542,7 @@ function toggleSelectAllKept(): void {
 
     const next: Record<number, boolean> = {};
 
-    for (const account of props.keptAccounts) {
+    for (const account of keptAccountsList.value) {
         next[account.id] = true;
     }
 
@@ -1000,7 +1004,7 @@ onUnmounted(() => {
                 </ul>
             </section>
 
-            <section v-if="keptAccounts.length" class="mt-12">
+            <section v-if="!keptAccountsLoaded || keptAccountsList.length" class="mt-12">
                 <div class="flex flex-wrap items-end justify-between gap-3">
                     <div>
                         <h2 class="snitch-display text-2xl text-snitch-ink">Kept influencers</h2>
@@ -1009,6 +1013,7 @@ onUnmounted(() => {
                         </p>
                     </div>
                     <button
+                        v-if="keptAccountsLoaded && keptAccountsList.length"
                         type="button"
                         class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
                         @click="toggleSelectAllKept"
@@ -1017,9 +1022,25 @@ onUnmounted(() => {
                     </button>
                 </div>
 
-                <ul class="mt-6 space-y-3">
+                <ul v-if="!keptAccountsLoaded" class="mt-6 space-y-3" aria-label="Loading kept influencers">
                     <li
-                        v-for="account in keptAccounts"
+                        v-for="n in 3"
+                        :key="`kept-skel-${n}`"
+                        class="snitch-cutout flex flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-start sm:justify-between"
+                    >
+                        <div class="flex min-w-0 flex-1 items-start gap-3">
+                            <SnitchSkeleton variant="block" width="2.75rem" height="2.75rem" radius="9999px" />
+                            <div class="min-w-0 flex-1 space-y-2">
+                                <SnitchSkeleton variant="line" width="55%" height="1rem" />
+                                <SnitchSkeleton variant="line" width="35%" height="0.65rem" />
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+
+                <ul v-else class="mt-6 space-y-3">
+                    <li
+                        v-for="account in keptAccountsList"
                         :key="account.id"
                         class="snitch-cutout flex cursor-pointer flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-start sm:justify-between"
                         :class="selectedKept[account.id] ? 'ring-2 ring-snitch-spot/70' : ''"

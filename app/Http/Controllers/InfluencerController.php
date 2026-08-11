@@ -20,6 +20,7 @@ use App\Services\Influencers\InfluencerDiscoveryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -346,24 +347,6 @@ class InfluencerController extends Controller
             }
         }
 
-        $keptAccounts = TrackedAccount::query()
-            ->where('user_id', $user->id)
-            ->influencers()
-            ->withCount(['posts' => fn ($query) => $query->reelLike()])
-            ->orderByDesc('id')
-            ->get()
-            ->map(fn (TrackedAccount $account): array => [
-                'id' => $account->id,
-                'platform' => $account->platform->value,
-                'handle' => $account->handle,
-                'display_name' => $account->display_name,
-                'avatar' => $account->avatar,
-                'url' => $account->url,
-                'fit_reason' => $account->fit_reason,
-                'posts_count' => $account->posts_count ?? 0,
-            ])
-            ->values();
-
         $defaultPlatform = (string) config('snitch.influencer_find.default_platform', 'instagram');
         $defaultMinFollowers = (int) config('snitch.influencer_find.default_min_followers', 1000);
         $defaultMaxFollowers = (int) config('snitch.influencer_find.default_max_followers', 50000);
@@ -417,7 +400,7 @@ class InfluencerController extends Controller
             'suggestions' => $suggestions,
             'decisions' => $decisions,
             'reviewQueue' => $reviewQueue,
-            'keptAccounts' => $keptAccounts,
+            'keptAccounts' => Inertia::defer(fn () => $this->keptAccountsFor($user)),
             'canSearch' => $this->canStartSearch($user->id),
             'influencerCap' => [
                 'plan' => $summary['plan'],
@@ -428,6 +411,35 @@ class InfluencerController extends Controller
                 'can_upgrade' => $summary['can_upgrade'],
             ],
         ];
+    }
+
+    /**
+     * Load and shape the current user's kept influencer accounts for the Inertia payload.
+     *
+     * Deferred from the initial page render so the shell + review queue paint immediately
+     * while the withCount query and mapping stream in on the follow-up partial reload.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function keptAccountsFor(User $user): Collection
+    {
+        return TrackedAccount::query()
+            ->where('user_id', $user->id)
+            ->influencers()
+            ->withCount(['posts' => fn ($query) => $query->reelLike()])
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (TrackedAccount $account): array => [
+                'id' => $account->id,
+                'platform' => $account->platform->value,
+                'handle' => $account->handle,
+                'display_name' => $account->display_name,
+                'avatar' => $account->avatar,
+                'url' => $account->url,
+                'fit_reason' => $account->fit_reason,
+                'posts_count' => $account->posts_count ?? 0,
+            ])
+            ->values();
     }
 
     /**

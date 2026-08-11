@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Concerns\WithPlatformBilling;
 use Tests\TestCase;
 
@@ -206,11 +207,14 @@ class InfluencersBatchActionsTest extends TestCase
         $this->actingAs($user)
             ->get(route('influencers.index'))
             ->assertOk()
-            ->assertInertia(fn ($page) => $page
+            ->assertInertia(fn (Assert $page) => $page
                 ->component('influencers/Index')
-                ->has('keptAccounts', 1)
-                ->where('keptAccounts.0.url', 'https://www.instagram.com/urlme/')
-                ->where('keptAccounts.0.fit_reason', 'Good brand-deal fit.')
+                ->missing('keptAccounts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('keptAccounts', 1)
+                    ->where('keptAccounts.0.url', 'https://www.instagram.com/urlme/')
+                    ->where('keptAccounts.0.fit_reason', 'Good brand-deal fit.')
+                )
             );
     }
 }
