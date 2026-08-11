@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminOverviewController;
 use App\Http\Controllers\AgentsController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\BacklogController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\Marketing\PricingController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\Settings\WinnerRuleController;
 use App\Http\Controllers\WinnerController;
+use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureBrandProfile;
 use App\Http\Middleware\EnsureProductAccess;
 use App\Support\Seo;
@@ -76,6 +78,10 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
     Route::post('/agents/token', [AgentsController::class, 'rotateToken'])
         ->middleware('throttle:10,1')
         ->name('agents.token');
+
+    Route::middleware(EnsureAdmin::class)->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/', [AdminOverviewController::class, 'index'])->name('overview');
+    });
 
     Route::middleware([EnsureBrandProfile::class, EnsureProductAccess::class])->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');

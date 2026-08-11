@@ -42,6 +42,20 @@ class User extends Authenticatable implements OAuthenticatable
         return $this->claimed_at !== null && filled($this->workos_id);
     }
 
+    public function isAdmin(): bool
+    {
+        $email = strtolower(trim((string) $this->email));
+
+        if ($email === '') {
+            return false;
+        }
+
+        /** @var list<string> $admins */
+        $admins = config('snitch.admin_emails', []);
+
+        return in_array($email, $admins, true);
+    }
+
     /**
      * Recreate the Stripe customer when the stored id is missing in the
      * current Stripe mode/account (e.g. sandbox id after switching to live).

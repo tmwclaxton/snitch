@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { Bot, Clapperboard, Compass, CreditCard, LayoutGrid, Settings, Store, Trophy, UserRoundSearch, Users } from '@lucide/vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import { Bot, Clapperboard, Compass, CreditCard, LayoutGrid, Settings, Shield, Store, Trophy, UserRoundSearch, Users } from '@lucide/vue';
+import { computed } from 'vue';
 import { show as agents } from '@/actions/App/Http/Controllers/AgentsController';
 import { edit as brand } from '@/actions/App/Http/Controllers/BrandProfileController';
 import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
@@ -24,9 +25,13 @@ import {
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard, home } from '@/routes';
+import { overview as adminOverview } from '@/routes/admin';
 import { edit as appearance } from '@/routes/appearance';
 import { edit as billing } from '@/routes/billing';
 import type { NavItem } from '@/types';
+
+const page = usePage();
+const isAdmin = computed(() => Boolean(page.props.auth?.user?.is_admin));
 
 const mainNavItems: NavItem[] = [
     {
@@ -71,18 +76,32 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-const accountNavItems: NavItem[] = [
-    {
-        title: 'Billing',
-        href: billing(),
-        icon: CreditCard,
-    },
-    {
-        title: 'Settings',
-        href: appearance(),
-        icon: Settings,
-    },
-];
+const accountNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [];
+
+    if (isAdmin.value) {
+        items.push({
+            title: 'Admin',
+            href: adminOverview(),
+            icon: Shield,
+        });
+    }
+
+    items.push(
+        {
+            title: 'Billing',
+            href: billing(),
+            icon: CreditCard,
+        },
+        {
+            title: 'Settings',
+            href: appearance(),
+            icon: Settings,
+        },
+    );
+
+    return items;
+});
 
 const { isCurrentOrParentUrl } = useCurrentUrl();
 </script>

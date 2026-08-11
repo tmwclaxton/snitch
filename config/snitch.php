@@ -3,6 +3,15 @@
 return [
 
     /*
+    | Comma-separated emails allowed to open /admin (case-insensitive).
+    | Empty list means nobody is admin.
+    */
+    'admin_emails' => array_values(array_filter(array_map(
+        static fn (string $email): string => strtolower(trim($email)),
+        explode(',', (string) env('ADMIN_EMAILS', '')),
+    ))),
+
+    /*
     | Public support address shown on marketing pages. Contact form deliveries
     | go to contact_to (defaults to the same address when unset).
     */

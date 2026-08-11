@@ -46,7 +46,10 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $user,
+                'user' => $user === null ? null : [
+                    ...$user->toArray(),
+                    'is_admin' => $user->isAdmin(),
+                ],
             ],
             'subscription' => fn () => $user !== null
                 ? app(PlanEntitlementService::class)->sharedSummary($user)

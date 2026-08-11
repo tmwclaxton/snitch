@@ -3,14 +3,22 @@ import { computed } from 'vue';
 import PlatformStippleTrack from '@/components/PlatformStippleTrack.vue';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 
+// withDefaults used below for optional periodLabel
+
 export type PlatformBucket = {
     platform: string;
     count: number;
 };
 
-const props = defineProps<{
-    platforms: PlatformBucket[];
-}>();
+const props = withDefaults(
+    defineProps<{
+        platforms: PlatformBucket[];
+        periodLabel?: string;
+    }>(),
+    {
+        periodLabel: '12 wks',
+    },
+);
 
 const maxCount = computed(() =>
     Math.max(1, ...props.platforms.map((row) => row.count)),
@@ -40,7 +48,7 @@ const peakIndex = computed(() => {
         <div class="flex items-baseline justify-between gap-3">
             <p class="snitch-ink-label">By platform</p>
             <p class="tabular-nums text-xs text-snitch-ink/55">
-                {{ total }} · 12 wks
+                {{ total }} · {{ periodLabel }}
             </p>
         </div>
 
