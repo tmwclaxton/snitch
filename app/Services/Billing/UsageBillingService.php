@@ -249,7 +249,7 @@ class UsageBillingService
 
         $multiplier = $fixedPence !== null
             ? null
-            : (float) config('billing.price_multiplier', 1.3);
+            : (float) config('billing.price_multiplier', 1.75);
         $cogsForEntry = $fixedPence !== null ? null : $cogsUsd;
 
         return $this->writeEntry(
@@ -747,7 +747,7 @@ class UsageBillingService
         // Explicit 0 COGS charges 0; null falls back to catalog COGS for missing usage data.
         $cogs = $cogsUsd !== null ? max(0.0, $cogsUsd) : $floorUsd;
         $gbp = $cogs * (float) config('billing.usd_to_gbp', 0.79);
-        $priced = $gbp * (float) config('billing.price_multiplier', 1.3);
+        $priced = $gbp * (float) config('billing.price_multiplier', 1.75);
 
         // Round half-up to 0.01p (£0.0001). No min charge / vendor ceil.
         return $this->roundPence($priced * 100);

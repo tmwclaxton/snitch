@@ -384,9 +384,16 @@ class UsageBillingServiceTest extends TestCase
         $this->assertNotEqualsWithDelta(0.0005, $estimate, 0.0000001);
     }
 
-    public function test_price_multiplier_default_is_one_point_three(): void
+    public function test_price_multiplier_default_is_one_point_seven_five(): void
     {
-        $this->assertSame(1.3, (float) config('billing.price_multiplier'));
+        // setUp pins 1.3 for rounding math; assert the committed config default (base + 75%).
+        $source = file_get_contents(config_path('billing.php'));
+        $this->assertNotFalse($source);
+        $this->assertMatchesRegularExpression(
+            "/'price_multiplier'\\s*=>\\s*\\(float\\)\\s*env\\('SNITCH_BILLING_PRICE_MULTIPLIER',\\s*1\\.75\\)/",
+            $source,
+        );
+        $this->assertStringContainsString('SNITCH_BILLING_PRICE_MULTIPLIER=1.75', (string) file_get_contents(base_path('.env.example')));
     }
 
     private function subscribe(User $user): Subscription

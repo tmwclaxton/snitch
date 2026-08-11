@@ -48,10 +48,10 @@ return [
     'topup_expiry_months' => (int) env('SNITCH_TOPUP_EXPIRY_MONTHS', 3),
 
     /*
-    | Internal price multiplier on vendor COGS (1.3 = 30% over provider).
+    | Internal price multiplier on vendor COGS (1.75 = 75% over provider).
     | Never surface this ratio or markup language to users / MCP copy.
     */
-    'price_multiplier' => (float) env('SNITCH_BILLING_PRICE_MULTIPLIER', 1.3),
+    'price_multiplier' => (float) env('SNITCH_BILLING_PRICE_MULTIPLIER', 1.75),
 
     /*
     | Convert vendor USD COGS to GBP before applying the multiplier.
