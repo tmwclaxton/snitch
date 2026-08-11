@@ -22,6 +22,24 @@ class CompetitorsTest extends TestCase
     use RefreshDatabase;
     use WithPlatformBilling;
 
+    public function test_snitches_urls_and_legacy_competitors_redirect(): void
+    {
+        $this->assertSame(url('/snitches'), route('competitors.index'));
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->get('/competitors')
+            ->assertRedirect('/snitches');
+
+        $account = TrackedAccount::factory()->for($user)->create(['handle' => 'legacyredirect']);
+
+        $this->actingAs($user)
+            ->get('/competitors/'.$account->id)
+            ->assertRedirect('/snitches/'.$account->id);
+    }
+
     public function test_owner_can_list_and_create_competitors(): void
     {
         Queue::fake();

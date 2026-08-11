@@ -7,7 +7,7 @@ paths:
 
 # Snitches (UI name for tracked competitor accounts)
 
-Product UI and marketing call these **Snitches** - rivals or accounts whose style you want to copy. Routes, MCP tool names, `kind=competitor`, and PHP classes stay `competitors` / `Competitor*` for stability.
+Product UI and marketing call these **Snitches** - rivals or accounts whose style you want to copy. HTTP paths are `/snitches` (with 301 from legacy `/competitors`). Named routes, MCP tool names, `kind=competitor`, and PHP classes stay `competitors` / `Competitor*` for stability.
 
 ## Untrack does not delete the corpus
 Removing a snitch/influencer deletes only the user's `tracked_accounts` row. Global `social_accounts` + `posts` + analyses stay. Re-add resolves the same social account and attaches existing posts (sync refreshes; it should not recreate from zero when the reel already exists).
@@ -31,7 +31,7 @@ Discovery order: Firecrawl search -> NanoGPT normalize/dedupe grounded in hits -
 Lead Firecrawl with niche phrase + website host queries. Weak / ambiguous brand names (short single tokens or slang like "Snitch") must not drive `"{$name} competitors"` searches. Niche comes from suggest `brief`, else `brand_profiles.competitor_brief`, else brand description - empty niche blocks suggest (MCP BrandContext + service gate). Agents may pass `brief` on `suggest_competitors` or set description via update_brand / start_brand_autofill. Propose prompt rejects name-collision junk (fashion/meme/homonyms) when the brand is SaaS/software.
 
 ## Suggest options modal (web) + filters (MCP)
-Snitches Index opens a modal before kickoff (space is tight for an inline form). Required: one or more platforms + brief (min 8). Optional Generate drafts `competitor_brief` via NanoGPT (`competitor.brief`). Web POST `/competitors/suggest` body `{ platforms, brief }`; MCP `suggest_competitors` accepts optional `platforms` + `brief` (omit = config platforms + brand niche). Job stores `filters` in the suggest cache payload and passes them into `CompetitorSuggestionService`. Read filters via a safe helper (`resolvedFilters`) - jobs queued before the `filters` constructor arg can unserialize with that typed property uninitialized, and raw `$this->filters` crashes `putStatus` / `failed`.
+Snitches Index opens a modal before kickoff (space is tight for an inline form). Required: one or more platforms + brief (min 8). Optional Generate drafts `competitor_brief` via NanoGPT (`competitor.brief`). Web POST `/snitches/suggest` body `{ platforms, brief }`; MCP `suggest_competitors` accepts optional `platforms` + `brief` (omit = config platforms + brand niche). Job stores `filters` in the suggest cache payload and passes them into `CompetitorSuggestionService`. Read filters via a safe helper (`resolvedFilters`) - jobs queued before the `filters` constructor arg can unserialize with that typed property uninitialized, and raw `$this->filters` crashes `putStatus` / `failed`.
 
 ## Suggest must not starve non-Facebook platforms
 Run niche-led per-platform Firecrawl `site:` queries (instagram, tiktok, youtube, linkedin, facebook), not brand-name-only TikTok fishing. LinkedIn query covers company pages and `/in/` creators. Interleave candidates across platforms through merge and verify. Soft-cap any one platform (`max_per_platform`, default 3) while other platforms still have candidates; relax only to meet `min_suggestions`. Reject pure numeric Facebook handles (`@1000…`) unless Apify resolves a non-numeric vanity handle.

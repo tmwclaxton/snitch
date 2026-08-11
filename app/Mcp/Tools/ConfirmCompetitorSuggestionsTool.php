@@ -108,7 +108,7 @@ class ConfirmCompetitorSuggestionsTool extends Tool
         if ($created === []) {
             $nextStep = 'No matches. Pass handles exactly as returned by suggest_competitors_status (case-insensitive).';
         } elseif ($remaining !== []) {
-            $nextStep = 'Confirmed handles are tracked. Remaining suggestions still show on /competitors - call dismiss_competitor_suggestions or re-confirm (dismiss_remainder defaults true; pass false only when you want to keep remainder).';
+            $nextStep = 'Confirmed handles are tracked. Remaining suggestions still show on /snitches - call dismiss_competitor_suggestions or re-confirm (dismiss_remainder defaults true; pass false only when you want to keep remainder).';
         }
 
         return Response::json([

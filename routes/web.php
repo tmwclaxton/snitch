@@ -78,25 +78,31 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
     Route::middleware([EnsureBrandProfile::class])->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
 
-        Route::get('/competitors', [CompetitorController::class, 'index'])->name('competitors.index');
-        Route::post('/competitors', [CompetitorController::class, 'store'])->name('competitors.store');
-        Route::post('/competitors/suggest', [CompetitorController::class, 'suggest'])
+        Route::get('/snitches', [CompetitorController::class, 'index'])->name('competitors.index');
+        Route::post('/snitches', [CompetitorController::class, 'store'])->name('competitors.store');
+        Route::post('/snitches/suggest', [CompetitorController::class, 'suggest'])
             ->middleware('throttle:10,1')
             ->name('competitors.suggest');
-        Route::get('/competitors/suggest/{suggestId}', [CompetitorController::class, 'suggestStatus'])
+        Route::get('/snitches/suggest/{suggestId}', [CompetitorController::class, 'suggestStatus'])
             ->name('competitors.suggest.status');
-        Route::post('/competitors/brief', [CompetitorController::class, 'generateBrief'])
+        Route::post('/snitches/brief', [CompetitorController::class, 'generateBrief'])
             ->middleware('throttle:20,1')
             ->name('competitors.brief');
-        Route::patch('/competitors/brief', [CompetitorController::class, 'updateBrief'])
+        Route::patch('/snitches/brief', [CompetitorController::class, 'updateBrief'])
             ->name('competitors.brief.update');
-        Route::post('/competitors/confirm-suggestions', [CompetitorController::class, 'confirmSuggestions'])->name('competitors.confirm-suggestions');
-        Route::post('/competitors/dismiss-suggestions', [CompetitorController::class, 'dismissSuggestions'])->name('competitors.dismiss-suggestions');
-        Route::post('/competitors/batch-sync', [CompetitorController::class, 'batchSync'])->name('competitors.batch-sync');
-        Route::post('/competitors/batch-destroy', [CompetitorController::class, 'batchDestroy'])->name('competitors.batch-destroy');
-        Route::get('/competitors/{trackedAccount}', [CompetitorController::class, 'show'])->name('competitors.show');
-        Route::delete('/competitors/{trackedAccount}', [CompetitorController::class, 'destroy'])->name('competitors.destroy');
-        Route::post('/competitors/{trackedAccount}/sync', [CompetitorController::class, 'sync'])->name('competitors.sync');
+        Route::post('/snitches/confirm-suggestions', [CompetitorController::class, 'confirmSuggestions'])->name('competitors.confirm-suggestions');
+        Route::post('/snitches/dismiss-suggestions', [CompetitorController::class, 'dismissSuggestions'])->name('competitors.dismiss-suggestions');
+        Route::post('/snitches/batch-sync', [CompetitorController::class, 'batchSync'])->name('competitors.batch-sync');
+        Route::post('/snitches/batch-destroy', [CompetitorController::class, 'batchDestroy'])->name('competitors.batch-destroy');
+        Route::get('/snitches/{trackedAccount}', [CompetitorController::class, 'show'])->name('competitors.show');
+        Route::delete('/snitches/{trackedAccount}', [CompetitorController::class, 'destroy'])->name('competitors.destroy');
+        Route::post('/snitches/{trackedAccount}/sync', [CompetitorController::class, 'sync'])->name('competitors.sync');
+
+        // Legacy Competitors URLs (bookmarks / old clients).
+        Route::permanentRedirect('/competitors', '/snitches');
+        Route::get('/competitors/{path}', function (string $path) {
+            return redirect('/snitches/'.$path, 301);
+        })->where('path', '.*')->name('competitors.legacy-redirect');
 
         Route::get('/influencers', [InfluencerController::class, 'index'])->name('influencers.index');
         Route::post('/influencers/brief', [InfluencerController::class, 'generateBrief'])
