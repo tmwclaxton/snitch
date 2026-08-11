@@ -174,7 +174,7 @@ class CompetitorSuggestionServiceTest extends TestCase
         $this->assertSame('', $service->nicheSearchPhrase($brand));
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('brand description or competitor brief');
+        $this->expectExceptionMessage('brand description or snitch brief');
 
         $service->search($brand);
     }
