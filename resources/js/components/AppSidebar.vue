@@ -60,7 +60,7 @@ const mainNavItems: NavItem[] = [
         icon: Compass,
     },
     {
-        title: 'Find Influencers',
+        title: 'Brand Deals',
         href: influencers(),
         icon: UserRoundSearch,
     },
