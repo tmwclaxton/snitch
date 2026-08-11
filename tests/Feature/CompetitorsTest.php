@@ -35,9 +35,11 @@ class CompetitorsTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('competitors/Index')
-                ->has('suggestions', 0)
+                ->missing('accounts')
+                ->missing('suggestions')
                 ->where('suggestRun', null)
                 ->where('platforms', ['tiktok', 'instagram', 'facebook', 'linkedin', 'youtube'])
+                ->loadDeferredProps('suggestions', fn (Assert $page) => $page->has('suggestions', 0))
             );
 
         $this->actingAs($user)
@@ -192,12 +194,15 @@ class CompetitorsTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('competitors/Index')
-                ->has('accounts', 1)
-                ->where('accounts.0.handle', 'rivalbakery')
-                ->where('accounts.0.last_sync_status', 'success')
-                ->where('accounts.0.last_synced_at', $syncedAt->toJSON())
-                ->missing('accounts.0.next_sync_at')
-                ->missing('accounts.0.sync_due')
+                ->missing('accounts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('accounts', 1)
+                    ->where('accounts.0.handle', 'rivalbakery')
+                    ->where('accounts.0.last_sync_status', 'success')
+                    ->where('accounts.0.last_synced_at', $syncedAt->toJSON())
+                    ->missing('accounts.0.next_sync_at')
+                    ->missing('accounts.0.sync_due')
+                )
             );
 
         $indexVue = file_get_contents(resource_path('js/pages/competitors/Index.vue'));
@@ -231,7 +236,10 @@ class CompetitorsTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('competitors/Index')
-                ->where('accounts.0.last_sync_status', 'running')
+                ->missing('accounts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->where('accounts.0.last_sync_status', 'running')
+                )
             );
     }
 
@@ -266,10 +274,13 @@ class CompetitorsTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('competitors/Index')
-                ->where('accounts.0.reels_count', 2)
-                ->where('accounts.0.analysis_backlog_count', 1)
-                ->where('accounts.0.winners_count', 1)
-                ->missing('accounts.0.posts_count')
+                ->missing('accounts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->where('accounts.0.reels_count', 2)
+                    ->where('accounts.0.analysis_backlog_count', 1)
+                    ->where('accounts.0.winners_count', 1)
+                    ->missing('accounts.0.posts_count')
+                )
             );
     }
 

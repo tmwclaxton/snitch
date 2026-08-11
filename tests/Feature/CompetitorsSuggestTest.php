@@ -312,9 +312,12 @@ class CompetitorsSuggestTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('competitors/Index')
-                ->has('suggestions', 1)
-                ->where('suggestions.0.handle', 'instrumentl')
+                ->missing('suggestions')
                 ->where('suggestRun', null)
+                ->loadDeferredProps('suggestions', fn (Assert $page) => $page
+                    ->has('suggestions', 1)
+                    ->where('suggestions.0.handle', 'instrumentl')
+                )
             );
     }
 
@@ -580,8 +583,11 @@ class CompetitorsSuggestTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('competitors/Index')
-                ->has('suggestions', 1)
-                ->where('suggestions.0.handle', 'candid-org')
+                ->missing('suggestions')
+                ->loadDeferredProps('suggestions', fn (Assert $page) => $page
+                    ->has('suggestions', 1)
+                    ->where('suggestions.0.handle', 'candid-org')
+                )
             );
     }
 
@@ -625,8 +631,11 @@ class CompetitorsSuggestTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('competitors/Index')
-                ->has('suggestions', 1)
-                ->where('suggestions.0.handle', 'grantsforgood')
+                ->missing('suggestions')
+                ->loadDeferredProps('suggestions', fn (Assert $page) => $page
+                    ->has('suggestions', 1)
+                    ->where('suggestions.0.handle', 'grantsforgood')
+                )
             );
 
         $payload = Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId));

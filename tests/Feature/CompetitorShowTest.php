@@ -47,11 +47,17 @@ class CompetitorShowTest extends TestCase
                 ->where('account.id', $account->id)
                 ->where('account.handle', 'rivalbakery')
                 ->where('account.last_sync_status', 'success')
-                ->has('posts', 1)
-                ->where('posts.0.id', $post->id)
-                ->where('posts.0.analysis.concept', 'Proof before pitch')
-                ->has('winners', 1)
-                ->where('winners.0.score', 88.5)
+                ->missing('posts')
+                ->missing('winners')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts', 1)
+                    ->where('posts.0.id', $post->id)
+                    ->where('posts.0.analysis.concept', 'Proof before pitch')
+                )
+                ->loadDeferredProps('winners', fn (Assert $page) => $page
+                    ->has('winners', 1)
+                    ->where('winners.0.score', 88.5)
+                )
             );
 
         $showVue = file_get_contents(resource_path('js/pages/competitors/Show.vue'));

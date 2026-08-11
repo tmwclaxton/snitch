@@ -19,6 +19,7 @@ import FeedContactCell from '@/components/FeedContactCell.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
+import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { PostMetrics } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
@@ -57,21 +58,28 @@ type Post = {
     winner_insight?: { score: number } | null;
 };
 
+type Winner = {
+    id: number;
+    score: number;
+    why: string;
+    how_to_copy: string;
+    post: {
+        id: number;
+        platform: string;
+        analysis?: { hook: string | null; concept?: string | null } | null;
+    };
+};
+
 const props = defineProps<{
     account: Account;
-    posts: Post[];
-    winners: Array<{
-        id: number;
-        score: number;
-        why: string;
-        how_to_copy: string;
-        post: {
-            id: number;
-            platform: string;
-            analysis?: { hook: string | null; concept?: string | null } | null;
-        };
-    }>;
+    posts?: Post[] | null;
+    winners?: Winner[] | null;
 }>();
+
+const postsList = computed<Post[]>(() => props.posts ?? []);
+const winnersList = computed<Winner[]>(() => props.winners ?? []);
+const postsLoaded = computed(() => Array.isArray(props.posts));
+const winnersLoaded = computed(() => Array.isArray(props.winners));
 
 defineOptions({
     layout: AppLayout,
@@ -304,7 +312,7 @@ function askRemove(): void {
                 </div>
 
                 <div class="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-sm text-snitch-ink/60">
-                    <p>{{ account.posts_count ?? posts.length }} reels tracked</p>
+                    <p>{{ account.posts_count ?? postsList.length }} reels tracked</p>
                     <p v-if="isSyncing">Last synced: in progress</p>
                     <p v-else-if="lastSyncedLabel">{{ lastSyncedLabel }}</p>
                 </div>
@@ -327,11 +335,24 @@ function askRemove(): void {
                 </div>
 
                 <div
-                    v-if="posts.length"
+                    v-if="!postsLoaded"
+                    class="snitch-contact-sheet mt-5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                    aria-live="polite"
+                    aria-label="Loading recent posts"
+                >
+                    <SnitchSkeleton
+                        v-for="row in 8"
+                        :key="`post-skel-${row}`"
+                        variant="polaroid"
+                        width="100%"
+                    />
+                </div>
+                <div
+                    v-else-if="postsList.length"
                     class="snitch-contact-sheet snitch-contact-reveal mt-5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
                 >
                     <FeedContactCell
-                        v-for="(post, index) in posts"
+                        v-for="(post, index) in postsList"
                         :key="post.id"
                         :post="post"
                         :index="index"
@@ -376,11 +397,24 @@ function askRemove(): void {
                 </h2>
 
                 <div
-                    v-if="winners.length"
+                    v-if="!winnersLoaded"
+                    class="snitch-tear-board mt-5 grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3"
+                    aria-live="polite"
+                    aria-label="Loading winners"
+                >
+                    <SnitchSkeleton
+                        v-for="row in 3"
+                        :key="`winner-skel-${row}`"
+                        variant="scrap"
+                        height="6rem"
+                    />
+                </div>
+                <div
+                    v-else-if="winnersList.length"
                     class="snitch-tear-board mt-5 grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3"
                 >
                     <Link
-                        v-for="(winner, index) in winners"
+                        v-for="(winner, index) in winnersList"
                         :key="winner.id"
                         :href="feedShow.url(winner.post.id)"
                         class="snitch-polaroid relative block"

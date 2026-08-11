@@ -25,6 +25,7 @@ import BulkActionBar from '@/components/BulkActionBar.vue';
 import PlatformSelect from '@/components/PlatformSelect.vue';
 import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
+import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import { lastSyncedLabel } from '@/lib/syncSchedule';
@@ -79,9 +80,9 @@ type CompetitorCap = {
 };
 
 const props = defineProps<{
-    accounts: Account[];
+    accounts?: Account[] | null;
     platforms: string[];
-    suggestions: Suggestion[];
+    suggestions?: Suggestion[] | null;
     suggestRun?: SuggestRun | null;
     suggestError?: string | null;
     competitorCap?: CompetitorCap | null;
@@ -93,12 +94,15 @@ defineOptions({
 
 const toast = useToastStore();
 
+const accountsList = computed<Account[]>(() => props.accounts ?? []);
+const accountsLoaded = computed(() => Array.isArray(props.accounts));
+
 const competitorsUsed = computed(() => {
     if (props.competitorCap?.competitors_used != null) {
         return props.competitorCap.competitors_used;
     }
 
-    return props.accounts.length;
+    return accountsList.value.length;
 });
 
 const selected = ref<Record<string, boolean>>({});
@@ -115,7 +119,7 @@ let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let syncPollTimer: ReturnType<typeof setInterval> | null = null;
 
 const hasRunningSync = computed(() =>
-    props.accounts.some(
+    accountsList.value.some(
         (account) =>
             !!syncingIds.value[account.id] || account.last_sync_status === 'running',
     ),
@@ -132,7 +136,7 @@ const minRunBalancePence = computed(
 const trackedKeys = computed(() => {
     const keys = new Set<string>();
 
-    for (const account of props.accounts) {
+    for (const account of accountsList.value) {
         keys.add(`${account.platform}:${account.handle}`.toLowerCase());
     }
 
@@ -165,7 +169,7 @@ function syncSuggestionsFromProps(rows: Suggestion[]): void {
 watch(
     () => props.suggestions,
     (rows) => {
-        syncSuggestionsFromProps(rows);
+        syncSuggestionsFromProps(rows ?? []);
     },
     { immediate: true, deep: true },
 );
@@ -177,7 +181,7 @@ watch(
 
         const nextSelected: Record<number, boolean> = {};
 
-        for (const account of accounts) {
+        for (const account of accounts ?? []) {
             if (selectedAccountIds.value[account.id]) {
                 nextSelected[account.id] = true;
             }
@@ -209,13 +213,13 @@ const allSuggestionsSelected = computed(
 );
 
 const selectedAccounts = computed(() =>
-    props.accounts.filter((account) => !!selectedAccountIds.value[account.id]),
+    accountsList.value.filter((account) => !!selectedAccountIds.value[account.id]),
 );
 
 const allAccountsSelected = computed(
     () =>
-        props.accounts.length > 0 &&
-        props.accounts.every((account) => !!selectedAccountIds.value[account.id]),
+        accountsList.value.length > 0 &&
+        accountsList.value.every((account) => !!selectedAccountIds.value[account.id]),
 );
 
 const showSuggestActionBar = computed(() => selectedSuggestions.value.length > 0);
@@ -265,7 +269,7 @@ function toggleAccount(account: Account): void {
 function selectAllAccounts(): void {
     const next: Record<number, boolean> = {};
 
-    for (const account of props.accounts) {
+    for (const account of accountsList.value) {
         next[account.id] = true;
     }
 
@@ -947,7 +951,24 @@ const syncSelectedTitle = computed(() => {
             </section>
 
             <div
-                v-if="accounts.length"
+                v-if="!accountsLoaded"
+                class="snitch-scrap relative mt-8 space-y-3 p-3 pt-5 pb-6 sm:p-4 sm:pt-6 sm:pb-7"
+                aria-live="polite"
+                aria-label="Loading tracked competitors"
+            >
+                <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
+                <div class="relative z-10 space-y-2.5">
+                    <SnitchSkeleton
+                        v-for="row in 4"
+                        :key="row"
+                        variant="scrap"
+                        height="3rem"
+                    />
+                </div>
+            </div>
+
+            <div
+                v-else-if="accountsList.length"
                 class="snitch-scrap relative mt-8 p-3 pt-5 pb-6 sm:p-4 sm:pt-6 sm:pb-7"
             >
                 <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
@@ -989,7 +1010,7 @@ const syncSelectedTitle = computed(() => {
                         </thead>
                         <tbody>
                             <tr
-                                v-for="account in accounts"
+                                v-for="account in accountsList"
                                 :key="account.id"
                                 class="border-b border-snitch-ink/10 last:border-0"
                                 :class="[
@@ -1154,7 +1175,7 @@ const syncSelectedTitle = computed(() => {
             </div>
 
             <div
-                v-else-if="!localSuggestions.length && !suggesting"
+                v-else-if="accountsLoaded && !localSuggestions.length && !suggesting"
                 class="snitch-scrap relative mx-auto mt-10 max-w-md p-8 text-center"
             >
                 <span class="snitch-tape left-8 -top-2" aria-hidden="true" />

@@ -41,7 +41,14 @@ class CompetitorController extends Controller
     {
         $this->authorize('viewAny', TrackedAccount::class);
 
-        return Inertia::render('competitors/Index', $this->pageProps($request));
+        return Inertia::render('competitors/Index', [
+            'accounts' => Inertia::defer(fn () => $this->accountsWithCounts($request->user())),
+            'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
+            'suggestions' => Inertia::defer(fn () => $this->visibleSuggestions($request), 'suggestions'),
+            'suggestRun' => $this->activeSuggestRun($request->user()->id),
+            'suggestError' => $this->suggestError($request->user()->id),
+            'competitorCap' => $this->entitlements->summary($request->user()),
+        ]);
     }
 
     public function show(Request $request, TrackedAccount $trackedAccount): Response
@@ -55,40 +62,10 @@ class CompetitorController extends Controller
         ]);
         $trackedAccount->setAttribute('in_quota', true);
 
-        $posts = Post::query()
-            ->where('social_account_id', $trackedAccount->social_account_id)
-            ->reelLike()
-            ->with([
-                'socialAccount',
-                'analysis',
-                'winnerInsight' => fn ($q) => $q->where('user_id', $user->id),
-            ])
-            ->latest('posted_at')
-            ->limit(24)
-            ->get()
-            ->map(function (Post $post) use ($user): Post {
-                PostAccountPresenter::attachForUser([$post], $user);
-                $post->setAttribute(
-                    'embed',
-                    PlatformEmbed::resolve($post->platform, $post->url, compact: true),
-                );
-
-                return $post;
-            });
-
-        $winners = WinnerInsight::query()
-            ->where('user_id', $user->id)
-            ->whereHas('post', fn ($query) => $query->where('social_account_id', $trackedAccount->social_account_id))
-            ->with(['post.socialAccount', 'post.analysis'])
-            ->orderByDesc('score')
-            ->limit(8)
-            ->get();
-        PostAccountPresenter::attachForUser($winners->pluck('post')->filter(), $user);
-
         return Inertia::render('competitors/Show', [
             'account' => $trackedAccount,
-            'posts' => $posts,
-            'winners' => $winners,
+            'posts' => Inertia::defer(fn () => $this->competitorPosts($trackedAccount, $user)),
+            'winners' => Inertia::defer(fn () => $this->competitorWinners($trackedAccount, $user), 'winners'),
         ]);
     }
 
@@ -337,13 +314,11 @@ class CompetitorController extends Controller
     }
 
     /**
-     * @return array{accounts: \Illuminate\Database\Eloquent\Collection<int, TrackedAccount>, platforms: Collection<int, string>, suggestions: list<array{platform: string, handle: string, url: string, display_name: string, avatar: string|null, source?: string|null}>, suggestRun: array{id: string, status: string}|null, suggestError: string|null}
+     * @return \Illuminate\Database\Eloquent\Collection<int, TrackedAccount>
      */
-    private function pageProps(Request $request): array
+    private function accountsWithCounts(User $user): \Illuminate\Database\Eloquent\Collection
     {
-        $user = $request->user();
-
-        $accounts = $user
+        return $user
             ->trackedAccounts()
             ->competitors()
             ->withCount([
@@ -356,10 +331,19 @@ class CompetitorController extends Controller
             ->each(function (TrackedAccount $account): void {
                 $account->setAttribute('in_quota', true);
             });
+    }
 
-        $latest = $this->latestSuggestPayload($request->user()->id);
+    /**
+     * @return list<array{platform: string, handle: string, url: string, display_name: string, avatar: string|null, source?: string|null}>
+     */
+    private function visibleSuggestions(Request $request): array
+    {
+        $user = $request->user();
+        $latest = $this->latestSuggestPayload($user->id);
         $suggestions = is_array($latest['suggestions'] ?? null) ? $latest['suggestions'] : [];
-        $trackedKeys = $accounts
+
+        $trackedKeys = $user->trackedAccounts()->competitors()
+            ->get(['platform', 'handle'])
             ->map(function (TrackedAccount $account): string {
                 $platform = $account->platform instanceof Platform
                     ? $account->platform->value
@@ -391,7 +375,7 @@ class CompetitorController extends Controller
         // Persist the filtered set so reload / dismiss stay consistent with tracked accounts.
         if ($visibleSuggestions !== $suggestions) {
             SuggestCompetitorsJob::pruneLatestSuggestions(
-                $request->user()->id,
+                $user->id,
                 array_values(array_filter(
                     $suggestions,
                     function (mixed $row) use ($trackedLookup): bool {
@@ -408,14 +392,59 @@ class CompetitorController extends Controller
             );
         }
 
-        return [
-            'accounts' => $accounts,
-            'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
-            'suggestions' => $visibleSuggestions,
-            'suggestRun' => $this->activeSuggestRun($request->user()->id),
-            'suggestError' => is_string($latest['error'] ?? null) ? $latest['error'] : null,
-            'competitorCap' => $this->entitlements->summary($request->user()),
-        ];
+        /** @var list<array{platform: string, handle: string, url: string, display_name: string, avatar: string|null, source?: string|null}> */
+        return $visibleSuggestions;
+    }
+
+    private function suggestError(int $userId): ?string
+    {
+        $latest = $this->latestSuggestPayload($userId);
+
+        return is_string($latest['error'] ?? null) ? $latest['error'] : null;
+    }
+
+    /**
+     * @return Collection<int, Post>
+     */
+    private function competitorPosts(TrackedAccount $trackedAccount, User $user): Collection
+    {
+        return Post::query()
+            ->where('social_account_id', $trackedAccount->social_account_id)
+            ->reelLike()
+            ->with([
+                'socialAccount',
+                'analysis',
+                'winnerInsight' => fn ($q) => $q->where('user_id', $user->id),
+            ])
+            ->latest('posted_at')
+            ->limit(24)
+            ->get()
+            ->map(function (Post $post) use ($user): Post {
+                PostAccountPresenter::attachForUser([$post], $user);
+                $post->setAttribute(
+                    'embed',
+                    PlatformEmbed::resolve($post->platform, $post->url, compact: true),
+                );
+
+                return $post;
+            });
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Collection<int, WinnerInsight>
+     */
+    private function competitorWinners(TrackedAccount $trackedAccount, User $user): \Illuminate\Database\Eloquent\Collection
+    {
+        $winners = WinnerInsight::query()
+            ->where('user_id', $user->id)
+            ->whereHas('post', fn ($query) => $query->where('social_account_id', $trackedAccount->social_account_id))
+            ->with(['post.socialAccount', 'post.analysis'])
+            ->orderByDesc('score')
+            ->limit(8)
+            ->get();
+        PostAccountPresenter::attachForUser($winners->pluck('post')->filter(), $user);
+
+        return $winners;
     }
 
     /**
