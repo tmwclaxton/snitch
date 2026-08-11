@@ -149,6 +149,43 @@ const musicIsrc = computed(() => {
     return typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : null;
 });
 
+const spotifyTrackId = computed(() => {
+    const music = props.post.analysis?.music;
+
+    if (!music || typeof music !== 'object') {
+        return null;
+    }
+
+    const direct = typeof music.spotify_track_id === 'string' ? music.spotify_track_id.trim() : '';
+
+    if (/^[A-Za-z0-9]{22}$/.test(direct)) {
+        return direct;
+    }
+
+    const url = typeof music.spotify_url === 'string' ? music.spotify_url : '';
+    const match = url.match(/open\.spotify\.com\/(?:[a-z-]{2,10}\/)?track\/([A-Za-z0-9]{22})/);
+
+    return match ? match[1] : null;
+});
+
+const spotifyUrl = computed(() => {
+    if (spotifyTrackId.value) {
+        return `https://open.spotify.com/track/${spotifyTrackId.value}`;
+    }
+
+    const raw = props.post.analysis?.music?.spotify_url;
+
+    return typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : null;
+});
+
+const spotifyEmbedUrl = computed(() => {
+    if (!spotifyTrackId.value) {
+        return null;
+    }
+
+    return `https://open.spotify.com/embed/track/${spotifyTrackId.value}?utm_source=snitch`;
+});
+
 const postedLabel = computed(() => {
     if (!props.post.posted_at) {
         return null;
@@ -459,6 +496,39 @@ const termChips = computed(() => {
                                         ISRC {{ musicIsrc }}
                                     </span>
                                 </p>
+
+                                <div
+                                    v-if="spotifyEmbedUrl"
+                                    class="mt-3"
+                                >
+                                    <iframe
+                                        :src="spotifyEmbedUrl"
+                                        class="w-full rounded-md border border-snitch-ink/10 shadow-[3px_3px_0_0_var(--snitch-spot)]"
+                                        style="height: 80px"
+                                        loading="lazy"
+                                        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
+                                        title="Spotify preview"
+                                    />
+                                    <a
+                                        :href="spotifyUrl ?? '#'"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="snitch-ink-label mt-2 inline-flex items-center gap-1 hover:text-snitch-ink"
+                                    >
+                                        Open on Spotify
+                                        <ExternalLink class="size-3" aria-hidden="true" />
+                                    </a>
+                                </div>
+                                <a
+                                    v-else-if="spotifyUrl"
+                                    :href="spotifyUrl"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="snitch-ink-label mt-3 inline-flex items-center gap-1 hover:text-snitch-ink"
+                                >
+                                    Spotify
+                                    <ExternalLink class="size-3" aria-hidden="true" />
+                                </a>
                                 <ul
                                     v-if="post.analysis.sfx?.length"
                                     class="mt-2 space-y-1 text-sm"

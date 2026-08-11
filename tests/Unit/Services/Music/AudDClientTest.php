@@ -28,9 +28,13 @@ class AudDClientTest extends TestCase
                     'apple_music' => [
                         'id' => 'apple-123',
                         'isrc' => 'USUG11904206',
+                        'url' => 'https://music.apple.com/us/album/apple-123',
                     ],
                     'spotify' => [
-                        'id' => 'spotify-456',
+                        'id' => '0VjIjW4GlUZAMYd2vXMi3b',
+                        'external_urls' => [
+                            'spotify' => 'https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b',
+                        ],
                     ],
                 ],
             ]),
@@ -50,6 +54,10 @@ class AudDClientTest extends TestCase
         $this->assertSame('The Weeknd', $result['artist']);
         $this->assertSame('USUG11904206', $result['isrc']);
         $this->assertGreaterThanOrEqual(0.85, $result['confidence']);
+        $this->assertSame('0VjIjW4GlUZAMYd2vXMi3b', $result['spotify_track_id']);
+        $this->assertSame('https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b', $result['spotify_url']);
+        $this->assertSame('apple-123', $result['apple_music_id']);
+        $this->assertSame('https://music.apple.com/us/album/apple-123', $result['apple_music_url']);
 
         Http::assertSent(function ($request) {
             return str_contains($request->url(), 'https://audd.test');

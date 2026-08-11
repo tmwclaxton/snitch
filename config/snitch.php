@@ -159,6 +159,15 @@ return [
             // Approximate provider COGS per successful recognition (USD).
             'cogs_usd' => (float) env('AUDD_COGS_USD', 0.005),
         ],
+        // Spotify link enrichment: AudD already returns a Spotify id for free.
+        // When absent (AcoustID hits, platform metadata), we optionally use
+        // Firecrawl to resolve title+artist -> Spotify track URL. Cached, safe to
+        // disable when Firecrawl is not configured.
+        'spotify_resolver' => [
+            'enabled' => filter_var(env('SNITCH_SPOTIFY_RESOLVER_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+            'cache_ttl_seconds' => (int) env('SNITCH_SPOTIFY_RESOLVER_CACHE_TTL', 60 * 60 * 24 * 30),
+            'search_limit' => (int) env('SNITCH_SPOTIFY_RESOLVER_SEARCH_LIMIT', 5),
+        ],
     ],
 
     'video_analysis' => [

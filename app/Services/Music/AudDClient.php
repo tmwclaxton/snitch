@@ -28,6 +28,10 @@ class AudDClient
      *     album: string|null,
      *     isrc: string|null,
      *     confidence: float,
+     *     spotify_track_id: string|null,
+     *     spotify_url: string|null,
+     *     apple_music_id: string|null,
+     *     apple_music_url: string|null,
      *     raw: array<string, mixed>|null
      * }|null
      */
@@ -83,6 +87,16 @@ class AudDClient
             ?? $this->trimmedString(data_get($result, 'apple_music.isrc'))
             ?? $this->trimmedString(data_get($result, 'spotify.external_ids.isrc'));
 
+        $spotifyId = $this->trimmedString(data_get($result, 'spotify.id'));
+        $spotifyUrl = $this->trimmedString(data_get($result, 'spotify.external_urls.spotify'));
+
+        if ($spotifyUrl === null && $spotifyId !== null) {
+            $spotifyUrl = 'https://open.spotify.com/track/'.$spotifyId;
+        }
+
+        $appleId = $this->trimmedString(data_get($result, 'apple_music.id'));
+        $appleUrl = $this->trimmedString(data_get($result, 'apple_music.url'));
+
         return [
             'provider' => 'audd',
             'title' => $title,
@@ -90,12 +104,16 @@ class AudDClient
             'album' => $album,
             'isrc' => $isrc,
             'confidence' => $this->deriveConfidence($result, $isrc),
+            'spotify_track_id' => $spotifyId,
+            'spotify_url' => $spotifyUrl,
+            'apple_music_id' => $appleId,
+            'apple_music_url' => $appleUrl,
             'raw' => [
                 'song_link' => $this->trimmedString($result['song_link'] ?? null),
                 'label' => $this->trimmedString($result['label'] ?? null),
                 'release_date' => $this->trimmedString($result['release_date'] ?? null),
-                'apple_music_id' => $this->trimmedString(data_get($result, 'apple_music.id')),
-                'spotify_id' => $this->trimmedString(data_get($result, 'spotify.id')),
+                'apple_music_id' => $appleId,
+                'spotify_id' => $spotifyId,
             ],
         ];
     }

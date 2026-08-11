@@ -32,6 +32,7 @@ class MusicRecognitionService
         private ChromaprintFingerprinter $fingerprinter,
         private AcoustIdClient $acoustId,
         private AudDClient $audd,
+        private SpotifyLinkResolver $spotifyResolver,
     ) {}
 
     public function enabled(): bool
@@ -53,7 +54,13 @@ class MusicRecognitionService
      *     confidence?: float,
      *     recording_id?: string|null,
      *     media_hash?: string|null,
-     *     identified_at?: string
+     *     identified_at?: string,
+     *     spotify_track_id?: string,
+     *     spotify_url?: string,
+     *     spotify_embed_url?: string,
+     *     spotify_resolved_via?: string,
+     *     apple_music_id?: string,
+     *     apple_music_url?: string
      * }|null
      */
     public function recognize(Post $post): ?array
@@ -61,7 +68,7 @@ class MusicRecognitionService
         $platform = $this->platformExtractor->fromPost($post);
 
         if ($platform !== null) {
-            return $this->platformResult($platform);
+            return $this->enrichWithSpotify($this->platformResult($platform));
         }
 
         if (! $this->enabled()) {
@@ -248,9 +255,54 @@ class MusicRecognitionService
             $payload['recording_id'] = $providerResult['recording_id'];
         }
 
+        foreach (['spotify_track_id', 'spotify_url', 'apple_music_id', 'apple_music_url'] as $streamingKey) {
+            if (isset($providerResult[$streamingKey]) && $providerResult[$streamingKey] !== null) {
+                $payload[$streamingKey] = $providerResult[$streamingKey];
+            }
+        }
+
         if ($mediaHash !== null) {
             $payload['media_hash'] = $mediaHash;
         }
+
+        return $this->enrichWithSpotify($payload);
+    }
+
+    /**
+     * Add spotify_track_id / spotify_url / spotify_embed_url to a music payload
+     * when we can resolve one cheaply. Any resolver failure is swallowed - Spotify
+     * is a nice-to-have, never a blocker.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function enrichWithSpotify(array $payload): array
+    {
+        try {
+            $resolved = $this->spotifyResolver->resolve([
+                'title' => $payload['title'] ?? null,
+                'artist' => $payload['artist'] ?? null,
+                'isrc' => $payload['isrc'] ?? null,
+                'spotify_track_id' => $payload['spotify_track_id'] ?? null,
+                'spotify_url' => $payload['spotify_url'] ?? null,
+                'is_original_audio' => $payload['is_original_audio'] ?? null,
+            ]);
+        } catch (Throwable $e) {
+            Log::info('SpotifyLinkResolver threw while enriching payload.', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return $payload;
+        }
+
+        if ($resolved === null) {
+            return $payload;
+        }
+
+        $payload['spotify_track_id'] = $resolved['spotify_track_id'];
+        $payload['spotify_url'] = $resolved['spotify_url'];
+        $payload['spotify_embed_url'] = $resolved['spotify_embed_url'];
+        $payload['spotify_resolved_via'] = $resolved['resolved_via'];
 
         return $payload;
     }

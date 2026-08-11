@@ -28,6 +28,8 @@ class MusicRecognitionServiceTest extends TestCase
             'snitch.music_recognition.silence_dbfs' => -45.0,
             'snitch.music_recognition.acoustid.api_key' => 'test-acoustid',
             'snitch.music_recognition.audd.api_key' => 'test-audd',
+            'snitch.music_recognition.spotify_resolver.enabled' => false,
+            'snitch.firecrawl.api_key' => '',
         ]);
     }
 
@@ -177,7 +179,11 @@ class MusicRecognitionServiceTest extends TestCase
                 'album' => 'You\'ll Be Alright',
                 'isrc' => 'USATO2432117',
                 'confidence' => 0.9,
-                'raw' => ['spotify_id' => 'spotify-99'],
+                'spotify_track_id' => '1S8DHfSs4uzjrfM4EIlbCu',
+                'spotify_url' => 'https://open.spotify.com/track/1S8DHfSs4uzjrfM4EIlbCu',
+                'apple_music_id' => null,
+                'apple_music_url' => null,
+                'raw' => ['spotify_id' => '1S8DHfSs4uzjrfM4EIlbCu'],
             ]);
 
         $this->app->instance(AudioClipExtractor::class, $clipExtractor);
@@ -196,6 +202,13 @@ class MusicRecognitionServiceTest extends TestCase
         $this->assertSame('Ordinary', $result['title']);
         $this->assertSame('Alex Warren', $result['artist']);
         $this->assertSame('USATO2432117', $result['isrc']);
+        $this->assertSame('1S8DHfSs4uzjrfM4EIlbCu', $result['spotify_track_id']);
+        $this->assertSame('https://open.spotify.com/track/1S8DHfSs4uzjrfM4EIlbCu', $result['spotify_url']);
+        $this->assertSame(
+            'https://open.spotify.com/embed/track/1S8DHfSs4uzjrfM4EIlbCu',
+            $result['spotify_embed_url'],
+        );
+        $this->assertSame('audd', $result['spotify_resolved_via']);
     }
 
     public function test_skips_silent_clips_without_calling_providers(): void

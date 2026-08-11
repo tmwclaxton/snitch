@@ -8,6 +8,7 @@ use App\Enums\PostType;
 use App\Models\PostAnalysis;
 use App\Services\Analysis\PlatformMusicExtractor;
 use App\Services\Music\MusicRecognitionService;
+use App\Services\Music\SpotifyLinkResolver;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -20,6 +21,7 @@ use Throwable;
     {--force : Re-run recognition even when a provider result is already stored}
     {--post-id= : Restrict to a single post id}
     {--platform-metadata-only : Refresh from platform metadata, do not call AcoustID / AudD}
+    {--enrich-spotify-only : Skip recognition and only add spotify_* fields to existing music payloads}
     {--dry-run : Report which posts would be processed without touching them}
     {--verbose-clip : Print clip diagnostics (sha, mean dBFS) when available}')]
 #[Description('Back-run song ID (platform > AcoustID > AudD) on completed reel analyses')]
@@ -28,6 +30,7 @@ class BackfillMusicRecognitionCommand extends Command
     public function handle(
         MusicRecognitionService $recognition,
         PlatformMusicExtractor $platformExtractor,
+        SpotifyLinkResolver $spotifyResolver,
     ): int {
         $platforms = $this->resolvePlatforms();
         $limit = max(1, (int) $this->option('limit'));
@@ -35,6 +38,7 @@ class BackfillMusicRecognitionCommand extends Command
         $dryRun = (bool) $this->option('dry-run');
         $onlyMissing = filter_var($this->option('only-missing'), FILTER_VALIDATE_BOOLEAN);
         $platformOnly = (bool) $this->option('platform-metadata-only');
+        $spotifyOnly = (bool) $this->option('enrich-spotify-only');
         $singleId = $this->option('post-id');
 
         $query = PostAnalysis::query()
@@ -77,6 +81,72 @@ class BackfillMusicRecognitionCommand extends Command
             }
 
             $existing = is_array($analysis->music) ? $analysis->music : null;
+
+            if ($spotifyOnly) {
+                if ($existing === null || $existing === []) {
+                    $skipped++;
+
+                    continue;
+                }
+
+                if (isset($existing['spotify_track_id']) && ! $force) {
+                    $skipped++;
+
+                    continue;
+                }
+
+                if ($dryRun) {
+                    $this->line(sprintf(
+                        ' would-enrich post=%d %s title=%s',
+                        $post->id,
+                        $post->platform instanceof Platform ? $post->platform->value : 'unknown',
+                        $existing['title'] ?? '-',
+                    ));
+
+                    continue;
+                }
+
+                try {
+                    $resolved = $spotifyResolver->resolve([
+                        'title' => $existing['title'] ?? null,
+                        'artist' => $existing['artist'] ?? null,
+                        'isrc' => $existing['isrc'] ?? null,
+                        'spotify_track_id' => $existing['spotify_track_id'] ?? null,
+                        'spotify_url' => $existing['spotify_url'] ?? null,
+                        'is_original_audio' => $existing['is_original_audio'] ?? null,
+                    ]);
+                } catch (Throwable $e) {
+                    $failed++;
+                    $this->warn(sprintf('  post=%d spotify resolve threw: %s', $post->id, $e->getMessage()));
+
+                    continue;
+                }
+
+                if ($resolved === null) {
+                    $unresolved++;
+                    $this->line(sprintf(' no-spotify post=%d title=%s', $post->id, $existing['title'] ?? '-'));
+
+                    continue;
+                }
+
+                $existing['spotify_track_id'] = $resolved['spotify_track_id'];
+                $existing['spotify_url'] = $resolved['spotify_url'];
+                $existing['spotify_embed_url'] = $resolved['spotify_embed_url'];
+                $existing['spotify_resolved_via'] = $resolved['resolved_via'];
+
+                $analysis->music = array_filter($existing, static fn ($value) => $value !== null);
+                $analysis->save();
+
+                $identified++;
+                $this->info(sprintf(
+                    '     spotify post=%d via=%s url=%s',
+                    $post->id,
+                    $resolved['resolved_via'],
+                    $resolved['spotify_url'],
+                ));
+
+                continue;
+            }
 
             if (! $force && $this->shouldSkipExisting($existing, $onlyMissing)) {
                 $skipped++;
