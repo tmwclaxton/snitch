@@ -72,8 +72,10 @@ class EmbedLoadQueueContractTest extends TestCase
             '.snitch-contact-cell .snitch-glance-tag:first-child',
             $css,
         );
+        $this->assertStringContainsString('width: max-content', $css);
         $this->assertStringContainsString('text-overflow: ellipsis', $css);
-        $this->assertStringContainsString('max-w-full min-w-0 overflow-hidden', $chipVue);
+        $this->assertStringContainsString('w-max max-w-full min-w-0 overflow-hidden', $chipVue);
+        $this->assertStringNotContainsString('flex-1', $chipVue);
         $this->assertStringContainsString('min-w-0 truncate', $chipVue);
         $this->assertStringNotContainsString('flex-1 truncate', $chipVue);
     }

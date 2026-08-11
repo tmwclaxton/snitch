@@ -1383,9 +1383,11 @@
 
     .snitch-glance-tag {
         display: inline-flex;
+        width: max-content;
         min-width: 0;
         max-width: 100%;
-        flex: 0 1 auto;
+        flex: 0 0 auto;
+        align-self: flex-start;
         align-items: center;
         gap: 0.2rem;
         overflow: hidden;
@@ -1415,6 +1417,7 @@
      * ellipsize - never stretch the first chip to a full-width bar.
      */
     .snitch-contact-cell .snitch-glance-tag {
+        width: max-content;
         max-width: 100%;
     }
 

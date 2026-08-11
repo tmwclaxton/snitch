@@ -44,7 +44,7 @@ const rootClass = computed(() => {
 
     if (props.variant === 'glance') {
         return [
-            'snitch-glance-tag max-w-full min-w-0 overflow-hidden',
+            'snitch-glance-tag w-max max-w-full min-w-0 overflow-hidden',
             linkClass,
         ];
     }
