@@ -22,7 +22,7 @@ class RotateTokenTool extends Tool
             return $user;
         }
 
-        $user->tokens()->delete();
+        $user->sanctumTokens()->delete();
         $token = $user->createSanctumToken('mcp')->plainTextToken;
 
         return Response::json([
