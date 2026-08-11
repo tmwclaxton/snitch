@@ -294,6 +294,22 @@ class McpRuntimeGuidanceTest extends TestCase
         $this->assertSame('queued', $result['payload']['status'] ?? null);
     }
 
+    public function test_suggest_competitors_defaults_to_zero_wait_seconds(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->create(['user_id' => $user->id]);
+        $this->actingAs($user);
+
+        SnitchServer::tool(SuggestCompetitorsTool::class, [])
+            ->assertOk()
+            ->assertSee('"waited_seconds":0')
+            ->assertSee('"queued":true');
+
+        Queue::assertPushed(SuggestCompetitorsJob::class);
+    }
+
     public function test_mcp_job_wait_extends_execution_time_for_long_waits(): void
     {
         $previous = (int) ini_get('max_execution_time');

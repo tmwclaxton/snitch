@@ -18,7 +18,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('find_influencers')]
-#[Description('Queue influencer discovery for one platform (billable). Requires brand name + website. Optional wait_seconds (default ~22, max 45) polls cache so a completed run often returns suggestions in one call. Does NOT track anyone - after status completed call keep_influencer or discard_influencer.')]
+#[Description('Queue influencer discovery for one platform (billable). Requires brand name + website. Optional wait_seconds (default 0, max 45) - omit or 0 to return immediately and poll influencer_search_status; pass wait_seconds for a blocking wait in Cursor/local. Does NOT track anyone - after status completed call keep_influencer or discard_influencer.')]
 class FindInfluencersTool extends Tool
 {
     public function handle(Request $request): Response
@@ -68,7 +68,8 @@ class FindInfluencersTool extends Tool
 
         $wait = McpJobWait::untilTerminal(
             FindInfluencersJob::cacheKeyFor($user->id, $runId),
-            isset($data['wait_seconds']) ? (int) $data['wait_seconds'] : null,
+            isset($data['wait_seconds']) ? (int) $data['wait_seconds'] : McpJobWait::QUEUED_TOOL_DEFAULT_SECONDS,
+            defaultSeconds: McpJobWait::QUEUED_TOOL_DEFAULT_SECONDS,
         );
 
         return $this->responseForWait($runId, $wait, $brandWarnings, $runtime);

@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Cache;
  */
 class McpJobWait
 {
+    /** Default when dispatch tools omit wait_seconds (Claude.ai MCP gateway times out around 10-15s). */
+    public const QUEUED_TOOL_DEFAULT_SECONDS = 0;
+
+    /** Default for explicit long in-request polls (Cursor/local agents may pass wait_seconds directly). */
     public const DEFAULT_SECONDS = 22;
 
     public const MAX_SECONDS = 45;

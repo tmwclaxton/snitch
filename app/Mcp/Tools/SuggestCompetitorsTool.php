@@ -17,7 +17,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('suggest_competitors')]
-#[Description('Queue AI competitor suggestions (Firecrawl + NanoGPT + Apify; billable). Requires brand name + website. Optional wait_seconds (default ~22, max 45) polls cache so a completed run often returns suggestions in one call. Does NOT track anyone - after status completed you MUST call confirm_competitor_suggestions (or dismiss).')]
+#[Description('Queue AI competitor suggestions (Firecrawl + NanoGPT + Apify; billable). Requires brand name + website. Optional wait_seconds (default 0, max 45) - omit or 0 to return immediately and poll suggest_competitors_status; pass wait_seconds for a blocking wait in Cursor/local. Does NOT track anyone - after status completed you MUST call confirm_competitor_suggestions (or dismiss).')]
 class SuggestCompetitorsTool extends Tool
 {
     public function handle(Request $request): Response
@@ -45,7 +45,8 @@ class SuggestCompetitorsTool extends Tool
 
         $wait = McpJobWait::untilTerminal(
             SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId),
-            isset($data['wait_seconds']) ? (int) $data['wait_seconds'] : null,
+            isset($data['wait_seconds']) ? (int) $data['wait_seconds'] : McpJobWait::QUEUED_TOOL_DEFAULT_SECONDS,
+            defaultSeconds: McpJobWait::QUEUED_TOOL_DEFAULT_SECONDS,
         );
 
         return $this->responseForWait($suggestId, $wait, $brandWarnings, $runtime);

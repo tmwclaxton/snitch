@@ -31,7 +31,7 @@ if [ -d /var/www/html/storage ]; then
     if [ -f /var/www/html/storage/oauth-private.key ]; then
         chown sail:sail /var/www/html/storage/oauth-private.key /var/www/html/storage/oauth-public.key 2>/dev/null || true
         chmod 600 /var/www/html/storage/oauth-private.key 2>/dev/null || true
-        chmod 640 /var/www/html/storage/oauth-public.key 2>/dev/null || true
+        chmod 660 /var/www/html/storage/oauth-public.key 2>/dev/null || true
     fi
 fi
 
