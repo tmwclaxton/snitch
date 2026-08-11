@@ -627,7 +627,7 @@ function paginationLabel(label: string): string {
                         Try another hook, topic, or craft - or clear the filters.
                     </template>
                     <template v-else>
-                        Sync competitors and wait for analysis to fill the catalogue.
+                        Sync snitches and wait for analysis to fill the catalogue.
                     </template>
                 </p>
                 <button

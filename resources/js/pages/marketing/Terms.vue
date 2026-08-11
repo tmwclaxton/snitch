@@ -18,10 +18,10 @@ defineOptions({
                 The service
             </h2>
             <p>
-                Snitch is a personal competitor social tracker. You may create
+                Snitch is a personal social tracker for accounts you choose. You may create
                 one personal workspace, track public accounts you choose, view
                 analysis of public posts, filter craft terms in Explore, and
-                configure winner rules. Competitor slots are capped by your plan
+                configure winner rules. Usage is prepaid by your plan
                 (Free, Basic, or Pro).
             </p>
 
@@ -30,7 +30,7 @@ defineOptions({
             </h2>
             <p>
                 New accounts may start with a time-limited trial at Basic
-                competitor limits without entering a card. After the trial, you
+                usage limits without entering a card. After the trial, you
                 stay on Free unless you subscribe. Paid plans are billed through
                 Stripe. You can manage or cancel a subscription in the billing
                 portal. Prices and caps may change; material changes will be

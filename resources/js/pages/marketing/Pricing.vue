@@ -33,7 +33,7 @@ function formatMoney(pence: number): string {
                 </h1>
                 <p class="mt-4 max-w-2xl text-snitch-ink/80">
                     A simple monthly platform fee, then prepaid credits for Apify syncs, NanoGPT analysis, and
-                    Firecrawl discovery. No competitor seat caps - you pay for the work you run.
+                    Firecrawl discovery. No snitch seat caps - you pay for the work you run.
                 </p>
 
                 <div class="snitch-contact-reveal mt-12 grid gap-6 md:grid-cols-2">

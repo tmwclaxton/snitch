@@ -18,7 +18,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('get_post')]
-#[Description('Get a post and its analysis if available. Tracked competitors are free; completed corpus reels whose author is not a tracked competitor charge 0.1p (idempotent per post).')]
+#[Description('Get a post and its analysis if available. Tracked snitches are free; completed corpus reels whose author is not a tracked snitch charge 0.1p (idempotent per post).')]
 class GetPostTool extends Tool
 {
     public function handle(Request $request, ExploreBillingService $exploreBilling): Response

@@ -26,13 +26,13 @@ defineOptions({
             </p>
 
             <h2 class="snitch-display text-xl text-snitch-ink">
-                Competitor and post data
+                Snitch and post data
             </h2>
             <p>
                 When you track public social accounts, we process publicly
                 available profile and post data through third-party collection
                 services (including Apify actors) so we can show a unified feed.
-                We do not ask you to provide private credentials for competitor
+                We do not ask you to provide private credentials for snitch
                 accounts, and we do not claim to access private or
                 authenticated-only content. Import focuses on public reels and
                 Shorts-style video.
@@ -55,7 +55,7 @@ defineOptions({
             <p>
                 Paid plans and checkout are processed by Stripe. We store
                 Stripe customer and subscription identifiers, plan status, and
-                trial end dates needed to enforce competitor caps. Card numbers
+                trial end dates needed for billing access. Card numbers
                 and payment credentials are handled by Stripe, not stored by
                 Snitch. See Stripe's privacy policy for how they process payment
                 data.

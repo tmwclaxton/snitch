@@ -119,7 +119,7 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
             'dismiss_remainder' => false,
         ])
             ->assertOk()
-            ->assertSee('tracked competitors');
+            ->assertSee('tracked snitches');
 
         $this->assertDatabaseHas('tracked_accounts', [
             'user_id' => $user->id,
@@ -260,7 +260,7 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
             ->assertOk()
             ->assertSee('warning')
             ->assertSee('processing')
-            ->assertSee('tracked competitors');
+            ->assertSee('tracked snitches');
 
         $this->assertDatabaseHas('tracked_accounts', [
             'user_id' => $user->id,

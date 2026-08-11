@@ -22,7 +22,7 @@ defineOptions({
                     class="relative z-10 mt-8 space-y-5 text-base leading-relaxed text-snitch-ink/80"
                 >
                     <p>
-                        Snitch is a personal competitor tracker for public short
+                        Snitch is a personal tracker for public short
                         video. Add rival handles on TikTok, Instagram, YouTube
                         Shorts, Facebook, and LinkedIn. We sync recent public
                         reels into one contact sheet, analyse the craft, and
@@ -31,7 +31,7 @@ defineOptions({
                     <p>
                         It is for local brands, creators, and small agencies who
                         want a clear tear sheet of what is working - not another
-                        multi-seat team suite. One workspace, competitor caps by
+                        multi-seat team suite. One workspace, prepaid usage by
                         plan, remake notes you can act on.
                     </p>
                     <p>

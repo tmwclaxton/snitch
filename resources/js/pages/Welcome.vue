@@ -173,7 +173,7 @@ const steps = [
     {
         stamp: '01',
         title: 'Track',
-        copy: 'Add competitor accounts. Snitch pulls recent public posts into one contact sheet.',
+        copy: 'Add snitch accounts. Snitch pulls recent public posts into one contact sheet.',
     },
     {
         stamp: '02',
@@ -249,7 +249,7 @@ const steps = [
                 <h1
                     class="snitch-display mt-3 max-w-[16rem] text-[1.15rem] leading-[1.25] tracking-[-0.012em] text-pretty text-snitch-ink"
                 >
-                    See what competitors post. Remake what wins.
+                    See what snitches post. Remake what wins.
                 </h1>
                 <div
                     class="snitch-hero-mobile-cta mt-5 flex flex-col items-stretch gap-2.5"
@@ -437,7 +437,7 @@ const steps = [
                             <h1
                                 class="snitch-display snitch-hero-lede mt-3.5 text-[1.3rem] leading-[1.22] tracking-[-0.012em] text-pretty sm:mt-4 sm:text-[1.55rem] sm:leading-[1.2]"
                             >
-                                See what competitors post. Remake what wins.
+                                See what snitches post. Remake what wins.
                             </h1>
                             <div
                                 class="snitch-hero-cta mt-6 flex flex-wrap items-stretch justify-start gap-2.5 sm:mt-7 sm:gap-3"
@@ -481,7 +481,7 @@ const steps = [
                 <h2
                     class="snitch-display max-w-5xl text-pretty text-3xl text-snitch-ink sm:text-4xl"
                 >
-                    Competitor social media intelligence.
+                    Social media intelligence for accounts you track.
                 </h2>
                 <p class="mt-4 max-w-3xl text-base leading-relaxed text-snitch-ink/80">
                     Built for local brands, creators, and agencies who need inspiration. Not mindless doom-scrolling.
@@ -567,7 +567,7 @@ const steps = [
                     Connect your agent
                 </h2>
                 <p class="mt-3 max-w-3xl text-snitch-ink/80">
-                    Point Cursor, Claude, Codex, or any MCP client at Snitch. Sync competitors, find influencers,
+                    Point Cursor, Claude, Codex, or any MCP client at Snitch. Sync snitches, find influencers,
                     and analyse posts from the tools your agent already uses.
                 </p>
                 <div class="mt-6">
@@ -601,7 +601,7 @@ const steps = [
                     Start tracking the competition.
                 </h2>
                 <p class="mx-auto mt-3 max-w-2xl text-snitch-ink/80">
-                    Sign in and build your first competitor list.
+                    Sign in and build your first snitch list.
                 </p>
                 <div class="mt-8 flex justify-center">
                     <Link

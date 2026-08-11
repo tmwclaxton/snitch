@@ -87,7 +87,7 @@ function barY(count: number): number {
             class="mt-3 w-full overflow-visible"
             :viewBox="`0 0 ${chartWidth} ${chartHeight + 28}`"
             role="img"
-            :aria-label="`Weekly competitor posts, ${total} over 12 weeks`"
+            :aria-label="`Weekly snitch posts, ${total} over 12 weeks`"
         >
             <g v-for="tick in yTicks" :key="`y-${tick.value}`">
                 <line

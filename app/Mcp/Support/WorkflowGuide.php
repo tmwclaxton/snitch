@@ -65,7 +65,7 @@ final class WorkflowGuide
             ],
             'do_not_skip' => [
                 'whoami first - check runtime.app_url (local vs https://www.snitchsocial.net) and brand_warnings.',
-                'Competitor/influencer discovery is incomplete until confirm/keep.',
+                'Snitch/influencer discovery is incomplete until confirm/keep.',
             ],
             'steps' => [
                 self::step(1, 'whoami', 'Confirm user, runtime.app_url, brand_warnings, queue warnings.'),
@@ -95,14 +95,14 @@ final class WorkflowGuide
     private static function brand(): array
     {
         return [
-            'summary' => 'Ensure brand name, website, and description are set before competitor or influencer discovery.',
+            'summary' => 'Ensure brand name, website, and description are set before snitch or influencer discovery.',
             'prerequisites' => [
                 'whoami already called.',
             ],
             'do_not_skip' => [
                 'Brand name, website, and description are required for suggest_competitors and find_influencers.',
                 'Empty description hard-blocks discovery so niche search is not skipped for ambiguous names.',
-                'Switching brand does NOT clear tracked competitors/influencers - remove prior-niche accounts before discovery.',
+                'Switching brand does NOT clear tracked snitches/influencers - remove prior-niche accounts before discovery.',
             ],
             'steps' => [
                 self::step(1, 'whoami', 'Read brand_warnings.'),
@@ -115,7 +115,7 @@ final class WorkflowGuide
             'notes' => [
                 'Soft-warn when name looks unrelated to the website host - fix before discovery.',
                 'Autofill is billable (Firecrawl/NanoGPT) and needs queue workers locally.',
-                'One Sanctum user shares competitors/influencers across brand switches - clean up explicitly.',
+                'One Sanctum user shares snitches/influencers across brand switches - clean up explicitly.',
             ],
         ];
     }
@@ -132,7 +132,7 @@ final class WorkflowGuide
     private static function competitors(): array
     {
         return [
-            'summary' => 'Discover competitors with optional platforms + brief, then confirm selections. Suggestions are cache-only until confirmed.',
+            'summary' => 'Discover snitches (rivals or style inspiration) with optional platforms + brief, then confirm selections. Suggestions are cache-only until confirmed.',
             'prerequisites' => [
                 'whoami + billing_status (can_run_billable).',
                 'Brand name + website + niche (description or brief) ready (BrandContext).',
@@ -140,7 +140,7 @@ final class WorkflowGuide
             ],
             'do_not_skip' => [
                 'After suggest completes you MUST call confirm_competitor_suggestions or dismiss_competitor_suggestions.',
-                'Completed suggest_competitors_status is NOT tracked competitors yet.',
+                'Completed suggest_competitors_status is NOT tracked snitches yet.',
                 'Prefer waiting until status=completed before confirming - mid-run rows can include weak/off-niche matches.',
             ],
             'steps' => [
@@ -156,7 +156,7 @@ final class WorkflowGuide
                 'add_competitor / remove_competitor for manual edits; sync_competitor after tracking.',
                 'Do not end the session with unconfirmed suggestions still pending.',
                 'Partial suggestions stream while processing - cherry-pick carefully or wait for completed.',
-                'Brand switch does not auto-clear rivals - remove_competitor for prior niche first.',
+                'Brand switch does not auto-clear snitches - remove_competitor for prior niche first.',
                 'Pass platforms + brief when the brand name is weak or you need TikTok/Instagram reels for the feed.',
             ],
         ];
@@ -216,7 +216,7 @@ final class WorkflowGuide
         return [
             'summary' => 'Sync tracked accounts, read the feed, analyze posts, optionally score winners.',
             'prerequisites' => [
-                'At least one tracked competitor/influencer.',
+                'At least one tracked snitch/influencer.',
                 'billing_status can_run_billable before sync/analyze/rescore.',
                 'Queue worker for local async.',
             ],
@@ -285,13 +285,13 @@ final class WorkflowGuide
     private static function explore(): array
     {
         return [
-            'summary' => 'Search and open explore posts; searches and non-competitor views cost small product fees.',
+            'summary' => 'Search and open explore posts; searches and non-snitch views cost small product fees.',
             'prerequisites' => [
                 'billing_status can_run_billable for paid explore.search / explore.view.',
             ],
             'do_not_skip' => [
                 'explore_posts with q charges explore.search (idempotent per normalised query).',
-                'Opening a completed reel not from your tracked competitors charges explore.view.',
+                'Opening a completed reel not from your tracked snitches charges explore.view.',
             ],
             'steps' => [
                 self::step(1, 'billing_status', 'Confirm credits.'),
@@ -300,7 +300,7 @@ final class WorkflowGuide
                 self::step(4, 'analyze_post', 'Optional analysis on a chosen post.'),
             ],
             'notes' => [
-                'Tracked-competitor views are free for explore.view.',
+                'Tracked-snitch views are free for explore.view.',
             ],
         ];
     }

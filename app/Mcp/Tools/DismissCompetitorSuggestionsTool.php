@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('dismiss_competitor_suggestions')]
-#[Description('Clear a competitor suggestion run from cache without tracking anyone. Also clears the Competitors pending panel (latest + active pointers). Use after rejecting a run, or after confirm when leftover rows should disappear.')]
+#[Description('Clear a snitch suggestion run from cache without tracking anyone. Also clears the Snitches pending panel (latest + active pointers). Use after rejecting a run, or after confirm when leftover rows should disappear.')]
 class DismissCompetitorSuggestionsTool extends Tool
 {
     public function handle(Request $request): Response

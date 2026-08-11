@@ -47,7 +47,7 @@ class OnboardingController extends Controller
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => __('Brand profile saved. Add competitors to start tracking.'),
+            'message' => __('Brand profile saved. Add snitches to start tracking.'),
         ]);
 
         return redirect()->route('competitors.index');

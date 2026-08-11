@@ -356,7 +356,7 @@ onMounted(() => {
     if (localSuggestions.value.length > 0 && Object.keys(selected.value).length === 0) {
         selectAllSuggestions();
         suggestMessage.value =
-            suggestMessage.value || `Found ${localSuggestions.value.length} competitors.`;
+            suggestMessage.value || `Found ${localSuggestions.value.length} snitches.`;
     }
 
     const run = props.suggestRun;
@@ -438,14 +438,14 @@ async function pollSuggestions(id: string, attempt = 0): Promise<void> {
         suggesting.value = false;
         suggestMessage.value =
             localSuggestions.value.length > 0
-                ? `Found ${localSuggestions.value.length} competitors.`
-                : 'No verified competitors found.';
+                ? `Found ${localSuggestions.value.length} snitches.`
+                : 'No verified snitches found.';
 
         if (localSuggestions.value.length === 0) {
-            toast.error('No verified competitor accounts found. Try again later.');
+            toast.error('No verified snitch accounts found. Try again later.');
         } else {
             selectAllSuggestions();
-            toast.success('Competitor picks ready.');
+            toast.success('Snitch picks ready.');
         }
 
         return;
@@ -458,7 +458,7 @@ async function pollSuggestions(id: string, attempt = 0): Promise<void> {
             localSuggestions.value.length > 0
                 ? `${payload.error || 'Suggestion stopped.'} Showing ${localSuggestions.value.length} found.`
                 : payload.error || 'Suggestion failed.';
-        toast.error(payload.error || 'Could not suggest competitors.');
+        toast.error(payload.error || 'Could not suggest snitches.');
 
         if (localSuggestions.value.length > 0) {
             selectAllSuggestions();
@@ -528,7 +528,7 @@ async function requestSuggestions(filters: {
                 : undefined;
 
             throw new Error(
-                firstError || errorBody?.message || 'Could not start competitor suggestions.',
+                firstError || errorBody?.message || 'Could not start snitch suggestions.',
             );
         }
 
@@ -736,17 +736,17 @@ const syncSelectedTitle = computed(() => {
         class="snitch-app-shell relative min-h-full min-w-0 px-5 py-6 sm:px-8 sm:py-8"
         :class="showAnyActionBar ? 'pb-28 sm:pb-32' : ''"
     >
-        <Head title="Competitors" />
+        <Head title="Snitches" />
         <div class="snitch-grain" aria-hidden="true" />
 
         <div class="relative z-10 mx-auto w-full min-w-0 max-w-6xl">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div class="min-w-0">
                     <h1 class="snitch-display text-3xl text-snitch-ink sm:text-4xl">
-                        Tracked accounts
+                        Snitches
                     </h1>
                     <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
-                        Accounts you watch across Instagram, TikTok, YouTube Shorts, Facebook, and LinkedIn.
+                        Rivals or accounts whose style you want to copy - across Instagram, TikTok, YouTube Shorts, Facebook, and LinkedIn.
                     </p>
                     <p
                         v-if="competitorsUsed > 0"
@@ -773,7 +773,7 @@ const syncSelectedTitle = computed(() => {
                             aria-hidden="true"
                         />
                         <span class="relative z-10">
-                            {{ suggesting ? 'Finding…' : 'Suggest competitors' }}
+                            {{ suggesting ? 'Finding…' : 'Suggest snitches' }}
                         </span>
                     </button>
                     <p
@@ -806,7 +806,7 @@ const syncSelectedTitle = computed(() => {
                             Scraping the neighborhood
                         </p>
                         <p class="mt-1 text-sm text-snitch-ink/65">
-                            Searching the web for rivals, then verifying real public profiles.
+                            Searching the web for accounts to track, then verifying real public profiles.
                             Verified picks appear below as they land.
                         </p>
                     </div>
@@ -838,7 +838,7 @@ const syncSelectedTitle = computed(() => {
                             id="competitor-handle"
                             v-model="form.handle"
                             class="snitch-field snitch-add-account-control mt-1"
-                            placeholder="@competitor"
+                            placeholder="@handle"
                             autocomplete="off"
                             required
                         />
@@ -868,10 +868,10 @@ const syncSelectedTitle = computed(() => {
                 </div>
             </form>
 
-            <section v-if="localSuggestions.length" class="mt-10" aria-labelledby="suggested-rivals-heading">
+            <section v-if="localSuggestions.length" class="mt-10" aria-labelledby="suggested-snitches-heading">
                 <div>
-                    <h2 id="suggested-rivals-heading" class="snitch-display text-2xl text-snitch-ink">
-                        Suggested rivals
+                    <h2 id="suggested-snitches-heading" class="snitch-display text-2xl text-snitch-ink">
+                        Suggested snitches
                     </h2>
                     <p class="mt-1.5 text-sm text-snitch-ink/65">
                         Pending suggestions (including from an agent) are not tracked yet. Select rows to confirm or dismiss. Reload keeps this table until you clear it or re-run.
@@ -889,7 +889,7 @@ const syncSelectedTitle = computed(() => {
                                             type="checkbox"
                                             class="size-4 accent-[var(--snitch-spot)]"
                                             :checked="allSuggestionsSelected"
-                                            :aria-label="allSuggestionsSelected ? 'Clear suggested selection' : 'Select all suggested rivals'"
+                                            :aria-label="allSuggestionsSelected ? 'Clear suggested selection' : 'Select all suggested snitches'"
                                             @change="toggleSelectAllSuggestions"
                                         />
                                     </th>
@@ -985,7 +985,7 @@ const syncSelectedTitle = computed(() => {
                 v-if="!accountsLoaded"
                 class="snitch-scrap relative mt-8 space-y-3 p-3 pt-5 pb-6 sm:p-4 sm:pt-6 sm:pb-7"
                 aria-live="polite"
-                aria-label="Loading tracked competitors"
+                aria-label="Loading tracked snitches"
             >
                 <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
                 <div class="relative z-10 space-y-2.5">
@@ -1012,7 +1012,7 @@ const syncSelectedTitle = computed(() => {
                                         type="checkbox"
                                         class="size-4 accent-[var(--snitch-spot)]"
                                         :checked="allAccountsSelected"
-                                        :aria-label="allAccountsSelected ? 'Clear tracked selection' : 'Select all tracked competitors'"
+                                        :aria-label="allAccountsSelected ? 'Clear tracked selection' : 'Select all tracked snitches'"
                                         @change="toggleSelectAllAccounts"
                                     />
                                 </th>
@@ -1211,9 +1211,9 @@ const syncSelectedTitle = computed(() => {
             >
                 <span class="snitch-tape left-8 -top-2" aria-hidden="true" />
                 <Users class="mx-auto size-8 text-snitch-ink/35" aria-hidden="true" />
-                <p class="snitch-display mt-3 text-2xl">No competitors yet</p>
+                <p class="snitch-display mt-3 text-2xl">No snitches yet</p>
                 <p class="mt-2 text-sm text-snitch-ink/65">
-                    Add a handle above, or ask Snitch to suggest competitors.
+                    Add a handle above, or ask Snitch to suggest accounts to track.
                 </p>
             </div>
         </div>
@@ -1225,8 +1225,8 @@ const syncSelectedTitle = computed(() => {
             <BulkActionBar
                 v-if="showSuggestActionBar"
                 :count="selectedSuggestions.length"
-                :label="selectedSuggestions.length === 1 ? 'suggested rival' : 'suggested rivals'"
-                aria-label="Suggested rivals actions"
+                :label="selectedSuggestions.length === 1 ? 'suggested snitch' : 'suggested snitches'"
+                aria-label="Suggested snitches actions"
             >
                 <button
                     type="button"
@@ -1269,8 +1269,8 @@ const syncSelectedTitle = computed(() => {
             <BulkActionBar
                 v-if="showAccountActionBar"
                 :count="selectedAccounts.length"
-                :label="selectedAccounts.length === 1 ? 'tracked competitor' : 'tracked competitors'"
-                aria-label="Tracked competitors actions"
+                :label="selectedAccounts.length === 1 ? 'tracked snitch' : 'tracked snitches'"
+                aria-label="Tracked snitches actions"
             >
                 <button
                     type="button"

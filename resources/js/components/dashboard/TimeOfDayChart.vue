@@ -91,7 +91,7 @@ function showLabel(hour: number): boolean {
             class="mt-3 w-full overflow-visible"
             :viewBox="`0 0 ${chartWidth} ${chartHeight + 24}`"
             role="img"
-            :aria-label="`Competitor posts by hour, ${total} over 12 weeks`"
+            :aria-label="`Snitch posts by hour, ${total} over 12 weeks`"
         >
             <g v-for="tick in yTicks" :key="`y-${tick.value}`">
                 <line

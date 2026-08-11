@@ -131,7 +131,7 @@ function isFuture(day: HeatmapDay): boolean {
             <div
                 class="snitch-heatmap-grid"
                 role="img"
-                :aria-label="`Competitor posting calendar, ${days.length} days`"
+                :aria-label="`Snitch posting calendar, ${days.length} days`"
             >
                 <div
                     v-for="(week, weekIndex) in weeks"

@@ -150,7 +150,7 @@ class SuggestCompetitorsJob implements ShouldQueue
         $this->putStatus([
             'status' => 'failed',
             'suggestions' => $partials,
-            'error' => $exception?->getMessage() ?: 'Unable to suggest competitors.',
+            'error' => $exception?->getMessage() ?: 'Unable to suggest snitches.',
         ]);
     }
 
@@ -199,7 +199,7 @@ class SuggestCompetitorsJob implements ShouldQueue
     }
 
     /**
-     * Seed the poll cache + active pointer used by the Competitors page and MCP status tools.
+     * Seed the poll cache + active pointer used by the Snitches page and MCP status tools.
      * Web and MCP must both call this so Inertia can show a running suggest job.
      *
      * @param  array{platforms?: list<string>, brief?: string}  $filters
@@ -333,7 +333,7 @@ class SuggestCompetitorsJob implements ShouldQueue
         $payload['suggestions'] = $kept;
         Cache::put(self::cacheKeyFor($userId, $suggestId), $payload, now()->addHours(2));
 
-        // Keep the Competitors Index pointed at this pruned set.
+        // Keep the Snitches Index pointed at this pruned set.
         Cache::put(self::latestCacheKeyFor($userId), $suggestId, now()->addHours(2));
         self::clearActive($userId, $suggestId);
     }

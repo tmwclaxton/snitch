@@ -40,7 +40,7 @@ const mainNavItems: NavItem[] = [
         icon: Store,
     },
     {
-        title: 'Competitors',
+        title: 'Snitches',
         href: competitors(),
         icon: Users,
     },

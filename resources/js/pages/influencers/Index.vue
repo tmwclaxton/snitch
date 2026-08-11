@@ -1010,7 +1010,7 @@ onUnmounted(() => {
                     <div>
                         <h2 class="snitch-display text-2xl text-snitch-ink">Kept influencers</h2>
                         <p class="mt-1.5 text-sm text-snitch-ink/65">
-                            Creators you kept for brand deals and outreach. Separate from competitor tracking.
+                            Creators you kept for brand deals and outreach. Separate from snitch tracking.
                         </p>
                     </div>
                     <button

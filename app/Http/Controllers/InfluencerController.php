@@ -190,7 +190,7 @@ class InfluencerController extends Controller
         if ($result === 'competitor') {
             Inertia::flash('toast', [
                 'type' => 'success',
-                'message' => __('Already tracked as a competitor. Marked as kept.'),
+                'message' => __('Already tracked as a snitch. Marked as kept.'),
             ]);
 
             return redirect()->route('influencers.index');
@@ -631,7 +631,7 @@ class InfluencerController extends Controller
             ->where('handle', $handle)
             ->first();
 
-        // Already tracked as a competitor still counts as kept for review, without
+        // Already tracked as a snitch still counts as kept for review, without
         // converting the row or consuming an influencer slot.
         if ($existing !== null && $existing->kind === TrackedAccountKind::Competitor) {
             $this->markDecision($user->id, $runId, $key, 'kept');

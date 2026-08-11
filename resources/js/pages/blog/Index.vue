@@ -53,7 +53,7 @@ function formatDate(date: string): string {
                 <h1
                     class="snitch-display relative z-10 mt-2 text-pretty text-4xl text-snitch-ink sm:text-5xl"
                 >
-                    Competitor social notes worth keeping.
+                    Snitch social notes worth keeping.
                 </h1>
                 <p
                     class="mt-4 max-w-2xl text-base leading-relaxed text-snitch-ink/80"

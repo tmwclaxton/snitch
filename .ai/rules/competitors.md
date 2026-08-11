@@ -5,31 +5,33 @@ paths:
   - 'app/Http/Controllers/CompetitorController.php'
 ---
 
-# Competitors
+# Snitches (UI name for tracked competitor accounts)
+
+Product UI and marketing call these **Snitches** - rivals or accounts whose style you want to copy. Routes, MCP tool names, `kind=competitor`, and PHP classes stay `competitors` / `Competitor*` for stability.
 
 ## Untrack does not delete the corpus
-Removing a competitor/influencer deletes only the user's `tracked_accounts` row. Global `social_accounts` + `posts` + analyses stay. Re-add resolves the same social account and attaches existing posts (sync refreshes; it should not recreate from zero when the reel already exists).
+Removing a snitch/influencer deletes only the user's `tracked_accounts` row. Global `social_accounts` + `posts` + analyses stay. Re-add resolves the same social account and attaches existing posts (sync refreshes; it should not recreate from zero when the reel already exists).
 
 ## Sync is intentional - no auto-sync countdown
-Competitors Index/Show show Sync status only: Manual, last synced date, or Syncing. Do not expose next_sync_at / sync_due or a scheduled countdown. Agents and users kick sync; snitch:sync-accounts is ops-only and not registered in routes/console.php.
+Snitches Index/Show show Sync status only: Manual, last synced date, or Syncing. Do not expose next_sync_at / sync_due or a scheduled countdown. Agents and users kick sync; snitch:sync-accounts is ops-only and not registered in routes/console.php.
 
 ## Suggest runs share one active cache pointer
-Web and MCP must call `SuggestCompetitorsJob::beginRun()` before dispatch so `competitor-suggest-active:{userId}` is set. Competitors Index reads that pointer as `suggestRun` and polls until terminal. Do not seed only `latest` / status `queued` - the UI will miss in-progress agent jobs.
+Web and MCP must call `SuggestCompetitorsJob::beginRun()` before dispatch so `competitor-suggest-active:{userId}` is set. Snitches Index reads that pointer as `suggestRun` and polls until terminal. Do not seed only `latest` / status `queued` - the UI will miss in-progress agent jobs.
 
 ## Index table is reel-focused scan columns
-Competitors Index counts reel-like posts only (`reels_count`), plus cheap `analysis_backlog_count` and `winners_count`. Do not show a separate Posts column or invent follower metrics not stored on TrackedAccount.
+Snitches Index counts reel-like posts only (`reels_count`), plus cheap `analysis_backlog_count` and `winners_count`. Do not show a separate Posts column or invent follower metrics not stored on TrackedAccount.
 
 ## Bulk select floating bar
-Suggested rivals and tracked competitors use independent checkbox selection. Shared `BulkActionBar` scrap floats with Confirm/Dismiss (suggestions) or Sync/Remove (tracked). Batch routes: `competitors.batch-sync`, `competitors.batch-destroy`. Prefer the shared component over a second inline scrap bar.
+Suggested snitches and tracked snitches use independent checkbox selection. Shared `BulkActionBar` scrap floats with Confirm/Dismiss (suggestions) or Sync/Remove (tracked). Batch routes: `competitors.batch-sync`, `competitors.batch-destroy`. Prefer the shared component over a second inline scrap bar.
 
-## Competitor suggest is Firecrawl-first
+## Snitch suggest is Firecrawl-first
 Discovery order: Firecrawl search -> NanoGPT normalize/dedupe grounded in hits -> Apify resolveProfile (require external_id). Do not invent rivals from LLM memory alone. Target 12-16 verified rows when possible; fail clearly under min_suggestions. Multi-platform mix including youtube.
 
 ## Suggest is niche-first (not brand-name-first)
 Lead Firecrawl with niche phrase + website host queries. Weak / ambiguous brand names (short single tokens or slang like "Snitch") must not drive `"{$name} competitors"` searches. Niche comes from suggest `brief`, else `brand_profiles.competitor_brief`, else brand description - empty niche blocks suggest (MCP BrandContext + service gate). Agents may pass `brief` on `suggest_competitors` or set description via update_brand / start_brand_autofill. Propose prompt rejects name-collision junk (fashion/meme/homonyms) when the brand is SaaS/software.
 
 ## Suggest options modal (web) + filters (MCP)
-Competitors Index opens a modal before kickoff (space is tight for an inline form). Required: one or more platforms + brief (min 8). Optional Generate drafts `competitor_brief` via NanoGPT (`competitor.brief`). Web POST `/competitors/suggest` body `{ platforms, brief }`; MCP `suggest_competitors` accepts optional `platforms` + `brief` (omit = config platforms + brand niche). Job stores `filters` in the suggest cache payload and passes them into `CompetitorSuggestionService`. Read filters via a safe helper (`resolvedFilters`) - jobs queued before the `filters` constructor arg can unserialize with that typed property uninitialized, and raw `$this->filters` crashes `putStatus` / `failed`.
+Snitches Index opens a modal before kickoff (space is tight for an inline form). Required: one or more platforms + brief (min 8). Optional Generate drafts `competitor_brief` via NanoGPT (`competitor.brief`). Web POST `/competitors/suggest` body `{ platforms, brief }`; MCP `suggest_competitors` accepts optional `platforms` + `brief` (omit = config platforms + brand niche). Job stores `filters` in the suggest cache payload and passes them into `CompetitorSuggestionService`. Read filters via a safe helper (`resolvedFilters`) - jobs queued before the `filters` constructor arg can unserialize with that typed property uninitialized, and raw `$this->filters` crashes `putStatus` / `failed`.
 
 ## Suggest must not starve non-Facebook platforms
 Run niche-led per-platform Firecrawl `site:` queries (instagram, tiktok, youtube, linkedin, facebook), not brand-name-only TikTok fishing. LinkedIn query covers company pages and `/in/` creators. Interleave candidates across platforms through merge and verify. Soft-cap any one platform (`max_per_platform`, default 3) while other platforms still have candidates; relax only to meet `min_suggestions`. Reject pure numeric Facebook handles (`@1000…`) unless Apify resolves a non-numeric vanity handle.

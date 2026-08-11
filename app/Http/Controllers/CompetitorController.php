@@ -269,8 +269,8 @@ class CompetitorController extends Controller
         Inertia::flash('toast', [
             'type' => 'success',
             'message' => $this->billing->canRun($user)
-                ? __('Competitors added. Sync is starting.')
-                : __('Competitors added. Sync needs a balance above :min p - subscribe or top up on Billing.', [
+                ? __('Snitches added. Sync is starting.')
+                : __('Snitches added. Sync needs a balance above :min p - subscribe or top up on Billing.', [
                     'min' => $this->billing->minRunBalancePence(),
                 ]),
         ]);
@@ -318,7 +318,7 @@ class CompetitorController extends Controller
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => __('Removed :count competitors.', ['count' => $accounts->count()]),
+            'message' => __('Removed :count snitches.', ['count' => $accounts->count()]),
         ]);
 
         return redirect()->route('competitors.index');
@@ -382,7 +382,7 @@ class CompetitorController extends Controller
 
         Inertia::flash('toast', [
             'type' => 'info',
-            'message' => __('Sync running for :count competitors. This page updates when they finish.', [
+            'message' => __('Sync running for :count snitches. This page updates when they finish.', [
                 'count' => $accounts->count(),
             ]),
         ]);

@@ -197,10 +197,10 @@ function onKickOff(): void {
                     <div>
                         <DialogTitle class="snitch-display flex items-center gap-2 text-2xl text-snitch-ink">
                             <Sparkles class="size-5 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                            Suggest competitors
+                            Suggest snitches
                         </DialogTitle>
                         <DialogDescription class="mt-1.5 text-sm text-snitch-ink/65">
-                            Steer niche and platforms before we scrape the web for rivals.
+                            Steer niche and platforms before we scrape the web for accounts worth tracking.
                         </DialogDescription>
                     </div>
                     <DialogClose
@@ -270,7 +270,7 @@ function onKickOff(): void {
                             v-model="briefText"
                             rows="4"
                             class="snitch-field mt-2 w-full resize-y text-sm"
-                            placeholder="Describe the niche rivals you want - e.g. social listening / competitor intelligence SaaS on TikTok and Instagram."
+                            placeholder="Describe who to track - rivals or creators whose style you want to copy. e.g. social listening SaaS on TikTok and Instagram."
                             :disabled="busy || generatingBrief"
                             @input="scheduleBriefSave"
                         />

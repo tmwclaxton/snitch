@@ -52,7 +52,7 @@ class LedgerChargePresenterTest extends TestCase
             'suggest competitors' => [
                 'competitors.suggest',
                 ['suggest_id' => 'abc', 'kind' => 'search'],
-                'Suggested competitors',
+                'Suggested snitches',
             ],
             'brand autofill' => [
                 'brand.autofill',
@@ -138,7 +138,7 @@ class LedgerChargePresenterTest extends TestCase
     public function test_discovery_actions_link_to_index_pages(): void
     {
         $this->assertSame(
-            ['type' => 'competitors', 'label' => 'Competitors'],
+            ['type' => 'competitors', 'label' => 'Snitches'],
             $this->presenter->link('competitors.suggest', ['suggest_id' => 's1']),
         );
 

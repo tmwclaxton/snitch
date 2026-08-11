@@ -63,7 +63,7 @@ const footerSections = [
                     <p
                         class="mt-3 text-sm leading-relaxed text-pretty text-snitch-ink/75"
                     >
-                        Track public competitor reels, learn why they work, and
+                        Track public snitch reels, learn why they work, and
                         remake the&nbsp;winners.
                     </p>
                     <p
@@ -111,7 +111,7 @@ const footerSections = [
                     © {{ year }} Snitch. All rights reserved.
                 </p>
                 <p class="text-xs text-snitch-ink/45">
-                    Public competitor intel for creators who ship.
+                    Public snitch intel for creators who ship.
                 </p>
             </div>
         </div>

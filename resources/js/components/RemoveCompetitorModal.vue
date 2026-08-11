@@ -46,10 +46,10 @@ const displayName = computed(() => {
     const first = targets.value[0];
 
     if (!first) {
-        return 'this competitor';
+        return 'this snitch';
     }
 
-    return first.display_name || first.handle || 'this competitor';
+    return first.display_name || first.handle || 'this snitch';
 });
 
 function setOpen(value: boolean): void {
@@ -114,10 +114,10 @@ function confirmRemove(): void {
                     <DialogTitle class="snitch-display flex items-center gap-2 text-xl text-snitch-ink">
                         <Trash2 class="size-5 shrink-0 text-snitch-ink/55" aria-hidden="true" />
                         <template v-if="isBatch">
-                            Remove {{ targets.length }} competitors?
+                            Remove {{ targets.length }} snitches?
                         </template>
                         <template v-else>
-                            Remove this competitor?
+                            Remove this snitch?
                         </template>
                     </DialogTitle>
                     <DialogDescription class="text-sm text-snitch-ink/65">

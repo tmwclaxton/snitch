@@ -4,7 +4,7 @@ return [
 
     'site_name' => env('APP_NAME', 'Snitch'),
 
-    'default_description' => 'Snitch tracks competitor social posts across TikTok, Instagram, YouTube, and more, explains why they work, and surfaces winners you can remake.',
+    'default_description' => 'Snitch tracks social posts from accounts you care about across TikTok, Instagram, YouTube, and more, explains why they work, and surfaces winners you can remake.',
 
     'default_image' => '/images/marketing/og.jpg',
 
@@ -29,8 +29,8 @@ return [
     'pages' => [
 
         'home' => [
-            'title' => 'Competitor social tracking',
-            'description' => 'Track competitor posts on TikTok, Instagram, YouTube, Facebook, and LinkedIn. Snitch analyses hooks and craft, then surfaces winners worth remaking.',
+            'title' => 'Snitch social tracking',
+            'description' => 'Track snitch accounts on TikTok, Instagram, YouTube, Facebook, and LinkedIn. Snitch analyses hooks and craft, then surfaces winners worth remaking.',
             'json_ld' => 'website',
             'sitemap' => [
                 'changefreq' => 'weekly',
@@ -40,7 +40,7 @@ return [
 
         'about' => [
             'title' => 'About Snitch',
-            'description' => 'Snitch is a competitor social tracker for local brands, creators, and agencies who want public posts analysed and winners scored in one place.',
+            'description' => 'Snitch tracks rivals and style inspiration for local brands, creators, and agencies who want public posts analysed and winners scored in one place.',
             'json_ld' => 'webpage',
             'sitemap' => [
                 'changefreq' => 'monthly',
@@ -50,7 +50,7 @@ return [
 
         'how-it-works' => [
             'title' => 'How Snitch works',
-            'description' => 'Add competitor accounts, sync public posts, run full-video analysis, and score winners with your rules. See how Snitch turns rival content into remakes.',
+            'description' => 'Add snitch accounts, sync public posts, run full-video analysis, and score winners with your rules. See how Snitch turns tracked content into remakes.',
             'json_ld' => 'webpage',
             'sitemap' => [
                 'changefreq' => 'monthly',
@@ -60,7 +60,7 @@ return [
 
         'pricing' => [
             'title' => 'Pricing',
-            'description' => 'Snitch plans with a 7-day free trial: Free (3 competitors), Basic (£20 / 10), or Pro (£99 / 50). Save 20% with yearly billing.',
+            'description' => 'Snitch plans with a 7-day free trial and prepaid usage credits. Subscribe for monthly plan value or top up as you go.',
             'json_ld' => 'webpage',
             'sitemap' => [
                 'changefreq' => 'weekly',
@@ -70,7 +70,7 @@ return [
 
         'agents' => [
             'title' => 'Agents and MCP',
-            'description' => 'Connect Cursor, Claude, Codex, or any MCP client to Snitch. Create an agent account, claim it, and use tools for competitors, influencers, and winners.',
+            'description' => 'Connect Cursor, Claude, Codex, or any MCP client to Snitch. Create an agent account, claim it, and use tools for snitches, influencers, and winners.',
             'json_ld' => 'webpage',
             'sitemap' => [
                 'changefreq' => 'weekly',
@@ -90,7 +90,7 @@ return [
 
         'contact' => [
             'title' => 'Contact',
-            'description' => 'Contact the Snitch team about competitor tracking, billing, or support. Email hello@snitchsocial.net or send a message from this form.',
+            'description' => 'Contact the Snitch team about snitch tracking, billing, or support. Email hello@snitchsocial.net or send a message from this form.',
             'json_ld' => 'webpage',
             'sitemap' => [
                 'changefreq' => 'yearly',
@@ -130,7 +130,7 @@ return [
 
         'blog.index' => [
             'title' => 'Blog',
-            'description' => 'Competitor social tracking notes from Snitch: hooks, remakes, and cross-platform workflows for brands and agencies.',
+            'description' => 'Snitch social tracking notes: hooks, remakes, and cross-platform workflows for brands and agencies.',
             'json_ld' => 'webpage',
             'sitemap' => [
                 'changefreq' => 'daily',

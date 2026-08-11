@@ -13,7 +13,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('list_competitors')]
-#[Description('List tracked competitor accounts.')]
+#[Description('List tracked snitch accounts (rivals or style inspiration you follow).')]
 class ListCompetitorsTool extends Tool
 {
     public function handle(Request $request): Response

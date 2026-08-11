@@ -74,7 +74,7 @@ const peakIndex = computed(() => {
             </li>
         </ul>
         <p v-else class="mt-3 text-sm text-snitch-ink/55">
-            No competitor posts in the last 12 weeks.
+            No snitch posts in the last 12 weeks.
         </p>
     </div>
 </template>

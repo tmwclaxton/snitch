@@ -32,7 +32,7 @@ defineOptions({
                 Whoops, the page you wanted is not here.
             </h1>
             <p class="mt-3 text-snitch-ink/80">
-                Head home or sign in to keep tracking competitors.
+                Head home or sign in to keep tracking snitches.
             </p>
             <div class="mt-8 flex flex-wrap gap-3">
                 <Link :href="home()" class="snitch-btn">

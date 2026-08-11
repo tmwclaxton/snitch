@@ -120,8 +120,8 @@ class ConfirmCompetitorSuggestionsTool extends Tool
             'note' => $created === []
                 ? 'No matching suggestion handles. Pass handles exactly as returned by suggest_competitors_status.'
                 : ($remaining === []
-                    ? 'Confirmed handles are now tracked competitors. Pending suggestion panel is clear.'
-                    : 'Confirmed handles are now tracked competitors. Remaining suggestion rows stay because dismiss_remainder=false.'),
+                    ? 'Confirmed handles are now tracked snitches. Pending suggestion panel is clear.'
+                    : 'Confirmed handles are now tracked snitches. Remaining suggestion rows stay because dismiss_remainder=false.'),
             'next_step' => $nextStep,
         ]);
     }

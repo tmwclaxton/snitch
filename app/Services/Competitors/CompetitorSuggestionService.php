@@ -34,7 +34,7 @@ class CompetitorSuggestionService
         $hits = $this->search($brand, $filters);
 
         if ($hits === []) {
-            throw new RuntimeException('Firecrawl search returned no competitor leads.');
+            throw new RuntimeException('Firecrawl search returned no snitch leads.');
         }
 
         $candidates = $this->propose($brand, $hits, $filters);
@@ -45,7 +45,7 @@ class CompetitorSuggestionService
         if (count($verified) < $min) {
             throw new InsufficientCompetitorSuggestionsException(
                 $verified,
-                'Only '.count($verified)." verified competitor profiles found (need at least {$min}).",
+                'Only '.count($verified)." verified snitch profiles found (need at least {$min}).",
             );
         }
 
@@ -66,7 +66,7 @@ class CompetitorSuggestionService
 
         if ($this->nicheSearchPhrase($brand, $filters) === '') {
             throw new RuntimeException(
-                'Competitor suggestion needs a brand description or competitor brief (update_brand, start_brand_autofill, or pass brief) so discovery can search the niche instead of an ambiguous name.',
+                'Snitch suggestion needs a brand description or snitch brief (update_brand, start_brand_autofill, or pass brief) so discovery can search the niche instead of an ambiguous name.',
             );
         }
 
@@ -87,7 +87,7 @@ class CompetitorSuggestionService
         }
 
         if ($hits === []) {
-            throw new RuntimeException('Competitor suggestion requires Firecrawl search hits.');
+            throw new RuntimeException('Snitch suggestion requires Firecrawl search hits.');
         }
 
         $maxCandidates = max(1, (int) config('snitch.competitor_suggest.max_candidates', 16));
@@ -104,7 +104,7 @@ class CompetitorSuggestionService
         $response = $this->nanoGpt->chat([
             [
                 'role' => 'system',
-                'content' => 'You normalise competitor organisations and social handles from web search evidence. Reply with JSON only. Ground every suggestion in the provided search hits (titles, urls, descriptions, or social links). Never invent placeholder handles like *_local, *tips, or slug-derived fakes. Never suggest the brand itself or its own handles. Prefer real public org pages. Omit a platform when unsure. Niche rivals only - not lifestyle, meme, fashion-label name collisions, slang/gossip, or unrelated accounts. When the brand is a software/SaaS product, reject hits that only match the brand name as a word or homonym. Multiple platforms per org are encouraged when the evidence supports them.',
+                'content' => 'You normalise organisations and creator accounts worth tracking (direct rivals OR accounts whose content style the brand should study/copy) from web search evidence. Reply with JSON only. Ground every suggestion in the provided search hits (titles, urls, descriptions, or social links). Never invent placeholder handles like *_local, *tips, or slug-derived fakes. Never suggest the brand itself or its own handles. Prefer real public profiles. Omit a platform when unsure. Stay on-niche - not lifestyle, meme, fashion-label name collisions, slang/gossip, or unrelated accounts. When the brand is a software/SaaS product, reject hits that only match the brand name as a word or homonym. Multiple platforms per org are encouraged when the evidence supports them.',
             ],
             [
                 'role' => 'user',
@@ -120,7 +120,7 @@ class CompetitorSuggestionService
         $payload = json_decode($this->extractJson($text), true);
 
         if (! is_array($payload)) {
-            throw new RuntimeException('Competitor suggestion model returned invalid JSON.');
+            throw new RuntimeException('Snitch suggestion model returned invalid JSON.');
         }
 
         $seeded = $this->candidatesFromSearchHits($hits, $platforms);
@@ -144,7 +144,7 @@ class CompetitorSuggestionService
         $response = $this->nanoGpt->chat([
             [
                 'role' => 'system',
-                'content' => 'You write short UK English competitor-discovery briefs for a brand looking to track rival companies on social media. Reply with plain text only (no markdown, no JSON). 2-4 sentences. Focus on product category, direct rivals, and which platforms matter. Do not invent specific handles.',
+                'content' => 'You write short UK English discovery briefs for a brand looking to track social accounts - direct rivals and creators whose style they may want to copy. Reply with plain text only (no markdown, no JSON). 2-4 sentences. Focus on product category, who to watch, and which platforms matter. Do not invent specific handles.',
             ],
             [
                 'role' => 'user',
@@ -152,7 +152,7 @@ class CompetitorSuggestionService
                     "Brand name: {$brand->name}",
                     'Brand description: '.($description !== '' ? $description : '(none provided - write a generic editable template)'),
                     'Target platforms: '.($platforms !== [] ? implode(', ', $platforms) : 'any'),
-                    'Write a brief the brand can edit before searching for competitors.',
+                    'Write a brief the brand can edit before searching for snitches to track.',
                 ]),
             ],
         ], (string) config('snitch.competitor_suggest.model'), [

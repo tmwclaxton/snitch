@@ -21,7 +21,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('explore_posts')]
-#[Description('Browse analysed reels across the shared platform corpus. Optional q charges 0.5p for search; optional post_id returns detail and may charge 0.1p when the author is not a tracked competitor.')]
+#[Description('Browse analysed reels across the shared platform corpus. Optional q charges 0.5p for search; optional post_id returns detail and may charge 0.1p when the author is not a tracked snitch.')]
 class ExplorePostsTool extends Tool
 {
     public function handle(Request $request, ExploreBillingService $exploreBilling): Response

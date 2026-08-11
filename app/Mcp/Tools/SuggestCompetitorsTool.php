@@ -19,7 +19,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('suggest_competitors')]
-#[Description('Queue AI competitor suggestions (Firecrawl + NanoGPT + Apify; billable). Niche-first search: requires brand description or optional brief. Optional platforms array (instagram/tiktok/youtube/linkedin/facebook) to bias discovery (e.g. reel-native). Optional wait_seconds (default 0, max 45). Does NOT track anyone - after status completed you MUST call confirm_competitor_suggestions (or dismiss).')]
+#[Description('Queue AI snitch suggestions - rivals or accounts whose style to copy (Firecrawl + NanoGPT + Apify; billable). Niche-first search: requires brand description or optional brief. Optional platforms array (instagram/tiktok/youtube/linkedin/facebook) to bias discovery (e.g. reel-native). Optional wait_seconds (default 0, max 45). Does NOT track anyone - after status completed you MUST call confirm_competitor_suggestions (or dismiss).')]
 class SuggestCompetitorsTool extends Tool
 {
     public function handle(Request $request): Response

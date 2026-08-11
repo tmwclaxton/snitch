@@ -13,7 +13,7 @@ const steps: Array<{ title: string; body: string; icon: Component }> = [
     {
         title: 'Track',
         icon: Users,
-        body: 'Set your brand context, then add competitor handles on TikTok, Instagram, YouTube Shorts, Facebook, and LinkedIn - or use suggest to find public rivals in your niche. Snitch syncs recent public reels and Shorts into one feed (images and carousels stay out).',
+        body: 'Set your brand context, then add snitch handles on TikTok, Instagram, YouTube Shorts, Facebook, and LinkedIn - or use suggest to find public accounts in your niche (rivals or style inspiration). Snitch syncs recent public reels and Shorts into one feed (images and carousels stay out).',
     },
     {
         title: 'Analyse',

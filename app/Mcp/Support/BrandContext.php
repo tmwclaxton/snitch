@@ -86,9 +86,9 @@ class BrandContext
         }
 
         if (blank($brand->description) && blank($brand->competitor_brief)) {
-            $warnings[] = 'Brand description and competitor brief are blank (blocks suggest_competitors / find_influencers unless you pass brief). Autofill, update_brand, or pass brief so discovery stays on-niche.';
+            $warnings[] = 'Brand description and snitch brief are blank (blocks suggest_competitors / find_influencers unless you pass brief). Autofill, update_brand, or pass brief so discovery stays on-niche.';
         } elseif (blank($brand->description)) {
-            $warnings[] = 'Brand description is blank. Autofill or update_brand with positioning; competitor_brief alone can unlock suggest.';
+            $warnings[] = 'Brand description is blank. Autofill or update_brand with positioning; competitor_brief (snitch brief) alone can unlock suggest.';
         }
 
         if (

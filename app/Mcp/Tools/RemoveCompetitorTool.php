@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('remove_competitor')]
-#[Description('Remove a tracked competitor account. Pass tracked_account_id (aliases: competitor_id, id) from list_competitors.')]
+#[Description('Remove a tracked snitch account. Pass tracked_account_id (aliases: competitor_id, id) from list_competitors.')]
 class RemoveCompetitorTool extends Tool
 {
     public function handle(Request $request): Response
@@ -43,7 +43,7 @@ class RemoveCompetitorTool extends Tool
             ->first();
 
         if ($account === null) {
-            return Response::error('Competitor not found.');
+            return Response::error('Snitch account not found.');
         }
 
         $account->delete();
@@ -56,7 +56,7 @@ class RemoveCompetitorTool extends Tool
     {
         return [
             'tracked_account_id' => $schema->integer()
-                ->description('Tracked competitor id from list_competitors.id')
+                ->description('Tracked snitch id from list_competitors.id')
                 ->nullable(),
             'competitor_id' => $schema->integer()
                 ->description('Alias for tracked_account_id')

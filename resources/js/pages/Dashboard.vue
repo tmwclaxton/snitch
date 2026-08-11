@@ -227,7 +227,7 @@ function accountHref(post: RecentPost): string | null {
                     <div>
                         <p class="snitch-ink-label">Cadence</p>
                         <h2 class="snitch-display mt-1 text-2xl text-snitch-ink">
-                            Competitor posting
+                            Snitch posting
                         </h2>
                     </div>
                     <p class="text-xs text-snitch-ink/55">
@@ -352,7 +352,7 @@ function accountHref(post: RecentPost): string | null {
                         <Users class="size-8 text-snitch-ink/35" aria-hidden="true" />
                         <p class="snitch-display mt-3 text-xl">No frames yet</p>
                         <p class="mt-2 text-sm text-snitch-ink/65">
-                            Add competitors and sync to fill the board.
+                            Add snitches and sync to fill the board.
                         </p>
                         <Link
                             :href="competitors.url()"
@@ -360,7 +360,7 @@ function accountHref(post: RecentPost): string | null {
                         >
                             <span class="relative z-10 inline-flex items-center gap-2">
                                 <Users class="size-3.5 shrink-0" aria-hidden="true" />
-                                Competitors
+                                Snitches
                             </span>
                         </Link>
                     </div>

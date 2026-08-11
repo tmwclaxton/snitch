@@ -412,7 +412,7 @@ function commitDaysInput(): void {
                         title="Posts synced per day"
                         :description="`Daily totals from ${formatDate(analytics.range.from)} to ${formatDate(analytics.range.to)}.`"
                         empty-title="No posts synced yet."
-                        empty-description="As competitors sync public reels, daily totals will appear here."
+                        empty-description="As snitches sync public reels, daily totals will appear here."
                         :series="analytics.metrics.posts_synced.series"
                         :days="analytics.days"
                         unit-label="posts"
@@ -531,7 +531,7 @@ function commitDaysInput(): void {
                             class="space-y-2 text-sm leading-relaxed text-snitch-ink/75"
                         >
                             <p>
-                                Posts synced count newly stored competitor
+                                Posts synced count newly stored snitch
                                 posts from successful syncs.
                             </p>
                             <p>

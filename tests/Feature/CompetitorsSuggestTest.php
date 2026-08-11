@@ -694,13 +694,13 @@ class CompetitorsSuggestTest extends TestCase
         $page = file_get_contents(resource_path('js/pages/competitors/Index.vue'));
 
         $this->assertNotFalse($page);
-        $this->assertStringContainsString('Suggest competitors', $page);
+        $this->assertStringContainsString('Suggest snitches', $page);
         $this->assertStringContainsString('Finding…', $page);
         $this->assertStringContainsString('SuggestCompetitorsModal', $page);
         $this->assertStringContainsString('openSuggestModal', $page);
         $this->assertStringContainsString('suggestStatus.url', $page);
         $this->assertStringContainsString('Scraping the neighborhood', $page);
-        $this->assertStringContainsString('Searching the web for rivals', $page);
+        $this->assertStringContainsString('Searching the web for accounts to track', $page);
         $this->assertStringContainsString('Verified picks appear below as they land', $page);
         $this->assertStringContainsString('Found ${localSuggestions.value.length} so far', $page);
         $this->assertStringContainsString('applySuggestionRows', $page);
@@ -734,7 +734,7 @@ class CompetitorsSuggestTest extends TestCase
         $this->assertStringNotContainsString('snitch-polaroid', $page);
         $this->assertStringNotContainsString('Sync now', $page);
         $this->assertStringNotContainsString('Profile', $page);
-        $this->assertStringContainsString('Suggested rivals', $page);
+        $this->assertStringContainsString('Suggested snitches', $page);
         $this->assertStringContainsString('Select all', $page);
         $this->assertStringContainsString('dismissSuggestions', $page);
         $this->assertStringContainsString('withoutTracked', $page);

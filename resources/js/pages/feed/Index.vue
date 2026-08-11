@@ -302,7 +302,7 @@ function paginationLabel(label: string): string {
                         Try another platform, type, or account - or clear the filters.
                     </template>
                     <template v-else>
-                        Add competitors and sync to fill the contact sheet.
+                        Add snitches and sync to fill the contact sheet.
                     </template>
                 </p>
                 <button

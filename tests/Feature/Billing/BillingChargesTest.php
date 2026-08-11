@@ -273,9 +273,9 @@ class BillingChargesTest extends TestCase
                 ->component('billing/Charges')
                 ->missing('charges')
                 ->loadDeferredProps('default', fn (Assert $page) => $page
-                    ->where('charges.data.0.description', 'Suggested competitors')
+                    ->where('charges.data.0.description', 'Suggested snitches')
                     ->where('charges.data.0.link.type', 'competitors')
-                    ->where('charges.data.0.link.label', 'Competitors')
+                    ->where('charges.data.0.link.label', 'Snitches')
                     ->where('charges.data.1.description', 'Synced Instagram competitor @rival')
                     ->where('charges.data.1.link.type', 'tracked_account')
                     ->where('charges.data.1.link.id', 7)
@@ -291,7 +291,7 @@ class BillingChargesTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('billing/Index')
-                ->where('usage.recent.0.description', 'Suggested competitors')
+                ->where('usage.recent.0.description', 'Suggested snitches')
                 ->where('usage.recent.0.link.type', 'competitors')
                 ->where('usage.recent.2.description', 'Analyzed YouTube Short')
                 ->where('usage.recent.2.link.id', 42));

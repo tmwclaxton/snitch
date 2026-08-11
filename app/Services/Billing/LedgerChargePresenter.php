@@ -42,10 +42,10 @@ class LedgerChargePresenter
             'analyze.post' => $this->analyzeDescription($meta),
             'embed.analysis' => 'Indexed post analysis',
             'sync.account' => $this->syncDescription($meta),
-            'competitors.suggest' => 'Suggested competitors',
+            'competitors.suggest' => 'Suggested snitches',
             'influencers.find' => 'Suggested influencers',
             'influencer.brief' => 'Generated influencer brief',
-            'competitor.brief' => 'Generated competitor brief',
+            'competitor.brief' => 'Generated snitch brief',
             'brand.autofill' => 'Brand autofill',
             'winners.copy' => 'Generated winner copy',
             'explore.search' => $this->exploreSearchDescription($meta),
@@ -89,7 +89,7 @@ class LedgerChargePresenter
         return match ($action) {
             'competitors.suggest', 'competitor.brief' => [
                 'type' => 'competitors',
-                'label' => 'Competitors',
+                'label' => 'Snitches',
             ],
             'influencers.find', 'influencer.brief' => [
                 'type' => 'influencers',

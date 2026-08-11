@@ -288,7 +288,7 @@ class CompetitorsTest extends TestCase
     {
         $modalVue = file_get_contents(resource_path('js/components/RemoveCompetitorModal.vue'));
         $this->assertIsString($modalVue);
-        $this->assertStringContainsString('Remove this competitor?', $modalVue);
+        $this->assertStringContainsString('Remove this snitch?', $modalVue);
         $this->assertStringContainsString('confirm-remove-competitor-button', $modalVue);
         $this->assertStringContainsString('Cancel', $modalVue);
         $this->assertStringContainsString('router.delete', $modalVue);

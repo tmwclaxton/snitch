@@ -17,7 +17,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('suggest_competitors_status')]
-#[Description('Poll competitor suggestion status and rows. suggest_id optional - omit to use the latest suggest for this user (falls back to active run). Optional wait_seconds (max 45; default 0) blocks briefly for a terminal status. When suggestions appear, call confirm_competitor_suggestions (required to track) or dismiss_competitor_suggestions. Status alone never adds TrackedAccounts.')]
+#[Description('Poll snitch suggestion status and rows. suggest_id optional - omit to use the latest suggest for this user (falls back to active run). Optional wait_seconds (max 45; default 0) blocks briefly for a terminal status. When suggestions appear, call confirm_competitor_suggestions (required to track) or dismiss_competitor_suggestions. Status alone never adds TrackedAccounts.')]
 class SuggestCompetitorsStatusTool extends Tool
 {
     public function handle(Request $request): Response
@@ -39,7 +39,7 @@ class SuggestCompetitorsStatusTool extends Tool
                 $suggestId = Cache::get(SuggestCompetitorsJob::activeCacheKeyFor($user->id));
             }
             if (! is_string($suggestId) || ! Str::isUuid($suggestId)) {
-                return Response::error('No suggest_id provided and no latest competitor suggest found. Call suggest_competitors first.');
+                return Response::error('No suggest_id provided and no latest snitch suggest found. Call suggest_competitors first.');
             }
         } elseif (! Str::isUuid($suggestId)) {
             return Response::error('Invalid suggest_id.');
