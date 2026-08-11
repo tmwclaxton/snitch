@@ -31,7 +31,7 @@ class AgentsController extends Controller
         abort_unless($user !== null, 403);
 
         $user->tokens()->where('name', 'mcp')->delete();
-        $token = $user->createToken('mcp')->plainTextToken;
+        $token = $user->createSanctumToken('mcp')->plainTextToken;
         $request->session()->flash('agents.plain_token', $token);
 
         Inertia::flash('toast', [

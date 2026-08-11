@@ -8,7 +8,6 @@ use App\Mcp\Tools\WorkflowGuideTool;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Server\Attributes\Instructions;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class WorkflowGuideToolTest extends TestCase
@@ -28,7 +27,7 @@ class WorkflowGuideToolTest extends TestCase
     public function test_workflow_guide_overview_lists_core_loops(): void
     {
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(WorkflowGuideTool::class)
             ->assertOk()
@@ -40,7 +39,7 @@ class WorkflowGuideToolTest extends TestCase
     public function test_workflow_guide_competitors_requires_confirm(): void
     {
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(WorkflowGuideTool::class, [
             'workflow' => 'competitors',
@@ -54,7 +53,7 @@ class WorkflowGuideToolTest extends TestCase
     public function test_workflow_guide_accepts_topic_alias(): void
     {
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(WorkflowGuideTool::class, [
             'topic' => 'brand',

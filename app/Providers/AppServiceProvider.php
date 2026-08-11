@@ -22,6 +22,8 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Cashier\Events\WebhookReceived;
+use Laravel\Mcp\Facades\Mcp;
+use Laravel\Passport\Passport;
 use WorkOS\Client as WorkOsClient;
 
 class AppServiceProvider extends ServiceProvider
@@ -43,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configurePassport();
         $this->configureHttpClient();
         $this->configureWorkOsClient();
         $this->configureUrlGenerator();
@@ -87,6 +90,15 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Configure default behaviors for production-ready applications.
      */
+    protected function configurePassport(): void
+    {
+        Mcp::ensureMcpScope();
+
+        Passport::authorizationView('mcp.authorize');
+        Passport::tokensExpireIn(now()->addMonths(6));
+        Passport::refreshTokensExpireIn(now()->addYear());
+    }
+
     protected function configureDefaults(): void
     {
         Date::use(CarbonImmutable::class);

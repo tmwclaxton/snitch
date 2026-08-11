@@ -31,7 +31,7 @@ class AccountClaimService
             'claimed_at' => null,
         ]);
 
-        $token = $user->createToken('mcp')->plainTextToken;
+        $token = $user->createSanctumToken('mcp')->plainTextToken;
 
         return [
             'user' => $user,

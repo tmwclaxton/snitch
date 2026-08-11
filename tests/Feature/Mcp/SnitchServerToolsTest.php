@@ -15,7 +15,6 @@ use App\Models\WinnerRule;
 use App\Services\Billing\UsageBillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class SnitchServerToolsTest extends TestCase
@@ -25,7 +24,7 @@ class SnitchServerToolsTest extends TestCase
     public function test_update_winner_rules_tool_persists_preset(): void
     {
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         $response = SnitchServer::tool(UpdateWinnerRulesTool::class, [
             'preset' => 'aggressive',
@@ -42,7 +41,7 @@ class SnitchServerToolsTest extends TestCase
     public function test_explore_posts_tool_returns_posts_payload(): void
     {
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         $response = SnitchServer::tool(ExplorePostsTool::class, [
             'limit' => 5,
@@ -54,7 +53,7 @@ class SnitchServerToolsTest extends TestCase
     public function test_remove_competitor_tool_errors_when_missing(): void
     {
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         $response = SnitchServer::tool(RemoveCompetitorTool::class, [
             'tracked_account_id' => 999999,
@@ -70,7 +69,7 @@ class SnitchServerToolsTest extends TestCase
             'user_id' => $user->id,
             'kind' => TrackedAccountKind::Competitor,
         ]);
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(RemoveCompetitorTool::class, [
             'competitor_id' => $account->id,
@@ -89,7 +88,7 @@ class SnitchServerToolsTest extends TestCase
             'user_id' => $user->id,
             'kind' => TrackedAccountKind::Competitor,
         ]);
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(SyncCompetitorTool::class, [
             'id' => $account->id,
@@ -99,7 +98,7 @@ class SnitchServerToolsTest extends TestCase
     public function test_billing_portal_tool_requires_stripe_customer(): void
     {
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         $response = SnitchServer::tool(BillingPortalTool::class);
 
@@ -122,7 +121,7 @@ class SnitchServerToolsTest extends TestCase
     public function test_update_winner_rules_creates_rule_row(): void
     {
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(UpdateWinnerRulesTool::class, [
             'preset' => 'balanced',

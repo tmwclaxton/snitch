@@ -19,7 +19,6 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Instructions;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class CompetitorSuggestConfirmLoopTest extends TestCase
@@ -48,7 +47,7 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
 
         $user = User::factory()->create();
         BrandProfile::factory()->create(['user_id' => $user->id]);
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(SuggestCompetitorsTool::class, [
             'wait_seconds' => 0,
@@ -61,7 +60,7 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
     public function test_status_tool_reminds_agent_to_confirm_when_suggestions_exist(): void
     {
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         $suggestId = (string) Str::uuid();
         Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
@@ -89,7 +88,7 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
         Queue::fake();
 
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         $suggestId = (string) Str::uuid();
         $payload = [
@@ -147,7 +146,7 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
         Queue::fake();
 
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         $suggestId = (string) Str::uuid();
         Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
@@ -184,7 +183,7 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
         Queue::fake();
 
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         $suggestId = (string) Str::uuid();
         Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
@@ -237,7 +236,7 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
         Queue::fake();
 
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         $suggestId = (string) Str::uuid();
         Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
@@ -279,7 +278,7 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
         $this->assertStringContainsString('dismiss_remainder defaults to true', $description);
 
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         $suggestId = (string) Str::uuid();
         Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
@@ -321,7 +320,7 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
         Queue::fake();
 
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         $suggestId = (string) Str::uuid();
         Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
@@ -366,7 +365,7 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
     public function test_dismiss_clears_active_and_latest_pointers(): void
     {
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         $suggestId = (string) Str::uuid();
         Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [

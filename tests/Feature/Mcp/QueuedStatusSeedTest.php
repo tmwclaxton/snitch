@@ -12,7 +12,6 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class QueuedStatusSeedTest extends TestCase
@@ -25,7 +24,7 @@ class QueuedStatusSeedTest extends TestCase
 
         $user = User::factory()->create();
         BrandProfile::factory()->create(['user_id' => $user->id]);
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(SuggestCompetitorsTool::class, [
             'wait_seconds' => 0,
@@ -50,7 +49,7 @@ class QueuedStatusSeedTest extends TestCase
 
         $user = User::factory()->create();
         BrandProfile::factory()->create(['user_id' => $user->id]);
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(FindInfluencersTool::class, [
             'platform' => 'tiktok',

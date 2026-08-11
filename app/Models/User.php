@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPassportOAuth;
+use App\Models\Concerns\HasSanctumMcpTokens;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -11,16 +13,16 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Cashier\Billable;
-use Laravel\Sanctum\HasApiTokens;
+use Laravel\Passport\Contracts\OAuthenticatable;
 use Stripe\Customer;
 use Stripe\Exception\InvalidRequestException;
 
 #[Fillable(['name', 'email', 'workos_id', 'avatar', 'created_via', 'claim_token', 'claimed_at'])]
 #[Hidden(['workos_id', 'remember_token', 'claim_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements OAuthenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use Billable, HasApiTokens, HasFactory, Notifiable;
+    use Billable, HasFactory, HasPassportOAuth, HasSanctumMcpTokens, Notifiable;
 
     /**
      * @return array<string, string>

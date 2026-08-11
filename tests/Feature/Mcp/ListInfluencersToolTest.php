@@ -15,7 +15,6 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class ListInfluencersToolTest extends TestCase
@@ -32,7 +31,7 @@ class ListInfluencersToolTest extends TestCase
             'url' => 'https://www.instagram.com/dealmaker/',
             'fit_reason' => 'Strong mid-tier fashion audience for DTC collabs.',
         ]);
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(ListInfluencersTool::class)
             ->assertOk()
@@ -48,7 +47,7 @@ class ListInfluencersToolTest extends TestCase
             'platform' => 'instagram',
             'handle' => 'to-remove',
         ]);
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(RemoveInfluencerTool::class, [
             'influencer_id' => $account->id,
@@ -85,7 +84,7 @@ class ListInfluencersToolTest extends TestCase
             'error' => null,
         ], now()->addHour());
 
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(InfluencerSearchStatusTool::class, [
             'run_id' => $runId,
@@ -121,7 +120,7 @@ class ListInfluencersToolTest extends TestCase
             'error' => null,
         ], now()->addHour());
 
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(InfluencerSearchStatusTool::class, [
             'wait_seconds' => 0,
@@ -161,7 +160,7 @@ class ListInfluencersToolTest extends TestCase
             'error' => null,
         ], now()->addHour());
 
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(KeepInfluencerTool::class, [
             'platform' => 'tiktok',

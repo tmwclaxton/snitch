@@ -46,10 +46,28 @@ class McpConnectionGuide
                 ],
                 [
                     'id' => 'claude',
-                    'name' => 'Claude',
-                    'blurb' => 'Works with Claude Desktop / Claude Code HTTP MCP configs that accept bearer headers.',
+                    'name' => 'Claude.ai',
+                    'blurb' => 'Connect Snitch as a custom MCP connector in Claude.ai with OAuth (no manual Client ID).',
                     'steps' => [
-                        'Create a Snitch API token.',
+                        'Sign in to Snitch in your browser (WorkOS) so the OAuth consent screen can bind your account.',
+                        'In Claude.ai, open Settings → Connectors → Add custom connector.',
+                        'Set the MCP server URL to the Snitch MCP endpoint below (URL only - Dynamic Client Registration supplies the rest).',
+                        'Complete the OAuth flow when Claude prompts you, then call whoami to confirm.',
+                    ],
+                    'snippet' => implode("\n", [
+                        'Claude.ai custom connector URL:',
+                        $mcpUrl,
+                        '',
+                        'No Client ID or secret required when Dynamic Client Registration is enabled.',
+                        'OAuth metadata: '.$origin.'/.well-known/oauth-authorization-server',
+                    ]),
+                ],
+                [
+                    'id' => 'claude-desktop',
+                    'name' => 'Claude Desktop / Claude Code',
+                    'blurb' => 'HTTP MCP configs that accept a bearer token (same as Cursor).',
+                    'steps' => [
+                        'Create a Snitch API token on the Agents page.',
                         'Add an HTTP MCP server pointing at the Snitch MCP URL.',
                         'Pass Authorization: Bearer YOUR_SNITCH_API_TOKEN.',
                         'Restart Claude and run whoami.',
@@ -116,7 +134,7 @@ class McpConnectionGuide
                     'For local MCP, run php artisan queue:work (or composer run dev, which includes queue:listen) so autofill/suggest/find/sync/analyze jobs process.',
                     'Local php artisan serve is single-threaded: one long MCP tools/call can block the dashboard until it returns. If the site hangs, wait for the tool, pause MCP in the client, or restart serve. Production php-fpm is fine.',
                     'Subscribe to the platform plan and top up credits before billable tools.',
-                    'Call authenticated tools on '.$mcpUrl.' with Authorization: Bearer <token>. Never paste tokens into public chats.',
+                    'Call authenticated tools on '.$mcpUrl.' with Authorization: Bearer <token> (Cursor/agents) or OAuth (Claude.ai connector). Never paste tokens into public chats.',
                 ],
                 'snippet' => implode("\n", [
                     'Register (public): '.$registerUrl,

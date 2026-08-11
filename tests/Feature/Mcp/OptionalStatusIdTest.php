@@ -11,7 +11,6 @@ use App\Models\BrandProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class OptionalStatusIdTest extends TestCase
@@ -37,7 +36,7 @@ class OptionalStatusIdTest extends TestCase
             'error' => null,
         ], now()->addHour());
 
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(AutofillStatusTool::class, [
             'wait_seconds' => 0,
@@ -51,7 +50,7 @@ class OptionalStatusIdTest extends TestCase
     public function test_autofill_status_errors_when_no_latest_and_id_omitted(): void
     {
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(AutofillStatusTool::class, [
             'wait_seconds' => 0,
@@ -78,7 +77,7 @@ class OptionalStatusIdTest extends TestCase
             'error' => null,
         ], now()->addHours(2));
 
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(SuggestCompetitorsStatusTool::class, [
             'wait_seconds' => 0,
@@ -117,7 +116,7 @@ class OptionalStatusIdTest extends TestCase
             'error' => null,
         ], now()->addHours(2));
 
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(SuggestCompetitorsStatusTool::class, [
             'wait_seconds' => 0,

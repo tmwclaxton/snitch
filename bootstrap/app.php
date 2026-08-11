@@ -31,6 +31,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->validateCsrfTokens(except: [
             'stripe/*',
+            'oauth/token',
+            'oauth/register',
         ]);
 
         $middleware->web(append: [

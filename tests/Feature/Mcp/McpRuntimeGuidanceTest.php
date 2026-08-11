@@ -23,7 +23,6 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Laravel\Mcp\Server\Attributes\Instructions;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class McpRuntimeGuidanceTest extends TestCase
@@ -47,7 +46,7 @@ class McpRuntimeGuidanceTest extends TestCase
         config(['app.url' => 'http://localhost:8000']);
 
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(WhoamiTool::class)
             ->assertOk()
@@ -60,7 +59,7 @@ class McpRuntimeGuidanceTest extends TestCase
     public function test_billing_status_includes_runtime_and_next_step(): void
     {
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(BillingStatusTool::class)
             ->assertOk()
@@ -78,7 +77,7 @@ class McpRuntimeGuidanceTest extends TestCase
             'website' => null,
             'description' => 'AI opinions platform',
         ]);
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(GetBrandTool::class)
             ->assertOk()
@@ -93,7 +92,7 @@ class McpRuntimeGuidanceTest extends TestCase
     public function test_suggest_status_includes_next_step_when_completed(): void
     {
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         $suggestId = (string) Str::uuid();
         Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
@@ -119,7 +118,7 @@ class McpRuntimeGuidanceTest extends TestCase
     public function test_influencer_status_includes_next_step_when_completed(): void
     {
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         $runId = (string) Str::uuid();
         Cache::put(FindInfluencersJob::cacheKeyFor($user->id, $runId), [
@@ -230,7 +229,7 @@ class McpRuntimeGuidanceTest extends TestCase
             'website' => null,
             'description' => 'AI opinions',
         ]);
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(SuggestCompetitorsTool::class, [
             'wait_seconds' => 0,
@@ -246,7 +245,7 @@ class McpRuntimeGuidanceTest extends TestCase
         Queue::fake();
 
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         SnitchServer::tool(FindInfluencersTool::class, [
             'platform' => 'tiktok',
@@ -300,7 +299,7 @@ class McpRuntimeGuidanceTest extends TestCase
     public function test_suggest_status_wait_seconds_returns_terminal_payload(): void
     {
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $this->actingAs($user);
 
         $suggestId = (string) Str::uuid();
         Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
