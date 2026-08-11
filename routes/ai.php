@@ -3,6 +3,7 @@
 use App\Http\Middleware\AuthenticateMcp;
 use App\Http\Middleware\EnsureMcpProductAccess;
 use App\Http\Middleware\LogMcpToolInvocation;
+use App\Http\Middleware\RejectAdminMcpTools;
 use App\Mcp\Servers\SnitchRegisterServer;
 use App\Mcp\Servers\SnitchServer;
 use Laravel\Mcp\Facades\Mcp;
@@ -16,6 +17,7 @@ Mcp::web('/mcp', SnitchServer::class)
     ->middleware([
         AuthenticateMcp::class,
         LogMcpToolInvocation::class,
+        RejectAdminMcpTools::class,
         EnsureMcpProductAccess::class,
         'throttle:mcp',
     ]);
