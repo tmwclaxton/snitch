@@ -7,12 +7,14 @@ use App\Enums\PostType;
 use App\Exceptions\InsufficientCreditsException;
 use App\Models\Post;
 use App\Models\TrackedAccount;
+use App\Models\User;
 use App\Services\Analysis\AnalysisTermCatalogue;
 use App\Services\Billing\ExploreBillingService;
 use App\Services\Billing\PlanEntitlementService;
 use App\Support\PlatformEmbed;
 use App\Support\PostAccountPresenter;
 use App\Support\SafeMarkdown;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -33,6 +35,28 @@ class FeedController extends Controller
         $user = $request->user();
         $inQuotaIds = $this->entitlements->inQuotaTrackedAccountIds($user);
 
+        return Inertia::render('feed/Index', [
+            'posts' => Inertia::defer(fn () => $this->paginatedPosts($request, $user, $inQuotaIds)),
+            'filters' => [
+                'platform' => $request->string('platform')->toString() ?: null,
+                'type' => $request->string('type')->toString() ?: null,
+                'account' => $request->integer('account') ?: null,
+            ],
+            'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
+            'types' => collect(PostType::analyzable())->map(fn (PostType $t) => $t->value)->values(),
+            'accounts' => $user->trackedAccounts()
+                ->whereIn('id', $inQuotaIds === [] ? [-1] : $inQuotaIds)
+                ->orderBy('handle')
+                ->get(['id', 'handle', 'platform', 'display_name', 'avatar']),
+        ]);
+    }
+
+    /**
+     * @param  list<int>  $inQuotaIds
+     * @return LengthAwarePaginator<int, Post>
+     */
+    private function paginatedPosts(Request $request, User $user, array $inQuotaIds): LengthAwarePaginator
+    {
         $query = Post::query()
             ->forUser($user)
             ->reelLike()
@@ -81,20 +105,7 @@ class FeedController extends Controller
             return $post;
         });
 
-        return Inertia::render('feed/Index', [
-            'posts' => $posts,
-            'filters' => [
-                'platform' => $request->string('platform')->toString() ?: null,
-                'type' => $request->string('type')->toString() ?: null,
-                'account' => $request->integer('account') ?: null,
-            ],
-            'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
-            'types' => collect(PostType::analyzable())->map(fn (PostType $t) => $t->value)->values(),
-            'accounts' => $user->trackedAccounts()
-                ->whereIn('id', $inQuotaIds === [] ? [-1] : $inQuotaIds)
-                ->orderBy('handle')
-                ->get(['id', 'handle', 'platform', 'display_name', 'avatar']),
-        ]);
+        return $posts;
     }
 
     public function show(Request $request, Post $post): Response|RedirectResponse

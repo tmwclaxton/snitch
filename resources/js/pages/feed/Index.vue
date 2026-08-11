@@ -8,6 +8,7 @@ import FeedContactCell from '@/components/FeedContactCell.vue';
 import PaperSelect from '@/components/PaperSelect.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import SnitchImage from '@/components/SnitchImage.vue';
+import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { PostMetrics } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
@@ -34,10 +35,10 @@ type Post = {
 };
 
 const props = defineProps<{
-    posts: {
+    posts?: {
         data: Post[];
         links: Array<{ url: string | null; label: string; active: boolean }>;
-    };
+    } | null;
     filters: {
         platform: string | null;
         type: string | null;
@@ -84,7 +85,9 @@ const selectedAccount = computed(() =>
     props.filters.account != null ? String(props.filters.account) : 'all',
 );
 
-const frameCount = computed(() => props.posts.data.length);
+const frameCount = computed(() => props.posts?.data.length ?? 0);
+const postsLoaded = computed(() => props.posts != null);
+const paginationLinks = computed(() => props.posts?.links ?? []);
 
 const hasActiveFilters = computed(
     () =>
@@ -230,7 +233,31 @@ function paginationLabel(label: string): string {
             </div>
 
             <div
-                v-if="posts.data.length"
+                v-if="!postsLoaded"
+                class="snitch-contact-sheet mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                aria-live="polite"
+                aria-busy="true"
+            >
+                <div class="snitch-contact-sheet-rail col-span-full">
+                    <p>Proof sheet</p>
+                    <p>developing frames</p>
+                </div>
+
+                <div
+                    v-for="index in 8"
+                    :key="`feed-skel-${index}`"
+                    class="p-2"
+                >
+                    <SnitchSkeleton
+                        variant="polaroid"
+                        width="100%"
+                        :label="`Loading frame ${index}`"
+                    />
+                </div>
+            </div>
+
+            <div
+                v-else-if="posts && posts.data.length"
                 class="snitch-contact-sheet snitch-contact-reveal mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
             >
                 <div class="snitch-contact-sheet-rail col-span-full">
@@ -297,12 +324,12 @@ function paginationLabel(label: string): string {
             </div>
 
             <nav
-                v-if="posts.links.length > 3"
+                v-if="paginationLinks.length > 3"
                 class="mt-8 flex flex-wrap justify-center gap-2"
                 aria-label="Pagination"
             >
                 <template
-                    v-for="(link, index) in posts.links"
+                    v-for="(link, index) in paginationLinks"
                     :key="`${link.label}-${index}`"
                 >
                     <Link

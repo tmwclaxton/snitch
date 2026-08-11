@@ -41,8 +41,11 @@ class FeedTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('feed/Index')
-                ->has('posts.data', 1)
-                ->where('posts.data.0.id', $post->id)
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 1)
+                    ->where('posts.data.0.id', $post->id)
+                )
             );
     }
 
@@ -84,11 +87,14 @@ class FeedTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('feed/Index')
-                ->where('posts.data.0.id', $post->id)
-                ->where('posts.data.0.embed.provider', 'tiktok')
-                ->where(
-                    'posts.data.0.embed.src',
-                    'https://www.tiktok.com/player/v1/6718335390845095173?music_info=0&description=0&autoplay=0',
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->where('posts.data.0.id', $post->id)
+                    ->where('posts.data.0.embed.provider', 'tiktok')
+                    ->where(
+                        'posts.data.0.embed.src',
+                        'https://www.tiktok.com/player/v1/6718335390845095173?music_info=0&description=0&autoplay=0',
+                    )
                 )
             );
     }
@@ -124,15 +130,18 @@ class FeedTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('feed/Index')
-                ->where('posts.data.0.id', $post->id)
-                ->where('posts.data.0.caption', "GrantTalk Ep 30: Classroom grants\nMore body copy")
-                ->where('posts.data.0.metrics.views', 12000)
-                ->where('posts.data.0.analysis.hook', 'Cuts on the gasp')
-                ->where('posts.data.0.analysis.concept', 'Contrast reveal')
-                ->where('posts.data.0.analysis.topics.0', 'before after')
-                ->where('posts.data.0.winner_insight.score', 91.2)
-                ->where('posts.data.0.tracked_account.id', $account->id)
-                ->where('posts.data.0.tracked_account.handle', $account->handle)
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->where('posts.data.0.id', $post->id)
+                    ->where('posts.data.0.caption', "GrantTalk Ep 30: Classroom grants\nMore body copy")
+                    ->where('posts.data.0.metrics.views', 12000)
+                    ->where('posts.data.0.analysis.hook', 'Cuts on the gasp')
+                    ->where('posts.data.0.analysis.concept', 'Contrast reveal')
+                    ->where('posts.data.0.analysis.topics.0', 'before after')
+                    ->where('posts.data.0.winner_insight.score', 91.2)
+                    ->where('posts.data.0.tracked_account.id', $account->id)
+                    ->where('posts.data.0.tracked_account.handle', $account->handle)
+                )
             );
     }
 
@@ -218,8 +227,11 @@ class FeedTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('feed/Index')
-                ->has('posts.data', 2)
                 ->where('types', ['reel', 'video'])
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 2)
+                )
             );
 
         $this->actingAs($user)
@@ -346,8 +358,11 @@ class FeedTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('feed/Index')
-                ->where('posts.data.0.analysis.term_labels.0.slug', 'fundraising')
-                ->where('posts.data.0.analysis.term_labels.0.section', 'Grants & nonprofit')
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->where('posts.data.0.analysis.term_labels.0.slug', 'fundraising')
+                    ->where('posts.data.0.analysis.term_labels.0.section', 'Grants & nonprofit')
+                )
             );
 
         $this->actingAs($user)
