@@ -19,6 +19,7 @@ use App\Services\Winners\WinnerScorer;
 use App\Support\PublicDiskMedia;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -158,9 +159,10 @@ class AnalyzePostJob implements ShouldQueue
                 'error' => $e->getMessage(),
             ]);
 
-            // Checklist / validation failures already persist Failed on the analysis row.
-            // Do not burn queue retries on the same model output.
-            if (str_starts_with($e->getMessage(), 'Analysis failed checklist:')) {
+            // Checklist / validation failures and NanoGPT invalid_request 400s already
+            // persist Failed on the analysis row. Do not burn queue retries or escalate
+            // to production.ERROR for the same permanent client failure.
+            if ($this->shouldSoftFailWithoutRetry($e)) {
                 return;
             }
 
@@ -275,5 +277,29 @@ class AnalyzePostJob implements ShouldQueue
             || str_contains($message, 'not available')
             || str_contains($message, 'unavailable')
             || str_contains($message, 'private');
+    }
+
+    private function shouldSoftFailWithoutRetry(Throwable $e): bool
+    {
+        if (str_starts_with($e->getMessage(), 'Analysis failed checklist:')) {
+            return true;
+        }
+
+        return $this->isPermanentNanoGptClientError($e);
+    }
+
+    private function isPermanentNanoGptClientError(Throwable $e): bool
+    {
+        $message = $e->getMessage();
+
+        if (str_contains($message, 'invalid_request_error')) {
+            return true;
+        }
+
+        if ($e instanceof RequestException && $e->response !== null && $e->response->status() === 400) {
+            return true;
+        }
+
+        return (bool) preg_match('/HTTP request returned status code 400\b/i', $message);
     }
 }

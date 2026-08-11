@@ -203,6 +203,39 @@ class AnalyzePostJobUnavailableTest extends TestCase
         $this->assertSame(MediaAvailability::Available, $post->fresh()->media_availability);
     }
 
+    public function test_nanogpt_invalid_request_400_does_not_rethrow_for_queue_retries(): void
+    {
+        Http::fake([
+            'https://cdn.example.com/clip.mp4' => Http::response(null, 200),
+        ]);
+
+        $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+            'media_url' => 'https://cdn.example.com/clip.mp4',
+            'posted_at' => now()->subDay(),
+            'media_availability' => MediaAvailability::Available,
+        ]);
+
+        $analysis = Mockery::mock(VideoAnalysisService::class);
+        $analysis->shouldReceive('analyzePost')
+            ->once()
+            ->andThrow(new RuntimeException(
+                'HTTP request returned status code 400:'."\n".
+                '{"error":{"message":"Invalid request parameters. Please check your input and try again.","type":"invalid_request_error"}}',
+            ));
+        $this->app->instance(VideoAnalysisService::class, $analysis);
+
+        $scorer = Mockery::mock(WinnerScorer::class);
+        $scorer->shouldNotReceive('scoreAndPersist');
+
+        $this->runAnalyzeJob($post->id, $scorer);
+
+        $this->assertSame(MediaAvailability::Available, $post->fresh()->media_availability);
+    }
+
     private function runAnalyzeJob(int $postId, ?WinnerScorer $scorer = null): void
     {
         (new AnalyzePostJob($postId))->handle(
