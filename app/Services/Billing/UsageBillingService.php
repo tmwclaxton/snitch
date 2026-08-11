@@ -778,8 +778,15 @@ class UsageBillingService
 
     public function estimateNanoGptChatUsd(?int $inputTokens, ?int $outputTokens, string $model, string $floorKey = 'chat'): float
     {
-        $floor = (float) config("billing.vendors.nanogpt.floors_usd.{$floorKey}", 0.0005);
-        $rates = config("billing.vendors.nanogpt.models.{$model}");
+        $floors = config('billing.vendors.nanogpt.floors_usd', []);
+        $floor = is_array($floors) && isset($floors[$floorKey])
+            ? (float) $floors[$floorKey]
+            : 0.0005;
+
+        // Look up by array key - model ids can contain dots (e.g. qwen3.7-flash),
+        // which break Laravel dotted config("…models.{$model}") path access.
+        $models = config('billing.vendors.nanogpt.models', []);
+        $rates = is_array($models) ? ($models[$model] ?? null) : null;
 
         if (! is_array($rates) || ($inputTokens === null && $outputTokens === null)) {
             return $floor;

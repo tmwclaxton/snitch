@@ -360,6 +360,30 @@ class UsageBillingServiceTest extends TestCase
         $this->assertEqualsWithDelta(0.42, $large, 0.000001);
     }
 
+    public function test_estimate_nanogpt_resolves_model_ids_that_contain_dots(): void
+    {
+        config([
+            'billing.vendors.nanogpt.floors_usd.video_analysis' => 0.0005,
+            'billing.vendors.nanogpt.models' => [
+                'qwen3.7-flash' => [
+                    'input_per_m_usd' => 0.10,
+                    'output_per_m_usd' => 0.40,
+                ],
+            ],
+        ]);
+
+        // 45800 * 0.10/M + 924 * 0.40/M = 0.00458 + 0.0003696 = 0.0049496
+        $estimate = $this->billing->estimateNanoGptChatUsd(
+            45_800,
+            924,
+            'qwen3.7-flash',
+            'video_analysis',
+        );
+
+        $this->assertEqualsWithDelta(0.0049496, $estimate, 0.0000001);
+        $this->assertNotEqualsWithDelta(0.0005, $estimate, 0.0000001);
+    }
+
     public function test_price_multiplier_default_is_one_point_three(): void
     {
         $this->assertSame(1.3, (float) config('billing.price_multiplier'));
