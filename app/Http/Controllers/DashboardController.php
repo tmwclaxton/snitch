@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Models\TrackedAccount;
+use App\Models\User;
 use App\Models\WinnerInsight;
 use App\Services\Billing\PlanEntitlementService;
 use App\Services\Dashboard\DashboardActivityBuilder;
 use App\Support\PlatformEmbed;
 use App\Support\PostAccountPresenter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -49,7 +51,35 @@ class DashboardController extends Controller
 
         $analysisFailed = $postsBase()->analysisFailed()->count();
 
-        $recentPosts = $postsBase()
+        return Inertia::render('Dashboard', [
+            'stats' => [
+                'tracked_accounts' => $trackedCount,
+                'posts' => $postsCount,
+                'winners' => $winnersCount,
+                'analysis_backlog' => $analysisBacklog,
+                'analysis_failed' => $analysisFailed,
+                'last_synced_at' => $lastSyncedAt,
+            ],
+            'activity' => Inertia::defer(fn () => $activity->forUser($user), 'activity'),
+            'recent_posts' => Inertia::defer(
+                fn () => $this->recentPosts($user),
+                'content',
+            ),
+            'top_winners' => Inertia::defer(
+                fn () => $this->topWinners($user, $socialIds),
+                'content',
+            ),
+        ]);
+    }
+
+    /**
+     * @return Collection<int, Post>
+     */
+    private function recentPosts(User $user): Collection
+    {
+        $recentPosts = Post::query()
+            ->forUser($user)
+            ->reelLike()
             ->with([
                 'socialAccount',
                 'analysis',
@@ -68,6 +98,15 @@ class DashboardController extends Controller
             return $post;
         });
 
+        return $recentPosts;
+    }
+
+    /**
+     * @param  list<int>  $socialIds
+     * @return Collection<int, WinnerInsight>
+     */
+    private function topWinners(User $user, array $socialIds): Collection
+    {
         $topWinners = WinnerInsight::query()
             ->where('user_id', $user->id)
             ->when(
@@ -96,19 +135,7 @@ class DashboardController extends Controller
             );
         });
 
-        return Inertia::render('Dashboard', [
-            'stats' => [
-                'tracked_accounts' => $trackedCount,
-                'posts' => $postsCount,
-                'winners' => $winnersCount,
-                'analysis_backlog' => $analysisBacklog,
-                'analysis_failed' => $analysisFailed,
-                'last_synced_at' => $lastSyncedAt,
-            ],
-            'activity' => $activity->forUser($user),
-            'recent_posts' => $recentPosts,
-            'top_winners' => $topWinners,
-        ]);
+        return $topWinners;
     }
 
     /**

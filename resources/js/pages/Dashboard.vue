@@ -23,6 +23,7 @@ import WeeklyVolumeChart from '@/components/dashboard/WeeklyVolumeChart.vue';
 import FeedContactCell from '@/components/FeedContactCell.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
+import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { winnerStatPills } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
@@ -47,6 +48,33 @@ type RecentPost = {
     winner_insight?: { score: number } | null;
 };
 
+type ActivityPayload = {
+    heatmap: Array<{ date: string; count: number }>;
+    weekly: Array<{ week_start: string; label: string; count: number }>;
+    by_platform: Array<{ platform: string; count: number }>;
+    by_time_of_day: Array<{
+        hour: number;
+        label: string;
+        count: number;
+    }>;
+};
+
+type TopWinner = {
+    id: number;
+    score: number;
+    why: string;
+    post: {
+        id: number;
+        platform: string;
+        url: string | null;
+        media_url: string | null;
+        metrics?: PostMetrics | null;
+        embed?: EmbedConfig | null;
+        tracked_account?: { handle: string } | null;
+        analysis?: { hook: string | null; concept?: string | null } | null;
+    };
+};
+
 const props = defineProps<{
     stats: {
         tracked_accounts: number;
@@ -56,32 +84,9 @@ const props = defineProps<{
         analysis_failed: number;
         last_synced_at: string | null;
     };
-    activity: {
-        heatmap: Array<{ date: string; count: number }>;
-        weekly: Array<{ week_start: string; label: string; count: number }>;
-        by_platform: Array<{ platform: string; count: number }>;
-        by_time_of_day: Array<{
-            hour: number;
-            label: string;
-            count: number;
-        }>;
-    };
-    recent_posts: RecentPost[];
-    top_winners: Array<{
-        id: number;
-        score: number;
-        why: string;
-        post: {
-            id: number;
-            platform: string;
-            url: string | null;
-            media_url: string | null;
-            metrics?: PostMetrics | null;
-            embed?: EmbedConfig | null;
-            tracked_account?: { handle: string } | null;
-            analysis?: { hook: string | null; concept?: string | null } | null;
-        };
-    }>;
+    activity?: ActivityPayload | null;
+    recent_posts?: RecentPost[] | null;
+    top_winners?: TopWinner[] | null;
 }>();
 
 defineOptions({
@@ -100,7 +105,7 @@ const lastSyncLabel = computed(() => {
 });
 
 const heatmapTotal = computed(() =>
-    props.activity.heatmap.reduce((sum, day) => sum + day.count, 0),
+    (props.activity?.heatmap ?? []).reduce((sum, day) => sum + day.count, 0),
 );
 
 const statCards = computed(() => [
@@ -235,22 +240,58 @@ function accountHref(post: RecentPost): string | null {
                         <div class="snitch-scrap relative p-5 pt-6">
                             <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
                             <p class="snitch-ink-label mb-3">Heat map</p>
-                            <PostingHeatmap :days="activity.heatmap" />
+                            <PostingHeatmap
+                                v-if="activity"
+                                :days="activity.heatmap"
+                            />
+                            <SnitchSkeleton
+                                v-else
+                                variant="scrap"
+                                height="7rem"
+                                label="Loading heat map"
+                            />
                         </div>
                         <div class="snitch-scrap relative p-5 pt-6">
                             <span class="snitch-tape right-6 -top-2" aria-hidden="true" />
-                            <TimeOfDayChart :hours="activity.by_time_of_day" />
+                            <TimeOfDayChart
+                                v-if="activity"
+                                :hours="activity.by_time_of_day"
+                            />
+                            <SnitchSkeleton
+                                v-else
+                                variant="scrap"
+                                height="8rem"
+                                label="Loading time of day chart"
+                            />
                         </div>
                     </div>
 
                     <div class="grid gap-4">
                         <div class="snitch-scrap relative p-5 pt-6">
                             <span class="snitch-tape right-4 -top-2" aria-hidden="true" />
-                            <WeeklyVolumeChart :weeks="activity.weekly" />
+                            <WeeklyVolumeChart
+                                v-if="activity"
+                                :weeks="activity.weekly"
+                            />
+                            <SnitchSkeleton
+                                v-else
+                                variant="scrap"
+                                height="8rem"
+                                label="Loading weekly volume chart"
+                            />
                         </div>
                         <div class="snitch-scrap relative p-5 pt-6">
                             <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
-                            <PlatformSplitChart :platforms="activity.by_platform" />
+                            <PlatformSplitChart
+                                v-if="activity"
+                                :platforms="activity.by_platform"
+                            />
+                            <SnitchSkeleton
+                                v-else
+                                variant="scrap"
+                                height="8rem"
+                                label="Loading platform split chart"
+                            />
                         </div>
                     </div>
                 </div>
@@ -275,7 +316,24 @@ function accountHref(post: RecentPost): string | null {
                     </div>
 
                     <div
-                        v-if="recent_posts.length"
+                        v-if="recent_posts === undefined || recent_posts === null"
+                        class="snitch-contact-sheet mt-5 grid grid-cols-2 sm:grid-cols-3"
+                        aria-live="polite"
+                    >
+                        <div
+                            v-for="index in 6"
+                            :key="`recent-skel-${index}`"
+                            class="p-2"
+                        >
+                            <SnitchSkeleton
+                                variant="polaroid"
+                                width="100%"
+                                :label="`Loading recent frame ${index}`"
+                            />
+                        </div>
+                    </div>
+                    <div
+                        v-else-if="recent_posts.length"
                         class="snitch-contact-sheet snitch-contact-reveal mt-5 grid grid-cols-2 sm:grid-cols-3"
                     >
                         <FeedContactCell
@@ -326,7 +384,30 @@ function accountHref(post: RecentPost): string | null {
                     </div>
 
                     <div
-                        v-if="top_winners.length"
+                        v-if="top_winners === undefined || top_winners === null"
+                        class="snitch-tear-board mt-5 grid gap-4 p-4 sm:p-5"
+                        aria-live="polite"
+                    >
+                        <div
+                            v-for="index in 4"
+                            :key="`winner-skel-${index}`"
+                            class="flex items-start gap-3 px-0.5 pt-1"
+                        >
+                            <SnitchSkeleton
+                                variant="polaroid"
+                                width="6rem"
+                                height="8rem"
+                                :label="`Loading winner ${index}`"
+                            />
+                            <div class="flex min-w-0 flex-1 flex-col gap-2">
+                                <SnitchSkeleton variant="line" width="60%" />
+                                <SnitchSkeleton variant="line" width="90%" />
+                                <SnitchSkeleton variant="line" width="75%" />
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        v-else-if="top_winners.length"
                         class="snitch-tear-board mt-5 grid gap-4 p-4 sm:p-5"
                     >
                         <article
