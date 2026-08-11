@@ -87,25 +87,7 @@ class WinnersTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('winners/Index')
-                ->has('winners', 1)
-                ->where('winners.0.post.id', $winnerPost->id)
-                ->where('winners.0.post.metrics.views', 5000)
-                ->where('winners.0.post.metrics.likes', 400)
-                ->where('winners.0.post.analysis.hook', 'Strong opening line here')
-                ->where('winners.0.post.analysis.concept', 'Pattern interrupt with proof')
-                ->where('winners.0.post.analysis.topics.0', 'social proof with receipts')
-                ->where('winners.0.post.analysis.topics.1', 'contrast framing')
-                ->where('winners.0.post.embed.provider', 'tiktok')
-                ->where(
-                    'winners.0.post.embed.src',
-                    'https://www.tiktok.com/player/v1/6718335390845095173?music_info=0&description=0&autoplay=0',
-                )
-                ->where(
-                    'winners.0.how_to_copy_html',
-                    fn (?string $html): bool => is_string($html)
-                        && $html !== ''
-                        && str_contains($html, '<'),
-                )
+                ->missing('winners')
                 ->has('presets')
                 ->has('presets.balanced')
                 ->has('rule.preset')
@@ -113,6 +95,27 @@ class WinnersTest extends TestCase
                 ->has('rule.min_likes')
                 ->has('rule.min_engagement_rate')
                 ->has('rule.advanced')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('winners', 1)
+                    ->where('winners.0.post.id', $winnerPost->id)
+                    ->where('winners.0.post.metrics.views', 5000)
+                    ->where('winners.0.post.metrics.likes', 400)
+                    ->where('winners.0.post.analysis.hook', 'Strong opening line here')
+                    ->where('winners.0.post.analysis.concept', 'Pattern interrupt with proof')
+                    ->where('winners.0.post.analysis.topics.0', 'social proof with receipts')
+                    ->where('winners.0.post.analysis.topics.1', 'contrast framing')
+                    ->where('winners.0.post.embed.provider', 'tiktok')
+                    ->where(
+                        'winners.0.post.embed.src',
+                        'https://www.tiktok.com/player/v1/6718335390845095173?music_info=0&description=0&autoplay=0',
+                    )
+                    ->where(
+                        'winners.0.how_to_copy_html',
+                        fn (?string $html): bool => is_string($html)
+                            && $html !== ''
+                            && str_contains($html, '<'),
+                    )
+                )
             );
     }
 

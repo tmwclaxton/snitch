@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Jobs\ScoreWinnersJob;
 use App\Models\TrackedAccount;
+use App\Models\User;
 use App\Models\WinnerInsight;
 use App\Services\Billing\PlanEntitlementService;
 use App\Services\Winners\WinnerScorer;
 use App\Support\PlatformEmbed;
 use App\Support\PostAccountPresenter;
 use App\Support\SafeMarkdown;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +25,20 @@ class WinnerController extends Controller
     public function index(Request $request, WinnerScorer $scorer): Response
     {
         $user = $request->user();
-        $rule = $scorer->ruleFor($user);
+
+        return Inertia::render('winners/Index', [
+            'winners' => Inertia::defer(fn () => $this->winnersFor($user)),
+            'rule' => $scorer->ruleFor($user),
+            'presets' => config('snitch.winners.presets'),
+            'rescoreRun' => ScoreWinnersJob::activeRunFor($user->id),
+        ]);
+    }
+
+    /**
+     * @return Collection<int, WinnerInsight>
+     */
+    private function winnersFor(User $user): Collection
+    {
         $inQuotaIds = $this->entitlements->inQuotaTrackedAccountIds($user);
         $socialIds = $inQuotaIds === []
             ? []
@@ -69,12 +84,7 @@ class WinnerController extends Controller
             );
         });
 
-        return Inertia::render('winners/Index', [
-            'winners' => $winners,
-            'rule' => $rule,
-            'presets' => config('snitch.winners.presets'),
-            'rescoreRun' => ScoreWinnersJob::activeRunFor($user->id),
-        ]);
+        return $winners;
     }
 
     public function rescore(Request $request): RedirectResponse

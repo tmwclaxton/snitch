@@ -11,6 +11,7 @@ import AnalysisTermChip from '@/components/AnalysisTermChip.vue';
 import MarkdownText from '@/components/MarkdownText.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
+import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import type {
     WinnerRuleFormData,
     WinnerRulePreset,
@@ -34,32 +35,37 @@ type RescoreStatusResponse = {
     winner_count?: number | null;
 };
 
-const props = defineProps<{
-    winners: Array<{
+type Winner = {
+    id: number;
+    score: number;
+    why: string;
+    how_to_copy: string;
+    how_to_copy_html?: string | null;
+    post: {
         id: number;
-        score: number;
-        why: string;
-        how_to_copy: string;
-        how_to_copy_html?: string | null;
-        post: {
-            id: number;
-            url: string | null;
-            media_url: string | null;
-            platform: string;
-            metrics?: PostMetrics | null;
-            embed?: EmbedConfig | null;
-            tracked_account?: { handle: string };
-            analysis?: {
-                hook: string | null;
-                concept?: string | null;
-                topics?: string[] | null;
-            } | null;
-        };
-    }>;
+        url: string | null;
+        media_url: string | null;
+        platform: string;
+        metrics?: PostMetrics | null;
+        embed?: EmbedConfig | null;
+        tracked_account?: { handle: string };
+        analysis?: {
+            hook: string | null;
+            concept?: string | null;
+            topics?: string[] | null;
+        } | null;
+    };
+};
+
+const props = defineProps<{
+    winners?: Winner[] | null;
     rule: WinnerRuleFormData;
     presets: Record<string, WinnerRulePreset>;
     rescoreRun?: RescoreRun | null;
 }>();
+
+const winnersList = computed<Winner[]>(() => props.winners ?? []);
+const winnersLoaded = computed(() => Array.isArray(props.winners));
 
 defineOptions({
     layout: AppLayout,
@@ -265,12 +271,27 @@ onUnmounted(() => {
             </div>
 
             <div
+                v-if="!winnersLoaded"
+                class="snitch-tear-board mt-8 space-y-4 p-4 sm:space-y-5 sm:p-6"
+                aria-live="polite"
+                aria-label="Loading winners"
+            >
+                <SnitchSkeleton
+                    v-for="row in 3"
+                    :key="`winner-skel-${row}`"
+                    variant="scrap"
+                    height="8rem"
+                />
+            </div>
+
+            <div
+                v-else
                 class="snitch-tear-board mt-8 p-4 sm:p-6"
                 :class="isRescoring ? 'opacity-70' : ''"
             >
                 <div class="snitch-contact-reveal space-y-4 sm:space-y-5">
                     <article
-                        v-for="(winner, index) in winners"
+                        v-for="(winner, index) in winnersList"
                         :key="winner.id"
                         class="snitch-tear-row relative border-b border-dashed border-snitch-ink/15 pb-5 last:border-b-0 last:pb-0 sm:pb-6"
                     >
@@ -351,7 +372,7 @@ onUnmounted(() => {
                 </div>
 
                 <div
-                    v-if="!winners.length"
+                    v-if="!winnersList.length"
                     class="snitch-scrap relative mx-auto max-w-md p-8 text-center"
                 >
                     <span class="snitch-tape left-8 -top-2" aria-hidden="true" />
