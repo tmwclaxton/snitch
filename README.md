@@ -31,7 +31,7 @@
   <img src="https://img.shields.io/badge/Inertia-3-E644AD" alt="Inertia v3" />
   <img src="https://img.shields.io/badge/PHP-8.5-777BB4?logo=php&logoColor=white" alt="PHP 8.5" />
   <img src="https://img.shields.io/badge/Platforms-5-1C1B1A?labelColor=F0C400" alt="5 platforms" />
-  <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License" />
+  <img src="https://img.shields.io/badge/License-AGPL--3.0-blue.svg" alt="AGPL-3.0 License" />
 </p>
 
 <p align="center">
@@ -153,7 +153,7 @@ Typical list prices below are approximate public starting points and change ofte
 2. **Craft intelligence** - hook windows, visuals, SFX/music recognition (platform metadata + AcoustID/AudD), transcripts, Spotify links, and how-to-copy notes - not vanity charts alone.
 3. **Agent-native MCP** - Cursor / Claude can suggest snitches, sync, list feed/winners, explore, and rotate tokens. Few competitors expose the product as tools with prepaid usage.
 4. **Honest empty states** - sync can report `empty` when a handle has no recent reels; explore search scales with result count (0p when empty, max 0.5p).
-5. **Source available** - MIT app code on GitHub. Inspect adapters, billing, and jobs yourself.
+5. **Fully open source** - AGPL-3.0 on GitHub. Inspect adapters, billing, and jobs yourself.
 
 ### Why Snitch is cheaper
 
@@ -310,7 +310,7 @@ UI metaphors: scrap filters, polaroid frames, contact sheets, tear-board winners
 - **AI processing** - brand autofill, snitch suggest, influencer find, and video analysis send text/video context to NanoGPT as needed. Firecrawl is used for website and discovery search.
 - **MCP auth split** - Sanctum tokens for agents; Passport OAuth for Claude.ai. Rotate revokes Sanctum MCP tokens only.
 - **No data selling** - see the [privacy policy](https://www.snitchsocial.net/privacy).
-- **Source available** - MIT-licensed application code on GitHub. Inspect adapters, jobs, and analysis pipeline yourself.
+- **Fully open source** - AGPL-3.0 application code on GitHub. Inspect adapters, jobs, and analysis pipeline yourself.
 - **Live probes off by default** - `SNITCH_LIVE_APIFY`, `SNITCH_LIVE_VIDEO`, and related flags stay `0` locally so tests do not burn API credits.
 
 ## Links
@@ -574,7 +574,7 @@ Project conventions for agents and humans live in `AGENTS.md` and `.ai/rules/`.
 
 ## License
 
-[MIT](https://opensource.org/licenses/MIT) (`composer.json`). Free to use, modify, and ship - including commercially - with attribution preserved.
+[GNU Affero General Public License v3.0 (AGPL-3.0)](https://www.gnu.org/licenses/agpl-3.0.html) (`LICENSE`, `composer.json`). Free to use, modify, and run - network use requires sharing corresponding source under the same license.
 
 ---
 

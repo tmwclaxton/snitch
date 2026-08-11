@@ -395,6 +395,20 @@ class PublicPagesTest extends TestCase
         $this->assertStringContainsString('aria-label="Snitch on GitHub"', $nav);
     }
 
+    public function test_landing_page_states_agpl_open_source_license(): void
+    {
+        $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
+
+        $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
+        $this->assertStringContainsString('Fully open source', $welcome);
+        $this->assertStringContainsString(
+            'GNU Affero General Public License v3.0 (AGPL-3.0)',
+            $welcome,
+        );
+        $this->assertStringContainsString('https://www.gnu.org/licenses/agpl-3.0.html', $welcome);
+        $this->assertStringContainsString('https://github.com/tmwclaxton/snitch', $welcome);
+    }
+
     public function test_ghost_ticket_buttons_stroke_follows_clip_not_inset_shadow(): void
     {
         $css = file_get_contents(resource_path('css/app.css'));

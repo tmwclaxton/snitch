@@ -579,6 +579,44 @@ const steps = [
         </section>
 
         <section class="px-5 pb-20 sm:px-8">
+            <div class="mx-auto max-w-6xl">
+                <p class="snitch-ink-label">Open source</p>
+                <h2 class="snitch-display mt-1 text-3xl text-snitch-ink">
+                    Fully open source
+                </h2>
+                <p class="mt-3 max-w-3xl text-snitch-ink/80">
+                    Snitch is fully open source under the
+                    <a
+                        href="https://www.gnu.org/licenses/agpl-3.0.html"
+                        class="font-semibold text-snitch-ink underline decoration-snitch-spot decoration-2 underline-offset-2 transition-colors hover:text-snitch-ink/80"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >GNU Affero General Public License v3.0 (AGPL-3.0)</a>.
+                    Read the code, run it yourself, and contribute on
+                    <a
+                        href="https://github.com/tmwclaxton/snitch"
+                        class="font-semibold text-snitch-ink underline decoration-snitch-spot decoration-2 underline-offset-2 transition-colors hover:text-snitch-ink/80"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >GitHub</a>.
+                </p>
+                <div class="mt-6">
+                    <a
+                        href="https://github.com/tmwclaxton/snitch"
+                        class="snitch-btn"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        <span class="relative z-10 inline-flex items-center gap-2">
+                            <font-awesome-icon :icon="['fab', 'github']" class="size-3.5" aria-hidden="true" />
+                            View source
+                        </span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section class="px-5 pb-20 sm:px-8">
             <div
                 class="snitch-tear-board relative mx-auto max-w-6xl overflow-hidden px-6 py-12 sm:px-10"
             >

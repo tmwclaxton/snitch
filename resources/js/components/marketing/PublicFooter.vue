@@ -108,7 +108,13 @@ const footerSections = [
                 class="mt-10 flex flex-col gap-2 border-t border-snitch-ink/10 pt-6 sm:mt-12 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
             >
                 <p class="text-xs text-snitch-ink/50">
-                    © {{ year }} Snitch. All rights reserved.
+                    © {{ year }} Snitch. Open source under
+                    <a
+                        href="https://www.gnu.org/licenses/agpl-3.0.html"
+                        class="underline decoration-snitch-ink/30 underline-offset-2 transition-colors hover:text-snitch-ink/70"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >AGPL-3.0</a>.
                 </p>
                 <p class="text-xs text-snitch-ink/45">
                     Public snitch intel for creators who ship.
