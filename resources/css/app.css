@@ -1316,17 +1316,16 @@
         font-size: 1.125rem;
         color: var(--snitch-ink);
         line-height: 1;
-        font-feature-settings: 'tnum';
+        letter-spacing: 0.01em;
+        font-variant-numeric: tabular-nums;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
 
     .snitch-glance-metric:first-child .snitch-glance-metric-value {
-        text-decoration: underline;
-        text-decoration-color: var(--snitch-spot);
-        text-decoration-thickness: 3px;
-        text-underline-offset: 2px;
+        box-shadow: inset 0 -3px 0 0 var(--snitch-spot);
+        padding-bottom: 1px;
     }
 
     .snitch-glance-metric-label {
@@ -1380,7 +1379,7 @@
     }
 
     .snitch-glance-tag {
-        display: flex;
+        display: inline-flex;
         min-width: 0;
         max-width: 100%;
         flex: 0 1 auto;
@@ -1409,16 +1408,10 @@
     }
 
     /*
-     * Concept / idea chips can stay ~28 chars but still beat a narrow
-     * proof frame unless the chip row is width-bound and ellipsized.
+     * Hug short labels; cap long concept chips at the frame width and
+     * ellipsize - never stretch the first chip to a full-width bar.
      */
     .snitch-contact-cell .snitch-glance-tag {
-        max-width: 100%;
-    }
-
-    .snitch-contact-cell .snitch-glance-tag:first-child {
-        flex: 0 0 auto;
-        width: 100%;
         max-width: 100%;
     }
 

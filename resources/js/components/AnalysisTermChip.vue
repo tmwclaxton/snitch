@@ -91,7 +91,7 @@ const iconClass = computed(() => {
             :class="iconClass"
             aria-hidden="true"
         />
-        <span :class="variant === 'glance' ? 'min-w-0 flex-1 truncate' : 'min-w-0 truncate'">{{ label }}</span>
+        <span class="min-w-0 truncate">{{ label }}</span>
         <span
             v-if="count != null && count > 0"
             :class="
@@ -112,7 +112,7 @@ const iconClass = computed(() => {
             :class="iconClass"
             aria-hidden="true"
         />
-        <span :class="variant === 'glance' ? 'min-w-0 flex-1 truncate' : 'min-w-0 truncate'">{{ label }}</span>
+        <span class="min-w-0 truncate">{{ label }}</span>
         <span
             v-if="count != null && count > 0"
             :class="
