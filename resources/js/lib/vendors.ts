@@ -29,7 +29,7 @@ const VENDOR_ICON_FILES: Record<string, string> = {
 /** SVG fill utilities for stacked spend stipple segments (must stay unique per vendor). */
 export const VENDOR_CHART_FILL: Record<SpendVendorKey, string> = {
     apify: 'fill-snitch-ink/75',
-    nanogpt: 'fill-snitch-stipple-spot',
+    nanogpt: 'fill-snitch-ink/55',
     firecrawl: 'fill-snitch-teal',
     tikhub: 'fill-snitch-ink/40',
     snitch: 'fill-snitch-stipple-spot',

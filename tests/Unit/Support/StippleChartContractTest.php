@@ -88,9 +88,10 @@ class StippleChartContractTest extends TestCase
         $this->assertStringNotContainsString('buildLogoMarks', $bar);
         $this->assertStringNotContainsString('buildLogoMarks', $stipple);
         $this->assertStringContainsString('.snitch-vendor-spend-tip', $css);
-        $this->assertStringContainsString("nanogpt: 'fill-snitch-stipple-spot'", $vendors);
+        $this->assertStringContainsString("nanogpt: 'fill-snitch-ink/55'", $vendors);
         $this->assertStringContainsString("tikhub: 'fill-snitch-ink/40'", $vendors);
         $this->assertStringContainsString("firecrawl: 'fill-snitch-teal'", $vendors);
+        $this->assertStringContainsString("snitch: 'fill-snitch-stipple-spot'", $vendors);
         $this->assertStringNotContainsString('VENDOR_CHART_SWATCH', $vendors);
     }
 
