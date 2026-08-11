@@ -4,6 +4,7 @@ namespace App\Mcp\Tools;
 
 use App\Mcp\Support\McpAuth;
 use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\StripeCheckoutSyncService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Mcp\Request;
@@ -34,8 +35,8 @@ class CreatePlatformCheckoutTool extends Tool
         }
 
         $checkout = $user->newSubscription($type, $priceId)->checkout([
-            'success_url' => route('billing.edit').'?checkout=success',
-            'cancel_url' => route('billing.edit').'?checkout=cancelled',
+            'success_url' => StripeCheckoutSyncService::billingSuccessUrl('success'),
+            'cancel_url' => StripeCheckoutSyncService::billingCancelUrl(),
         ]);
 
         return Response::json([

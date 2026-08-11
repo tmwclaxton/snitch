@@ -5,6 +5,7 @@ namespace App\Mcp\Tools;
 use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Mcp\Support\McpAuth;
 use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\StripeCheckoutSyncService;
 use App\Services\Billing\UsageBillingService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
@@ -42,8 +43,8 @@ class CreateCreditCheckoutTool extends Tool
         }
 
         $checkout = $user->checkout([$priceId], [
-            'success_url' => route('billing.edit').'?checkout=credits_success',
-            'cancel_url' => route('billing.edit').'?checkout=cancelled',
+            'success_url' => StripeCheckoutSyncService::billingSuccessUrl('credits_success'),
+            'cancel_url' => StripeCheckoutSyncService::billingCancelUrl(),
             'metadata' => [
                 'snitch_product' => 'credits',
                 'credit_pack' => $data['pack'],

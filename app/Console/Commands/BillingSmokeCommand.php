@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\StripeCheckoutSyncService;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -64,8 +65,8 @@ class BillingSmokeCommand extends Command
             );
 
             $checkout = $checkoutUser->newSubscription('default', $platformPrice)->checkout([
-                'success_url' => route('billing.edit').'?checkout=success',
-                'cancel_url' => route('billing.edit').'?checkout=cancelled',
+                'success_url' => StripeCheckoutSyncService::billingSuccessUrl('success'),
+                'cancel_url' => StripeCheckoutSyncService::billingCancelUrl(),
             ]);
 
             $url = $checkout->asStripeCheckoutSession()->url ?? null;

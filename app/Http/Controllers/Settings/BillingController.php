@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ListBillingChargesRequest;
 use App\Models\User;
 use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\StripeCheckoutSyncService;
 use App\Services\Billing\UsageBillingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,13 +24,18 @@ class BillingController extends Controller
     public function __construct(
         private PlanEntitlementService $entitlements,
         private UsageBillingService $usage,
+        private StripeCheckoutSyncService $checkoutSync,
     ) {}
 
     public function index(Request $request): Response
     {
         $user = $request->user();
+        $this->syncCheckoutReturn($user, $request);
+
         $data = $request->validate([
             'grain' => ['sometimes', 'nullable', 'string', Rule::in(['day', 'week', 'month'])],
+            'checkout' => ['sometimes', 'nullable', 'string'],
+            'session_id' => ['sometimes', 'nullable', 'string'],
         ]);
         $grain = is_string($data['grain'] ?? null) ? $data['grain'] : 'day';
 
@@ -119,6 +125,23 @@ class BillingController extends Controller
         return Inertia::location($user->billingPortalUrl(route('billing.edit')));
     }
 
+    private function syncCheckoutReturn(User $user, Request $request): void
+    {
+        $checkout = $request->query('checkout');
+        $sessionId = $request->query('session_id');
+        $sessionId = is_string($sessionId) && $sessionId !== '' ? $sessionId : null;
+
+        if (! in_array($checkout, ['success', 'credits_success'], true) && $sessionId === null) {
+            return;
+        }
+
+        try {
+            $this->checkoutSync->syncUserFromCheckoutReturn($user, $sessionId);
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+    }
+
     private function checkoutPlatform(User $user): SymfonyResponse|RedirectResponse
     {
         $priceId = $this->entitlements->platformStripePriceId();
@@ -145,8 +168,8 @@ class BillingController extends Controller
 
         $checkout = $user->newSubscription($type, $priceId)
             ->checkout([
-                'success_url' => route('billing.edit').'?checkout=success',
-                'cancel_url' => route('billing.edit').'?checkout=cancelled',
+                'success_url' => StripeCheckoutSyncService::billingSuccessUrl('success'),
+                'cancel_url' => StripeCheckoutSyncService::billingCancelUrl(),
             ]);
 
         $url = $this->checkoutUrl($checkout);
@@ -198,8 +221,8 @@ class BillingController extends Controller
         }
 
         $checkout = $user->checkout([$priceId], [
-            'success_url' => route('billing.edit').'?checkout=credits_success',
-            'cancel_url' => route('billing.edit').'?checkout=cancelled',
+            'success_url' => StripeCheckoutSyncService::billingSuccessUrl('credits_success'),
+            'cancel_url' => StripeCheckoutSyncService::billingCancelUrl(),
             'metadata' => [
                 'snitch_product' => 'credits',
                 'credit_pack' => $packKey,
