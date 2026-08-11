@@ -43,7 +43,10 @@ const rootClass = computed(() => {
         : '';
 
     if (props.variant === 'glance') {
-        return ['snitch-glance-tag', linkClass];
+        return [
+            'snitch-glance-tag max-w-full min-w-0 overflow-hidden',
+            linkClass,
+        ];
     }
 
     if (props.variant === 'picker') {
@@ -88,7 +91,7 @@ const iconClass = computed(() => {
             :class="iconClass"
             aria-hidden="true"
         />
-        <span class="min-w-0 truncate">{{ label }}</span>
+        <span :class="variant === 'glance' ? 'min-w-0 flex-1 truncate' : 'min-w-0 truncate'">{{ label }}</span>
         <span
             v-if="count != null && count > 0"
             :class="
@@ -109,7 +112,7 @@ const iconClass = computed(() => {
             :class="iconClass"
             aria-hidden="true"
         />
-        <span class="min-w-0 truncate">{{ label }}</span>
+        <span :class="variant === 'glance' ? 'min-w-0 flex-1 truncate' : 'min-w-0 truncate'">{{ label }}</span>
         <span
             v-if="count != null && count > 0"
             :class="

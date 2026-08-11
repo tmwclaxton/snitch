@@ -46,6 +46,20 @@ class EmbedLoadQueueContractTest extends TestCase
     }
 
     #[Test]
+    public function contact_cell_tag_styles_constrain_long_glance_chips(): void
+    {
+        $css = file_get_contents(base_path('resources/css/app.css'));
+        $chipVue = file_get_contents(base_path('resources/js/components/AnalysisTermChip.vue'));
+
+        $this->assertIsString($css);
+        $this->assertIsString($chipVue);
+        $this->assertStringContainsString('.snitch-contact-cell .snitch-glance-tag:first-child', $css);
+        $this->assertStringContainsString('text-overflow: ellipsis', $css);
+        $this->assertStringContainsString('max-w-full min-w-0 overflow-hidden', $chipVue);
+        $this->assertStringContainsString('flex-1 truncate', $chipVue);
+    }
+
+    #[Test]
     public function platform_embed_defaults_to_lazy_and_uses_queue(): void
     {
         $source = file_get_contents(base_path('resources/js/components/PlatformEmbed.vue'));

@@ -1360,10 +1360,9 @@
 
     .snitch-contact-cell-footer {
         display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.35rem 0.6rem;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.35rem;
         min-width: 0;
         width: 100%;
     }
@@ -1374,22 +1373,20 @@
         align-content: flex-start;
         gap: 0.25rem;
         min-width: 0;
-        flex: 1 1 100%;
+        width: 100%;
         max-width: 100%;
         overflow: hidden;
         max-height: calc(2 * (0.58rem * 1.35 + 0.2rem) + 0.25rem);
     }
 
     .snitch-glance-tag {
-        display: inline-flex;
+        display: flex;
         min-width: 0;
         max-width: 100%;
         flex: 0 1 auto;
         align-items: center;
         gap: 0.2rem;
         overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
         padding: 0.1rem 0.35rem;
         background: color-mix(in oklab, var(--snitch-spot) 72%, var(--snitch-paper));
         color: var(--snitch-on-spot);
@@ -1409,6 +1406,27 @@
     .snitch-glance-tag:nth-child(3) {
         background: color-mix(in oklab, var(--snitch-teal) 35%, var(--snitch-paper));
         color: var(--snitch-ink);
+    }
+
+    /*
+     * Concept / idea chips can stay ~28 chars but still beat a narrow
+     * proof frame unless the chip row is width-bound and ellipsized.
+     */
+    .snitch-contact-cell .snitch-glance-tag {
+        max-width: 100%;
+    }
+
+    .snitch-contact-cell .snitch-glance-tag:first-child {
+        flex: 0 0 auto;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .snitch-contact-cell .snitch-glance-tag > span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .snitch-glance-account-link {
