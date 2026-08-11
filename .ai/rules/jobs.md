@@ -11,6 +11,9 @@ QUEUE_CONNECTION=database. SyncTrackedAccountJob, AnalyzePostJob, and GenerateIn
 ## AnalyzePostJob must not HTTP-probe app public-disk media
 YouTube hydrate stores MP4s under `storage/app/public/youtube-media` and sets `media_url` to `{APP_URL}/storage/...`. Probe those with `PublicDiskMedia::existsOnPublicDisk` only. HTTP HEAD against localhost (or any host without `public/storage` linked) returns 403 and must not mark the post unavailable. Loopback analysis inlines (and may ffmpeg-compress) those files for NanoGPT; see adapters.md.
 
+## AnalyzePostJob soft-fails permanent NanoGPT client errors
+`VideoAnalysisService` already marks the analysis Failed and logs a warning. `AnalyzePostJob` must not rethrow checklist failures or NanoGPT HTTP 400 / `invalid_request_error` responses - retries will not fix bad request params and escalate to production.ERROR / failed_jobs noise. Keep WARNING-level logging; leave true transport/5xx failures to retry.
+
 ## Backlog and sync drop posts outside recency after hydrate
 YouTube list payloads often omit `published_time`, so null `posted_at` passes the pre-import cutoff. Hydrate (or AnalyzePostJob) may then backfill a date years ago. Sync must re-check cutoff after `hydrateMediaUrls` and skip those payloads. `Post::analysisQueue` / `analysisFailed` / `analysisBacklog` use `withinAnalysisRecency` so `/backlog` never shows unanalyzable archive ghosts as Waiting forever.
 
