@@ -4,6 +4,7 @@ namespace Tests\Feature\Mcp;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Laravel\Passport\ClientRepository;
 use Tests\TestCase;
 
@@ -15,6 +16,7 @@ class McpOAuthTest extends TestCase
     {
         parent::setUp();
 
+        Artisan::call('passport:keys', ['--force' => true]);
         app(ClientRepository::class)->createPersonalAccessGrantClient('MCP Tests', 'users');
     }
 

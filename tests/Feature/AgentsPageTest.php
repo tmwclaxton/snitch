@@ -11,6 +11,13 @@ class AgentsPageTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withoutVite();
+    }
+
     public function test_public_agents_page_renders_mcp_guide(): void
     {
         $this->get(route('agents'))
@@ -45,7 +52,7 @@ class AgentsPageTest extends TestCase
             ->post(route('agents.token'))
             ->assertRedirect();
 
-        $this->assertTrue($user->tokens()->where('name', 'mcp')->exists());
+        $this->assertTrue($user->sanctumTokens()->where('name', 'mcp')->exists());
 
         $this->actingAs($user)
             ->get(route('agents'))
