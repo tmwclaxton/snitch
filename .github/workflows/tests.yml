@@ -49,6 +49,9 @@ jobs:
       - name: Generate Application Key
         run: php artisan key:generate
 
+      - name: Generate Passport Keys
+        run: php artisan passport:keys
+
       - name: Build Assets
         run: npm run build
 

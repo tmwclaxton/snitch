@@ -15,6 +15,10 @@ class McpOAuthTest extends TestCase
     {
         parent::setUp();
 
+        if (! file_exists(storage_path('oauth-private.key'))) {
+            $this->artisan('passport:keys');
+        }
+
         app(ClientRepository::class)->createPersonalAccessGrantClient('MCP Tests', 'users');
     }
 
