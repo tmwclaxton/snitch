@@ -173,7 +173,8 @@ return [
         'influencer.brief' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0005],
         'competitor.brief' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0005],
         'winners.copy' => ['vendor' => 'nanogpt', 'floor_usd' => 0.0005],
-        'explore.search' => ['vendor' => 'snitch', 'fixed_pence' => 0.5],
+        // Proportional to result count (linear up to max_pence at results_for_max_pence); 0 results = 0p.
+        'explore.search' => ['vendor' => 'snitch', 'max_pence' => 0.5, 'results_for_max_pence' => 24],
         'explore.view' => ['vendor' => 'snitch', 'fixed_pence' => 0.1],
     ],
 

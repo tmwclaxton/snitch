@@ -686,7 +686,7 @@ function emptyImportHint(account: Account): string | null {
         return 'Last sync failed';
     }
 
-    if (account.last_sync_status === 'success') {
+    if (account.last_sync_status === 'empty' || account.last_sync_status === 'success') {
         return 'No recent reels found';
     }
 

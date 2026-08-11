@@ -22,7 +22,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('explore_posts')]
-#[Description('Browse analysed reels across the shared platform corpus. Optional q charges 0.5p for search; optional post_id returns detail and may charge 0.1p when the author is not a tracked snitch.')]
+#[Description('Browse analysed reels across the shared platform corpus. Optional q charges up to 0.5p proportional to result count (0p when empty); optional post_id returns detail and may charge 0.1p when the author is not a tracked snitch.')]
 class ExplorePostsTool extends Tool
 {
     public function handle(Request $request, ExploreBillingService $exploreBilling): Response
@@ -50,25 +50,16 @@ class ExplorePostsTool extends Tool
 
         $queryText = isset($data['q']) ? trim((string) $data['q']) : '';
         if ($queryText !== '') {
-            try {
-                $exploreBilling->chargeSearch($user, $queryText, 'q');
-            } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $exception) {
-                return Response::error($exception->getMessage());
+            $query = Post::query()
+                ->reelLike()
+                ->whereHas('analysis', fn ($a) => $a->where('status', AnalysisStatus::Completed))
+                ->latest('posted_at')
+                ->limit((int) ($data['limit'] ?? 20));
+
+            if (! empty($data['platform'])) {
+                $query->where('platform', $data['platform']);
             }
-        }
 
-        $query = Post::query()
-            ->reelLike()
-            ->whereHas('analysis', fn ($a) => $a->where('status', AnalysisStatus::Completed))
-            ->with(['socialAccount:id,handle,platform', 'analysis:id,post_id,status'])
-            ->latest('posted_at')
-            ->limit((int) ($data['limit'] ?? 20));
-
-        if (! empty($data['platform'])) {
-            $query->where('platform', $data['platform']);
-        }
-
-        if ($queryText !== '') {
             $like = '%'.$queryText.'%';
             $query->where(function (Builder $builder) use ($like): void {
                 $builder
@@ -83,9 +74,33 @@ class ExplorePostsTool extends Tool
                             ->orWhere('custom_tags', 'like', $like);
                     });
             });
+
+            $resultCount = (clone $query)->count();
+
+            try {
+                $exploreBilling->chargeSearch($user, $queryText, 'q', $resultCount);
+            } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $exception) {
+                return Response::error($exception->getMessage());
+            }
+
+            $posts = $query
+                ->with(['socialAccount:id,handle,platform', 'analysis:id,post_id,status'])
+                ->get(['id', 'platform', 'url', 'caption', 'posted_at', 'social_account_id', 'type']);
+        } else {
+            $query = Post::query()
+                ->reelLike()
+                ->whereHas('analysis', fn ($a) => $a->where('status', AnalysisStatus::Completed))
+                ->with(['socialAccount:id,handle,platform', 'analysis:id,post_id,status'])
+                ->latest('posted_at')
+                ->limit((int) ($data['limit'] ?? 20));
+
+            if (! empty($data['platform'])) {
+                $query->where('platform', $data['platform']);
+            }
+
+            $posts = $query->get(['id', 'platform', 'url', 'caption', 'posted_at', 'social_account_id', 'type']);
         }
 
-        $posts = $query->get(['id', 'platform', 'url', 'caption', 'posted_at', 'social_account_id', 'type']);
         PostAccountPresenter::attachForUser($posts, $user);
         $posts->each(fn (Post $post) => $post->makeHidden(['raw_payload']));
 

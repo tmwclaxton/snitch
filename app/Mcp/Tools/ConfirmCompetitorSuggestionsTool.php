@@ -7,6 +7,7 @@ use App\Jobs\SuggestCompetitorsJob;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Mcp\Support\McpAuth;
 use App\Models\TrackedAccount;
+use App\Support\SocialHandle;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Illuminate\Support\Facades\Cache;
@@ -18,7 +19,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('confirm_competitor_suggestions')]
-#[Description('REQUIRED after suggest_competitors to start tracking. Creates TrackedAccounts for selected handles from a suggest run and optionally queues syncs. handles may be strings ("farmbrite") or {platform, handle} objects for platform-specific picks. dismiss_remainder defaults to true so leftover pending suggestion cards clear after a typical confirm; pass false to keep remainder. Until confirmed, suggestions remain pending cache/UI only.')]
+#[Description('REQUIRED after suggest_competitors to start tracking. Creates TrackedAccounts for selected handles from a suggest run and optionally queues syncs. handles may be strings ("farmbrite") or {platform, handle} objects for platform-specific picks. dismiss_remainder defaults to true so leftover pending suggestion cards clear after a typical confirm; pass false to keep remainder. Rejects when the suggest run is still processing unless allow_partial=true. Until confirmed, suggestions remain pending cache/UI only.')]
 class ConfirmCompetitorSuggestionsTool extends Tool
 {
     public function handle(Request $request): Response
@@ -33,6 +34,7 @@ class ConfirmCompetitorSuggestionsTool extends Tool
             'handles' => ['required', 'array', 'min:1'],
             'sync' => ['nullable', 'boolean'],
             'dismiss_remainder' => ['nullable', 'boolean'],
+            'allow_partial' => ['nullable', 'boolean'],
         ]);
 
         if (! Str::isUuid($data['suggest_id'])) {
@@ -49,13 +51,16 @@ class ConfirmCompetitorSuggestionsTool extends Tool
             return Response::error('Suggest run not found. Call suggest_competitors_status with this suggest_id first.');
         }
 
+        $allowPartial = (bool) ($data['allow_partial'] ?? false);
+        if ($blocked = SuggestCompetitorsJob::confirmBlockedReason($payload, $allowPartial)) {
+            return Response::error($blocked);
+        }
+
         $runStatus = is_string($payload['status'] ?? null) ? (string) $payload['status'] : null;
         $suggestions = is_array($payload['suggestions'] ?? null) ? $payload['suggestions'] : [];
         $created = [];
         $confirmed = [];
-        $midRunWarning = in_array($runStatus, ['queued', 'pending', 'processing', 'running'], true)
-            ? 'Suggest run status is still '.$runStatus.'. Partial rows may include weak matches - prefer waiting until completed before confirming.'
-            : null;
+        $skippedWeak = [];
 
         foreach ($suggestions as $row) {
             if (! is_array($row)) {
@@ -64,6 +69,12 @@ class ConfirmCompetitorSuggestionsTool extends Tool
             $handle = ltrim((string) ($row['handle'] ?? ''), '@');
             $platform = (string) ($row['platform'] ?? 'instagram');
             if ($handle === '' || ! $this->rowMatchesSelectors($platform, $handle, $selectors)) {
+                continue;
+            }
+
+            if (SocialHandle::isWeak($handle, $platform)) {
+                $skippedWeak[] = "{$platform}:{$handle}";
+
                 continue;
             }
 
@@ -106,7 +117,9 @@ class ConfirmCompetitorSuggestionsTool extends Tool
 
         $nextStep = 'Done - confirmed handles are tracked.';
         if ($created === []) {
-            $nextStep = 'No matches. Pass handles exactly as returned by suggest_competitors_status (case-insensitive).';
+            $nextStep = $skippedWeak !== []
+                ? 'All selected handles were rejected as weak or junk. Pick stronger handles from suggest_competitors_status.'
+                : 'No matches. Pass handles exactly as returned by suggest_competitors_status (case-insensitive).';
         } elseif ($remaining !== []) {
             $nextStep = 'Confirmed handles are tracked. Remaining suggestions still show on /snitches - call dismiss_competitor_suggestions or re-confirm (dismiss_remainder defaults true; pass false only when you want to keep remainder).';
         }
@@ -116,9 +129,11 @@ class ConfirmCompetitorSuggestionsTool extends Tool
             'remaining_count' => count($remaining),
             'dismiss_remainder' => $dismissRemainder,
             'run_status' => $runStatus,
-            'warning' => $midRunWarning,
+            'skipped_weak_handles' => $skippedWeak,
             'note' => $created === []
-                ? 'No matching suggestion handles. Pass handles exactly as returned by suggest_competitors_status.'
+                ? ($skippedWeak !== []
+                    ? 'Selected handles were rejected as weak or junk (e.g. generic tokens like content).'
+                    : 'No matching suggestion handles. Pass handles exactly as returned by suggest_competitors_status.')
                 : ($remaining === []
                     ? 'Confirmed handles are now tracked snitches. Pending suggestion panel is clear.'
                     : 'Confirmed handles are now tracked snitches. Remaining suggestion rows stay because dismiss_remainder=false.'),
@@ -192,6 +207,7 @@ class ConfirmCompetitorSuggestionsTool extends Tool
             'handles' => $schema->array()->required(),
             'sync' => $schema->boolean()->nullable(),
             'dismiss_remainder' => $schema->boolean()->nullable(),
+            'allow_partial' => $schema->boolean()->nullable(),
         ];
     }
 }

@@ -231,7 +231,7 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
         $this->assertSame(1, TrackedAccount::query()->where('user_id', $user->id)->count());
     }
 
-    public function test_confirm_warns_when_suggest_still_processing(): void
+    public function test_confirm_rejects_when_suggest_still_processing_without_allow_partial(): void
     {
         Queue::fake();
 
@@ -257,14 +257,83 @@ class CompetitorSuggestConfirmLoopTest extends TestCase
             'sync' => false,
             'dismiss_remainder' => true,
         ])
+            ->assertHasErrors()
+            ->assertSee('processing');
+
+        $this->assertDatabaseMissing('tracked_accounts', [
+            'user_id' => $user->id,
+            'handle' => 'earlybird',
+        ]);
+    }
+
+    public function test_confirm_allows_partial_when_allow_partial_true(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $suggestId = (string) Str::uuid();
+        Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
+            'status' => 'processing',
+            'suggestions' => [
+                [
+                    'platform' => 'instagram',
+                    'handle' => 'earlybird',
+                    'display_name' => 'Early Bird',
+                ],
+            ],
+            'error' => null,
+        ], now()->addHours(2));
+
+        SnitchServer::tool(ConfirmCompetitorSuggestionsTool::class, [
+            'suggest_id' => $suggestId,
+            'handles' => ['earlybird'],
+            'sync' => false,
+            'dismiss_remainder' => true,
+            'allow_partial' => true,
+        ])
             ->assertOk()
-            ->assertSee('warning')
-            ->assertSee('processing')
             ->assertSee('tracked snitches');
 
         $this->assertDatabaseHas('tracked_accounts', [
             'user_id' => $user->id,
             'handle' => 'earlybird',
+        ]);
+    }
+
+    public function test_confirm_rejects_weak_handles(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $suggestId = (string) Str::uuid();
+        Cache::put(SuggestCompetitorsJob::cacheKeyFor($user->id, $suggestId), [
+            'status' => 'completed',
+            'suggestions' => [
+                [
+                    'platform' => 'tiktok',
+                    'handle' => 'content',
+                    'display_name' => 'Content',
+                ],
+            ],
+            'error' => null,
+        ], now()->addHours(2));
+
+        SnitchServer::tool(ConfirmCompetitorSuggestionsTool::class, [
+            'suggest_id' => $suggestId,
+            'handles' => ['content'],
+            'sync' => false,
+            'dismiss_remainder' => true,
+        ])
+            ->assertOk()
+            ->assertSee('skipped_weak_handles');
+
+        $this->assertDatabaseMissing('tracked_accounts', [
+            'user_id' => $user->id,
+            'handle' => 'content',
         ]);
     }
 

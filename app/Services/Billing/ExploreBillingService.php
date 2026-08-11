@@ -19,12 +19,19 @@ class ExploreBillingService
     public function __construct(private UsageBillingService $billing) {}
 
     /**
-     * Flat 0.5p search fee. Same normalised query is idempotent.
+     * Proportional search fee: 0p when resultCount is 0, linear up to max_pence (default 0.5p
+     * at results_for_max_pence, default 24). Same normalised query is idempotent.
      *
      * @param  'q'|'custom_tag'  $kind
      */
-    public function chargeSearch(User $user, string $query, string $kind = 'q'): CreditLedgerEntry
+    public function chargeSearch(User $user, string $query, string $kind, int $resultCount): ?CreditLedgerEntry
     {
+        $amountPence = $this->searchChargePence($resultCount);
+
+        if ($amountPence === 0.0) {
+            return null;
+        }
+
         $normalized = mb_strtolower(trim($query));
         $idempotencyKey = sprintf(
             'explore.search:%d:%s:%s',
@@ -33,7 +40,7 @@ class ExploreBillingService
             hash('sha256', $normalized),
         );
 
-        $entry = $this->billing->charge(
+        return $this->billing->charge(
             user: $user,
             action: self::ACTION_SEARCH,
             vendor: BillingVendor::Snitch,
@@ -41,15 +48,35 @@ class ExploreBillingService
             meta: [
                 'query' => $normalized,
                 'kind' => $kind,
+                'result_count' => max(0, $resultCount),
             ],
             idempotencyKey: $idempotencyKey,
+            amountPenceOverride: $amountPence,
         );
+    }
 
-        if ($entry === null) {
-            throw new \RuntimeException('Explore search fee must not round to zero.');
+    public function searchChargePence(int $resultCount): float
+    {
+        if ($resultCount <= 0) {
+            return 0.0;
         }
 
-        return $entry;
+        $action = config('billing.actions.explore.search', []);
+        $maxPence = is_array($action) && isset($action['max_pence']) && is_numeric($action['max_pence'])
+            ? max(0.0, (float) $action['max_pence'])
+            : 0.5;
+        $fullAt = is_array($action) && isset($action['results_for_max_pence']) && is_numeric($action['results_for_max_pence'])
+            ? max(1, (int) $action['results_for_max_pence'])
+            : 24;
+
+        $scaled = ($resultCount / $fullAt) * $maxPence;
+
+        return $this->roundSearchPence(min($maxPence, $scaled));
+    }
+
+    private function roundSearchPence(float $value): float
+    {
+        return round($value, 2, PHP_ROUND_HALF_UP);
     }
 
     /**

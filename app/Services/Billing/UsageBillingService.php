@@ -227,6 +227,7 @@ class UsageBillingService
         ?float $cogsUsd = null,
         array $meta = [],
         ?string $idempotencyKey = null,
+        ?float $amountPenceOverride = null,
     ): ?CreditLedgerEntry {
         $vendorEnum = $vendor instanceof BillingVendor ? $vendor : BillingVendor::from($vendor);
 
@@ -234,7 +235,9 @@ class UsageBillingService
             throw new \InvalidArgumentException('Use credit helpers for bonus/top-up entries.');
         }
 
-        $fixedPence = $this->fixedPenceForAction($action);
+        $fixedPence = $amountPenceOverride !== null
+            ? $this->roundPence(max(0.0, $amountPenceOverride))
+            : $this->fixedPenceForAction($action);
         $amountPence = $this->roundPence($fixedPence ?? $this->pricePenceFromCogs($action, $vendorEnum, $cogsUsd));
 
         // No minimum charge, but a £0 debit is not useful audit - skip the write.

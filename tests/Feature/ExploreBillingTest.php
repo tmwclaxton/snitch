@@ -37,7 +37,7 @@ class ExploreBillingTest extends TestCase
         $this->billing = app(UsageBillingService::class);
     }
 
-    public function test_explore_search_charges_half_penny_idempotently(): void
+    public function test_explore_search_charges_proportionally_and_idempotently(): void
     {
         $this->seed(AnalysisTermSeeder::class);
 
@@ -66,9 +66,28 @@ class ExploreBillingTest extends TestCase
 
         $this->assertCount(1, $entries);
         $this->assertSame(BillingVendor::Snitch, $entries->first()->vendor);
-        $this->assertSame(-0.5, (float) $entries->first()->amount_pence);
-        // Factory claim bonus (£5) + top-up (£10) minus 0.5p search.
-        $this->assertSame(1499.5, $this->billing->balancePence($user));
+        $this->assertSame(-0.02, (float) $entries->first()->amount_pence);
+        $this->assertSame(1499.98, $this->billing->balancePence($user));
+    }
+
+    public function test_explore_search_with_no_results_charges_nothing(): void
+    {
+        $this->seed(AnalysisTermSeeder::class);
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $this->billing->creditFromTopUp($user, 1000, 'topup:explore-empty');
+        $before = $this->billing->balancePence($user);
+
+        $this->actingAs($user)
+            ->get(route('explore.index', ['q' => 'zzzz-no-match-phrase']))
+            ->assertOk();
+
+        $this->assertSame(0, CreditLedgerEntry::query()
+            ->where('user_id', $user->id)
+            ->where('action', 'explore.search')
+            ->count());
+        $this->assertSame($before, $this->billing->balancePence($user));
     }
 
     public function test_viewing_non_tracked_competitor_reel_charges_tenth_penny_once(): void

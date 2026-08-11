@@ -490,6 +490,34 @@ class SyncTrackedAccountJobTest extends TestCase
         Queue::assertPushed(AnalyzePostJob::class);
     }
 
+    public function test_sync_with_zero_recent_reels_reports_empty_status(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Facebook,
+            'handle' => 'quietpage',
+        ]);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
+        $client->shouldReceive('runActor')->andReturn([]);
+        $this->app->instance(ApifyClient::class, $client);
+
+        (new SyncTrackedAccountJob($account->id, force: true))->handle(
+            app(PlatformAdapterManager::class),
+            app(SnitchAnalyticsService::class),
+            app(VendorUsageCharger::class),
+        );
+
+        $account->refresh();
+        $this->assertSame('empty', $account->last_sync_status);
+        $this->assertSame('No recent reels found for this handle.', $account->last_sync_error);
+        $this->assertSame(0, Post::query()->count());
+    }
+
     public function test_force_sync_uses_full_recency_window_not_incremental_since(): void
     {
         Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);

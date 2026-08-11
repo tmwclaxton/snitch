@@ -73,13 +73,23 @@ class ExploreController extends Controller
 
         if ($customTag !== null) {
             try {
-                $this->exploreBilling->chargeSearch($user, $customTag, 'custom_tag');
+                $this->exploreBilling->chargeSearch(
+                    $user,
+                    $customTag,
+                    'custom_tag',
+                    $this->exploreSearchResultCount($platform, $hookTypes, $topics, $visualCrafts, null, $customTag),
+                );
             } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $exception) {
                 return $this->redirectToBilling($exception);
             }
         } elseif ($queryText !== null) {
             try {
-                $this->exploreBilling->chargeSearch($user, $queryText, 'q');
+                $this->exploreBilling->chargeSearch(
+                    $user,
+                    $queryText,
+                    'q',
+                    $this->exploreSearchResultCount($platform, $hookTypes, $topics, $visualCrafts, $queryText, null),
+                );
             } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $exception) {
                 return $this->redirectToBilling($exception);
             }
@@ -486,6 +496,69 @@ class ExploreController extends Controller
         $trimmed = trim((string) $value);
 
         return $trimmed === '' ? null : $trimmed;
+    }
+
+    /**
+     * @param  list<string>  $hookTypes
+     * @param  list<string>  $topics
+     * @param  list<string>  $visualCrafts
+     */
+    private function exploreSearchResultCount(
+        ?string $platform,
+        array $hookTypes,
+        array $topics,
+        array $visualCrafts,
+        ?string $queryText,
+        ?string $customTag,
+    ): int {
+        $query = $this->corpusCompletedReelsQuery();
+
+        if ($platform !== null && in_array($platform, array_column(Platform::cases(), 'value'), true)) {
+            $query->where('platform', $platform);
+        }
+
+        if ($hookTypes !== []) {
+            $this->constrainByTermSlugs($query, AnalysisTermDimension::HookType, $hookTypes);
+        }
+
+        if ($topics !== []) {
+            $this->constrainByTermSlugs($query, AnalysisTermDimension::Topic, $topics);
+        }
+
+        if ($visualCrafts !== []) {
+            $this->constrainByTermSlugs($query, AnalysisTermDimension::VisualCraft, $visualCrafts);
+        }
+
+        $semanticQuery = $customTag ?? $queryText;
+
+        if ($semanticQuery === null) {
+            return 0;
+        }
+
+        if ($customTag !== null) {
+            return count($this->exactCustomTagPostIds(clone $query, $customTag));
+        }
+
+        $queryVector = $this->embeddings->embedQuery($semanticQuery);
+
+        if ($queryVector !== null) {
+            $maxCandidates = max(1, (int) config('snitch.embeddings.max_candidates', 500));
+            $candidates = (clone $query)
+                ->with('analysis')
+                ->limit($maxCandidates)
+                ->get();
+
+            $scored = $this->embeddings->scorePosts($candidates, $queryVector, []);
+
+            if ($scored !== []) {
+                return count($scored);
+            }
+        }
+
+        $fallback = clone $query;
+        $this->constrainByLikeSearch($fallback, $queryText ?? $semanticQuery);
+
+        return $fallback->count();
     }
 
     private function redirectToBilling(PlatformSubscriptionRequiredException|InsufficientCreditsException $exception): RedirectResponse

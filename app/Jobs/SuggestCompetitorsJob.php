@@ -353,6 +353,28 @@ class SuggestCompetitorsJob implements ShouldQueue
         Cache::forget(self::activeCacheKeyFor($userId));
     }
 
+    /**
+     * Block confirm until the suggest run is completed unless the caller opts in to partial rows.
+     */
+    public static function confirmBlockedReason(array $payload, bool $allowPartial = false): ?string
+    {
+        $status = is_string($payload['status'] ?? null) ? (string) $payload['status'] : null;
+
+        if ($status === 'completed' || $allowPartial) {
+            return null;
+        }
+
+        if ($status === 'failed') {
+            return 'Suggest run failed. Poll suggest_competitors_status or start a new suggest_competitors run.';
+        }
+
+        if ($status === null || $status === '') {
+            return 'Suggest run status is unknown. Poll suggest_competitors_status until completed.';
+        }
+
+        return 'Suggest run is still '.$status.'. Wait until completed or pass allow_partial=true to confirm partial rows.';
+    }
+
     private function cacheKey(): string
     {
         return self::cacheKeyFor($this->userId, $this->suggestId);

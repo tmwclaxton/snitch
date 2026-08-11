@@ -288,7 +288,7 @@ return [
                 'video_info' => '/api/v1/youtube/web/get_video_info_v2',
                 // Formatted metadata; carries date_text when publish_date is empty.
                 'video_metadata' => '/api/v1/youtube/web_v2/get_video_info',
-                'search' => '/api/v1/youtube/web/search_channel',
+                'search_channels' => '/api/v1/youtube/web_v2/search_channels',
             ],
             'linkedin' => [
                 'company_posts' => '/api/v1/linkedin/web_v2/get_company_posts',

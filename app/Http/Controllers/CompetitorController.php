@@ -27,6 +27,7 @@ use App\Services\Billing\VendorUsageCharger;
 use App\Services\Competitors\CompetitorSuggestionService;
 use App\Support\PlatformEmbed;
 use App\Support\PostAccountPresenter;
+use App\Support\SocialHandle;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -119,6 +120,13 @@ class CompetitorController extends Controller
         $data = $request->validated();
         $handle = $data['handle'];
         $platform = Platform::from($data['platform'] instanceof Platform ? $data['platform']->value : $data['platform']);
+
+        if (SocialHandle::isWeak($handle, $platform)) {
+            return redirect()
+                ->route('competitors.index')
+                ->withErrors(['handle' => 'This handle looks too generic or weak to track.']);
+        }
+
         $user = $request->user();
 
         $account = TrackedAccount::query()->updateOrCreate(
@@ -259,6 +267,19 @@ class CompetitorController extends Controller
     public function confirmSuggestions(ConfirmSuggestionsRequest $request): RedirectResponse
     {
         $user = $request->user();
+        $allowPartial = $request->boolean('allow_partial');
+        $latestId = Cache::get(SuggestCompetitorsJob::latestCacheKeyFor($user->id));
+
+        if (is_string($latestId)) {
+            $payload = Cache::get(SuggestCompetitorsJob::cacheKeyFor($user->id, $latestId));
+
+            if (is_array($payload) && ($blocked = SuggestCompetitorsJob::confirmBlockedReason($payload, $allowPartial)) !== null) {
+                return redirect()
+                    ->route('competitors.index')
+                    ->withErrors(['confirm' => $blocked]);
+            }
+        }
+
         $suggestions = $request->validated('suggestions');
 
         $confirmed = [];

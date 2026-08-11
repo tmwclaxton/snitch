@@ -94,18 +94,27 @@ class YoutubeAdapter extends AbstractTikHubAdapter
      */
     public function searchChannels(string $query, int $limit): array
     {
-        $payload = $this->client->get($this->endpoint('search'), [
+        $payload = $this->client->get($this->endpoint('search_channels'), [
             'search_query' => $query,
             'query' => $query,
         ], 'youtube');
 
-        $items = $this->extractList($payload, ['videos', 'data.videos', 'items', 'data.items']);
+        $items = $this->extractList($payload, [
+            'channels',
+            'data.channels',
+            'channel_list',
+            'items',
+            'data.items',
+            'results',
+            'data.results',
+        ]);
         $out = [];
         $seen = [];
 
         foreach ($items as $item) {
-            $handle = ltrim((string) ($item['channelUsername'] ?? $item['channel_handle'] ?? $item['channelHandle'] ?? ''), '@');
-            $channelId = (string) ($item['channelId'] ?? $item['channel_id'] ?? '');
+            $channel = is_array($item['channel'] ?? null) ? $item['channel'] : $item;
+            $handle = ltrim((string) ($channel['channelUsername'] ?? $channel['channel_handle'] ?? $channel['channelHandle'] ?? $channel['handle'] ?? $channel['username'] ?? ''), '@');
+            $channelId = (string) ($channel['channelId'] ?? $channel['channel_id'] ?? $item['channelId'] ?? $item['channel_id'] ?? '');
 
             if ($handle === '' && $channelId === '') {
                 continue;
@@ -119,10 +128,10 @@ class YoutubeAdapter extends AbstractTikHubAdapter
 
             $seen[$key] = true;
             $out[] = [
-                'name' => (string) ($item['channelName'] ?? $item['channel_title'] ?? ($handle !== '' ? $handle : $channelId)),
+                'name' => (string) ($channel['channelName'] ?? $channel['channel_title'] ?? $channel['title'] ?? ($handle !== '' ? $handle : $channelId)),
                 'platform' => Platform::Youtube->value,
                 'handle' => $handle !== '' ? $handle : $channelId,
-                'followers' => isset($item['subscriberCount']) ? (int) $item['subscriberCount'] : null,
+                'followers' => isset($channel['subscriberCount']) ? (int) $channel['subscriberCount'] : (isset($channel['subscriber_count']) ? (int) $channel['subscriber_count'] : null),
                 'seed' => 'tikhub-search',
             ];
 

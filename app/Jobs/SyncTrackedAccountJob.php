@@ -218,11 +218,25 @@ class SyncTrackedAccountJob implements ShouldQueue
             $charger->chargePulledApifyRuns($owner, 'sync.account', $syncMeta);
             $charger->chargePulledTikHubRuns($owner, 'sync.account', $syncMeta);
 
-            $account->fill([
-                'last_synced_at' => now(),
-                'last_sync_status' => 'success',
-                'last_sync_error' => null,
-            ])->save();
+            $reelsInWindow = Post::query()
+                ->where('social_account_id', $account->social_account_id)
+                ->reelLike()
+                ->where('posted_at', '>=', $cutoff)
+                ->count();
+
+            if ($reelsInWindow === 0) {
+                $account->fill([
+                    'last_synced_at' => now(),
+                    'last_sync_status' => 'empty',
+                    'last_sync_error' => 'No recent reels found for this handle.',
+                ])->save();
+            } else {
+                $account->fill([
+                    'last_synced_at' => now(),
+                    'last_sync_status' => 'success',
+                    'last_sync_error' => null,
+                ])->save();
+            }
 
             ScoreWinnersJob::queueFor($account->user_id);
         } catch (Throwable $e) {

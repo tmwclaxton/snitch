@@ -4,9 +4,11 @@ namespace App\Http\Requests\Competitors;
 
 use App\Enums\Platform;
 use App\Models\TrackedAccount;
+use App\Support\SocialHandle;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class ConfirmSuggestionsRequest extends FormRequest
 {
@@ -27,7 +29,35 @@ class ConfirmSuggestionsRequest extends FormRequest
             'suggestions.*.display_name' => ['nullable', 'string', 'max:120'],
             'suggestions.*.avatar' => ['nullable', 'string', 'max:500'],
             'suggestions.*.source' => ['nullable', 'string', 'max:200'],
+            'allow_partial' => ['nullable', 'boolean'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            $suggestions = $this->input('suggestions');
+
+            if (! is_array($suggestions)) {
+                return;
+            }
+
+            foreach ($suggestions as $index => $suggestion) {
+                if (! is_array($suggestion)) {
+                    continue;
+                }
+
+                $handle = is_string($suggestion['handle'] ?? null) ? $suggestion['handle'] : null;
+                $platform = $suggestion['platform'] ?? null;
+
+                if ($handle !== null && SocialHandle::isWeak($handle, $platform instanceof Platform ? $platform : (is_string($platform) ? $platform : null))) {
+                    $validator->errors()->add(
+                        "suggestions.{$index}.handle",
+                        'This handle looks too generic or weak to track.',
+                    );
+                }
+            }
+        });
     }
 
     protected function prepareForValidation(): void
