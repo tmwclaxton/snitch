@@ -10,6 +10,7 @@ import PaperSelect from '@/components/PaperSelect.vue';
 import PaperTermPicker from '@/components/PaperTermPicker.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import SnitchImage from '@/components/SnitchImage.vue';
+import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { analysisDimensionIcon } from '@/lib/analysisTerms';
 import type { PostMetrics } from '@/lib/metrics';
@@ -49,10 +50,10 @@ type Post = {
 };
 
 const props = defineProps<{
-    posts: {
+    posts?: {
         data: Post[];
         links: Array<{ url: string | null; label: string; active: boolean }>;
-    };
+    } | null;
     filters: {
         q: string | null;
         custom_tag: string | null;
@@ -62,11 +63,11 @@ const props = defineProps<{
         platform: string | null;
         explore_seed: number;
     };
-    terms: {
+    terms?: {
         hook_type: AnalysisTermOption[];
         topic: AnalysisTermOption[];
         visual_craft: AnalysisTermOption[];
-    };
+    } | null;
     platforms: string[];
 }>();
 
@@ -97,8 +98,11 @@ const platformOptions = computed(() => [
 
 const selectedPlatform = computed(() => props.filters.platform ?? 'all');
 
+const termsLoaded = computed(() => props.terms != null);
+const postsLoaded = computed(() => props.posts != null);
+
 const hookPickerOptions = computed(() =>
-    props.terms.hook_type.map((term) => ({
+    (props.terms?.hook_type ?? []).map((term) => ({
         slug: term.slug,
         label: term.label,
         section: term.section,
@@ -107,7 +111,7 @@ const hookPickerOptions = computed(() =>
 );
 
 const topicPickerOptions = computed(() =>
-    props.terms.topic.map((term) => ({
+    (props.terms?.topic ?? []).map((term) => ({
         slug: term.slug,
         label: term.label,
         section: term.section,
@@ -116,7 +120,7 @@ const topicPickerOptions = computed(() =>
 );
 
 const craftPickerOptions = computed(() =>
-    props.terms.visual_craft.map((term) => ({
+    (props.terms?.visual_craft ?? []).map((term) => ({
         slug: term.slug,
         label: term.label,
         section: term.section,
@@ -135,7 +139,9 @@ const hasActiveFilters = computed(
 );
 
 function labelForSlug(dimension: 'hook_type' | 'topic' | 'visual_craft', slug: string): string {
-    return props.terms[dimension].find((term) => term.slug === slug)?.label ?? slug;
+    const list = props.terms?.[dimension] ?? [];
+
+    return list.find((term) => term.slug === slug)?.label ?? slug;
 }
 
 function summaryFor(
@@ -400,6 +406,8 @@ function paginationLabel(label: string): string {
                         class="snitch-platform-select-trigger w-full rounded-none text-left text-sm"
                         :class="filters.hook_types.length ? 'font-medium' : 'text-snitch-ink/55'"
                         aria-label="Open hook type catalogue"
+                        :disabled="!termsLoaded"
+                        :aria-busy="!termsLoaded"
                         @click="hookPickerOpen = true"
                     >
                         <span class="inline-flex min-w-0 items-center gap-1.5">
@@ -427,6 +435,8 @@ function paginationLabel(label: string): string {
                         class="snitch-platform-select-trigger w-full rounded-none text-left text-sm"
                         :class="filters.topics.length ? 'font-medium' : 'text-snitch-ink/55'"
                         aria-label="Open topic catalogue"
+                        :disabled="!termsLoaded"
+                        :aria-busy="!termsLoaded"
                         @click="topicPickerOpen = true"
                     >
                         <span class="inline-flex min-w-0 items-center gap-1.5">
@@ -454,6 +464,8 @@ function paginationLabel(label: string): string {
                         class="snitch-platform-select-trigger w-full rounded-none text-left text-sm"
                         :class="filters.visual_crafts.length ? 'font-medium' : 'text-snitch-ink/55'"
                         aria-label="Open visual craft catalogue"
+                        :disabled="!termsLoaded"
+                        :aria-busy="!termsLoaded"
                         @click="craftPickerOpen = true"
                     >
                         <span class="inline-flex min-w-0 items-center gap-1.5">
@@ -547,7 +559,31 @@ function paginationLabel(label: string): string {
             </div>
 
             <div
-                v-if="posts.data.length"
+                v-if="!postsLoaded"
+                class="snitch-contact-sheet mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                aria-live="polite"
+                aria-busy="true"
+            >
+                <div class="snitch-contact-sheet-rail col-span-full">
+                    <p>Explore sheet</p>
+                    <p>developing frames</p>
+                </div>
+
+                <div
+                    v-for="index in 8"
+                    :key="`explore-skel-${index}`"
+                    class="p-2"
+                >
+                    <SnitchSkeleton
+                        variant="polaroid"
+                        width="100%"
+                        :label="`Loading explore frame ${index}`"
+                    />
+                </div>
+            </div>
+
+            <div
+                v-else-if="posts && posts.data.length"
                 class="snitch-contact-sheet snitch-contact-reveal mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
             >
                 <div class="snitch-contact-sheet-rail col-span-full">
@@ -613,7 +649,7 @@ function paginationLabel(label: string): string {
             </div>
 
             <nav
-                v-if="posts.links.length > 3"
+                v-if="posts && posts.links.length > 3"
                 class="mt-8 flex flex-wrap justify-center gap-2"
                 aria-label="Pagination"
             >

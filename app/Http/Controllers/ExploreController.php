@@ -9,6 +9,7 @@ use App\Enums\PostType;
 use App\Exceptions\InsufficientCreditsException;
 use App\Models\AnalysisTerm;
 use App\Models\Post;
+use App\Models\User;
 use App\Services\Analysis\AnalysisEmbeddingService;
 use App\Services\Analysis\AnalysisTermCatalogue;
 use App\Services\Analysis\ExploreMixService;
@@ -59,6 +60,59 @@ class ExploreController extends Controller
             }
         }
 
+        // Bare /explore: new seed every reload. Any query (filters, page, seed):
+        // reuse explore_seed when present, otherwise the 6h bucket seed.
+        $mixSeed = $this->exploreMix->resolveSeed(
+            $request->query('explore_seed'),
+            (int) $user->id,
+            hasQueryParams: count($request->query()) > 0,
+        );
+
+        $filters = [
+            'q' => $queryText,
+            'custom_tag' => $customTag,
+            'hook_types' => $hookTypes,
+            'topics' => $topics,
+            'visual_crafts' => $visualCrafts,
+            'platform' => $platform,
+            'explore_seed' => $mixSeed,
+        ];
+
+        return Inertia::render('explore/Index', [
+            'posts' => Inertia::defer(fn () => $this->paginatedPosts(
+                $request,
+                $user,
+                $platform,
+                $hookTypes,
+                $topics,
+                $visualCrafts,
+                $queryText,
+                $customTag,
+                $mixSeed,
+            )),
+            'filters' => $filters,
+            'terms' => Inertia::defer(fn () => $this->termCatalogue(), 'terms'),
+            'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
+        ]);
+    }
+
+    /**
+     * @param  list<string>  $hookTypes
+     * @param  list<string>  $topics
+     * @param  list<string>  $visualCrafts
+     * @return LengthAwarePaginator<int, Post>
+     */
+    private function paginatedPosts(
+        Request $request,
+        User $user,
+        ?string $platform,
+        array $hookTypes,
+        array $topics,
+        array $visualCrafts,
+        ?string $queryText,
+        ?string $customTag,
+        int $mixSeed,
+    ): LengthAwarePaginator {
         $query = $this->corpusCompletedReelsQuery();
 
         if ($platform !== null && in_array($platform, array_column(Platform::cases(), 'value'), true)) {
@@ -79,13 +133,6 @@ class ExploreController extends Controller
 
         $semanticQuery = $customTag ?? $queryText;
         $posts = null;
-        // Bare /explore: new seed every reload. Any query (filters, page, seed):
-        // reuse explore_seed when present, otherwise the 6h bucket seed.
-        $mixSeed = $this->exploreMix->resolveSeed(
-            $request->query('explore_seed'),
-            (int) $user->id,
-            hasQueryParams: count($request->query()) > 0,
-        );
 
         if ($semanticQuery !== null) {
             $posts = $this->paginateSemanticOrFallback(
@@ -118,6 +165,18 @@ class ExploreController extends Controller
             return $post;
         });
 
+        return $posts;
+    }
+
+    /**
+     * @return array{
+     *     hook_type: list<array{id: int, dimension: string, slug: string, label: string, section: string, count: int}>,
+     *     topic: list<array{id: int, dimension: string, slug: string, label: string, section: string, count: int}>,
+     *     visual_craft: list<array{id: int, dimension: string, slug: string, label: string, section: string, count: int}>
+     * }
+     */
+    private function termCatalogue(): array
+    {
         $sections = $this->catalogue->sectionByKey();
         $termCounts = $this->termUsageCounts();
         $terms = AnalysisTerm::query()
@@ -141,24 +200,11 @@ class ExploreController extends Controller
             ->groupBy('dimension')
             ->map(fn ($group) => $group->values()->all());
 
-        return Inertia::render('explore/Index', [
-            'posts' => $posts,
-            'filters' => [
-                'q' => $queryText,
-                'custom_tag' => $customTag,
-                'hook_types' => $hookTypes,
-                'topics' => $topics,
-                'visual_crafts' => $visualCrafts,
-                'platform' => $platform,
-                'explore_seed' => $mixSeed,
-            ],
-            'terms' => [
-                'hook_type' => $terms->get('hook_type', []),
-                'topic' => $terms->get('topic', []),
-                'visual_craft' => $terms->get('visual_craft', []),
-            ],
-            'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
-        ]);
+        return [
+            'hook_type' => $terms->get('hook_type', []),
+            'topic' => $terms->get('topic', []),
+            'visual_craft' => $terms->get('visual_craft', []),
+        ];
     }
 
     /**

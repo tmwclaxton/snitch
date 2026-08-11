@@ -78,31 +78,37 @@ class ExploreTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('explore/Index')
-                ->has('posts.data', 2)
-                ->where('posts.data', function ($posts) use ($post, $otherPost, $term): bool {
-                    $ids = collect($posts)->pluck('id')->all();
-                    $own = collect($posts)->firstWhere('id', $post->id);
-
-                    return in_array($post->id, $ids, true)
-                        && in_array($otherPost->id, $ids, true)
-                        && is_array($own)
-                        && ($own['analysis']['term_labels'][0]['slug'] ?? null) === $term->slug
-                        && ($own['analysis']['term_labels'][0]['section'] ?? null) === 'Claims & takes';
-                })
-                ->has('terms.hook_type')
-                ->where('terms.hook_type.0.section', fn ($section) => is_string($section) && $section !== '')
-                ->where('terms.hook_type', function ($terms) use ($term): bool {
-                    $match = collect($terms)->firstWhere('slug', $term->slug);
-
-                    return is_array($match)
-                        && ($match['count'] ?? null) === 1;
-                })
-                ->has('terms.topic')
-                ->has('terms.visual_craft')
+                ->missing('posts')
+                ->missing('terms')
                 ->where('filters.hook_types', [])
                 ->where('filters.custom_tag', null)
                 ->missing('accounts')
                 ->missing('filters.account')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 2)
+                    ->where('posts.data', function ($posts) use ($post, $otherPost, $term): bool {
+                        $ids = collect($posts)->pluck('id')->all();
+                        $own = collect($posts)->firstWhere('id', $post->id);
+
+                        return in_array($post->id, $ids, true)
+                            && in_array($otherPost->id, $ids, true)
+                            && is_array($own)
+                            && ($own['analysis']['term_labels'][0]['slug'] ?? null) === $term->slug
+                            && ($own['analysis']['term_labels'][0]['section'] ?? null) === 'Claims & takes';
+                    })
+                )
+                ->loadDeferredProps('terms', fn (Assert $page) => $page
+                    ->has('terms.hook_type')
+                    ->where('terms.hook_type.0.section', fn ($section) => is_string($section) && $section !== '')
+                    ->where('terms.hook_type', function ($terms) use ($term): bool {
+                        $match = collect($terms)->firstWhere('slug', $term->slug);
+
+                        return is_array($match)
+                            && ($match['count'] ?? null) === 1;
+                    })
+                    ->has('terms.topic')
+                    ->has('terms.visual_craft')
+                )
             );
     }
 
@@ -144,12 +150,15 @@ class ExploreTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('explore/Index')
-                ->where('terms.hook_type', function ($terms) use ($term): bool {
-                    $match = collect($terms)->firstWhere('slug', $term->slug);
+                ->missing('terms')
+                ->loadDeferredProps('terms', fn (Assert $page) => $page
+                    ->where('terms.hook_type', function ($terms) use ($term): bool {
+                        $match = collect($terms)->firstWhere('slug', $term->slug);
 
-                    return is_array($match)
-                        && ($match['count'] ?? null) === 2;
-                })
+                        return is_array($match)
+                            && ($match['count'] ?? null) === 2;
+                    })
+                )
             );
     }
 
@@ -186,8 +195,11 @@ class ExploreTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('explore/Index')
                 ->where('filters.topics', ['fundraising'])
-                ->has('posts.data', 1)
-                ->where('posts.data.0.id', $post->id)
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 1)
+                    ->where('posts.data.0.id', $post->id)
+                )
             );
     }
 
@@ -243,8 +255,11 @@ class ExploreTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('explore/Index')
-                ->has('posts.data', 2)
                 ->where('filters.hook_types', ['pattern_interrupt', 'bold_claim'])
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 2)
+                )
             );
     }
 
@@ -281,8 +296,11 @@ class ExploreTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('explore/Index')
-                ->has('posts.data', 1)
-                ->where('posts.data.0.id', $post->id)
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 1)
+                    ->where('posts.data.0.id', $post->id)
+                )
             );
     }
 
@@ -316,8 +334,11 @@ class ExploreTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('explore/Index')
-                ->has('posts.data', 1)
-                ->where('posts.data.0.id', $post->id)
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 1)
+                    ->where('posts.data.0.id', $post->id)
+                )
             );
     }
 }
