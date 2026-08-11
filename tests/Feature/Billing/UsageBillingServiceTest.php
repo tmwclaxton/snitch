@@ -132,7 +132,8 @@ class UsageBillingServiceTest extends TestCase
         $this->billing->charge($user, 'sync.account', BillingVendor::Apify, 0.05);
         $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.04);
         $this->billing->charge($user, 'brand.autofill', BillingVendor::Firecrawl, 0.01);
-        $this->billing->charge($user, 'explore.search', BillingVendor::Snitch);
+        // explore.search is proportional; pass an exact fee for vendor grouping.
+        $this->billing->charge($user, 'explore.search', BillingVendor::Snitch, amountPenceOverride: 0.5);
 
         $summary = $this->billing->summary($user);
 
@@ -155,7 +156,7 @@ class UsageBillingServiceTest extends TestCase
         $this->billing->charge($user, 'analyze.post', BillingVendor::NanoGpt, 0.04);
         $this->billing->charge($user, 'brand.autofill', BillingVendor::Firecrawl, 0.01);
         $this->billing->charge($user, 'sync.account', BillingVendor::TikHub, 0.002);
-        $this->billing->charge($user, 'explore.search', BillingVendor::Snitch);
+        $this->billing->charge($user, 'explore.search', BillingVendor::Snitch, amountPenceOverride: 0.5);
         $this->billing->charge($user, 'explore.view', BillingVendor::Snitch);
 
         $series = $this->billing->dailySpendSeries($user, 14);
