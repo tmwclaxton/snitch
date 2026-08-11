@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { createPinia } from 'pinia';
 import { createApp, createSSRApp, h } from 'vue';
+import AppToast from '@/components/AppToast.vue';
 import { initializeTheme } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
@@ -37,7 +38,7 @@ createInertiaApp({
     setup({ el, App, props, plugin }) {
         // Vite SSR calls setup with el=null and expects the Vue app returned.
         const vueApp = (el ? createApp : createSSRApp)({
-            render: () => h(App, props),
+            render: () => [h(App, props), h(AppToast)],
         });
 
         vueApp

@@ -24,6 +24,14 @@ class AgentsPageTest extends TestCase
                 ->has('tools'));
     }
 
+    public function test_app_entry_mounts_global_toast_ui(): void
+    {
+        $appEntry = file_get_contents(base_path('resources/js/app.ts'));
+
+        $this->assertStringContainsString('AppToast', $appEntry);
+        $this->assertStringContainsString('h(AppToast)', $appEntry);
+    }
+
     public function test_for_agents_redirects_to_agents(): void
     {
         $this->get('/for-agents')
