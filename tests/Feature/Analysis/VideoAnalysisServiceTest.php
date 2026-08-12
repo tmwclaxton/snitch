@@ -511,9 +511,9 @@ class VideoAnalysisServiceTest extends TestCase
         );
     }
 
-    public function test_video_analysis_default_max_tokens_is_8192(): void
+    public function test_video_analysis_default_max_tokens_is_16384(): void
     {
-        $this->assertSame(8192, (int) config('snitch.video_analysis.max_tokens'));
+        $this->assertSame(16384, (int) config('snitch.video_analysis.max_tokens'));
     }
 
     public function test_analyze_url_sends_default_max_tokens_when_not_overridden(): void
@@ -521,7 +521,7 @@ class VideoAnalysisServiceTest extends TestCase
         config([
             'snitch.nanogpt.api_key' => 'test-key',
             'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
-            'snitch.video_analysis.max_tokens' => 8192,
+            'snitch.video_analysis.max_tokens' => 16384,
         ]);
 
         Http::fake([
@@ -554,7 +554,7 @@ class VideoAnalysisServiceTest extends TestCase
         app(VideoAnalysisService::class)->analyzeUrl('https://cdn.example.com/reel.mp4');
 
         Http::assertSent(function ($request): bool {
-            return ($request->data()['max_tokens'] ?? null) === 8192;
+            return ($request->data()['max_tokens'] ?? null) === 16384;
         });
     }
 

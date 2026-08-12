@@ -186,7 +186,8 @@ return [
     'video_analysis' => [
         'model' => env('SNITCH_VIDEO_ANALYSIS_MODEL', 'qwen3.7-flash'),
         // Verbatim reel transcripts need headroom beyond craft fields (~800-1200 tokens).
-        'max_tokens' => (int) env('SNITCH_VIDEO_ANALYSIS_MAX_TOKENS', 8192),
+        // qwen3.7-flash on NanoGPT allows up to 65536 output tokens.
+        'max_tokens' => (int) env('SNITCH_VIDEO_ANALYSIS_MAX_TOKENS', 16384),
         'temperature' => (float) env('SNITCH_VIDEO_ANALYSIS_TEMPERATURE', 0.2),
         // NanoGPT rejects request bodies over ~4.4MB when media is inlined as base64.
         'max_inline_data_uri_bytes' => (int) env('SNITCH_VIDEO_ANALYSIS_MAX_INLINE_DATA_URI_BYTES', 4_200_000),

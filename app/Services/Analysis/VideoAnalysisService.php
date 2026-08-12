@@ -47,7 +47,7 @@ class VideoAnalysisService
             ],
         ];
 
-        $maxTokens = (int) config('snitch.video_analysis.max_tokens', 8192);
+        $maxTokens = (int) config('snitch.video_analysis.max_tokens', 16384);
 
         $response = $this->client->chat(
             messages: [

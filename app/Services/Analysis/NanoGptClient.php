@@ -17,7 +17,7 @@ class NanoGptClient
             'model' => $model,
             'messages' => $messages,
             'temperature' => $options['temperature'] ?? config('snitch.video_analysis.temperature', 0.2),
-            'max_tokens' => $options['max_tokens'] ?? config('snitch.video_analysis.max_tokens', 8192),
+            'max_tokens' => $options['max_tokens'] ?? config('snitch.video_analysis.max_tokens', 16384),
         ];
 
         if (isset($options['response_format'])) {
