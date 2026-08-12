@@ -164,6 +164,10 @@ class PublicPagesTest extends TestCase
         $this->assertStringContainsString('usage credits every billing period', $pricing);
         $this->assertStringContainsString('Feed, Explore, Winners', $pricing);
         $this->assertStringContainsString('Live tool averages', $pricing);
+        $this->assertStringContainsString('Mean charge per step', $pricing);
+        $this->assertStringContainsString('avg / step', $pricing);
+        $this->assertStringNotContainsString('per run', strtolower($pricing));
+        $this->assertStringNotContainsString('avg / run', $pricing);
         $this->assertStringContainsString('formatPenceAsGbp', $pricing);
         $this->assertStringContainsString('Stripe', $privacy);
         $this->assertStringContainsString('Stripe', $terms);

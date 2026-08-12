@@ -130,7 +130,7 @@ function formatAverage(pence: number): string {
                         Live tool averages
                     </h2>
                     <p class="max-w-2xl text-sm text-snitch-ink/75">
-                        Mean charge per run across every Snitch ledger entry, same vendors as Billing.
+                        Mean charge per step across every Snitch ledger entry, same vendors as Billing.
                         Updated from live usage - shown to four decimal places.
                     </p>
                     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -157,7 +157,7 @@ function formatAverage(pence: number): string {
                             <p class="text-xs text-snitch-ink/60">
                                 {{
                                     row.entries > 0
-                                        ? `avg / run · ${row.entries.toLocaleString('en-GB')} runs`
+                                        ? `avg / step · ${row.entries.toLocaleString('en-GB')} steps`
                                         : 'No charges yet'
                                 }}
                             </p>
