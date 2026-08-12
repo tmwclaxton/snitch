@@ -640,7 +640,135 @@ class UsageBillingService
             'recent' => $recent,
             'recent_total' => $recentTotal,
             'recent_has_more' => $recentTotal > self::RECENT_PREVIEW_LIMIT,
+            'credit_expiry' => $this->creditExpiryBreakdown($user),
         ];
+    }
+
+    /**
+     * Remaining credit lots grouped by expiry, soonest first (never-expiring last).
+     *
+     * @return array{
+     *     total_remaining_pence: float,
+     *     topup_expiry_months: int,
+     *     buckets: list<array{
+     *         expires_at: string|null,
+     *         expires_label: string,
+     *         remaining_pence: float,
+     *         lots: list<array{
+     *             action: string,
+     *             label: string,
+     *             remaining_pence: float
+     *         }>
+     *     }>
+     * }
+     */
+    public function creditExpiryBreakdown(User $user): array
+    {
+        $this->syncExpiredLots($user);
+
+        $lots = CreditLedgerEntry::query()
+            ->where('user_id', $user->id)
+            ->where('amount_pence', '>', 0)
+            ->where('remaining_pence', '>', 0)
+            ->where(function ($query): void {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
+            ->orderByRaw('CASE WHEN expires_at IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('expires_at')
+            ->orderBy('id')
+            ->get(['action', 'remaining_pence', 'expires_at']);
+
+        /** @var array<string, array{expires_at: string|null, expires_label: string, remaining_pence: float, lots: list<array{action: string, label: string, remaining_pence: float}>}> $grouped */
+        $grouped = [];
+
+        foreach ($lots as $lot) {
+            $remaining = $this->roundPence((float) ($lot->remaining_pence ?? 0));
+            if ($remaining <= 0) {
+                continue;
+            }
+
+            $bucketKey = $lot->expires_at === null
+                ? '__never__'
+                : $lot->expires_at->toIso8601String();
+
+            if (! isset($grouped[$bucketKey])) {
+                $grouped[$bucketKey] = [
+                    'expires_at' => $lot->expires_at?->toIso8601String(),
+                    'expires_label' => $this->creditExpiryLabel($lot->expires_at, $lot->action),
+                    'remaining_pence' => 0.0,
+                    'lots' => [],
+                ];
+            }
+
+            $grouped[$bucketKey]['remaining_pence'] = $this->roundPence(
+                $grouped[$bucketKey]['remaining_pence'] + $remaining,
+            );
+            $grouped[$bucketKey]['lots'][] = [
+                'action' => $lot->action,
+                'label' => $this->creditLotLabel($lot->action),
+                'remaining_pence' => $remaining,
+            ];
+        }
+
+        return [
+            'total_remaining_pence' => $this->roundPence(array_sum(array_column($grouped, 'remaining_pence'))),
+            'topup_expiry_months' => max(1, (int) config('billing.topup_expiry_months', 3)),
+            'buckets' => array_values($grouped),
+        ];
+    }
+
+    /**
+     * Filter-aware expiry copy for the billing charges ledger.
+     *
+     * @return array{title: string, body: string}|null
+     */
+    public function creditExpiryFilterNote(?string $action): ?array
+    {
+        if (! is_string($action) || $action === '') {
+            return null;
+        }
+
+        $months = max(1, (int) config('billing.topup_expiry_months', 3));
+
+        return match ($action) {
+            'claim_bonus' => [
+                'title' => 'Starter credit',
+                'body' => 'Welcome credits from claiming your account never expire.',
+            ],
+            'subscription_bonus' => [
+                'title' => 'Plan credits',
+                'body' => 'Subscription credits expire at the end of the calendar month they were granted. They do not roll over.',
+            ],
+            'credits.topup' => [
+                'title' => 'Top-up credits',
+                'body' => "Top-up credits expire {$months} months after purchase.",
+            ],
+            default => null,
+        };
+    }
+
+    private function creditLotLabel(string $action): string
+    {
+        return match ($action) {
+            'claim_bonus' => 'Starter credit',
+            'subscription_bonus' => 'Plan credit',
+            'credits.topup' => 'Top-up',
+            default => Str::headline(str_replace('.', ' ', $action)),
+        };
+    }
+
+    private function creditExpiryLabel(?CarbonInterface $expiresAt, string $action): string
+    {
+        if ($expiresAt === null) {
+            return 'Never';
+        }
+
+        if ($action === 'subscription_bonus') {
+            return 'End of '.$expiresAt->format('M Y');
+        }
+
+        return $expiresAt->format('j M Y');
     }
 
     /**

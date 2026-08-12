@@ -6,6 +6,8 @@ import BillingController, {
     charges as billingCharges,
     index as billingIndex,
 } from '@/actions/App/Http/Controllers/Settings/BillingController';
+import CreditExpiryBreakdown from '@/components/billing/CreditExpiryBreakdown.vue';
+import type { CreditExpiryBreakdown as CreditExpiryBreakdownType } from '@/components/billing/CreditExpiryBreakdown.vue';
 import VendorSpendStackedChart from '@/components/billing/VendorSpendStackedChart.vue';
 import type {
     SpendGrain,
@@ -40,6 +42,7 @@ type UsageSummary = {
     recent: ChargeRow[];
     recent_total: number;
     recent_has_more: boolean;
+    credit_expiry: CreditExpiryBreakdownType;
 };
 
 type SubscriptionSummary = {
@@ -144,8 +147,8 @@ function vendorAccent(key: SpendVendorKey): string {
                     </h1>
                     <p class="mt-1.5 max-w-2xl text-sm text-snitch-ink/65 sm:text-base">
                         Keep more than 20p of usage credit to run sync, analysis, and discovery. After
-                        your free £5 starter, a paid plan is required. Plan credits expire at month end;
-                        top-ups expire after 3 months; starter credit never expires.
+                        your free £5 starter, a paid plan is required. See the expiry breakdown below
+                        for when each credit lot runs out.
                     </p>
                 </div>
                 <Link
@@ -240,6 +243,11 @@ function vendorAccent(key: SpendVendorKey): string {
                 </section>
             </div>
 
+            <CreditExpiryBreakdown
+                class="mt-4"
+                :breakdown="usage.credit_expiry"
+            />
+
             <section class="snitch-scrap relative mt-4 p-5 pt-6 sm:p-6">
                 <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
                 <div
@@ -285,7 +293,7 @@ function vendorAccent(key: SpendVendorKey): string {
                         data-test="topup-requires-plan"
                     >
                         Top-ups require an active paid plan. Subscribe first, then buy credit packs.
-                        Top-up credits expire 3 months after purchase.
+                        Top-up credits expire {{ usage.credit_expiry.topup_expiry_months }} months after purchase.
                     </p>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <Form

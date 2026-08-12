@@ -110,6 +110,14 @@ const props = defineProps<{
         last_sync_error: string | null;
         last_synced_at: string | null;
     }>;
+    creditExpirySeries: {
+        months: number;
+        from: string;
+        to: string;
+        never_pence: number;
+        total_scheduled_pence: number;
+        points: Array<{ month: string; label: string; remaining_pence: number }>;
+    };
 }>();
 
 defineOptions({
@@ -324,6 +332,151 @@ function moveProfitTip(event: PointerEvent): void {
 
 function hideProfitTip(): void {
     profitTip.value = null;
+}
+
+type CreditExpiryHit = {
+    key: string;
+    periodLabel: string;
+    amountLabel: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+};
+
+type CreditExpiryTip = {
+    periodLabel: string;
+    amountLabel: string;
+    x: number;
+    y: number;
+};
+
+const creditExpiryMax = computed(() =>
+    Math.max(
+        0.01,
+        ...props.creditExpirySeries.points.map((point) => point.remaining_pence),
+    ),
+);
+
+const creditExpiryLeftPad = 52;
+const creditExpiryChartHeight = 140;
+const creditExpiryPlotTop = 10;
+const creditExpirySlotWidth = 44;
+const creditExpiryBarWidth = 12;
+const creditExpiryLabelPad = 36;
+const creditExpiryPlotWidth = computed(() =>
+    Math.max(
+        creditExpirySlotWidth,
+        props.creditExpirySeries.points.length * creditExpirySlotWidth,
+    ),
+);
+const creditExpiryChartWidth = computed(
+    () => creditExpiryLeftPad + creditExpiryPlotWidth.value,
+);
+
+const creditExpiryYTicks = computed(() => {
+    const max = creditExpiryMax.value;
+    const mid = max / 2;
+    const values = max <= 1 ? [0, max] : [0, mid, max];
+
+    return values.map((value) => ({
+        value,
+        label: value === 0 ? '£0' : formatPenceAsGbp(value),
+        y:
+            creditExpiryPlotTop
+            + (1 - value / max) * (creditExpiryChartHeight - creditExpiryPlotTop),
+    }));
+});
+
+const creditExpiryXLabels = computed(() => {
+    const n = props.creditExpirySeries.points.length;
+    const every = n > 14 ? 2 : 1;
+
+    return props.creditExpirySeries.points
+        .map((point, index) => ({ point, index }))
+        .filter(
+            ({ index }) =>
+                index === 0 || index === n - 1 || index % every === 0,
+        );
+});
+
+function creditExpiryBarX(index: number): number {
+    return (
+        creditExpiryLeftPad
+        + index * creditExpirySlotWidth
+        + (creditExpirySlotWidth - creditExpiryBarWidth) / 2
+    );
+}
+
+function creditExpiryBarHeight(pence: number): number {
+    if (pence <= 0) {
+        return 0;
+    }
+
+    return Math.max(
+        3,
+        (pence / creditExpiryMax.value) * (creditExpiryChartHeight - creditExpiryPlotTop),
+    );
+}
+
+function creditExpiryBarY(pence: number): number {
+    return creditExpiryChartHeight - creditExpiryBarHeight(pence);
+}
+
+const creditExpiryHits = computed((): CreditExpiryHit[] =>
+    props.creditExpirySeries.points
+        .map((point, index) => ({
+            key: point.month,
+            periodLabel: point.label,
+            amountLabel: formatPenceAsGbp(point.remaining_pence),
+            x: creditExpiryBarX(index),
+            y: creditExpiryBarY(point.remaining_pence),
+            width: creditExpiryBarWidth,
+            height: Math.max(creditExpiryBarHeight(point.remaining_pence), 4),
+        }))
+        .filter((hit) => hit.height > 0),
+);
+
+const creditExpiryShell = ref<HTMLElement | null>(null);
+const creditExpiryTip = ref<CreditExpiryTip | null>(null);
+
+function creditExpiryTipPosition(event: PointerEvent): { x: number; y: number } {
+    const shell = creditExpiryShell.value;
+
+    if (!shell) {
+        return { x: 0, y: 0 };
+    }
+
+    const bounds = shell.getBoundingClientRect();
+
+    return {
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top,
+    };
+}
+
+function showCreditExpiryTip(hit: CreditExpiryHit, event: PointerEvent): void {
+    const { x, y } = creditExpiryTipPosition(event);
+
+    creditExpiryTip.value = {
+        periodLabel: hit.periodLabel,
+        amountLabel: hit.amountLabel,
+        x,
+        y,
+    };
+}
+
+function moveCreditExpiryTip(event: PointerEvent): void {
+    if (!creditExpiryTip.value) {
+        return;
+    }
+
+    const { x, y } = creditExpiryTipPosition(event);
+    creditExpiryTip.value = { ...creditExpiryTip.value, x, y };
+}
+
+function hideCreditExpiryTip(): void {
+    creditExpiryTip.value = null;
 }
 
 const mcpMax = computed(() =>
@@ -566,6 +719,98 @@ function formatGbpAxis(value: number): string {
             <p class="text-xs text-snitch-ink/55">
                 Admin only - COGS and markup are never shown on user billing.
             </p>
+        </section>
+
+        <section class="snitch-scrap space-y-3 p-4">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 class="font-display text-xl text-snitch-ink">Credit due to expire</h2>
+                <p class="text-xs text-snitch-ink/55">
+                    {{ formatPenceAsGbp(creditExpirySeries.total_scheduled_pence) }} scheduled ·
+                    {{ formatPenceAsGbp(creditExpirySeries.never_pence) }} never expires
+                </p>
+            </div>
+            <p class="text-xs text-snitch-ink/55">
+                Unused remaining credit by calendar month ({{ creditExpirySeries.from }} →
+                {{ creditExpirySeries.to }}). Starter credit with no expiry is excluded from bars.
+            </p>
+            <div ref="creditExpiryShell" class="relative overflow-x-auto">
+                <svg
+                    class="mt-1 w-full overflow-visible"
+                    :viewBox="`0 0 ${creditExpiryChartWidth} ${creditExpiryChartHeight + creditExpiryLabelPad}`"
+                    role="img"
+                    aria-label="Unused credit scheduled to expire by month"
+                >
+                    <g v-for="tick in creditExpiryYTicks" :key="`credit-expiry-y-${tick.value}`">
+                        <line
+                            :x1="creditExpiryLeftPad"
+                            :x2="creditExpiryChartWidth"
+                            :y1="tick.y"
+                            :y2="tick.y"
+                            class="stroke-snitch-ink/15"
+                            stroke-width="1"
+                        />
+                        <text
+                            :x="creditExpiryLeftPad - 6"
+                            :y="tick.y + 3"
+                            text-anchor="end"
+                            class="fill-snitch-ink/55"
+                            style="font-size: 9px"
+                        >
+                            {{ tick.label }}
+                        </text>
+                    </g>
+                    <g
+                        v-for="(point, index) in creditExpirySeries.points"
+                        :key="point.month"
+                    >
+                        <StippleBar
+                            v-if="point.remaining_pence > 0"
+                            :x="creditExpiryBarX(index)"
+                            :y="creditExpiryBarY(point.remaining_pence)"
+                            :width="creditExpiryBarWidth"
+                            :height="creditExpiryBarHeight(point.remaining_pence)"
+                            fill-class="fill-snitch-spot/90"
+                            :animate="false"
+                            :seed="index * 2"
+                        />
+                    </g>
+                    <rect
+                        v-for="hit in creditExpiryHits"
+                        :key="`credit-expiry-hit-${hit.key}`"
+                        class="snitch-vendor-spend-hit"
+                        :x="hit.x"
+                        :y="hit.y"
+                        :width="hit.width"
+                        :height="hit.height"
+                        fill="transparent"
+                        @pointerenter="showCreditExpiryTip(hit, $event)"
+                        @pointermove="moveCreditExpiryTip($event)"
+                        @pointerleave="hideCreditExpiryTip"
+                    />
+                    <text
+                        v-for="item in creditExpiryXLabels"
+                        :key="`credit-expiry-x-${item.point.month}`"
+                        :x="creditExpiryBarX(item.index) + creditExpiryBarWidth / 2"
+                        :y="creditExpiryChartHeight + 18"
+                        text-anchor="end"
+                        class="fill-snitch-ink/45"
+                        font-size="8"
+                        :transform="`rotate(-32 ${creditExpiryBarX(item.index) + creditExpiryBarWidth / 2} ${creditExpiryChartHeight + 18})`"
+                    >
+                        {{ item.point.label }}
+                    </text>
+                </svg>
+                <div
+                    v-if="creditExpiryTip"
+                    class="snitch-vendor-spend-tip"
+                    role="tooltip"
+                    :style="{ left: `${creditExpiryTip.x}px`, top: `${creditExpiryTip.y}px` }"
+                >
+                    <p class="snitch-vendor-spend-tip-vendor">Expiring</p>
+                    <p class="snitch-vendor-spend-tip-amount tabular-nums">{{ creditExpiryTip.amountLabel }}</p>
+                    <p class="snitch-vendor-spend-tip-period">{{ creditExpiryTip.periodLabel }}</p>
+                </div>
+            </div>
         </section>
 
         <div class="grid gap-6 lg:grid-cols-2">

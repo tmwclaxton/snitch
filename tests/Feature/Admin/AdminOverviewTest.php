@@ -9,6 +9,7 @@ use App\Models\CreditLedgerEntry;
 use App\Models\Post;
 use App\Models\PostAnalysis;
 use App\Models\User;
+use App\Services\Admin\AdminOverviewService;
 use App\Services\Billing\UsageBillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -69,11 +70,36 @@ class AdminOverviewTest extends TestCase
                 ->where('kpis.users_total', 1)
                 ->has('spendSeries.points')
                 ->has('profit')
+                ->has('creditExpirySeries.points', 12)
+                ->where('creditExpirySeries.never_pence', fn ($value) => (float) $value > 0)
                 ->has('platforms')
                 ->has('failedAnalyses')
                 ->has('mcpTools')
                 ->has('topActions')
                 ->where('auth.user.is_admin', true));
+    }
+
+    public function test_admin_credit_expiry_series_aggregates_by_month(): void
+    {
+        $this->travelTo(now()->startOfMonth()->addDays(2)->setTime(12, 0));
+
+        $user = User::factory()->withoutStarterCredit()->create();
+        $billing = app(UsageBillingService::class);
+        $billing->creditClaimBonus($user);
+        $billing->creditSubscriptionBonus($user, 'subscription_bonus:invoice:admin_1');
+        $billing->creditFromTopUp($user, 1500, 'topup:admin-series');
+
+        $series = app(AdminOverviewService::class)->creditExpirySeries(12);
+
+        $this->assertSame(12, $series['months']);
+        $this->assertSame(500.0, $series['never_pence']);
+        $this->assertGreaterThanOrEqual(4500.0, $series['total_scheduled_pence']);
+
+        $currentMonth = now()->format('Y-m');
+        $currentPoint = collect($series['points'])->firstWhere('month', $currentMonth);
+
+        $this->assertNotNull($currentPoint);
+        $this->assertSame(3000.0, $currentPoint['remaining_pence']);
     }
 
     public function test_shared_auth_marks_non_admin(): void

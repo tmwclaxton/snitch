@@ -79,6 +79,9 @@ class BillingController extends Controller
             'usage' => [
                 'balance_pence' => $this->usage->balancePence($user),
             ],
+            'creditExpiry' => $this->usage->creditExpiryBreakdown($user),
+            'creditExpiryNote' => $this->usage->creditExpiryFilterNote($filters['action'] ?? null),
+            'topupExpiryMonths' => max(1, (int) config('billing.topup_expiry_months', 3)),
         ]);
     }
 

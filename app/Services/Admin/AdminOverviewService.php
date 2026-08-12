@@ -54,6 +54,84 @@ class AdminOverviewService
             'mcpTools' => $this->mcpTools($from, $to),
             'topActions' => $this->topActions($from, $to),
             'syncFailures' => $this->syncFailures(),
+            'creditExpirySeries' => $this->creditExpirySeries(),
+        ];
+    }
+
+    /**
+     * Platform-wide unused credit scheduled to expire by calendar month.
+     *
+     * @return array{
+     *     months: int,
+     *     from: string,
+     *     to: string,
+     *     never_pence: float,
+     *     total_scheduled_pence: float,
+     *     points: list<array{month: string, label: string, remaining_pence: float}>
+     * }
+     */
+    public function creditExpirySeries(int $months = 12): array
+    {
+        $months = max(3, min(24, $months));
+        $from = now()->startOfMonth();
+        $to = $from->copy()->addMonthsNoOverflow($months - 1)->endOfMonth();
+
+        $points = [];
+        for ($offset = 0; $offset < $months; $offset++) {
+            $cursor = $from->copy()->addMonthsNoOverflow($offset);
+            $points[$cursor->format('Y-m')] = [
+                'month' => $cursor->format('Y-m'),
+                'label' => $cursor->format('M Y'),
+                'remaining_pence' => 0.0,
+            ];
+        }
+
+        $neverPence = 0.0;
+        $scheduledTotal = 0.0;
+
+        $lots = CreditLedgerEntry::query()
+            ->where('amount_pence', '>', 0)
+            ->where('remaining_pence', '>', 0)
+            ->where(function ($query): void {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
+            ->get(['remaining_pence', 'expires_at']);
+
+        foreach ($lots as $lot) {
+            $remaining = $this->roundPence((float) ($lot->remaining_pence ?? 0));
+            if ($remaining <= 0) {
+                continue;
+            }
+
+            if ($lot->expires_at === null) {
+                $neverPence = $this->roundPence($neverPence + $remaining);
+
+                continue;
+            }
+
+            if ($lot->expires_at->greaterThan($to)) {
+                continue;
+            }
+
+            $monthKey = $lot->expires_at->format('Y-m');
+            if (! isset($points[$monthKey])) {
+                continue;
+            }
+
+            $points[$monthKey]['remaining_pence'] = $this->roundPence(
+                $points[$monthKey]['remaining_pence'] + $remaining,
+            );
+            $scheduledTotal = $this->roundPence($scheduledTotal + $remaining);
+        }
+
+        return [
+            'months' => $months,
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'never_pence' => $neverPence,
+            'total_scheduled_pence' => $scheduledTotal,
+            'points' => array_values($points),
         ];
     }
 

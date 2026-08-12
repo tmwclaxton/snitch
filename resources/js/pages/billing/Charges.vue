@@ -3,6 +3,8 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { FilterX } from '@lucide/vue';
 import { computed } from 'vue';
 import { charges as billingCharges, index as billingIndex } from '@/actions/App/Http/Controllers/Settings/BillingController';
+import CreditExpiryBreakdown from '@/components/billing/CreditExpiryBreakdown.vue';
+import type { CreditExpiryBreakdown as CreditExpiryBreakdownType } from '@/components/billing/CreditExpiryBreakdown.vue';
 import PaperSelect from '@/components/PaperSelect.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -37,6 +39,9 @@ const props = defineProps<{
     vendors: string[];
     actions: string[];
     usage: { balance_pence: number };
+    creditExpiry: CreditExpiryBreakdownType;
+    creditExpiryNote: { title: string; body: string } | null;
+    topupExpiryMonths: number;
 }>();
 
 const chargesLoaded = computed(() => props.charges != null);
@@ -237,6 +242,21 @@ function paginationLabel(label: string): string {
                     Clear filters
                 </button>
             </div>
+
+            <p
+                v-if="creditExpiryNote"
+                class="mt-4 rounded-sm border border-snitch-spot/35 bg-snitch-spot/15 px-3 py-2 text-sm text-snitch-ink/80"
+                data-test="credit-expiry-filter-note"
+            >
+                <span class="font-medium text-snitch-ink">{{ creditExpiryNote.title }}:</span>
+                {{ creditExpiryNote.body }}
+            </p>
+
+            <CreditExpiryBreakdown
+                class="mt-4"
+                compact
+                :breakdown="creditExpiry"
+            />
 
             <section class="snitch-scrap relative mt-6 space-y-3 p-5 pt-6 sm:p-6">
                 <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
