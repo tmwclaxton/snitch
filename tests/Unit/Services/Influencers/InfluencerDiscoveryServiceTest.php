@@ -14,6 +14,8 @@ use App\Services\Firecrawl\FirecrawlClient;
 use App\Services\Influencers\InfluencerDiscoveryService;
 use App\Services\Scraping\ApifyMonthlyCapGate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use ReflectionMethod;
+use RuntimeException;
 use Tests\TestCase;
 
 class InfluencerDiscoveryServiceTest extends TestCase
@@ -453,5 +455,28 @@ class InfluencerDiscoveryServiceTest extends TestCase
         $this->assertSame('b', $prose['influencers'][0]['handle'] ?? null);
 
         $this->assertNull($service->decodeModelJson('not json at all'));
+    }
+
+    public function test_tikhub_http_4xx_are_expected_soft_vendor_failures(): void
+    {
+        $service = $this->service();
+        $method = new ReflectionMethod(InfluencerDiscoveryService::class, 'isExpectedVendorClientFailure');
+
+        $this->assertTrue($method->invoke(
+            $service,
+            new RuntimeException('TikHub request failed (404): {"detail":"Not Found"}'),
+        ));
+        $this->assertTrue($method->invoke(
+            $service,
+            new RuntimeException('TikHub API error (422): bad query'),
+        ));
+        $this->assertFalse($method->invoke(
+            $service,
+            new RuntimeException('TikHub request failed (500): upstream'),
+        ));
+        $this->assertFalse($method->invoke(
+            $service,
+            new RuntimeException('Firecrawl timed out'),
+        ));
     }
 }

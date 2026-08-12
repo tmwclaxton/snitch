@@ -25,7 +25,7 @@ UI defaults from `snitch.influencer_find`: platform `instagram`, language `Engli
 ## Multi-seed discovery
 Order: NanoGPT model seed + Firecrawl search/propose + vendor native platform search (Apify, or TikHub when `ApifyMonthlyCapGate` is exhausted) -> merge/dedupe -> platform resolve (require `external_id`) with follower extraction. Do not invent Keep-ready creators from LLM memory alone; model seeds always go through resolve verify. Fail clearly under `min_suggestions` via `InsufficientInfluencerSuggestionsException` (partial rows still returned for the UI). Probe locally with `php artisan snitch:probe-influencer-find --sync`.
 
-When Apify monthly COGS is exhausted and `TIKHUB_API_KEY` is set, `seedFromApifySearch` calls TikHub user/channel search for IG/TT/YT and labels seeds `tikhub-search`. Facebook has no TikHub search path and verify/resolve stays on Apify. Charge pulled TikHub runs on find jobs.
+When Apify monthly COGS is exhausted and `TIKHUB_API_KEY` is set, `seedFromApifySearch` calls TikHub user/channel search for IG/TT/YT and labels seeds `tikhub-search`. Facebook has no TikHub search path and verify/resolve stays on Apify. Charge pulled TikHub runs on find jobs. Per-platform TikHub HTTP 4xx (e.g. search 404) must soft-continue with `Log::warning` - do not `report()` those into production.ERROR while other seeds still run.
 
 Config toggles: `snitch.influencer_find.seeds.{model,firecrawl,apify_search}` (default all true), `model_seed_count`, `apify_search_limit`.
 
