@@ -120,13 +120,66 @@ class CompetitorsTest extends TestCase
             ->post(route('competitors.sync', $account))
             ->assertRedirect();
 
-        Queue::assertPushed(SyncTrackedAccountJob::class);
+        Queue::assertPushed(SyncTrackedAccountJob::class, function (SyncTrackedAccountJob $job) use ($account): bool {
+            return $job->trackedAccountId === $account->id
+                && $job->force === true
+                && $job->postsLimit === null
+                && $job->recencyDays === null;
+        });
 
         $this->actingAs($user)
             ->delete(route('competitors.destroy', $account))
             ->assertRedirect(route('competitors.index'));
 
         $this->assertDatabaseMissing('tracked_accounts', ['id' => $account->id]);
+    }
+
+    public function test_manual_sync_accepts_posts_limit_and_recency_days(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $this->enablePlatformBilling($user);
+        $account = TrackedAccount::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->post(route('competitors.sync', $account), [
+                'posts_limit' => 24,
+                'recency_days' => 60,
+            ])
+            ->assertRedirect();
+
+        Queue::assertPushed(SyncTrackedAccountJob::class, function (SyncTrackedAccountJob $job) use ($account): bool {
+            return $job->trackedAccountId === $account->id
+                && $job->force === true
+                && $job->postsLimit === 24
+                && $job->recencyDays === 60;
+        });
+    }
+
+    public function test_manual_sync_rejects_out_of_range_options(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $this->enablePlatformBilling($user);
+        $account = TrackedAccount::factory()->for($user)->create();
+
+        config([
+            'snitch.sync.posts_limit_max' => 50,
+            'snitch.sync.recency_days_max' => 90,
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('competitors.show', $account))
+            ->post(route('competitors.sync', $account), [
+                'posts_limit' => 999,
+            ])
+            ->assertSessionHasErrors(['posts_limit']);
+
+        Queue::assertNothingPushed();
     }
 
     public function test_manual_sync_force_queues_when_synced_within_min_interval(): void
@@ -214,6 +267,10 @@ class CompetitorsTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('competitors/Index')
+                ->has('syncDefaults.posts_limit')
+                ->has('syncDefaults.recency_days')
+                ->has('syncDefaults.posts_limit_max')
+                ->has('syncDefaults.recency_days_max')
                 ->missing('accounts')
                 ->loadDeferredProps('default', fn (Assert $page) => $page
                     ->has('accounts', 1)
@@ -235,6 +292,7 @@ class CompetitorsTest extends TestCase
         $this->assertStringContainsString('emptyImportHint', $indexVue);
         $this->assertStringContainsString('No recent reels found', $indexVue);
         $this->assertStringContainsString('RemoveCompetitorModal', $indexVue);
+        $this->assertStringContainsString('SyncAccountModal', $indexVue);
         $this->assertStringContainsString('askRemove', $indexVue);
         $this->assertStringNotContainsString('Auto sync', $indexVue);
         $this->assertStringNotContainsString('nextSyncLabel', $indexVue);

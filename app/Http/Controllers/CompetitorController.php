@@ -14,6 +14,7 @@ use App\Http\Requests\Competitors\DismissSuggestionsRequest;
 use App\Http\Requests\Competitors\GenerateCompetitorBriefRequest;
 use App\Http\Requests\Competitors\StoreTrackedAccountRequest;
 use App\Http\Requests\Competitors\SuggestCompetitorsRequest;
+use App\Http\Requests\Competitors\SyncTrackedAccountRequest;
 use App\Http\Requests\Competitors\UpdateCompetitorBriefRequest;
 use App\Jobs\SuggestCompetitorsJob;
 use App\Jobs\SyncTrackedAccountJob;
@@ -28,6 +29,7 @@ use App\Services\Competitors\CompetitorSuggestionService;
 use App\Support\PlatformEmbed;
 use App\Support\PostAccountPresenter;
 use App\Support\SocialHandle;
+use App\Support\SyncOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -76,6 +78,7 @@ class CompetitorController extends Controller
                 'suggestRun' => null,
                 'suggestError' => null,
                 'competitorCap' => $this->entitlements->sharedSummary($user),
+                'syncDefaults' => SyncOptions::inertiaDefaults(),
             ]);
         }
 
@@ -90,6 +93,7 @@ class CompetitorController extends Controller
             'suggestRun' => $this->activeSuggestRun($user->id),
             'suggestError' => $this->suggestError($user->id),
             'competitorCap' => $this->entitlements->sharedSummary($user),
+            'syncDefaults' => SyncOptions::inertiaDefaults(),
         ]);
     }
 
@@ -112,6 +116,7 @@ class CompetitorController extends Controller
             'account' => $trackedAccount,
             'posts' => Inertia::defer(fn () => $this->competitorPosts($trackedAccount, $user)),
             'winners' => Inertia::defer(fn () => $this->competitorWinners($trackedAccount, $user), 'winners'),
+            'syncDefaults' => SyncOptions::inertiaDefaults(),
         ]);
     }
 
@@ -369,10 +374,8 @@ class CompetitorController extends Controller
         return redirect()->route('competitors.index');
     }
 
-    public function sync(Request $request, TrackedAccount $trackedAccount): RedirectResponse
+    public function sync(SyncTrackedAccountRequest $request, TrackedAccount $trackedAccount): RedirectResponse
     {
-        $this->authorize('update', $trackedAccount);
-
         try {
             $this->billing->assertCanRun($request->user());
         } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $exception) {
@@ -384,8 +387,8 @@ class CompetitorController extends Controller
             return back();
         }
 
-        $trackedAccount->markSyncRunning();
-        SyncTrackedAccountJob::dispatch($trackedAccount->id, force: true);
+        $options = SyncOptions::fromValidated($request->validated());
+        $this->dispatchManualSync($trackedAccount, $options);
 
         Inertia::flash('toast', [
             'type' => 'info',
@@ -413,6 +416,8 @@ class CompetitorController extends Controller
             return back();
         }
 
+        $options = SyncOptions::fromValidated($request->validated());
+
         $accounts = TrackedAccount::query()
             ->where('user_id', $user->id)
             ->competitors()
@@ -421,8 +426,7 @@ class CompetitorController extends Controller
 
         foreach ($accounts as $account) {
             $this->authorize('update', $account);
-            $account->markSyncRunning();
-            SyncTrackedAccountJob::dispatch($account->id, force: true);
+            $this->dispatchManualSync($account, $options);
         }
 
         Inertia::flash('toast', [
@@ -433,6 +437,17 @@ class CompetitorController extends Controller
         ]);
 
         return back();
+    }
+
+    private function dispatchManualSync(TrackedAccount $account, SyncOptions $options): void
+    {
+        $account->markSyncRunning();
+        SyncTrackedAccountJob::dispatch(
+            $account->id,
+            force: true,
+            postsLimit: $options->postsLimit,
+            recencyDays: $options->recencyDays,
+        );
     }
 
     private function queueSyncIfBillable(User $user, TrackedAccount $account): void

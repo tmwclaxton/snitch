@@ -12,7 +12,6 @@ import {
 import { computed, onUnmounted, ref, watch } from 'vue';
 import {
     index as competitorsIndex,
-    sync,
 } from '@/actions/App/Http/Controllers/CompetitorController';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import FeedContactCell from '@/components/FeedContactCell.vue';
@@ -20,6 +19,7 @@ import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
+import SyncAccountModal from '@/components/SyncAccountModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { PostMetrics } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
@@ -70,10 +70,18 @@ type Winner = {
     };
 };
 
+type SyncDefaults = {
+    posts_limit: number;
+    recency_days: number;
+    posts_limit_max: number;
+    recency_days_max: number;
+};
+
 const props = defineProps<{
     account: Account;
     posts?: Post[] | null;
     winners?: Winner[] | null;
+    syncDefaults?: SyncDefaults;
 }>();
 
 const postsList = computed<Post[]>(() => props.posts ?? []);
@@ -116,6 +124,14 @@ const syncErrorLabel = computed(() => {
 });
 
 const removeDialogOpen = ref(false);
+const syncDialogOpen = ref(false);
+
+const syncDefaultsResolved = computed<SyncDefaults>(() => ({
+    posts_limit: props.syncDefaults?.posts_limit ?? 12,
+    recency_days: props.syncDefaults?.recency_days ?? 30,
+    posts_limit_max: props.syncDefaults?.posts_limit_max ?? 50,
+    recency_days_max: props.syncDefaults?.recency_days_max ?? 90,
+}));
 
 function clearSyncPoll(): void {
     if (syncPollTimer !== null) {
@@ -181,16 +197,11 @@ function syncNow(): void {
         return;
     }
 
-    syncRequested.value = true;
+    syncDialogOpen.value = true;
+}
 
-    router.post(sync.url(props.account.id), {}, {
-        preserveScroll: true,
-        onFinish: () => {
-            if (props.account.last_sync_status !== 'running') {
-                syncRequested.value = false;
-            }
-        },
-    });
+function onAccountSynced(): void {
+    syncRequested.value = true;
 }
 
 function askRemove(): void {
@@ -467,6 +478,13 @@ function askRemove(): void {
         <RemoveCompetitorModal
             v-model:open="removeDialogOpen"
             :account="account"
+        />
+
+        <SyncAccountModal
+            v-model:open="syncDialogOpen"
+            :account="account"
+            :sync-defaults="syncDefaultsResolved"
+            @synced="onAccountSynced"
         />
     </div>
 </template>

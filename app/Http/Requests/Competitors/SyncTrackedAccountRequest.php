@@ -7,11 +7,14 @@ use App\Support\SyncOptions;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class BatchSyncCompetitorsRequest extends FormRequest
+class SyncTrackedAccountRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('viewAny', TrackedAccount::class) ?? false;
+        $trackedAccount = $this->route('trackedAccount');
+
+        return $trackedAccount instanceof TrackedAccount
+            && ($this->user()?->can('update', $trackedAccount) ?? false);
     }
 
     /**
@@ -19,10 +22,6 @@ class BatchSyncCompetitorsRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'ids' => ['required', 'array', 'min:1', 'max:50'],
-            'ids.*' => ['required', 'integer', 'distinct'],
-            ...SyncOptions::optionalFieldRules(),
-        ];
+        return SyncOptions::optionalFieldRules();
     }
 }

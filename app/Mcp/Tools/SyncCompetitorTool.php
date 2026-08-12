@@ -8,6 +8,7 @@ use App\Jobs\SyncTrackedAccountJob;
 use App\Mcp\Support\McpAuth;
 use App\Models\TrackedAccount;
 use App\Services\Billing\UsageBillingService;
+use App\Support\SyncOptions;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Mcp\Request;
@@ -17,7 +18,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('sync_competitor')]
-#[Description('Queue a sync for a tracked account. Pass tracked_account_id (aliases: competitor_id, id) from list_competitors. Requires a credit balance above 20p; usage is billed when the job runs.')]
+#[Description('Queue a sync for a tracked account. Pass tracked_account_id (aliases: competitor_id, id) from list_competitors. Optional posts_limit and recency_days override defaults (config snitch.sync; capped). Requires a credit balance above 20p; usage is billed when the job runs.')]
 class SyncCompetitorTool extends Tool
 {
     public function handle(Request $request, UsageBillingService $billing): Response
@@ -31,6 +32,7 @@ class SyncCompetitorTool extends Tool
             'tracked_account_id' => ['nullable', 'integer'],
             'competitor_id' => ['nullable', 'integer'],
             'id' => ['nullable', 'integer'],
+            ...SyncOptions::optionalFieldRules(),
         ]);
 
         $trackedAccountId = $data['tracked_account_id'] ?? $data['competitor_id'] ?? $data['id'] ?? null;
@@ -48,6 +50,8 @@ class SyncCompetitorTool extends Tool
             return Response::error('Tracked account not found.');
         }
 
+        $options = SyncOptions::fromValidated($data);
+
         try {
             $billing->assertCanRun($user);
         } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $exception) {
@@ -55,9 +59,19 @@ class SyncCompetitorTool extends Tool
         }
 
         $account->markSyncRunning();
-        SyncTrackedAccountJob::dispatch($account->id, true);
+        SyncTrackedAccountJob::dispatch(
+            $account->id,
+            force: true,
+            postsLimit: $options->postsLimit,
+            recencyDays: $options->recencyDays,
+        );
 
-        return Response::json(['queued' => true, 'tracked_account_id' => $account->id]);
+        return Response::json([
+            'queued' => true,
+            'tracked_account_id' => $account->id,
+            'posts_limit' => $options->resolvedPostsLimit(),
+            'recency_days' => $options->resolvedRecencyDays(),
+        ]);
     }
 
     /** @return array<string, Type> */
@@ -72,6 +86,12 @@ class SyncCompetitorTool extends Tool
                 ->nullable(),
             'id' => $schema->integer()
                 ->description('Alias for tracked_account_id (same as list_competitors.id)')
+                ->nullable(),
+            'posts_limit' => $schema->integer()
+                ->description('Max reel-like posts to import (default config snitch.sync.posts_limit; max snitch.sync.posts_limit_max)')
+                ->nullable(),
+            'recency_days' => $schema->integer()
+                ->description('How far back to look in days (default config snitch.sync.recency_days; max snitch.sync.recency_days_max)')
                 ->nullable(),
         ];
     }

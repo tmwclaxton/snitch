@@ -13,6 +13,7 @@ use App\Services\Apify\PlatformAdapterManager;
 use App\Services\Billing\VendorUsageCharger;
 use App\Services\SnitchAnalyticsService;
 use App\Support\SafeExceptionMessage;
+use App\Support\SyncOptions;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -28,6 +29,8 @@ class SyncTrackedAccountJob implements ShouldQueue
     public function __construct(
         public int $trackedAccountId,
         public bool $force = false,
+        public ?int $postsLimit = null,
+        public ?int $recencyDays = null,
     ) {}
 
     public function handle(
@@ -83,8 +86,9 @@ class SyncTrackedAccountJob implements ShouldQueue
 
         $account->markSyncRunning();
 
-        $limit = max(1, (int) config('snitch.sync.posts_limit', 12));
-        $recencyDays = max(1, (int) config('snitch.sync.recency_days', 30));
+        $syncOptions = new SyncOptions($this->postsLimit, $this->recencyDays);
+        $limit = $syncOptions->resolvedPostsLimit();
+        $recencyDays = $syncOptions->resolvedRecencyDays();
         $cutoff = CarbonImmutable::now()->subDays($recencyDays);
         $scrapeDriver = $adapters->driverFor($account->platform);
 
@@ -158,7 +162,7 @@ class SyncTrackedAccountJob implements ShouldQueue
                 $externalId = (string) ($payload['external_id'] ?? md5((string) $payload['url']));
 
                 if ($existingPosts->has($externalId)) {
-                    $this->dispatchAnalysisIfNeeded($existingPosts->get($externalId), (int) $account->user_id);
+                    $this->dispatchAnalysisIfNeeded($existingPosts->get($externalId), (int) $account->user_id, $recencyDays);
 
                     continue;
                 }
@@ -204,7 +208,7 @@ class SyncTrackedAccountJob implements ShouldQueue
 
                 $analytics->recordPostSynced($account->platform);
 
-                $this->dispatchAnalysisIfNeeded($post->fresh('analysis'), (int) $account->user_id);
+                $this->dispatchAnalysisIfNeeded($post->fresh('analysis'), (int) $account->user_id, $recencyDays);
             }
 
             // Pull both buffers: empty Apify→TikHub fallback and YouTube
@@ -304,14 +308,13 @@ class SyncTrackedAccountJob implements ShouldQueue
         return $withBuffer->greaterThan($floor) ? $withBuffer : $floor;
     }
 
-    private function dispatchAnalysisIfNeeded(Post $post, int $billingUserId): void
+    private function dispatchAnalysisIfNeeded(Post $post, int $billingUserId, int $recencyDays): void
     {
         if (! $post->isAnalyzable()) {
             return;
         }
 
         if ($post->posted_at !== null) {
-            $recencyDays = max(1, (int) config('snitch.sync.recency_days', 30));
             if ($post->posted_at->lt(now()->subDays($recencyDays))) {
                 return;
             }

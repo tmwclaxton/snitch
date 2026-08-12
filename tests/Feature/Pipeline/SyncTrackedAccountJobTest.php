@@ -17,6 +17,7 @@ use App\Services\Apify\Contracts\PlatformAdapter;
 use App\Services\Apify\PlatformAdapterManager;
 use App\Services\Billing\VendorUsageCharger;
 use App\Services\SnitchAnalyticsService;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -742,5 +743,79 @@ class SyncTrackedAccountJobTest extends TestCase
         $this->assertNotNull($new);
         $this->assertSame('https://cdn.tiktokcdn.com/new.mp4', $new->media_url);
         Queue::assertPushed(AnalyzePostJob::class, fn (AnalyzePostJob $job) => $job->postId === $new->id);
+    }
+
+    public function test_sync_honors_custom_posts_limit_and_recency_days(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Facebook,
+            'handle' => 'rivalbakery',
+            'external_id' => 'page_1',
+            'url' => 'https://facebook.com/rivalbakery',
+            'display_name' => 'Rival Bakery',
+        ]);
+
+        $adapter = Mockery::mock(PlatformAdapter::class);
+        $adapter->shouldReceive('platform')->andReturn(Platform::Facebook);
+        $adapter->shouldReceive('resolveProfile')->once()->andReturn([
+            'platform' => Platform::Facebook,
+            'handle' => 'rivalbakery',
+            'url' => 'https://facebook.com/rivalbakery',
+            'external_id' => 'page_1',
+            'avatar' => null,
+            'display_name' => 'Rival Bakery',
+        ]);
+        $adapter->shouldReceive('listRecentPosts')
+            ->once()
+            ->with('rivalbakery', 3, Mockery::type(CarbonImmutable::class))
+            ->andReturn([
+                [
+                    'external_id' => 'in_window',
+                    'url' => 'https://facebook.com/rivalbakery/videos/1',
+                    'posted_at' => now()->subDays(40)->toIso8601String(),
+                    'type' => PostType::Video->value,
+                    'caption' => 'Inside 45-day window',
+                    'media_url' => 'https://cdn.example.com/in.mp4',
+                    'metrics' => [],
+                    'raw_payload' => [],
+                ],
+                [
+                    'external_id' => 'outside_window',
+                    'url' => 'https://facebook.com/rivalbakery/videos/2',
+                    'posted_at' => now()->subDays(80)->toIso8601String(),
+                    'type' => PostType::Video->value,
+                    'caption' => 'Outside 45-day window',
+                    'media_url' => 'https://cdn.example.com/out.mp4',
+                    'metrics' => [],
+                    'raw_payload' => [],
+                ],
+            ]);
+        $adapter->shouldReceive('hydrateMediaUrls')->once()->andReturnUsing(fn (array $posts) => $posts);
+
+        $adapters = Mockery::mock(PlatformAdapterManager::class);
+        $adapters->shouldReceive('driverFor')->andReturn('apify');
+        $adapters->shouldReceive('for')->with(Platform::Facebook)->andReturn($adapter);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
+        $this->app->instance(ApifyClient::class, $client);
+
+        config([
+            'snitch.sync.recency_days' => 30,
+            'snitch.sync.posts_limit' => 12,
+        ]);
+
+        (new SyncTrackedAccountJob($account->id, force: true, postsLimit: 3, recencyDays: 45))->handle(
+            $adapters,
+            app(SnitchAnalyticsService::class),
+            app(VendorUsageCharger::class),
+        );
+
+        $this->assertSame(1, Post::query()->count());
+        $this->assertSame('in_window', Post::query()->value('external_id'));
     }
 }

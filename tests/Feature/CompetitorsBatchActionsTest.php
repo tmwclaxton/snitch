@@ -49,6 +49,31 @@ class CompetitorsBatchActionsTest extends TestCase
         $this->assertNotSame('running', $other->fresh()?->last_sync_status);
     }
 
+    public function test_batch_sync_passes_sync_options_to_jobs(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $this->enablePlatformBilling($user);
+
+        $first = TrackedAccount::factory()->for($user)->create(['handle' => 'rival-a']);
+
+        $this->actingAs($user)
+            ->post(route('competitors.batch-sync'), [
+                'ids' => [$first->id],
+                'posts_limit' => 30,
+                'recency_days' => 45,
+            ])
+            ->assertRedirect();
+
+        Queue::assertPushed(SyncTrackedAccountJob::class, function (SyncTrackedAccountJob $job) use ($first): bool {
+            return $job->trackedAccountId === $first->id
+                && $job->postsLimit === 30
+                && $job->recencyDays === 45;
+        });
+    }
+
     public function test_batch_sync_blocked_when_balance_too_low(): void
     {
         Queue::fake();

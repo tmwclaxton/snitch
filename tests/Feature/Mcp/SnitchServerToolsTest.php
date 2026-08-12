@@ -3,6 +3,7 @@
 namespace Tests\Feature\Mcp;
 
 use App\Enums\TrackedAccountKind;
+use App\Jobs\SyncTrackedAccountJob;
 use App\Mcp\Servers\SnitchServer;
 use App\Mcp\Tools\BillingPortalTool;
 use App\Mcp\Tools\ExplorePostsTool;
@@ -94,6 +95,53 @@ class SnitchServerToolsTest extends TestCase
         SnitchServer::tool(SyncCompetitorTool::class, [
             'id' => $account->id,
         ])->assertOk()->assertSee('"queued":true');
+    }
+
+    public function test_sync_competitor_accepts_sync_options(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        app(UsageBillingService::class)->creditClaimBonus($user);
+        $account = TrackedAccount::factory()->create([
+            'user_id' => $user->id,
+            'kind' => TrackedAccountKind::Competitor,
+        ]);
+        $this->actingAs($user);
+
+        SnitchServer::tool(SyncCompetitorTool::class, [
+            'id' => $account->id,
+            'posts_limit' => 20,
+            'recency_days' => 45,
+        ])->assertOk()->assertSee('"posts_limit":20')->assertSee('"recency_days":45');
+
+        Queue::assertPushed(SyncTrackedAccountJob::class, function (SyncTrackedAccountJob $job) use ($account): bool {
+            return $job->trackedAccountId === $account->id
+                && $job->postsLimit === 20
+                && $job->recencyDays === 45;
+        });
+    }
+
+    public function test_sync_competitor_rejects_invalid_posts_limit(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        app(UsageBillingService::class)->creditClaimBonus($user);
+        $account = TrackedAccount::factory()->create([
+            'user_id' => $user->id,
+            'kind' => TrackedAccountKind::Competitor,
+        ]);
+        $this->actingAs($user);
+
+        config(['snitch.sync.posts_limit_max' => 50]);
+
+        SnitchServer::tool(SyncCompetitorTool::class, [
+            'id' => $account->id,
+            'posts_limit' => 500,
+        ])->assertHasErrors();
+
+        Queue::assertNothingPushed();
     }
 
     public function test_billing_portal_tool_requires_stripe_customer(): void

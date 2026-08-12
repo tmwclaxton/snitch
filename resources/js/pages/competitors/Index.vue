@@ -12,14 +12,12 @@ import {
 } from '@lucide/vue';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import {
-    batchSync,
     confirmSuggestions,
     dismissSuggestions,
     show as competitorShow,
     store,
     suggest,
     suggestStatus,
-    sync,
 } from '@/actions/App/Http/Controllers/CompetitorController';
 import BulkActionBar from '@/components/BulkActionBar.vue';
 import PlatformSelect from '@/components/PlatformSelect.vue';
@@ -27,6 +25,7 @@ import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import SuggestCompetitorsModal from '@/components/SuggestCompetitorsModal.vue';
+import SyncAccountModal from '@/components/SyncAccountModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import { lastSyncedLabel } from '@/lib/syncSchedule';
@@ -80,6 +79,13 @@ type CompetitorCap = {
     can_upgrade?: boolean;
 };
 
+type SyncDefaults = {
+    posts_limit: number;
+    recency_days: number;
+    posts_limit_max: number;
+    recency_days_max: number;
+};
+
 const props = defineProps<{
     accounts?: Account[] | null;
     platforms: string[];
@@ -89,6 +95,7 @@ const props = defineProps<{
     suggestRun?: SuggestRun | null;
     suggestError?: string | null;
     competitorCap?: CompetitorCap | null;
+    syncDefaults?: SyncDefaults;
 }>();
 
 defineOptions({
@@ -114,9 +121,12 @@ const localSuggestions = ref<Suggestion[]>([]);
 const suggesting = ref(false);
 const suggestMessage = ref(props.suggestError ?? '');
 const removeDialogOpen = ref(false);
+const syncDialogOpen = ref(false);
 const suggestModalOpen = ref(false);
 const accountToRemove = ref<Account | null>(null);
 const accountsToRemove = ref<Account[]>([]);
+const accountToSync = ref<Account | null>(null);
+const accountsToSync = ref<Account[]>([]);
 const batchWorking = ref(false);
 const syncingIds = ref<Record<number, boolean>>({});
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -142,6 +152,13 @@ const canRunBillable = computed(
 const minRunBalancePence = computed(
     () => (page.props.subscription as SubscriptionSummary)?.min_run_balance_pence ?? 20,
 );
+
+const syncDefaultsResolved = computed<SyncDefaults>(() => ({
+    posts_limit: props.syncDefaults?.posts_limit ?? 12,
+    recency_days: props.syncDefaults?.recency_days ?? 30,
+    posts_limit_max: props.syncDefaults?.posts_limit_max ?? 50,
+    recency_days_max: props.syncDefaults?.recency_days_max ?? 90,
+}));
 
 const trackedKeys = computed(() => {
     const keys = new Set<string>();
@@ -617,48 +634,56 @@ function onAccountsRemoved(): void {
     clearAccountSelection();
 }
 
+function askSyncSelectedAccounts(): void {
+    if (!canRunBillable.value || selectedAccounts.value.length === 0) {
+        return;
+    }
+
+    const eligible = selectedAccounts.value.filter((account) => !isAccountSyncing(account));
+
+    if (eligible.length === 0) {
+        return;
+    }
+
+    accountToSync.value = null;
+    accountsToSync.value = [...eligible];
+    syncDialogOpen.value = true;
+}
+
+function askSyncAccount(account: Account): void {
+    if (isAccountSyncing(account) || !canRunBillable.value) {
+        return;
+    }
+
+    accountToSync.value = account;
+    accountsToSync.value = [];
+    syncDialogOpen.value = true;
+}
+
+function onAccountsSynced(): void {
+    const ids = accountsToSync.value.length > 0
+        ? accountsToSync.value.map((account) => account.id)
+        : accountToSync.value
+            ? [accountToSync.value.id]
+            : [];
+
+    if (ids.length > 0) {
+        const nextSyncing = { ...syncingIds.value };
+
+        for (const id of ids) {
+            nextSyncing[id] = true;
+        }
+
+        syncingIds.value = nextSyncing;
+    }
+
+    if (accountsToSync.value.length > 0) {
+        clearAccountSelection();
+    }
+}
+
 function syncSelectedAccounts(): void {
-    if (batchWorking.value || !canRunBillable.value || selectedAccounts.value.length === 0) {
-        return;
-    }
-
-    const ids = selectedAccounts.value
-        .filter((account) => !isAccountSyncing(account))
-        .map((account) => account.id);
-
-    if (ids.length === 0) {
-        return;
-    }
-
-    batchWorking.value = true;
-    const nextSyncing = { ...syncingIds.value };
-
-    for (const id of ids) {
-        nextSyncing[id] = true;
-    }
-
-    syncingIds.value = nextSyncing;
-
-    router.post(
-        batchSync.url(),
-        { ids },
-        {
-            preserveScroll: true,
-            onFinish: () => {
-                batchWorking.value = false;
-                const cleared = { ...syncingIds.value };
-
-                for (const id of ids) {
-                    delete cleared[id];
-                }
-
-                syncingIds.value = cleared;
-            },
-            onSuccess: () => {
-                clearAccountSelection();
-            },
-        },
-    );
+    askSyncSelectedAccounts();
 }
 
 function accountSyncStatusLabel(account: Account): string {
@@ -694,20 +719,7 @@ function emptyImportHint(account: Account): string | null {
 }
 
 function syncAccount(account: Account): void {
-    if (syncingIds.value[account.id] || !canRunBillable.value) {
-        return;
-    }
-
-    syncingIds.value = { ...syncingIds.value, [account.id]: true };
-
-    router.post(sync.url(account.id), {}, {
-        preserveScroll: true,
-        onFinish: () => {
-            const next = { ...syncingIds.value };
-            delete next[account.id];
-            syncingIds.value = next;
-        },
-    });
+    askSyncAccount(account);
 }
 
 function syncButtonTitle(account: Account): string {
@@ -1318,6 +1330,14 @@ const syncSelectedTitle = computed(() => {
             :account="accountToRemove"
             :accounts="accountsToRemove"
             @removed="onAccountsRemoved"
+        />
+
+        <SyncAccountModal
+            v-model:open="syncDialogOpen"
+            :account="accountToSync"
+            :accounts="accountsToSync"
+            :sync-defaults="syncDefaultsResolved"
+            @synced="onAccountsSynced"
         />
 
         <SuggestCompetitorsModal

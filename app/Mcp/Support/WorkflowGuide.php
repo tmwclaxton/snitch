@@ -234,6 +234,7 @@ final class WorkflowGuide
             ],
             'notes' => [
                 'Manual/MCP sync always force-runs; ops due-interval does not apply.',
+                'Optional sync_competitor posts_limit and recency_days override config defaults (capped by snitch.sync.posts_limit_max / recency_days_max).',
             ],
         ];
     }
