@@ -2,7 +2,6 @@
 
 namespace App\Policies;
 
-use App\Enums\AnalysisStatus;
 use App\Enums\PostType;
 use App\Models\Post;
 use App\Models\TrackedAccount;
@@ -21,19 +20,8 @@ class PostPolicy
             return true;
         }
 
-        // Platform Explore: any authenticated user may open a completed reel analysis.
-        if (! $this->isReelLike($post)) {
-            return false;
-        }
-
-        if ($post->relationLoaded('analysis')) {
-            return $post->analysis !== null
-                && $post->analysis->status === AnalysisStatus::Completed;
-        }
-
-        return $post->analysis()
-            ->where('status', AnalysisStatus::Completed)
-            ->exists();
+        // Shared corpus: authenticated users may open any reel-like post (Explore catalog).
+        return $this->isReelLike($post);
     }
 
     public function create(User $user): bool

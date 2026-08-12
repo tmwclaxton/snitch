@@ -49,7 +49,7 @@ class FeedTest extends TestCase
             );
     }
 
-    public function test_post_detail_is_authorized(): void
+    public function test_post_detail_allows_tracker_and_non_tracker_for_reel_like_posts(): void
     {
         $user = User::factory()->create();
         $other = User::factory()->create();
@@ -57,7 +57,9 @@ class FeedTest extends TestCase
         BrandProfile::factory()->for($other)->create();
 
         $account = TrackedAccount::factory()->for($user)->create();
-        $post = Post::factory()->forAccount($account)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+        ]);
 
         $this->actingAs($user)
             ->get(route('feed.show', $post))
@@ -66,7 +68,55 @@ class FeedTest extends TestCase
 
         $this->actingAs($other)
             ->get(route('feed.show', $post))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('feed/Show'));
+    }
+
+    public function test_post_detail_forbids_non_tracker_for_non_reel_posts(): void
+    {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        BrandProfile::factory()->for($other)->create();
+
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Image,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('feed.show', $post))
+            ->assertOk();
+
+        $this->actingAs($other)
+            ->get(route('feed.show', $post))
             ->assertForbidden();
+    }
+
+    public function test_post_detail_allows_non_tracker_for_failed_analysis_reel(): void
+    {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        BrandProfile::factory()->for($other)->create();
+
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+        ]);
+        PostAnalysis::factory()->for($post)->create([
+            'status' => AnalysisStatus::Failed,
+            'error_message' => 'checklist failed',
+            'hook' => null,
+        ]);
+
+        $this->actingAs($other)
+            ->get(route('feed.show', $post))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('feed/Show')
+                ->where('post.analysis.status', 'failed')
+            );
     }
 
     public function test_feed_includes_platform_embed_payload(): void
