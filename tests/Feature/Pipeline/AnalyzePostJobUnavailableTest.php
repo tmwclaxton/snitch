@@ -236,6 +236,36 @@ class AnalyzePostJobUnavailableTest extends TestCase
         $this->assertSame(MediaAvailability::Available, $post->fresh()->media_availability);
     }
 
+    public function test_invalid_video_analysis_json_does_not_rethrow_for_queue_retries(): void
+    {
+        Http::fake([
+            'https://cdn.example.com/clip.mp4' => Http::response(null, 200),
+        ]);
+
+        $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+            'media_url' => 'https://cdn.example.com/clip.mp4',
+            'posted_at' => now()->subDay(),
+            'media_availability' => MediaAvailability::Available,
+        ]);
+
+        $analysis = Mockery::mock(VideoAnalysisService::class);
+        $analysis->shouldReceive('analyzePost')
+            ->once()
+            ->andThrow(new RuntimeException('Video analysis did not return valid JSON.'));
+        $this->app->instance(VideoAnalysisService::class, $analysis);
+
+        $scorer = Mockery::mock(WinnerScorer::class);
+        $scorer->shouldNotReceive('scoreAndPersist');
+
+        $this->runAnalyzeJob($post->id, $scorer);
+
+        $this->assertSame(MediaAvailability::Available, $post->fresh()->media_availability);
+    }
+
     private function runAnalyzeJob(int $postId, ?WinnerScorer $scorer = null): void
     {
         (new AnalyzePostJob($postId))->handle(

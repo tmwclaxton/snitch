@@ -285,6 +285,12 @@ class AnalyzePostJob implements ShouldQueue
             return true;
         }
 
+        // Model returned non-JSON / unparseable payload. Analysis row is already
+        // Failed; retries usually repeat the same bad response shape.
+        if ($e->getMessage() === 'Video analysis did not return valid JSON.') {
+            return true;
+        }
+
         return $this->isPermanentNanoGptClientError($e);
     }
 

@@ -18,6 +18,7 @@ use App\Services\Scraping\ApifyMonthlyCapGate;
 use App\Services\TikHub\Adapters\InstagramAdapter as TikHubInstagramAdapter;
 use App\Services\TikHub\Adapters\TikTokAdapter as TikHubTikTokAdapter;
 use App\Services\TikHub\Adapters\YoutubeAdapter as TikHubYoutubeAdapter;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
@@ -64,7 +65,7 @@ class InfluencerDiscoveryService
                 $hits = $this->search($brand, $filters, $platforms);
             } catch (Throwable $exception) {
                 // Multi-seed: Firecrawl outage must not abort model / Apify seeds.
-                report($exception);
+                $this->reportSoftSeedFailure($exception, 'Influencer Firecrawl search soft-failed');
                 $hits = [];
             }
 
@@ -72,7 +73,7 @@ class InfluencerDiscoveryService
                 try {
                     $firecrawlProposed = $this->propose($brand, $filters, $platforms, $hits);
                 } catch (Throwable $exception) {
-                    report($exception);
+                    $this->reportSoftSeedFailure($exception, 'Influencer Firecrawl propose soft-failed');
                     $firecrawlProposed = $this->candidatesFromSearchHits($hits, $platforms);
                 }
             }
@@ -84,7 +85,7 @@ class InfluencerDiscoveryService
             try {
                 $modelSeed = $this->seedFromModel($brand, $filters, $platforms);
             } catch (Throwable $exception) {
-                report($exception);
+                $this->reportSoftSeedFailure($exception, 'Influencer model seed soft-failed');
                 $modelSeed = [];
             }
         }
@@ -95,7 +96,7 @@ class InfluencerDiscoveryService
             try {
                 $apifySearch = $this->seedFromApifySearch($brand, $filters, $platforms);
             } catch (Throwable $exception) {
-                report($exception);
+                $this->reportSoftSeedFailure($exception, 'Influencer vendor search soft-failed');
                 $apifySearch = [];
             }
         }
@@ -521,7 +522,11 @@ class InfluencerDiscoveryService
                     ? $this->searchUsersViaTikHub($platform, $query, $limit)
                     : $this->searchUsersViaApify($platform, $query, $limit);
             } catch (Throwable $exception) {
-                report($exception);
+                $this->reportSoftSeedFailure(
+                    $exception,
+                    'Influencer platform search soft-failed',
+                    ['platform' => $platform, 'query' => $query],
+                );
 
                 continue;
             }
@@ -2035,5 +2040,41 @@ class InfluencerDiscoveryService
         }
 
         return $trimmed;
+    }
+
+    /**
+     * Multi-seed discovery continues after vendor blips. TikHub/Apify HTTP 4xx
+     * (e.g. search endpoint 404 for a noisy query) are expected soft failures -
+     * warn instead of report() so production.ERROR stays reserved for surprises.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function reportSoftSeedFailure(Throwable $exception, string $message, array $context = []): void
+    {
+        if ($this->isExpectedVendorClientFailure($exception)) {
+            Log::warning($message, [
+                ...$context,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return;
+        }
+
+        report($exception);
+    }
+
+    private function isExpectedVendorClientFailure(Throwable $exception): bool
+    {
+        $message = $exception->getMessage();
+
+        if (preg_match('/TikHub request failed \((4\d\d)\)/', $message) === 1) {
+            return true;
+        }
+
+        if (preg_match('/TikHub API error \((4\d\d)\)/', $message) === 1) {
+            return true;
+        }
+
+        return false;
     }
 }
