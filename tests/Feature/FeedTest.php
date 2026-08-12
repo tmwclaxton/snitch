@@ -313,6 +313,17 @@ class FeedTest extends TestCase
         $this->assertStringContainsString('TranscriptModal', $showVue);
     }
 
+    public function test_transcript_modal_uses_wide_full_width_layout(): void
+    {
+        $modalVue = file_get_contents(resource_path('js/components/TranscriptModal.vue'));
+
+        $this->assertIsString($modalVue);
+        $this->assertStringContainsString('sm:max-w-4xl', $modalVue);
+        $this->assertStringContainsString('w-full', $modalVue);
+        $this->assertStringContainsString('whitespace-pre-wrap', $modalVue);
+        $this->assertStringNotContainsString('sm:max-w-2xl', $modalVue);
+    }
+
     public function test_feed_index_vue_omits_frame_and_exposure_count_meta(): void
     {
         $indexVue = file_get_contents(resource_path('js/pages/feed/Index.vue'));

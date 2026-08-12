@@ -47,7 +47,7 @@ class VideoAnalysisService
             ],
         ];
 
-        $maxTokens = (int) config('snitch.video_analysis.max_tokens', 4096);
+        $maxTokens = (int) config('snitch.video_analysis.max_tokens', 8192);
 
         $response = $this->client->chat(
             messages: [
@@ -59,7 +59,8 @@ Return ONLY valid JSON matching the schema.
 Write every string value in English (UK), including concept, idea, topics, how_to_copy, visual_summary, cta, and labels.
 Do not use Chinese or other non-English prose. Spoken-word quotes in hook may keep the original language, but all explanation stays English.
 Prioritise reusable craft concepts and engagement mechanics.
-Keep the concept-first fields (hook / concept / idea / visual_summary / how_to_copy) free of long transcript dumps or caption paraphrasing - put every verbatim spoken word in the separate transcript field instead, from first word to last, without summarizing or truncating.
+Keep the concept-first fields (hook / concept / idea / visual_summary / how_to_copy) concise and free of long transcript dumps or caption paraphrasing - put every verbatim spoken word in the separate transcript field instead, from first word to last, without summarizing or truncating.
+When speech is present, reserve most of your output token budget for transcript until the reel ends. Do not stop early.
 Never invent music or SFX that are not audible in the media. Prefer platform music metadata when provided over guessing a song title.
 Reject vague filler ("engaging", "relatable vibe", "great energy") - name the mechanic.
 Always fill hook_type_slugs, topic_slugs, and visual_craft_slugs from the controlled catalogue when they fit (e.g. myth_bust for myth-busting opens). Use custom_tags only when nothing fits.
@@ -267,7 +268,8 @@ Rules:
 - custom_tags = short freeform labels ONLY when the catalogue misses something important.
 - how_to_copy = 2-4 actionable remake steps for another brand applying the SAME concept (required, never empty). Put each step on its own line as a Markdown numbered list (e.g. "1. ...\\n2. ...\\n3. ..."). Never pack steps onto one line. Do not bury the post CTA inside how_to_copy - CTA has its own field.
 - cta = the post's ask / next action only (separate from remake steps). Always fill this string; use "No explicit CTA" when the post has no ask.
-- transcript = every verbatim spoken word in the reel from start to finish (any language, keep original) as one plain string with line breaks between sentences/speakers. Include the full script even when long. Do NOT paraphrase, summarize, truncate, translate, or add commentary. Empty string "" when silent or purely music/SFX. The transcript field is separate from the concept-first fields above and never counts as caption echo.
+- transcript = highest priority when speech is present. Capture every verbatim spoken word from the first syllable to the last, in original language, as one plain string. Line breaks between sentences or speakers are fine; phrase-per-line is fine. Include the full script even when long (60-90s talking heads often need thousands of tokens). Do NOT paraphrase, summarize, truncate, translate, or add commentary. Never stop mid-sentence or mid-reel. Empty string "" only when silent or purely music/SFX. The transcript field is separate from the concept-first fields above and never counts as caption echo.
+- Keep hook, concept, idea, visual_summary, and how_to_copy tight so transcript can use the remaining output budget.
 - Do NOT reuse the transcript inside hook/concept/idea/visual_summary/how_to_copy - the transcript field is where spoken words live.
 - Keep hook/concept/idea short and specific; name the mechanic.
 

@@ -60,9 +60,9 @@ async function copyTranscript(): Promise<void> {
     <Dialog :open="open" @update:open="setOpen">
         <DialogContent
             :show-close-button="false"
-            class="snitch-modal-panel gap-0 overflow-hidden border-0 p-0 shadow-none sm:max-w-2xl"
+            class="snitch-modal-panel w-full gap-0 overflow-hidden border-0 p-0 shadow-none sm:max-w-4xl"
         >
-            <div class="snitch-doc relative flex max-h-[min(90vh,44rem)] flex-col p-6 sm:p-7">
+            <div class="snitch-doc relative flex w-full max-h-[min(92vh,52rem)] flex-col p-6 sm:p-7">
                 <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
 
                 <div class="relative z-10 flex items-start justify-between gap-4">
@@ -84,13 +84,13 @@ async function copyTranscript(): Promise<void> {
                     </DialogClose>
                 </div>
 
-                <div class="relative z-10 mt-5 min-h-0 flex-1">
+                <div class="relative z-10 mt-5 min-h-0 w-full flex-1">
                     <div
-                        class="snitch-scrap relative max-h-[min(60vh,32rem)] overflow-y-auto p-4 sm:p-5"
+                        class="snitch-scrap relative w-full max-h-[min(70vh,40rem)] overflow-y-auto p-4 sm:p-5"
                     >
                         <p
                             v-if="transcript.trim()"
-                            class="relative z-10 whitespace-pre-wrap text-sm leading-relaxed text-snitch-ink/85"
+                            class="relative z-10 w-full whitespace-pre-wrap text-sm leading-relaxed text-snitch-ink/85 sm:text-base"
                         >
                             {{ transcript }}
                         </p>

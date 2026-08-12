@@ -510,4 +510,107 @@ class VideoAnalysisServiceTest extends TestCase
             (string) $outcome['analysis']->transcript,
         );
     }
+
+    public function test_video_analysis_default_max_tokens_is_8192(): void
+    {
+        $this->assertSame(8192, (int) config('snitch.video_analysis.max_tokens'));
+    }
+
+    public function test_analyze_url_sends_default_max_tokens_when_not_overridden(): void
+    {
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+            'snitch.video_analysis.max_tokens' => 8192,
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'finish_reason' => 'stop',
+                    'message' => [
+                        'content' => json_encode([
+                            'concept' => 'Steam tease before product payoff',
+                            'hook' => 'Steam hits the lens first',
+                            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+                            'visual_summary' => str_repeat('Matte bakery counter with torn paper overlays and soft fade. ', 2),
+                            'idea' => 'Curiosity gap then proof via finished loaf',
+                            'topics' => ['process reveal'],
+                            'hook_type_slugs' => ['silent_visual_hook'],
+                            'topic_slugs' => ['content_strategy'],
+                            'visual_craft_slugs' => ['broll_overlay'],
+                            'custom_tags' => [],
+                            'cta' => 'Preorder tomorrow',
+                            'how_to_copy' => 'Start on steam, cut to hands, end on boxed loaf.',
+                            'transcript' => '',
+                            'sfx' => [],
+                            'is_original_audio' => true,
+                        ]),
+                    ],
+                ]],
+            ]),
+        ]);
+
+        app(VideoAnalysisService::class)->analyzeUrl('https://cdn.example.com/reel.mp4');
+
+        Http::assertSent(function ($request): bool {
+            return ($request->data()['max_tokens'] ?? null) === 8192;
+        });
+    }
+
+    public function test_analyze_url_prompt_prioritizes_full_transcript(): void
+    {
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'finish_reason' => 'stop',
+                    'message' => [
+                        'content' => json_encode([
+                            'concept' => 'Grant myth-bust hook then lead magnet gate',
+                            'hook' => 'Text overlay STOP DOING THIS on false grant advice',
+                            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+                            'visual_summary' => str_repeat('Split screen bold FALSE stamp with talking-head replies. ', 2),
+                            'idea' => 'Myth callout then exclusivity gate for the lead magnet.',
+                            'topics' => ['grants'],
+                            'hook_type_slugs' => ['pattern_interrupt'],
+                            'topic_slugs' => ['content_strategy'],
+                            'visual_craft_slugs' => ['talking_head'],
+                            'custom_tags' => [],
+                            'cta' => 'Comment MYTH for the guide',
+                            'how_to_copy' => "1. Cold open on the false claim\n2. Cut to your correction\n3. Gate the deeper answer",
+                            'transcript' => 'Stop applying for grants like this.',
+                            'sfx' => [],
+                            'is_original_audio' => true,
+                        ]),
+                    ],
+                ]],
+            ]),
+        ]);
+
+        app(VideoAnalysisService::class)->analyzeUrl('https://cdn.example.com/reel.mp4');
+
+        Http::assertSent(function ($request): bool {
+            $messages = $request->data()['messages'] ?? [];
+            $system = is_array($messages[0]['content'] ?? null) ? '' : (string) ($messages[0]['content'] ?? '');
+            $userParts = $messages[1]['content'] ?? [];
+            $userText = '';
+
+            if (is_array($userParts)) {
+                foreach ($userParts as $part) {
+                    if (is_array($part) && ($part['type'] ?? '') === 'text') {
+                        $userText .= (string) ($part['text'] ?? '');
+                    }
+                }
+            }
+
+            return str_contains($system, 'reserve most of your output token budget for transcript')
+                && str_contains($userText, 'highest priority when speech is present')
+                && str_contains($userText, 'Never stop mid-sentence or mid-reel');
+        });
+    }
 }
