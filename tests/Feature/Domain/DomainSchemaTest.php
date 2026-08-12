@@ -92,23 +92,22 @@ class DomainSchemaTest extends TestCase
         $this->assertFalse($other->can('delete', $account));
     }
 
-    public function test_post_policy_allows_trackers_and_completed_corpus_reels(): void
+    public function test_post_policy_allows_trackers_and_shared_reel_corpus(): void
     {
         $owner = User::factory()->create();
         $other = User::factory()->create();
         $account = TrackedAccount::factory()->for($owner)->create();
-        $post = Post::factory()->forAccount($account)->create([
+        $reel = Post::factory()->forAccount($account)->create([
             'type' => PostType::Reel,
         ]);
-
-        $this->assertTrue($owner->can('view', $post));
-        $this->assertFalse($other->can('view', $post));
-
-        PostAnalysis::factory()->for($post)->create([
-            'status' => AnalysisStatus::Completed,
+        $image = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Image,
         ]);
-        $post->unsetRelation('analysis');
 
-        $this->assertTrue($other->can('view', $post->fresh('analysis')));
+        $this->assertTrue($owner->can('view', $reel));
+        $this->assertTrue($other->can('view', $reel));
+
+        $this->assertTrue($owner->can('view', $image));
+        $this->assertFalse($other->can('view', $image));
     }
 }

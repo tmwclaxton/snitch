@@ -51,7 +51,7 @@ class ReferralAttribution
     public function codeFromRequest(Request $request): ?ReferralCode
     {
         $fromCookie = $request->cookie(self::COOKIE_NAME);
-        $fromSession = $request->session()->get(self::SESSION_KEY);
+        $fromSession = $this->sessionValue($request, self::SESSION_KEY);
 
         foreach ([$fromCookie, $fromSession] as $candidate) {
             if (! is_string($candidate) || $candidate === '') {
@@ -86,16 +86,16 @@ class ReferralAttribution
             is_string($request->cookie(self::COOKIE_NAME)) ? $request->cookie(self::COOKIE_NAME) : null,
         );
         $existingSession = $this->normalizeCode(
-            is_string($request->session()->get(self::SESSION_KEY))
-                ? (string) $request->session()->get(self::SESSION_KEY)
+            is_string($this->sessionValue($request, self::SESSION_KEY))
+                ? (string) $this->sessionValue($request, self::SESSION_KEY)
                 : null,
         );
 
         if ($existingCookie === null && $existingSession === null) {
-            $request->session()->put(self::SESSION_KEY, $referral->code);
+            $this->putSessionValue($request, self::SESSION_KEY, $referral->code);
             Cookie::queue($this->makeCookie($referral->code));
         } elseif ($existingSession === null && $existingCookie !== null) {
-            $request->session()->put(self::SESSION_KEY, $existingCookie);
+            $this->putSessionValue($request, self::SESSION_KEY, $existingCookie);
         }
 
         $this->recordVisit($request, $referral);
@@ -137,6 +137,24 @@ class ReferralAttribution
             raw: false,
             sameSite: 'lax',
         );
+    }
+
+    private function sessionValue(Request $request, string $key): mixed
+    {
+        if (! $request->hasSession()) {
+            return null;
+        }
+
+        return $request->session()->get($key);
+    }
+
+    private function putSessionValue(Request $request, string $key, string $value): void
+    {
+        if (! $request->hasSession()) {
+            return;
+        }
+
+        $request->session()->put($key, $value);
     }
 
     public function recordVisit(Request $request, ReferralCode $referral): void
