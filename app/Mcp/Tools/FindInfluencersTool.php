@@ -113,8 +113,8 @@ class FindInfluencersTool extends Tool
                 ...$base,
                 'suggestions' => $suggestions,
                 'queued' => false,
-                'note' => 'Creators are NOT tracked yet. Each suggestion may include fit_reason and url. Call keep_influencer for each fit (queues sync) or discard_influencer.',
-                'next_step' => 'keep_influencer / discard_influencer for each suggestion before ending the session.',
+                'note' => 'Creators are NOT tracked yet. Each suggestion may include fit_reason, url, and followers. Call keep_influencer for fits, discard_influencer for rejects, or dismiss_influencer_suggestions to clear the whole shortlist.',
+                'next_step' => 'keep_influencer / discard_influencer / dismiss_influencer_suggestions before ending the session.',
             ]);
         }
 
@@ -122,7 +122,7 @@ class FindInfluencersTool extends Tool
             ...$base,
             'queued' => true,
             'note' => 'Still running. Poll influencer_search_status (optionally with wait_seconds) until completed. Requires a queue worker.',
-            'next_step' => 'Poll influencer_search_status, then keep_influencer / discard_influencer. Ensure php artisan queue:work is running.',
+            'next_step' => 'Poll influencer_search_status, then keep_influencer / discard_influencer / dismiss_influencer_suggestions. Ensure php artisan queue:work is running.',
         ]);
     }
 

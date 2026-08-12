@@ -69,8 +69,8 @@ class InfluencerSearchStatusTool extends Tool
         }
 
         if ($status === 'completed' || $suggestions !== []) {
-            $note = 'Creators are NOT tracked yet. Read each suggestion fit_reason and url, then call keep_influencer (prefer with run_id) or discard_influencer.';
-            $nextStep = 'keep_influencer / discard_influencer for each suggestion before ending the session.';
+            $note = 'Creators are NOT tracked yet. Read each suggestion fit_reason, url, and followers, then keep_influencer, discard_influencer, or dismiss_influencer_suggestions for shortlist/report.';
+            $nextStep = 'keep_influencer / discard_influencer / dismiss_influencer_suggestions before ending the session.';
         }
 
         return Response::json([

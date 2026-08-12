@@ -116,15 +116,16 @@ class InfluencerDiscoveryService
         }
 
         $min = max(1, (int) config('snitch.influencer_find.min_suggestions', 6));
+        $max = max($min, (int) config('snitch.influencer_find.max_suggestions', 10));
 
-        if (count($verified) < $min) {
+        // Soft-complete: return thin shortlists (>=1) as success so MCP/UI can use them.
+        // Hard-fail only when nothing verified.
+        if ($verified === []) {
             throw new InsufficientInfluencerSuggestionsException(
-                $verified,
-                'Only '.count($verified)." verified influencer profiles found (need at least {$min}).",
+                [],
+                'Only 0 verified influencer profiles found (need at least '.$min.').',
             );
         }
-
-        $max = max($min, (int) config('snitch.influencer_find.max_suggestions', 10));
 
         return array_slice($verified, 0, $max);
     }
@@ -518,9 +519,11 @@ class InfluencerDiscoveryService
             $query = $queries[0];
 
             try {
+                $minFollowers = isset($filters['min_followers']) ? (int) $filters['min_followers'] : null;
+                $maxFollowers = isset($filters['max_followers']) ? (int) $filters['max_followers'] : null;
                 $rows = $useTikHub
                     ? $this->searchUsersViaTikHub($platform, $query, $limit)
-                    : $this->searchUsersViaApify($platform, $query, $limit);
+                    : $this->searchUsersViaApify($platform, $query, $limit, $minFollowers, $maxFollowers);
             } catch (Throwable $exception) {
                 $this->reportSoftSeedFailure(
                     $exception,
@@ -535,6 +538,17 @@ class InfluencerDiscoveryService
                 $key = "{$candidate['platform']}:{$candidate['handle']}";
 
                 if (isset($seen[$key])) {
+                    continue;
+                }
+
+                $followers = array_key_exists('followers', $candidate) ? $candidate['followers'] : null;
+                $minFollowers = isset($filters['min_followers']) ? (int) $filters['min_followers'] : null;
+                $maxFollowers = isset($filters['max_followers']) ? (int) $filters['max_followers'] : null;
+
+                if (
+                    $followers !== null
+                    && ! $this->followersInRange((int) $followers, $minFollowers, $maxFollowers)
+                ) {
                     continue;
                 }
 
@@ -575,8 +589,13 @@ class InfluencerDiscoveryService
     /**
      * @return list<array{name: string, platform: string, handle: string, source: string|null, seed: string, followers?: int|null}>
      */
-    private function searchUsersViaApify(string $platform, string $query, int $limit): array
-    {
+    private function searchUsersViaApify(
+        string $platform,
+        string $query,
+        int $limit,
+        ?int $minFollowers = null,
+        ?int $maxFollowers = null,
+    ): array {
         $adapter = $this->adapters->apifyAdapter($platform);
         $job = match ($platform) {
             'instagram' => $adapter instanceof InstagramAdapter
@@ -597,7 +616,13 @@ class InfluencerDiscoveryService
 
         $items = $this->apify->runActor($job['actorId'], $job['input']);
 
-        return $this->candidatesFromApifySearchItems($platform, $items, $limit);
+        return $this->candidatesFromApifySearchItems(
+            $platform,
+            $items,
+            $limit,
+            $minFollowers,
+            $maxFollowers,
+        );
     }
 
     /**
@@ -644,8 +669,17 @@ class InfluencerDiscoveryService
      * @param  list<array<string, mixed>>  $items
      * @return list<array{name: string, platform: string, handle: string, source: string|null, seed: string, followers?: int|null}>
      */
-    public function candidatesFromApifySearchItems(string $platform, array $items, int $limit): array
-    {
+    /**
+     * @param  list<array<string, mixed>>  $items
+     * @return list<array{name: string, platform: string, handle: string, source: string|null, seed: string, followers?: int|null}>
+     */
+    public function candidatesFromApifySearchItems(
+        string $platform,
+        array $items,
+        int $limit,
+        ?int $minFollowers = null,
+        ?int $maxFollowers = null,
+    ): array {
         $candidates = [];
         $seen = [];
 
@@ -694,6 +728,15 @@ class InfluencerDiscoveryService
 
             $seen[$key] = true;
             $followers = $this->extractFollowers([$item]);
+
+            // Drop known out-of-band seeds before resolve so they cannot slip through as null later.
+            if (
+                $followers !== null
+                && ! $this->followersInRange($followers, $minFollowers, $maxFollowers)
+            ) {
+                continue;
+            }
+
             $candidate = [
                 'name' => $name !== '' ? $name : $handle,
                 'platform' => $platform,
@@ -820,8 +863,19 @@ class InfluencerDiscoveryService
                         continue;
                     }
 
-                    $displayName = filled($profile['display_name'] ?? null)
-                        ? (string) $profile['display_name']
+                    $rawDisplay = filled($profile['display_name'] ?? null)
+                        ? trim((string) $profile['display_name'])
+                        : '';
+                    $avatar = filled($profile['avatar'] ?? null) ? (string) $profile['avatar'] : null;
+                    $bandRequested = $minFollowers !== null || $maxFollowers !== null;
+
+                    // Soft quality gate: reject empty shells when a follower band was requested.
+                    if ($bandRequested && $rawDisplay === '' && $avatar === null) {
+                        continue;
+                    }
+
+                    $displayName = $rawDisplay !== ''
+                        ? $rawDisplay
                         : ($item['candidate']['name'] !== '' ? $item['candidate']['name'] : $resolvedHandle);
 
                     $fitReason = isset($item['candidate']['fit_reason']) && is_string($item['candidate']['fit_reason'])
@@ -836,7 +890,7 @@ class InfluencerDiscoveryService
                             : $this->defaultUrl(Platform::from($platform), $resolvedHandle),
                         'display_name' => Str::limit($displayName, 80, ''),
                         'name' => Str::limit($displayName, 80, ''),
-                        'avatar' => filled($profile['avatar'] ?? null) ? (string) $profile['avatar'] : null,
+                        'avatar' => $avatar,
                         'source' => $item['candidate']['source'] ?? null,
                         'seed' => $item['candidate']['seed'] ?? $this->inferSeedLabel($item['candidate']),
                         'followers' => $followers,
@@ -856,10 +910,19 @@ class InfluencerDiscoveryService
 
                     unset($row['name']);
 
-                    // Prefer known follower counts; keep unknowns for later fill if needed.
-                    if ($row['followers'] === null && count($suggestions) >= $min) {
-                        $deferred[] = $row;
+                    $bandRequested = $minFollowers !== null || $maxFollowers !== null;
 
+                    // Prefer known follower counts; defer unknowns only when no band was requested.
+                    if ($row['followers'] === null && count($suggestions) >= $min) {
+                        if (! $bandRequested) {
+                            $deferred[] = $row;
+                        }
+
+                        continue;
+                    }
+
+                    // When a band is set, never accept null follower counts into the shortlist.
+                    if ($bandRequested && $row['followers'] === null) {
                         continue;
                     }
 
@@ -879,7 +942,12 @@ class InfluencerDiscoveryService
             }
         }
 
-        if (count($suggestions) < $min && $deferred !== []) {
+        // Only re-admit deferred null-follower rows when no follower band was requested.
+        if (
+            ($minFollowers === null && $maxFollowers === null)
+            && count($suggestions) < $min
+            && $deferred !== []
+        ) {
             foreach ($deferred as $row) {
                 if (count($suggestions) >= $max) {
                     break;
@@ -1833,9 +1901,11 @@ class InfluencerDiscoveryService
 
     public function followersInRange(?int $followers, ?int $min, ?int $max): bool
     {
+        $bandRequested = $min !== null || $max !== null;
+
         if ($followers === null) {
-            // Unknown counts are allowed; verify prefers known counts when filling.
-            return true;
+            // Unknown counts only pass when no band was requested.
+            return ! $bandRequested;
         }
 
         if ($min !== null && $followers < $min) {

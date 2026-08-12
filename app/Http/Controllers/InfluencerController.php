@@ -506,9 +506,13 @@ class InfluencerController extends Controller
             return true;
         }
 
-        // Failed runs (including thin partials under min_suggestions) may be re-run
+        // Failed runs, or thin completed partials under min_suggestions, may be re-run
         // without finishing Keep/Discard on every partial card.
         if (($latest['status'] ?? null) === 'failed') {
+            return true;
+        }
+
+        if (($latest['partial'] ?? false) === true) {
             return true;
         }
 

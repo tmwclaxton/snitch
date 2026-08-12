@@ -14,6 +14,7 @@ use App\Mcp\Tools\CreateCreditCheckoutTool;
 use App\Mcp\Tools\CreatePlatformCheckoutTool;
 use App\Mcp\Tools\DiscardInfluencerTool;
 use App\Mcp\Tools\DismissCompetitorSuggestionsTool;
+use App\Mcp\Tools\DismissInfluencerSuggestionsTool;
 use App\Mcp\Tools\ExplorePostsTool;
 use App\Mcp\Tools\FindInfluencersTool;
 use App\Mcp\Tools\GenerateInfluencerBriefTool;
@@ -45,7 +46,7 @@ use Laravel\Mcp\Server\Attributes\Version;
 
 #[Name('Snitch')]
 #[Version('1.0.0')]
-#[Instructions('Snitch is the social marketing data layer for agents. Authenticate with a Sanctum bearer token from create_account (or the website Agents page). Call workflow_guide first (workflow=overview or a specific flow), then whoami: check runtime.app_url (local vs https://www.snitchsocial.net), brand_warnings, and queue warnings. Local MCP (localhost) uses a different database and credits than production. Async tools need php artisan queue:work. Billable tools need a credit balance above 20p - subscribe for monthly plan value or top up credits. Prefer sync/analyze/find tools explicitly - nothing is auto-scheduled. Never paste bearer tokens into public chats; prefer rotate_token after exposure. Snitch discovery must complete the full loop: suggest_competitors → poll suggest_competitors_status → confirm_competitor_suggestions with selected handles (or dismiss_competitor_suggestions). Suggestions are cache-only until confirmed; they are NOT tracked snitches. Influencer discovery is the same pattern: find_influencers → influencer_search_status → keep_influencer / discard_influencer. Fix brand_warnings before discovery so suggestions match the intended company.')]
+#[Instructions('Snitch is the social marketing data layer for agents. Authenticate with a Sanctum bearer token from create_account (or the website Agents page). Call workflow_guide first (workflow=overview or a specific flow such as content_plan), then whoami: check runtime.app_url (local vs https://www.snitchsocial.net), brand_warnings, and queue warnings. Local MCP (localhost) uses a different database and credits than production. Async tools need php artisan queue:work. Billable tools need a credit balance above 20p - subscribe for monthly plan value or top up credits. Prefer sync/analyze/find tools explicitly - nothing is auto-scheduled. Never paste bearer tokens into public chats; prefer rotate_token after exposure. Snitch discovery must complete the full loop: suggest_competitors → poll suggest_competitors_status → confirm_competitor_suggestions with selected handles (or dismiss_competitor_suggestions). Suggestions are cache-only until confirmed; they are NOT tracked snitches. Influencer discovery: find_influencers → influencer_search_status → keep_influencer / discard_influencer, or dismiss_influencer_suggestions for shortlist/report without tracking. Follower min/max bands require known in-band counts. Post payloads include snitch_url deep links. Fix brand_warnings before discovery so suggestions match the intended company.')]
 class SnitchServer extends Server
 {
     public int $defaultPaginationLength = 50;
@@ -76,6 +77,7 @@ class SnitchServer extends Server
         InfluencerSearchStatusTool::class,
         KeepInfluencerTool::class,
         DiscardInfluencerTool::class,
+        DismissInfluencerSuggestionsTool::class,
         RemoveInfluencerTool::class,
         ListInfluencersTool::class,
         ListFeedTool::class,

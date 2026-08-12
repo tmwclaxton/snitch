@@ -12,6 +12,7 @@ final class WorkflowGuide
         'sync_analyze',
         'billing',
         'explore',
+        'content_plan',
     ];
 
     /**
@@ -36,6 +37,7 @@ final class WorkflowGuide
             'sync_analyze' => self::syncAnalyze(),
             'billing' => self::billing(),
             'explore' => self::explore(),
+            'content_plan' => self::contentPlan(),
             default => self::overview(),
         };
 
@@ -71,11 +73,12 @@ final class WorkflowGuide
                 self::step(1, 'whoami', 'Confirm user, runtime.app_url, brand_warnings, queue warnings.'),
                 self::step(2, 'billing_status', 'Confirm can_run_billable (balance above 20p) before sync/suggest/find/analyze.'),
                 self::step(3, 'get_brand', 'Verify name + website; fix with update_brand or start_brand_autofill → autofill_status.'),
-                self::step(4, 'workflow_guide', 'Pick brand | competitors | influencers | sync_analyze | billing | explore and follow that guide.'),
+                self::step(4, 'workflow_guide', 'Pick brand | competitors | influencers | sync_analyze | billing | explore | content_plan and follow that guide.'),
             ],
             'notes' => [
                 'Localhost and production are different databases and credit balances.',
                 'Nothing is auto-scheduled - agents/users trigger sync, suggest, find, analyze, winners.',
+                'Use workflow=content_plan for winner remakes + collab shortlists without leaving Snitch tooling.',
                 'On local artisan serve prefer short wait_seconds (8-12) on dispatch tools and re-poll status tools - long waits stall the browser UI.',
                 'Remote MCP clients (Claude.ai) time out around 10-15s - dispatch tools default wait_seconds=0; poll status tools until completed.',
                 'Never paste bearer tokens into public chats; use rotate_token if exposed.',
@@ -174,30 +177,33 @@ final class WorkflowGuide
     private static function influencers(): array
     {
         return [
-            'summary' => 'Find influencer candidates, then keep or discard. Find alone does not keep anyone.',
+            'summary' => 'Find influencer candidates, then keep, discard, or dismiss the whole shortlist. Find alone does not keep anyone.',
             'prerequisites' => [
                 'whoami + billing_status (can_run_billable).',
                 'Brand name + website + description ready.',
                 'Queue worker running for local async.',
             ],
             'do_not_skip' => [
-                'After find completes you MUST keep_influencer and/or discard_influencer before ending.',
+                'After find completes you MUST keep_influencer, discard_influencer, and/or dismiss_influencer_suggestions before ending.',
                 'Suggestions are not kept accounts until keep_influencer succeeds.',
+                'When min/max followers are set, only known in-band follower counts are returned.',
             ],
             'steps' => [
                 self::step(1, 'whoami', 'Check brand_warnings and runtime.'),
                 self::step(2, 'billing_status', 'Ensure balance above 20p.'),
                 self::step(3, 'generate_influencer_brief', 'Optional; persist brief from brand context.'),
-                self::step(4, 'find_influencers', 'Pass platform + brief (default wait_seconds=0). Poll influencer_search_status until completed; Cursor/local may pass wait_seconds 8-22.'),
-                self::step(5, 'influencer_search_status', 'Poll run_id (or omit to use latest) until completed/failed.'),
-                self::step(6, 'keep_influencer', 'Keep selected rows (platform + handle; include run_id when available).'),
-                self::step(7, 'discard_influencer', 'Discard rejects. Then list_influencers to verify kept set.'),
-                self::step(8, 'remove_influencer', 'Optional: delete a kept tracked influencer (id / influencer_id / tracked_account_id).'),
+                self::step(4, 'find_influencers', 'Pass platform + brief + follower band (default wait_seconds=0). Poll influencer_search_status until completed; Cursor/local may pass wait_seconds 8-22.'),
+                self::step(5, 'influencer_search_status', 'Poll run_id (or omit to use latest) until completed/failed. Read followers + fit_reason on each row.'),
+                self::step(6, 'keep_influencer', 'Keep selected rows to track (platform + handle; include run_id when available).'),
+                self::step(7, 'discard_influencer', 'Discard individual rejects.'),
+                self::step(8, 'dismiss_influencer_suggestions', 'Or clear the whole run after a shortlist/report without tracking anyone.'),
+                self::step(9, 'list_influencers', 'Verify kept set. Optional remove_influencer later.'),
             ],
             'notes' => [
-                'fit_reason and url appear on suggestions - use them when choosing keep vs discard.',
+                'fit_reason, url, and followers appear on suggestions - use them when choosing keep vs discard.',
+                'Thin runs may return status completed with partial=true when fewer than min_suggestions verified.',
                 'A new find_influencers call replaces the latest pointer - always poll the run_id you were given (or omit run_id to follow latest).',
-                'discard_influencer only clears suggestion cache; remove_influencer deletes a kept tracked account.',
+                'discard_influencer clears one suggestion decision; dismiss_influencer_suggestions clears the run; remove_influencer deletes a kept tracked account.',
             ],
         ];
     }
@@ -302,6 +308,50 @@ final class WorkflowGuide
             ],
             'notes' => [
                 'Tracked-snitch views are free for explore.view.',
+                'Prefer topics/hook_types catalogue slugs over long phrase LIKE searches.',
+                'include_terms defaults off; empty searches return matching term hints, not the full catalogue.',
+                'Each post includes snitch_url for the in-app feed page.',
+            ],
+        ];
+    }
+
+    /**
+     * @return array{
+     *     summary: string,
+     *     prerequisites: list<string>,
+     *     do_not_skip: list<string>,
+     *     steps: list<array{order: int, tool: string, action: string}>,
+     *     notes: list<string>
+     * }
+     */
+    private static function contentPlan(): array
+    {
+        return [
+            'summary' => 'Build a remake + collab plan from winners and influencer shortlists without leaving Snitch.',
+            'prerequisites' => [
+                'whoami + billing_status (can_run_billable for find/explore charges).',
+                'Brand ready (name, website, description).',
+                'Tracked accounts synced and winners scored (sync_analyze / rescore_winners as needed).',
+            ],
+            'do_not_skip' => [
+                'Use list_winners with q/topics so football virality does not drown brand-relevant remakes.',
+                'Use snitch_url from payloads - do not guess app links.',
+                'After find_influencers, either keep selected creators or dismiss_influencer_suggestions for report-only shortlists.',
+            ],
+            'steps' => [
+                self::step(1, 'whoami', 'Confirm production vs local and brand_warnings.'),
+                self::step(2, 'billing_status', 'Confirm can_run_billable.'),
+                self::step(3, 'get_brand', 'Confirm niche context for filters and briefs.'),
+                self::step(4, 'list_winners', 'Pass q and/or topics (e.g. ai_tools, seo). Read how_to_copy + snitch_url.'),
+                self::step(5, 'get_post', 'Optional deeper analysis for selected winner post_ids.'),
+                self::step(6, 'find_influencers', 'Pass platform + brief + min/max followers band. Poll influencer_search_status.'),
+                self::step(7, 'dismiss_influencer_suggestions', 'For shortlist/report: clear the run. Or keep_influencer for selected fits.'),
+                self::step(8, 'explore_posts', 'Optional corpus ideas via topics/q outside tracked accounts.'),
+            ],
+            'notes' => [
+                'Follower bands require known in-band counts - oversized creators with null followers no longer slip through.',
+                'Thin influencer finds may return partial=true with fewer than min_suggestions.',
+                'Prefer staying on Snitch tools; do not fall back to external scrapers for follower checks.',
             ],
         ];
     }

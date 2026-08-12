@@ -11,7 +11,7 @@ use Laravel\Mcp\Server\Prompt;
 use Laravel\Mcp\Server\Prompts\Argument;
 
 #[Name('workflow_guide')]
-#[Description('Text version of the Snitch MCP workflow guide. Prefer the workflow_guide tool for structured steps. Optional workflow: overview | brand | competitors | influencers | sync_analyze | billing | explore.')]
+#[Description('Text version of the Snitch MCP workflow guide. Prefer the workflow_guide tool for structured steps. Optional workflow: overview | brand | competitors | influencers | sync_analyze | billing | explore | content_plan.')]
 class WorkflowGuidePrompt extends Prompt
 {
     public function handle(Request $request): Response
@@ -56,7 +56,7 @@ class WorkflowGuidePrompt extends Prompt
         return [
             new Argument(
                 name: 'workflow',
-                description: 'overview | brand | competitors | influencers | sync_analyze | billing | explore',
+                description: 'overview | brand | competitors | influencers | sync_analyze | billing | explore | content_plan',
                 required: false,
             ),
         ];

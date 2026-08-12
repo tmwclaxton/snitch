@@ -117,6 +117,7 @@ class FindInfluencersJob implements ShouldQueue
         $this->chargeInfluencerFindVendors($user, $charger, $billing);
 
         $current = $this->payload();
+        $min = max(1, (int) config('snitch.influencer_find.min_suggestions', 6));
 
         $this->putStatus([
             'status' => 'completed',
@@ -125,6 +126,7 @@ class FindInfluencersJob implements ShouldQueue
             'suggestions' => $rows,
             'decisions' => is_array($current['decisions'] ?? null) ? $current['decisions'] : [],
             'error' => null,
+            'partial' => count($rows) < $min,
         ]);
     }
 
@@ -218,6 +220,17 @@ class FindInfluencersJob implements ShouldQueue
     public static function latestCacheKeyFor(int $userId): string
     {
         return "influencer-find-latest:{$userId}";
+    }
+
+    public static function clearRun(int $userId, string $runId): void
+    {
+        Cache::forget(self::cacheKeyFor($userId, $runId));
+
+        if (Cache::get(self::latestCacheKeyFor($userId)) === $runId) {
+            Cache::forget(self::latestCacheKeyFor($userId));
+        }
+
+        self::clearActive($userId, $runId);
     }
 
     public static function clearActive(int $userId, ?string $runId = null): void

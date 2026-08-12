@@ -73,4 +73,27 @@ class WorkflowGuideToolTest extends TestCase
             fn (string $note): bool => str_contains($note, 'latest'),
         ));
     }
+
+    public function test_workflow_guide_content_plan_mentions_winners_and_dismiss(): void
+    {
+        $guide = WorkflowGuide::for('content_plan');
+
+        $this->assertSame('content_plan', $guide['workflow']);
+        $this->assertTrue(collect($guide['steps'])->contains(
+            fn (array $step): bool => ($step['tool'] ?? null) === 'list_winners',
+        ));
+        $this->assertTrue(collect($guide['steps'])->contains(
+            fn (array $step): bool => ($step['tool'] ?? null) === 'dismiss_influencer_suggestions',
+        ));
+    }
+
+    public function test_server_instructions_mention_content_plan_and_snitch_url(): void
+    {
+        $attributes = (new \ReflectionClass(SnitchServer::class))->getAttributes(Instructions::class);
+        $instructions = $attributes[0]->newInstance()->value;
+
+        $this->assertStringContainsString('content_plan', $instructions);
+        $this->assertStringContainsString('dismiss_influencer_suggestions', $instructions);
+        $this->assertStringContainsString('snitch_url', $instructions);
+    }
 }

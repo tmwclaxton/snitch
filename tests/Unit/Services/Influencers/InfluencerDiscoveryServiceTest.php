@@ -63,14 +63,38 @@ class InfluencerDiscoveryServiceTest extends TestCase
         $this->assertStringContainsString('English', $joined);
     }
 
-    public function test_followers_in_range_allows_unknown_and_filters_known(): void
+    public function test_followers_in_range_requires_known_count_when_band_set(): void
     {
         $service = $this->service();
 
-        $this->assertTrue($service->followersInRange(null, 1000, 50000));
+        $this->assertFalse($service->followersInRange(null, 1000, 50000));
+        $this->assertFalse($service->followersInRange(null, 1000, null));
+        $this->assertFalse($service->followersInRange(null, null, 50000));
+        $this->assertTrue($service->followersInRange(null, null, null));
         $this->assertTrue($service->followersInRange(12000, 1000, 50000));
         $this->assertFalse($service->followersInRange(200, 1000, 50000));
         $this->assertFalse($service->followersInRange(90000, 1000, 50000));
+    }
+
+    public function test_candidates_from_apify_search_drops_known_out_of_band(): void
+    {
+        $service = $this->service();
+
+        $candidates = $service->candidatesFromApifySearchItems('tiktok', [
+            [
+                'authorMeta' => ['name' => 'huge', 'nickName' => 'Huge', 'fans' => 800000],
+            ],
+            [
+                'authorMeta' => ['name' => 'mid', 'nickName' => 'Mid', 'fans' => 12000],
+            ],
+            [
+                'authorMeta' => ['name' => 'tiny', 'nickName' => 'Tiny', 'fans' => 50],
+            ],
+        ], 10, 1000, 50000);
+
+        $this->assertCount(1, $candidates);
+        $this->assertSame('mid', $candidates[0]['handle']);
+        $this->assertSame(12000, $candidates[0]['followers']);
     }
 
     public function test_extract_followers_reads_common_actor_fields(): void

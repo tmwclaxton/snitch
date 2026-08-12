@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools;
 
+use App\Mcp\Support\McpAppUrls;
 use App\Mcp\Support\McpAuth;
 use App\Models\Post;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -40,6 +41,7 @@ class ListFeedTool extends Tool
             ->get(['id', 'platform', 'type', 'url', 'caption', 'posted_at', 'social_account_id']);
 
         $posts->each(fn (Post $post) => $post->makeHidden(['raw_payload']));
+        McpAppUrls::attachSnitchUrls($posts);
 
         return Response::json(['posts' => $posts]);
     }
