@@ -249,7 +249,7 @@ const steps = [
                 <h1
                     class="snitch-display mt-3 max-w-[16rem] text-[1.15rem] leading-[1.25] tracking-[-0.012em] text-pretty text-snitch-ink"
                 >
-                    See what snitches post. Remake what wins.
+                    See what competitors post. Remake what wins.
                 </h1>
                 <div
                     class="snitch-hero-mobile-cta mt-5 flex flex-col items-stretch gap-2.5"
@@ -437,7 +437,7 @@ const steps = [
                             <h1
                                 class="snitch-display snitch-hero-lede mt-3.5 text-[1.3rem] leading-[1.22] tracking-[-0.012em] text-pretty sm:mt-4 sm:text-[1.55rem] sm:leading-[1.2]"
                             >
-                                See what snitches post. Remake what wins.
+                                See what competitors post. Remake what wins.
                             </h1>
                             <div
                                 class="snitch-hero-cta mt-6 flex flex-wrap items-stretch justify-start gap-2.5 sm:mt-7 sm:gap-3"
