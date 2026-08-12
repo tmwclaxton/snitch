@@ -11,7 +11,8 @@ import StippleBar from '@/components/dashboard/StippleBar.vue';
 import WeeklyVolumeChart from '@/components/dashboard/WeeklyVolumeChart.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatPenceAsGbp } from '@/lib/money';
-import { overview as adminOverview } from '@/routes/admin';
+import { activity as adminActivity, overview as adminOverview } from '@/routes/admin';
+import { index as adminUsersIndex } from '@/routes/admin/users';
 
 type ProfitSeriesKey = 'charged' | 'cogs';
 
@@ -533,6 +534,14 @@ function formatGbpAxis(value: number): string {
                     Platform-wide usage, spend, profit (COGS vs charge), MCP tools, and failed reels.
                     {{ from }} → {{ to }}.
                 </p>
+                <nav class="mt-3 flex flex-wrap gap-3 text-sm">
+                    <Link :href="adminActivity()" class="underline decoration-snitch-ink/25 underline-offset-2 hover:decoration-snitch-ink">
+                        Activity
+                    </Link>
+                    <Link :href="adminUsersIndex()" class="underline decoration-snitch-ink/25 underline-offset-2 hover:decoration-snitch-ink">
+                        Users
+                    </Link>
+                </nav>
             </div>
             <div
                 class="snitch-seg flex flex-wrap gap-1"

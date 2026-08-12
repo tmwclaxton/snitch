@@ -1,6 +1,9 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminActivityController;
 use App\Http\Controllers\Admin\AdminOverviewController;
+use App\Http\Controllers\Admin\AdminReferralController;
+use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\AgentsController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\BacklogController;
@@ -81,6 +84,13 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
 
     Route::middleware(EnsureAdmin::class)->prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [AdminOverviewController::class, 'index'])->name('overview');
+        Route::get('/activity', [AdminActivityController::class, 'index'])->name('activity');
+        Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+        Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
+        Route::get('/referrals', [AdminReferralController::class, 'index'])->name('referrals.index');
+        Route::post('/referrals', [AdminReferralController::class, 'store'])->name('referrals.store');
+        Route::get('/referrals/{referral}', [AdminReferralController::class, 'show'])->name('referrals.show');
+        Route::patch('/referrals/{referral}', [AdminReferralController::class, 'update'])->name('referrals.update');
     });
 
     Route::middleware([EnsureBrandProfile::class, EnsureProductAccess::class])->group(function () {
