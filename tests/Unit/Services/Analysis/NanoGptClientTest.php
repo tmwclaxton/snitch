@@ -69,4 +69,29 @@ class NanoGptClientTest extends TestCase
             $client->extractUsage([]),
         );
     }
+
+    public function test_extract_finish_reason_reads_choice_finish_reason(): void
+    {
+        $client = app(NanoGptClient::class);
+
+        $this->assertSame(
+            'length',
+            $client->extractFinishReason([
+                'choices' => [
+                    ['finish_reason' => 'length'],
+                ],
+            ]),
+        );
+
+        $this->assertSame(
+            'stop',
+            $client->extractFinishReason([
+                'choices' => [
+                    ['finish_reason' => 'stop'],
+                ],
+            ]),
+        );
+
+        $this->assertNull($client->extractFinishReason([]));
+    }
 }

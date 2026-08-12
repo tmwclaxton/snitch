@@ -47,6 +47,8 @@ class VideoAnalysisService
             ],
         ];
 
+        $maxTokens = (int) config('snitch.video_analysis.max_tokens', 4096);
+
         $response = $this->client->chat(
             messages: [
                 [
@@ -57,7 +59,7 @@ Return ONLY valid JSON matching the schema.
 Write every string value in English (UK), including concept, idea, topics, how_to_copy, visual_summary, cta, and labels.
 Do not use Chinese or other non-English prose. Spoken-word quotes in hook may keep the original language, but all explanation stays English.
 Prioritise reusable craft concepts and engagement mechanics.
-Keep the concept-first fields (hook / concept / idea / visual_summary / how_to_copy) free of long transcript dumps or caption paraphrasing - put the verbatim spoken words in the separate transcript field instead.
+Keep the concept-first fields (hook / concept / idea / visual_summary / how_to_copy) free of long transcript dumps or caption paraphrasing - put every verbatim spoken word in the separate transcript field instead, from first word to last, without summarizing or truncating.
 Never invent music or SFX that are not audible in the media. Prefer platform music metadata when provided over guessing a song title.
 Reject vague filler ("engaging", "relatable vibe", "great energy") - name the mechanic.
 Always fill hook_type_slugs, topic_slugs, and visual_craft_slugs from the controlled catalogue when they fit (e.g. myth_bust for myth-busting opens). Use custom_tags only when nothing fits.
@@ -73,6 +75,7 @@ SYSTEM,
             model: $model,
             options: [
                 'response_format' => ['type' => 'json_object'],
+                'max_tokens' => $maxTokens,
             ],
         );
 
@@ -84,6 +87,15 @@ SYSTEM,
         }
 
         $usage = $this->client->extractUsage($response);
+        $finishReason = $this->client->extractFinishReason($response);
+
+        if ($finishReason === 'length') {
+            Log::warning('Video analysis response hit max_tokens; transcript may be incomplete.', [
+                'max_tokens' => $maxTokens,
+                'completion_tokens' => $usage['completion_tokens'],
+                'model' => $model,
+            ]);
+        }
 
         return VideoAnalysisResult::fromModelPayload(
             $payload,
@@ -91,6 +103,7 @@ SYSTEM,
             (float) config('snitch.video_analysis.success.min_hook_window_end_seconds'),
             $usage['prompt_tokens'],
             $usage['completion_tokens'],
+            outputTruncated: $finishReason === 'length',
         );
     }
 
@@ -176,7 +189,7 @@ SYSTEM,
                 ),
                 'cta' => $result->cta,
                 'how_to_copy' => $result->howToCopy,
-                'transcript' => $result->transcript !== '' ? $result->transcript : null,
+                'transcript' => $this->persistableTranscript($result),
                 'model' => $result->model,
                 'analyzed_at' => now(),
                 'error_message' => null,
@@ -254,7 +267,7 @@ Rules:
 - custom_tags = short freeform labels ONLY when the catalogue misses something important.
 - how_to_copy = 2-4 actionable remake steps for another brand applying the SAME concept (required, never empty). Put each step on its own line as a Markdown numbered list (e.g. "1. ...\\n2. ...\\n3. ..."). Never pack steps onto one line. Do not bury the post CTA inside how_to_copy - CTA has its own field.
 - cta = the post's ask / next action only (separate from remake steps). Always fill this string; use "No explicit CTA" when the post has no ask.
-- transcript = verbatim spoken words in the reel (any language, keep original) as one plain string with line breaks between sentences/speakers. Do NOT paraphrase, translate, or add commentary. Empty string "" when silent or purely music/SFX. The transcript field is separate from the concept-first fields above and never counts as caption echo.
+- transcript = every verbatim spoken word in the reel from start to finish (any language, keep original) as one plain string with line breaks between sentences/speakers. Include the full script even when long. Do NOT paraphrase, summarize, truncate, translate, or add commentary. Empty string "" when silent or purely music/SFX. The transcript field is separate from the concept-first fields above and never counts as caption echo.
 - Do NOT reuse the transcript inside hook/concept/idea/visual_summary/how_to_copy - the transcript field is where spoken words live.
 - Keep hook/concept/idea short and specific; name the mechanic.
 
@@ -319,5 +332,20 @@ PROMPT;
         }
 
         return $text;
+    }
+
+    private function persistableTranscript(VideoAnalysisResult $result): ?string
+    {
+        $transcript = trim($result->transcript);
+
+        if ($transcript === '') {
+            return null;
+        }
+
+        if ($result->outputTruncated) {
+            $transcript .= "\n\n[Output limit reached; transcript may be incomplete. Re-analyze to retry.]";
+        }
+
+        return $transcript;
     }
 }

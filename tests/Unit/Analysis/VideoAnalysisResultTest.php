@@ -147,6 +147,23 @@ class VideoAnalysisResultTest extends TestCase
         $this->assertSame('', $result->transcript);
     }
 
+    public function test_from_model_payload_tracks_output_truncated_flag(): void
+    {
+        $result = VideoAnalysisResult::fromModelPayload([
+            'concept' => 'Proof-first before CTA',
+            'hook' => 'Cold open on receipt',
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+            'visual_summary' => 'Tight crop on numbers then cut to face.',
+            'idea' => 'Status proof via specific dollar amount',
+            'cta' => 'Apply today',
+            'how_to_copy' => 'Lead with a concrete number, then your brand offer.',
+            'transcript' => 'Still talking when the model ran out of tokens.',
+            'sfx' => [],
+        ], 'qwen3.7-flash', outputTruncated: true);
+
+        $this->assertTrue($result->outputTruncated);
+    }
+
     public function test_from_model_payload_floors_empty_cta(): void
     {
         $result = VideoAnalysisResult::fromModelPayload([

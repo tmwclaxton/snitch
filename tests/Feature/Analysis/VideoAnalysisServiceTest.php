@@ -360,4 +360,154 @@ class VideoAnalysisServiceTest extends TestCase
         );
         $this->assertContains('Myth bust', $outcome['analysis']->topics);
     }
+
+    public function test_analyze_url_sends_configured_max_tokens(): void
+    {
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+            'snitch.video_analysis.max_tokens' => 5120,
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'finish_reason' => 'stop',
+                    'message' => [
+                        'content' => json_encode([
+                            'concept' => 'Steam tease before product payoff',
+                            'hook' => 'Steam hits the lens first',
+                            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+                            'visual_summary' => str_repeat('Matte bakery counter with torn paper overlays and soft fade. ', 2),
+                            'idea' => 'Curiosity gap then proof via finished loaf',
+                            'topics' => ['process reveal'],
+                            'hook_type_slugs' => ['silent_visual_hook'],
+                            'topic_slugs' => ['content_strategy'],
+                            'visual_craft_slugs' => ['broll_overlay'],
+                            'custom_tags' => [],
+                            'cta' => 'Preorder tomorrow',
+                            'how_to_copy' => 'Start on steam, cut to hands, end on boxed loaf.',
+                            'transcript' => '',
+                            'sfx' => [],
+                            'is_original_audio' => true,
+                        ]),
+                    ],
+                ]],
+            ]),
+        ]);
+
+        app(VideoAnalysisService::class)->analyzeUrl('https://cdn.example.com/reel.mp4');
+
+        Http::assertSent(function ($request): bool {
+            return ($request->data()['max_tokens'] ?? null) === 5120;
+        });
+    }
+
+    public function test_analyze_post_persists_long_transcript_without_truncating(): void
+    {
+        $this->seed(AnalysisTermSeeder::class);
+
+        $longTranscript = implode("\n", array_fill(0, 40, 'This is sentence number one in a long talking-head reel that must survive end to end.'));
+
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'finish_reason' => 'stop',
+                    'message' => [
+                        'content' => json_encode([
+                            'concept' => 'Grant myth-bust hook then lead magnet gate',
+                            'hook' => 'Text overlay STOP DOING THIS on false grant advice',
+                            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+                            'visual_summary' => str_repeat('Split screen bold FALSE stamp with talking-head replies. ', 2),
+                            'idea' => 'Myth callout then exclusivity gate for the lead magnet.',
+                            'topics' => ['grants'],
+                            'hook_type_slugs' => ['pattern_interrupt'],
+                            'topic_slugs' => ['content_strategy'],
+                            'visual_craft_slugs' => ['talking_head'],
+                            'custom_tags' => [],
+                            'cta' => 'Comment MYTH for the guide',
+                            'how_to_copy' => "1. Cold open on the false claim\n2. Cut to your correction\n3. Gate the deeper answer",
+                            'transcript' => $longTranscript,
+                            'sfx' => [],
+                            'is_original_audio' => true,
+                        ]),
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+            'media_url' => 'https://cdn.example.com/reel.mp4',
+        ]);
+
+        $outcome = app(VideoAnalysisService::class)->analyzePost($post);
+
+        $this->assertSame(AnalysisStatus::Completed, $outcome['analysis']->status);
+        $this->assertSame($longTranscript, $outcome['analysis']->transcript);
+        $this->assertGreaterThan(2000, strlen((string) $outcome['analysis']->transcript));
+    }
+
+    public function test_analyze_post_appends_truncation_notice_when_finish_reason_is_length(): void
+    {
+        $this->seed(AnalysisTermSeeder::class);
+
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'finish_reason' => 'length',
+                    'message' => [
+                        'content' => json_encode([
+                            'concept' => 'Grant myth-bust hook then lead magnet gate',
+                            'hook' => 'Text overlay STOP DOING THIS on false grant advice',
+                            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+                            'visual_summary' => str_repeat('Split screen bold FALSE stamp with talking-head replies. ', 2),
+                            'idea' => 'Myth callout then exclusivity gate for the lead magnet.',
+                            'topics' => ['grants'],
+                            'hook_type_slugs' => ['pattern_interrupt'],
+                            'topic_slugs' => ['content_strategy'],
+                            'visual_craft_slugs' => ['talking_head'],
+                            'custom_tags' => [],
+                            'cta' => 'Comment MYTH for the guide',
+                            'how_to_copy' => "1. Cold open on the false claim\n2. Cut to your correction\n3. Gate the deeper answer",
+                            'transcript' => 'Stop applying for grants like this.',
+                            'sfx' => [],
+                            'is_original_audio' => true,
+                        ]),
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+            'media_url' => 'https://cdn.example.com/reel.mp4',
+        ]);
+
+        $outcome = app(VideoAnalysisService::class)->analyzePost($post);
+
+        $this->assertSame(AnalysisStatus::Completed, $outcome['analysis']->status);
+        $this->assertStringContainsString(
+            'Stop applying for grants like this.',
+            (string) $outcome['analysis']->transcript,
+        );
+        $this->assertStringContainsString(
+            '[Output limit reached; transcript may be incomplete. Re-analyze to retry.]',
+            (string) $outcome['analysis']->transcript,
+        );
+    }
 }

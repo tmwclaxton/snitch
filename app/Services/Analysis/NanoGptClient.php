@@ -17,7 +17,7 @@ class NanoGptClient
             'model' => $model,
             'messages' => $messages,
             'temperature' => $options['temperature'] ?? config('snitch.video_analysis.temperature', 0.2),
-            'max_tokens' => $options['max_tokens'] ?? config('snitch.video_analysis.max_tokens', 1800),
+            'max_tokens' => $options['max_tokens'] ?? config('snitch.video_analysis.max_tokens', 4096),
         ];
 
         if (isset($options['response_format'])) {
@@ -52,6 +52,22 @@ class NanoGptClient
         }
 
         return trim((string) $content);
+    }
+
+    /**
+     * OpenAI-compatible finish_reason (e.g. stop, length).
+     */
+    public function extractFinishReason(array $response): ?string
+    {
+        $reason = data_get($response, 'choices.0.finish_reason');
+
+        if (! is_string($reason)) {
+            return null;
+        }
+
+        $trimmed = trim($reason);
+
+        return $trimmed === '' ? null : $trimmed;
     }
 
     /**
