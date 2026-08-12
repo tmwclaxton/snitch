@@ -55,6 +55,19 @@ defineOptions({
             </p>
 
             <h2 class="snitch-display text-xl text-snitch-ink">
+                Referral attribution
+            </h2>
+            <p>
+                When you arrive via a partner link with a
+                <code class="text-sm">?ref=</code> code, Snitch may set a
+                first-party cookie (<code class="text-sm">snitch_ref</code>) for
+                up to 90 days so signup can be credited even if the query
+                parameter is dropped on later pages. We also mirror the code in
+                session during auth. This is attribution only - not advertising
+                tracking.
+            </p>
+
+            <h2 class="snitch-display text-xl text-snitch-ink">
                 Managing cookies
             </h2>
             <p>

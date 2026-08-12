@@ -3,6 +3,7 @@
 namespace App\Services\Billing;
 
 use App\Models\User;
+use App\Services\Referrals\ReferralAttribution;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\WorkOS\User as WorkOsUser;
@@ -10,7 +11,10 @@ use RuntimeException;
 
 class AccountClaimService
 {
-    public function __construct(private UsageBillingService $usage) {}
+    public function __construct(
+        private UsageBillingService $usage,
+        private ReferralAttribution $referrals,
+    ) {}
 
     /**
      * @return array{user: User, plain_text_token: string, claim_url: string}
@@ -67,8 +71,9 @@ class AccountClaimService
             ])->save();
 
             $this->usage->creditClaimBonus($user);
+            $this->referrals->bindToUser($user);
 
-            return $user->fresh();
+            return $user->fresh() ?? $user;
         });
     }
 

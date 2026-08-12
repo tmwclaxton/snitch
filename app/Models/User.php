@@ -8,6 +8,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -17,7 +18,7 @@ use Laravel\Passport\Contracts\OAuthenticatable;
 use Stripe\Customer;
 use Stripe\Exception\InvalidRequestException;
 
-#[Fillable(['name', 'email', 'workos_id', 'avatar', 'created_via', 'claim_token', 'claimed_at'])]
+#[Fillable(['name', 'email', 'workos_id', 'avatar', 'created_via', 'claim_token', 'claimed_at', 'referral_code_id'])]
 #[Hidden(['workos_id', 'remember_token', 'claim_token'])]
 class User extends Authenticatable implements OAuthenticatable
 {
@@ -79,6 +80,14 @@ class User extends Authenticatable implements OAuthenticatable
         }
 
         return $this->createAsStripeCustomer($options, $requestOptions);
+    }
+
+    /**
+     * @return BelongsTo<ReferralCode, $this>
+     */
+    public function referralCode(): BelongsTo
+    {
+        return $this->belongsTo(ReferralCode::class);
     }
 
     /**

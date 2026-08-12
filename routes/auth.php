@@ -3,6 +3,7 @@
 use App\Http\Controllers\ClaimController;
 use App\Services\Billing\AccountClaimService;
 use App\Services\Billing\UsageBillingService;
+use App\Services\Referrals\ReferralAttribution;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Route;
 use Laravel\WorkOS\Http\Requests\AuthKitAuthenticationRequest;
@@ -56,7 +57,7 @@ Route::middleware(['guest'])->group(function () {
 
                 return null;
             },
-            createUsing: function (WorkOsUser $workOsUser): Authenticatable {
+            createUsing: function (WorkOsUser $workOsUser) use ($request): Authenticatable {
                 $userModel = config('auth.providers.users.model');
 
                 $user = $userModel::query()->create([
@@ -71,6 +72,7 @@ Route::middleware(['guest'])->group(function () {
                 ]);
 
                 app(UsageBillingService::class)->creditClaimBonus($user);
+                app(ReferralAttribution::class)->bindToUser($user, $request);
 
                 return $user;
             },
