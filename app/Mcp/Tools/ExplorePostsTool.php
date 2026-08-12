@@ -4,7 +4,6 @@ namespace App\Mcp\Tools;
 
 use App\Enums\AnalysisStatus;
 use App\Enums\AnalysisTermDimension;
-use App\Enums\PostType;
 use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Mcp\Support\McpAppUrls;
@@ -292,7 +291,7 @@ class ExplorePostsTool extends Tool
             ->whereKey($postId)
             ->first();
 
-        if ($post === null || ! $this->isCompletedReel($post)) {
+        if ($post === null || ! $user->can('view', $post)) {
             return Response::error('Post not found.');
         }
 
@@ -307,21 +306,6 @@ class ExplorePostsTool extends Tool
         McpAppUrls::attachSnitchUrls([$post]);
 
         return Response::json(['post' => $post]);
-    }
-
-    private function isCompletedReel(Post $post): bool
-    {
-        if (! in_array(
-            $post->type?->value ?? (is_string($post->type) ? $post->type : null),
-            PostType::analyzableValues(),
-            true,
-        )) {
-            return false;
-        }
-
-        $analysis = $post->analysis;
-
-        return $analysis !== null && $analysis->status === AnalysisStatus::Completed;
     }
 
     /** @return array<string, Type> */

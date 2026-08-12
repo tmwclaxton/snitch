@@ -2,8 +2,6 @@
 
 namespace App\Mcp\Tools;
 
-use App\Enums\AnalysisStatus;
-use App\Enums\PostType;
 use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Mcp\Support\McpAppUrls;
@@ -20,7 +18,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('get_post')]
-#[Description('Get a post and its analysis if available. Tracked snitches are free; completed corpus reels whose author is not a tracked snitch charge 0.1p (idempotent per post).')]
+#[Description('Get a post and its analysis if available. Tracked snitches are free; reel-like corpus posts whose author is not a tracked snitch charge 0.1p (idempotent per post).')]
 class GetPostTool extends Tool
 {
     public function handle(Request $request, ExploreBillingService $exploreBilling): Response
@@ -43,19 +41,7 @@ class GetPostTool extends Tool
             ->whereKey($data['post_id'])
             ->first();
 
-        if ($post === null) {
-            return Response::error('Post not found.');
-        }
-
-        $tracks = Post::query()->forUser($user)->whereKey($post->id)->exists();
-        $isCompletedReel = in_array(
-            $post->type?->value ?? (is_string($post->type) ? $post->type : null),
-            PostType::analyzableValues(),
-            true,
-        ) && $post->analysis !== null
-            && $post->analysis->status === AnalysisStatus::Completed;
-
-        if (! $tracks && ! $isCompletedReel) {
+        if ($post === null || ! $user->can('view', $post)) {
             return Response::error('Post not found.');
         }
 

@@ -244,6 +244,76 @@ class McpAgentGapsTest extends TestCase
             ->assertSee('/feed/'.$post->id);
     }
 
+    public function test_get_post_allows_non_tracker_for_failed_analysis_reel(): void
+    {
+        $owner = User::factory()->create();
+        $viewer = User::factory()->create();
+        app(UsageBillingService::class)->creditClaimBonus($viewer);
+        BrandProfile::factory()->for($owner)->create();
+        BrandProfile::factory()->for($viewer)->create();
+
+        $account = TrackedAccount::factory()->for($owner)->create();
+        $post = Post::factory()->forAccount($account)->create(['type' => PostType::Reel]);
+        PostAnalysis::factory()->for($post)->create([
+            'status' => AnalysisStatus::Failed,
+            'error_message' => 'checklist failed',
+            'hook' => null,
+        ]);
+
+        $this->actingAs($viewer);
+
+        SnitchServer::tool(GetPostTool::class, [
+            'post_id' => $post->id,
+        ])
+            ->assertOk()
+            ->assertSee('"status":"failed"')
+            ->assertSee('/feed/'.$post->id);
+    }
+
+    public function test_get_post_forbids_non_tracker_for_non_reel_posts(): void
+    {
+        $owner = User::factory()->create();
+        $viewer = User::factory()->create();
+        app(UsageBillingService::class)->creditClaimBonus($viewer);
+        BrandProfile::factory()->for($owner)->create();
+        BrandProfile::factory()->for($viewer)->create();
+
+        $account = TrackedAccount::factory()->for($owner)->create();
+        $post = Post::factory()->forAccount($account)->create(['type' => PostType::Image]);
+
+        $this->actingAs($viewer);
+
+        SnitchServer::tool(GetPostTool::class, [
+            'post_id' => $post->id,
+        ])->assertHasErrors()->assertSee('Post not found');
+    }
+
+    public function test_explore_posts_detail_allows_non_tracker_for_failed_analysis_reel(): void
+    {
+        $owner = User::factory()->create();
+        $viewer = User::factory()->create();
+        app(UsageBillingService::class)->creditClaimBonus($viewer);
+        BrandProfile::factory()->for($owner)->create();
+        BrandProfile::factory()->for($viewer)->create();
+
+        $account = TrackedAccount::factory()->for($owner)->create();
+        $post = Post::factory()->forAccount($account)->create(['type' => PostType::Reel]);
+        PostAnalysis::factory()->for($post)->create([
+            'status' => AnalysisStatus::Failed,
+            'error_message' => 'checklist failed',
+            'hook' => null,
+        ]);
+
+        $this->actingAs($viewer);
+
+        SnitchServer::tool(ExplorePostsTool::class, [
+            'post_id' => $post->id,
+        ])
+            ->assertOk()
+            ->assertSee('"status":"failed"')
+            ->assertSee('/feed/'.$post->id);
+    }
+
     public function test_workflow_guide_content_plan_is_available(): void
     {
         $user = User::factory()->create();
