@@ -510,11 +510,130 @@ class VideoAnalysisServiceTest extends TestCase
             '[Output limit reached; transcript may be incomplete. Re-analyze to retry.]',
             (string) $outcome['analysis']->transcript,
         );
+        $this->assertSame(
+            'Model output limit reached; transcript may be truncated.',
+            $outcome['analysis']->format_notes,
+        );
     }
 
-    public function test_video_analysis_default_max_tokens_is_16384(): void
+    public function test_analyze_post_requests_transcript_continuation_when_model_stops_mid_sentence(): void
     {
-        $this->assertSame(16384, (int) config('snitch.video_analysis.max_tokens'));
+        $this->seed(AnalysisTermSeeder::class);
+
+        $partialLines = array_merge(
+            array_fill(0, 24, 'short phrase fragment'),
+            ['before you can show them'],
+        );
+        $partialTranscript = implode("\n", $partialLines);
+        $continuation = 'once you have proof on camera.';
+
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::sequence()
+                ->push([
+                    'choices' => [[
+                        'finish_reason' => 'stop',
+                        'message' => [
+                            'content' => json_encode([
+                                'concept' => 'Three-offer ladder for AI retainers',
+                                'hook' => 'Text overlay on three pricing tiers',
+                                'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+                                'visual_summary' => str_repeat('Talking-head with bold price cards and jump cuts. ', 2),
+                                'idea' => 'Anchor high retainers then reveal lower entry offers.',
+                                'topics' => ['pricing'],
+                                'hook_type_slugs' => ['pattern_interrupt'],
+                                'topic_slugs' => ['content_strategy'],
+                                'visual_craft_slugs' => ['talking_head'],
+                                'custom_tags' => [],
+                                'cta' => 'Comment GUIDE for the playbook',
+                                'how_to_copy' => "1. Lead with the highest offer\n2. Reveal the mid tier\n3. Close on the install play",
+                                'transcript' => $partialTranscript,
+                                'sfx' => [],
+                                'is_original_audio' => true,
+                            ]),
+                        ],
+                    ]],
+                ])
+                ->push([
+                    'choices' => [[
+                        'finish_reason' => 'stop',
+                        'message' => [
+                            'content' => json_encode([
+                                'transcript' => $continuation,
+                            ]),
+                        ],
+                    ]],
+                ]),
+        ]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+            'media_url' => 'https://cdn.example.com/reel.mp4',
+        ]);
+
+        $outcome = app(VideoAnalysisService::class)->analyzePost($post);
+
+        $this->assertSame(AnalysisStatus::Completed, $outcome['analysis']->status);
+        $this->assertStringContainsString('before you can show them', (string) $outcome['analysis']->transcript);
+        $this->assertStringContainsString('once you have proof on camera.', (string) $outcome['analysis']->transcript);
+        $this->assertNull($outcome['analysis']->format_notes);
+
+        $chatRequests = collect(Http::recorded())
+            ->filter(fn (array $pair): bool => str_contains($pair[0]->url(), '/chat/completions'))
+            ->count();
+        $this->assertSame(2, $chatRequests);
+    }
+
+    public function test_analyze_url_extracts_balanced_json_when_prose_wraps_payload(): void
+    {
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+        ]);
+
+        $payload = [
+            'concept' => 'Bracket test {not json}',
+            'hook' => 'Cold open on receipt',
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+            'visual_summary' => str_repeat('Tight crop on numbers then cut to face. ', 2),
+            'idea' => 'Status proof via specific dollar amount',
+            'topics' => ['social proof'],
+            'hook_type_slugs' => ['pattern_interrupt'],
+            'topic_slugs' => ['content_strategy'],
+            'visual_craft_slugs' => ['talking_head'],
+            'custom_tags' => [],
+            'cta' => 'Apply today',
+            'how_to_copy' => "1. Lead with proof\n2. Offer the next step",
+            'transcript' => 'He said {maybe} and kept talking.',
+            'sfx' => [],
+            'is_original_audio' => true,
+        ];
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'finish_reason' => 'stop',
+                    'message' => [
+                        'content' => 'Here is the JSON: '.json_encode($payload),
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $result = app(VideoAnalysisService::class)->analyzeUrl('https://cdn.example.com/reel.mp4');
+
+        $this->assertSame('He said {maybe} and kept talking.', $result->transcript);
+    }
+
+    public function test_video_analysis_default_max_tokens_is_32768(): void
+    {
+        $this->assertSame(32768, (int) config('snitch.video_analysis.max_tokens'));
     }
 
     public function test_analyze_url_sends_default_max_tokens_when_not_overridden(): void
@@ -522,7 +641,7 @@ class VideoAnalysisServiceTest extends TestCase
         config([
             'snitch.nanogpt.api_key' => 'test-key',
             'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
-            'snitch.video_analysis.max_tokens' => 16384,
+            'snitch.video_analysis.max_tokens' => 32768,
         ]);
 
         Http::fake([
@@ -555,7 +674,7 @@ class VideoAnalysisServiceTest extends TestCase
         app(VideoAnalysisService::class)->analyzeUrl('https://cdn.example.com/reel.mp4');
 
         Http::assertSent(function ($request): bool {
-            return ($request->data()['max_tokens'] ?? null) === 16384;
+            return ($request->data()['max_tokens'] ?? null) === 32768;
         });
     }
 

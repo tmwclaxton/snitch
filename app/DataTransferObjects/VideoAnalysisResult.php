@@ -37,6 +37,7 @@ final readonly class VideoAnalysisResult
         public ?int $promptTokens = null,
         public ?int $completionTokens = null,
         public bool $outputTruncated = false,
+        public bool $transcriptIncomplete = false,
     ) {}
 
     /**
@@ -49,6 +50,7 @@ final readonly class VideoAnalysisResult
         ?int $promptTokens = null,
         ?int $completionTokens = null,
         bool $outputTruncated = false,
+        bool $transcriptIncomplete = false,
     ): self {
         $hookWindow = is_array($payload['hook_window'] ?? null) ? $payload['hook_window'] : [];
         $sfxItems = [];
@@ -117,6 +119,7 @@ final readonly class VideoAnalysisResult
             promptTokens: $promptTokens,
             completionTokens: $completionTokens,
             outputTruncated: $outputTruncated,
+            transcriptIncomplete: $transcriptIncomplete,
         );
     }
 

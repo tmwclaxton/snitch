@@ -47,6 +47,7 @@ type Analysis = {
     how_to_copy: string | null;
     how_to_copy_html?: string | null;
     transcript?: string | null;
+    format_notes?: string | null;
     sfx: Array<{ at_sec?: number | null; label: string; role?: string | null }> | null;
     music: Record<string, unknown> | null;
     error_message?: string | null;
@@ -256,6 +257,12 @@ const transcript = computed(() => {
     return typeof raw === 'string' ? raw.trim() : '';
 });
 
+const transcriptWarning = computed(() => {
+    const raw = props.post.analysis?.format_notes;
+
+    return typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : null;
+});
+
 const transcriptOpen = ref(false);
 
 function openTranscript(): void {
@@ -304,6 +311,7 @@ function openTranscript(): void {
             <TranscriptModal
                 v-model:open="transcriptOpen"
                 :transcript="transcript"
+                :warning="transcriptWarning"
             />
 
             <header class="mt-5 border-b border-snitch-ink/10 pb-5">

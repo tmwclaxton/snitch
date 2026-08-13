@@ -369,7 +369,9 @@ class FeedTest extends TestCase
 
         $this->assertIsString($modalVue);
         $this->assertStringContainsString('sm:max-w-4xl', $modalVue);
-        $this->assertStringContainsString('w-full', $modalVue);
+        $this->assertStringContainsString('flex-col', $modalVue);
+        $this->assertStringContainsString('min-w-0', $modalVue);
+        $this->assertStringContainsString('break-words', $modalVue);
         $this->assertStringContainsString('whitespace-pre-wrap', $modalVue);
         $this->assertStringNotContainsString('sm:max-w-2xl', $modalVue);
     }

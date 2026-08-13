@@ -37,70 +37,46 @@ class VideoAnalysisService
         ?array $platformMusic = null,
     ): VideoAnalysisResult {
         $model = (string) config('snitch.video_analysis.model');
+        $maxTokens = (int) config('snitch.video_analysis.max_tokens', 32768);
         $prompt = $this->buildPrompt($mediaKind, $caption, $platformMusic);
 
-        $content = [
-            ['type' => 'text', 'text' => $prompt],
-            [
-                'type' => 'video_url',
-                'video_url' => ['url' => $mediaUrl],
-            ],
-        ];
-
-        $maxTokens = (int) config('snitch.video_analysis.max_tokens', 16384);
-
-        $response = $this->client->chat(
-            messages: [
-                [
-                    'role' => 'system',
-                    'content' => <<<'SYSTEM'
-You analyse short-form social videos for creators who will remake the craft, not quote the script.
-Return ONLY valid JSON matching the schema.
-Write every string value in English (UK), including concept, idea, topics, how_to_copy, visual_summary, cta, and labels.
-Do not use Chinese or other non-English prose. Spoken-word quotes in hook may keep the original language, but all explanation stays English.
-Prioritise reusable craft concepts and engagement mechanics.
-Keep the concept-first fields (hook / concept / idea / visual_summary / how_to_copy) concise and free of long transcript dumps or caption paraphrasing - put every verbatim spoken word in the separate transcript field instead, from first word to last, without summarizing or truncating.
-When speech is present, reserve most of your output token budget for transcript until the reel ends. Do not stop early.
-Never invent music or SFX that are not audible in the media. Prefer platform music metadata when provided over guessing a song title.
-Reject vague filler ("engaging", "relatable vibe", "great energy") - name the mechanic.
-Always fill hook_type_slugs, topic_slugs, and visual_craft_slugs from the controlled catalogue when they fit (e.g. myth_bust for myth-busting opens). Use custom_tags only when nothing fits.
-When you see real VFX (particles, glitch/VHS, greenscreen keying, sticker packs, motion graphics, screen warp, light leaks, CapCut template FX, AI face filters), emit the matching Grade & effects visual_craft slugs. Do not call ordinary jump cuts, fades, or colour grade "VFX".
-For how_to_copy, always use a Markdown numbered list with a real newline before each step (1. / 2. / 3.). Never write steps inline on one line. Keep cta as the post's ask only - not inside how_to_copy.
-SYSTEM,
-                ],
-                [
-                    'role' => 'user',
-                    'content' => $content,
-                ],
-            ],
+        [$payload, $promptTokens, $completionTokens, $finishReason] = $this->requestAnalysisPayload(
+            mediaUrl: $mediaUrl,
+            prompt: $prompt,
             model: $model,
-            options: [
-                'response_format' => ['type' => 'json_object'],
-                'max_tokens' => $maxTokens,
-            ],
+            maxTokens: $maxTokens,
         );
 
-        $text = $this->client->extractAssistantText($response);
-        $usage = $this->client->extractUsage($response);
-        $finishReason = $this->client->extractFinishReason($response);
-        $payload = json_decode($this->extractJson($text), true);
+        $outputTruncated = $finishReason === 'length';
+        $transcript = VideoAnalysisResult::fromModelPayload(
+            ['transcript' => $payload['transcript'] ?? null],
+            $model,
+        )->transcript;
 
-        if (! is_array($payload)) {
-            Log::warning('Video analysis response was not valid JSON.', [
-                'finish_reason' => $finishReason,
-                'prompt_tokens' => $usage['prompt_tokens'],
-                'completion_tokens' => $usage['completion_tokens'],
-                'assistant_text_snippet' => $this->logSnippet($text),
-                'json_error' => json_last_error_msg(),
-            ]);
+        if ($this->shouldRequestTranscriptContinuation($transcript, $outputTruncated)) {
+            [$transcript, $continuationPromptTokens, $continuationCompletionTokens, $outputTruncated] = $this->continueTranscriptUntilComplete(
+                mediaUrl: $mediaUrl,
+                partialTranscript: $transcript,
+                model: $model,
+                outputTruncated: $outputTruncated,
+            );
 
-            throw new RuntimeException('Video analysis did not return valid JSON.');
+            $payload['transcript'] = $transcript;
+            $promptTokens = $this->sumNullableInts($promptTokens, $continuationPromptTokens);
+            $completionTokens = $this->sumNullableInts($completionTokens, $continuationCompletionTokens);
         }
 
-        if ($finishReason === 'length') {
+        $transcriptIncomplete = $outputTruncated || $this->transcriptLooksIncomplete($transcript);
+
+        if ($outputTruncated) {
             Log::warning('Video analysis response hit max_tokens; transcript may be incomplete.', [
                 'max_tokens' => $maxTokens,
-                'completion_tokens' => $usage['completion_tokens'],
+                'completion_tokens' => $completionTokens,
+                'model' => $model,
+            ]);
+        } elseif ($transcriptIncomplete) {
+            Log::warning('Video analysis transcript ended mid-sentence; continuation did not finish the reel.', [
+                'transcript_chars' => strlen($transcript),
                 'model' => $model,
             ]);
         }
@@ -109,9 +85,10 @@ SYSTEM,
             $payload,
             $model,
             (float) config('snitch.video_analysis.success.min_hook_window_end_seconds'),
-            $usage['prompt_tokens'],
-            $usage['completion_tokens'],
-            outputTruncated: $finishReason === 'length',
+            $promptTokens,
+            $completionTokens,
+            outputTruncated: $outputTruncated,
+            transcriptIncomplete: $transcriptIncomplete,
         );
     }
 
@@ -187,7 +164,7 @@ SYSTEM,
                 'concept' => $result->concept,
                 'topics' => $topics,
                 'custom_tags' => $result->customTags,
-                'format_notes' => null,
+                'format_notes' => $this->transcriptFormatNotes($result),
                 'sfx' => $result->sfx,
                 'music' => $this->musicExtractor->mergeForAnalysis(
                     $recognizedMusic,
@@ -330,17 +307,417 @@ PROMPT;
         return "Music metadata (authoritative via {$sourceLabel}): title={$title}; artist={$artist}; original_audio={$original}; id={$id}";
     }
 
+    /**
+     * @return array{0: array<string, mixed>, 1: int|null, 2: int|null, 3: string|null}
+     */
+    private function requestAnalysisPayload(
+        string $mediaUrl,
+        string $prompt,
+        string $model,
+        int $maxTokens,
+    ): array {
+        $response = $this->client->chat(
+            messages: [
+                [
+                    'role' => 'system',
+                    'content' => $this->analysisSystemPrompt(),
+                ],
+                [
+                    'role' => 'user',
+                    'content' => [
+                        ['type' => 'text', 'text' => $prompt],
+                        [
+                            'type' => 'video_url',
+                            'video_url' => ['url' => $mediaUrl],
+                        ],
+                    ],
+                ],
+            ],
+            model: $model,
+            options: [
+                'response_format' => ['type' => 'json_object'],
+                'max_tokens' => $maxTokens,
+            ],
+        );
+
+        return $this->decodeAnalysisResponse($response, $model, $maxTokens);
+    }
+
+    /**
+     * @return array{0: string, 1: int|null, 2: int|null, 3: bool}
+     */
+    private function continueTranscriptUntilComplete(
+        string $mediaUrl,
+        string $partialTranscript,
+        string $model,
+        bool $outputTruncated,
+    ): array {
+        $maxAttempts = max(1, (int) config('snitch.video_analysis.transcript_continuation.max_attempts', 2));
+        $continuationMaxTokens = (int) config('snitch.video_analysis.transcript_continuation.max_tokens', 16384);
+        $promptTokens = null;
+        $completionTokens = null;
+        $transcript = trim($partialTranscript);
+
+        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+            if (! $this->shouldRequestTranscriptContinuation($transcript, $outputTruncated)) {
+                break;
+            }
+
+            $response = $this->client->chat(
+                messages: [
+                    [
+                        'role' => 'system',
+                        'content' => <<<'SYSTEM'
+You continue verbatim reel transcripts for social video analysis.
+Return ONLY valid JSON with a single "transcript" string.
+Write spoken words in the original language. Do not summarize, translate, or add commentary.
+SYSTEM,
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => [
+                            ['type' => 'text', 'text' => $this->buildTranscriptContinuationPrompt($transcript)],
+                            [
+                                'type' => 'video_url',
+                                'video_url' => ['url' => $mediaUrl],
+                            ],
+                        ],
+                    ],
+                ],
+                model: $model,
+                options: [
+                    'response_format' => ['type' => 'json_object'],
+                    'max_tokens' => $continuationMaxTokens,
+                ],
+            );
+
+            $text = $this->client->extractAssistantText($response);
+            $usage = $this->client->extractUsage($response);
+            $finishReason = $this->client->extractFinishReason($response);
+            $payload = json_decode($this->extractJson($text), true);
+
+            $promptTokens = $this->sumNullableInts($promptTokens, $usage['prompt_tokens']);
+            $completionTokens = $this->sumNullableInts($completionTokens, $usage['completion_tokens']);
+            $outputTruncated = $finishReason === 'length';
+
+            if (! is_array($payload)) {
+                Log::warning('Transcript continuation response was not valid JSON.', [
+                    'finish_reason' => $finishReason,
+                    'attempt' => $attempt + 1,
+                    'assistant_text_snippet' => $this->logSnippet($text),
+                    'json_error' => json_last_error_msg(),
+                ]);
+
+                break;
+            }
+
+            $continuation = VideoAnalysisResult::fromModelPayload(
+                ['transcript' => $payload['transcript'] ?? null],
+                $model,
+            )->transcript;
+
+            if ($continuation === '') {
+                break;
+            }
+
+            $transcript = $this->mergeTranscriptContinuation($transcript, $continuation);
+
+            if ($finishReason === 'length') {
+                Log::warning('Transcript continuation hit max_tokens; transcript may still be incomplete.', [
+                    'attempt' => $attempt + 1,
+                    'max_tokens' => $continuationMaxTokens,
+                    'completion_tokens' => $usage['completion_tokens'],
+                    'model' => $model,
+                ]);
+            }
+        }
+
+        return [$transcript, $promptTokens, $completionTokens, $outputTruncated];
+    }
+
+    /**
+     * @return array{0: array<string, mixed>, 1: int|null, 2: int|null, 3: string|null}
+     */
+    private function decodeAnalysisResponse(array $response, string $model, int $maxTokens): array
+    {
+        $text = $this->client->extractAssistantText($response);
+        $usage = $this->client->extractUsage($response);
+        $finishReason = $this->client->extractFinishReason($response);
+        $payload = json_decode($this->extractJson($text), true);
+
+        if (! is_array($payload)) {
+            Log::warning('Video analysis response was not valid JSON.', [
+                'finish_reason' => $finishReason,
+                'prompt_tokens' => $usage['prompt_tokens'],
+                'completion_tokens' => $usage['completion_tokens'],
+                'assistant_text_snippet' => $this->logSnippet($text),
+                'json_error' => json_last_error_msg(),
+            ]);
+
+            throw new RuntimeException('Video analysis did not return valid JSON.');
+        }
+
+        if ($finishReason === 'length') {
+            Log::warning('Video analysis response hit max_tokens during initial parse.', [
+                'max_tokens' => $maxTokens,
+                'completion_tokens' => $usage['completion_tokens'],
+                'model' => $model,
+            ]);
+        }
+
+        return [$payload, $usage['prompt_tokens'], $usage['completion_tokens'], $finishReason];
+    }
+
+    private function analysisSystemPrompt(): string
+    {
+        return <<<'SYSTEM'
+You analyse short-form social videos for creators who will remake the craft, not quote the script.
+Return ONLY valid JSON matching the schema.
+Write every string value in English (UK), including concept, idea, topics, how_to_copy, visual_summary, cta, and labels.
+Do not use Chinese or other non-English prose. Spoken-word quotes in hook may keep the original language, but all explanation stays English.
+Prioritise reusable craft concepts and engagement mechanics.
+Keep the concept-first fields (hook / concept / idea / visual_summary / how_to_copy) concise and free of long transcript dumps or caption paraphrasing - put every verbatim spoken word in the separate transcript field instead, from first word to last, without summarizing or truncating.
+When speech is present, reserve most of your output token budget for transcript until the reel ends. Do not stop early.
+Never invent music or SFX that are not audible in the media. Prefer platform music metadata when provided over guessing a song title.
+Reject vague filler ("engaging", "relatable vibe", "great energy") - name the mechanic.
+Always fill hook_type_slugs, topic_slugs, and visual_craft_slugs from the controlled catalogue when they fit (e.g. myth_bust for myth-busting opens). Use custom_tags only when nothing fits.
+When you see real VFX (particles, glitch/VHS, greenscreen keying, sticker packs, motion graphics, screen warp, light leaks, CapCut template FX, AI face filters), emit the matching Grade & effects visual_craft slugs. Do not call ordinary jump cuts, fades, or colour grade "VFX".
+For how_to_copy, always use a Markdown numbered list with a real newline before each step (1. / 2. / 3.). Never write steps inline on one line. Keep cta as the post's ask only - not inside how_to_copy.
+SYSTEM;
+    }
+
+    private function shouldRequestTranscriptContinuation(string $transcript, bool $outputTruncated): bool
+    {
+        if (! filter_var(config('snitch.video_analysis.transcript_continuation.enabled', true), FILTER_VALIDATE_BOOLEAN)) {
+            return false;
+        }
+
+        if (trim($transcript) === '') {
+            return false;
+        }
+
+        return $outputTruncated || $this->transcriptLooksIncomplete($transcript);
+    }
+
+    private function transcriptLooksIncomplete(string $transcript): bool
+    {
+        $trimmed = trim($transcript);
+
+        if ($trimmed === '') {
+            return false;
+        }
+
+        if (str_contains($trimmed, '[Output limit reached')
+            || str_contains($trimmed, '[Transcript may be incomplete')) {
+            return false;
+        }
+
+        if (preg_match('/[.!?…"\')\]]$/u', $trimmed) === 1) {
+            return false;
+        }
+
+        $lines = preg_split('/\r\n|\r|\n/', $trimmed) ?: [];
+        $lastLine = trim((string) end($lines));
+
+        if ($lastLine !== '' && preg_match('/[.!?…"\')\]]$/u', $lastLine) === 1) {
+            return false;
+        }
+
+        if ($lastLine !== '' && strlen($lastLine) < 28 && str_word_count($lastLine) <= 6) {
+            return true;
+        }
+
+        if (count($lines) >= 20 && strlen($trimmed) < 1400) {
+            return true;
+        }
+
+        return true;
+    }
+
+    private function buildTranscriptContinuationPrompt(string $partialTranscript): string
+    {
+        $tail = $this->transcriptTail($partialTranscript, 900);
+
+        return <<<PROMPT
+The reel transcription stopped early. Continue verbatim from the next spoken word through the final word of the reel.
+
+Partial transcript ends with:
+---
+{$tail}
+---
+
+Rules:
+- Return ONLY JSON: {"transcript": "continuation text only"}
+- Do not repeat words already captured in the partial transcript.
+- Include every remaining spoken word until the reel ends.
+- Keep the original spoken language.
+- If no speech remains after the partial transcript, return {"transcript": ""}.
+PROMPT;
+    }
+
+    private function transcriptTail(string $transcript, int $maxChars): string
+    {
+        $trimmed = trim($transcript);
+
+        if (strlen($trimmed) <= $maxChars) {
+            return $trimmed;
+        }
+
+        return '...'.substr($trimmed, -$maxChars);
+    }
+
+    private function mergeTranscriptContinuation(string $partial, string $continuation): string
+    {
+        $partial = trim($partial);
+        $continuation = trim($continuation);
+
+        if ($continuation === '') {
+            return $partial;
+        }
+
+        if ($partial === '') {
+            return $continuation;
+        }
+
+        if (str_starts_with($continuation, $partial)) {
+            return trim($continuation);
+        }
+
+        if (str_ends_with($partial, $continuation)) {
+            return $partial;
+        }
+
+        $overlap = $this->transcriptOverlapSuffixPrefix($partial, $continuation);
+
+        if ($overlap !== '') {
+            return trim(substr($partial, 0, -strlen($overlap)).$continuation);
+        }
+
+        if (substr_count($partial, "\n") >= 5) {
+            return rtrim($partial)."\n".ltrim($continuation);
+        }
+
+        return rtrim($partial).' '.ltrim($continuation);
+    }
+
+    private function transcriptOverlapSuffixPrefix(string $left, string $right): string
+    {
+        $max = min(strlen($left), strlen($right), 240);
+
+        for ($size = $max; $size >= 20; $size--) {
+            $suffix = substr($left, -$size);
+
+            if ($suffix !== '' && str_starts_with($right, $suffix)) {
+                return $suffix;
+            }
+        }
+
+        return '';
+    }
+
+    private function sumNullableInts(?int $left, ?int $right): ?int
+    {
+        if ($left === null && $right === null) {
+            return null;
+        }
+
+        return ($left ?? 0) + ($right ?? 0);
+    }
+
+    private function transcriptFormatNotes(VideoAnalysisResult $result): ?string
+    {
+        if ($result->outputTruncated) {
+            return 'Model output limit reached; transcript may be truncated.';
+        }
+
+        if ($result->transcriptIncomplete) {
+            return 'Transcript ended mid-sentence; may be incomplete.';
+        }
+
+        return null;
+    }
+
     private function extractJson(string $text): string
     {
-        if (str_starts_with(trim($text), '{')) {
-            return trim($text);
+        $trimmed = trim($text);
+
+        if ($trimmed === '') {
+            return $trimmed;
         }
 
-        if (preg_match('/\{.*\}/s', $text, $matches) === 1) {
-            return $matches[0];
+        if (str_starts_with($trimmed, '{')) {
+            $balanced = $this->extractBalancedJsonObject($trimmed);
+
+            if ($balanced !== null) {
+                return $balanced;
+            }
         }
 
-        return $text;
+        $start = strpos($trimmed, '{');
+
+        if ($start !== false) {
+            $balanced = $this->extractBalancedJsonObject(substr($trimmed, $start));
+
+            if ($balanced !== null) {
+                return $balanced;
+            }
+        }
+
+        return $trimmed;
+    }
+
+    private function extractBalancedJsonObject(string $text): ?string
+    {
+        $length = strlen($text);
+        $depth = 0;
+        $inString = false;
+        $escaped = false;
+
+        for ($index = 0; $index < $length; $index++) {
+            $char = $text[$index];
+
+            if ($inString) {
+                if ($escaped) {
+                    $escaped = false;
+
+                    continue;
+                }
+
+                if ($char === '\\') {
+                    $escaped = true;
+
+                    continue;
+                }
+
+                if ($char === '"') {
+                    $inString = false;
+                }
+
+                continue;
+            }
+
+            if ($char === '"') {
+                $inString = true;
+
+                continue;
+            }
+
+            if ($char === '{') {
+                $depth++;
+
+                continue;
+            }
+
+            if ($char === '}') {
+                $depth--;
+
+                if ($depth === 0) {
+                    return substr($text, 0, $index + 1);
+                }
+            }
+        }
+
+        return null;
     }
 
     private function logSnippet(string $text, int $maxBytes = 500): string
@@ -367,6 +744,8 @@ PROMPT;
 
         if ($result->outputTruncated) {
             $transcript .= "\n\n[Output limit reached; transcript may be incomplete. Re-analyze to retry.]";
+        } elseif ($result->transcriptIncomplete) {
+            $transcript .= "\n\n[Transcript may be incomplete; re-analyze to retry.]";
         }
 
         return $transcript;
