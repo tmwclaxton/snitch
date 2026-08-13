@@ -20,7 +20,7 @@ class InstagramAdapter extends AbstractTikHubAdapter
             'username' => $handle,
         ], 'instagram');
 
-        $item = $this->extractObject($payload, ['user', 'data.user', 'user_info']);
+        $item = $this->extractObject($payload, ['data.data', 'data', 'user', 'data.user', 'user_info']);
 
         return $this->profileFromItems([$item !== [] ? $item : $payload], $handle);
     }
@@ -93,17 +93,18 @@ class InstagramAdapter extends AbstractTikHubAdapter
 
     protected function mapProfile(array $item, string $handle): ?array
     {
-        $user = is_array($item['user'] ?? null) ? $item['user'] : $item;
+        $user = $this->unwrapInstagramUser($item);
         $username = (string) ($user['username'] ?? $user['user_name'] ?? $handle);
 
-        if ($username === '' && ! isset($user['pk']) && ! isset($user['id'])) {
+        if ($username === '' && ! isset($user['pk']) && ! isset($user['id']) && ! isset($user['instagram_pk'])) {
             return null;
         }
 
         $resolved = ltrim($username !== '' ? $username : $handle, '@');
-        $externalId = $user['pk'] ?? $user['id'] ?? $user['user_id'] ?? null;
+        $externalId = $user['pk'] ?? $user['id'] ?? $user['instagram_pk'] ?? $user['user_id'] ?? null;
+        $followers = $this->followerCountFromUser($user);
 
-        return [
+        $profile = [
             'platform' => $this->platform(),
             'handle' => $resolved,
             'url' => $this->profileUrl($resolved),
@@ -111,6 +112,53 @@ class InstagramAdapter extends AbstractTikHubAdapter
             'avatar' => $user['profile_pic_url'] ?? $user['profilePicUrl'] ?? $user['avatar'] ?? null,
             'display_name' => $user['full_name'] ?? $user['fullName'] ?? $resolved,
         ];
+
+        if ($followers !== null) {
+            $profile['followers'] = $followers;
+        }
+
+        return $profile;
+    }
+
+    /**
+     * @param  array<string, mixed>  $item
+     * @return array<string, mixed>
+     */
+    private function unwrapInstagramUser(array $item): array
+    {
+        $user = is_array($item['user'] ?? null) ? $item['user'] : $item;
+
+        if (
+            is_array($user['data'] ?? null)
+            && ! isset($user['username'])
+            && ! isset($user['pk'])
+            && ! isset($user['id'])
+        ) {
+            $user = $user['data'];
+        }
+
+        return $user;
+    }
+
+    /**
+     * @param  array<string, mixed>  $user
+     */
+    private function followerCountFromUser(array $user): ?int
+    {
+        $candidates = [
+            $user['follower_count'] ?? null,
+            $user['followers'] ?? null,
+            $user['followersCount'] ?? null,
+            data_get($user, 'edge_followed_by.count'),
+        ];
+
+        foreach ($candidates as $value) {
+            if (is_numeric($value) && (int) $value >= 0) {
+                return (int) $value;
+            }
+        }
+
+        return null;
     }
 
     protected function mapPost(array $item, string $handle): ?array

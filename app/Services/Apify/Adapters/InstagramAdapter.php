@@ -29,6 +29,21 @@ class InstagramAdapter extends AbstractPlatformAdapter
         ];
     }
 
+    public function resolveProfile(string $handleOrUrl): array
+    {
+        $handle = $this->normalizeHandle($handleOrUrl);
+        $job = $this->resolveActorJob($handle);
+        $items = $this->client->runActor($job['actorId'], $job['input']);
+        $profile = $this->profileFromActorItems($items, $handle);
+        $followers = $this->followersFromActorItems($items);
+
+        if ($followers !== null) {
+            $profile['followers'] = $followers;
+        }
+
+        return $profile;
+    }
+
     /**
      * Influencer / competitor verify needs bio + followersCount; posts payloads rarely include them.
      *
@@ -92,6 +107,33 @@ class InstagramAdapter extends AbstractPlatformAdapter
                 'resultsLimit' => 1,
             ],
         ];
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $items
+     */
+    private function followersFromActorItems(array $items): ?int
+    {
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $owner = is_array($item['owner'] ?? null) ? $item['owner'] : $item;
+            $candidates = [
+                $item['followersCount'] ?? null,
+                $owner['followersCount'] ?? null,
+                data_get($owner, 'edge_followed_by.count'),
+            ];
+
+            foreach ($candidates as $value) {
+                if (is_numeric($value) && (int) $value >= 0) {
+                    return (int) $value;
+                }
+            }
+        }
+
+        return null;
     }
 
     protected function mapProfile(array $item, string $handle): ?array

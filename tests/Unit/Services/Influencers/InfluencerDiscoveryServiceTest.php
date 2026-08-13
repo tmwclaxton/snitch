@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services\Influencers;
 
+use App\Enums\Platform;
 use App\Models\BrandProfile;
 use App\Models\User;
 use App\Services\Analysis\NanoGptClient;
@@ -502,5 +503,137 @@ class InfluencerDiscoveryServiceTest extends TestCase
             $service,
             new RuntimeException('Firecrawl timed out'),
         ));
+    }
+
+    public function test_social_from_url_rejects_non_profile_tiktok_paths(): void
+    {
+        $service = $this->service();
+        $method = new ReflectionMethod(InfluencerDiscoveryService::class, 'socialFromUrl');
+
+        $this->assertNull($method->invoke($service, 'https://www.tiktok.com/tag/ugcstrategy'));
+        $this->assertNull($method->invoke($service, 'https://tiktok.com/discover/food'));
+        $this->assertNull($method->invoke($service, 'https://tiktok.com/music/original-sound-123'));
+        $this->assertNull($method->invoke($service, 'https://tiktok.com/search?q=ugc'));
+
+        $parsed = $method->invoke($service, 'https://www.tiktok.com/@realcreator');
+        $this->assertSame('tiktok', $parsed['platform']);
+        $this->assertSame('realcreator', $parsed['handle']);
+    }
+
+    public function test_candidates_from_search_hits_skips_junk_tiktok_tag_urls(): void
+    {
+        $service = $this->service();
+        $method = new ReflectionMethod(InfluencerDiscoveryService::class, 'candidatesFromSearchHits');
+
+        $candidates = $method->invoke($service, [
+            [
+                'url' => 'https://www.tiktok.com/tag/ugcstrategy',
+                'title' => '#ugcstrategy',
+                'description' => 'Hashtag page',
+            ],
+            [
+                'url' => 'https://www.tiktok.com/@goodcreator',
+                'title' => 'Good Creator',
+                'description' => 'UGC tips',
+            ],
+        ], ['tiktok']);
+
+        $this->assertCount(1, $candidates);
+        $this->assertSame('goodcreator', $candidates[0]['handle']);
+    }
+
+    public function test_enrich_fit_reasons_backfills_firecrawl_rows_without_fit_reason(): void
+    {
+        $user = User::factory()->create();
+        $brand = BrandProfile::factory()->for($user)->create([
+            'name' => 'UGC Co',
+            'description' => 'UGC strategy tools',
+        ]);
+
+        config(['snitch.nanogpt.api_key' => '']);
+
+        $rows = $this->service()->enrichFitReasons($brand, [
+            'platforms' => ['tiktok'],
+            'language' => 'English',
+            'min_followers' => null,
+            'max_followers' => null,
+            'brief' => 'UGC strategy creators',
+        ], [
+            [
+                'platform' => 'tiktok',
+                'handle' => 'ugctips',
+                'display_name' => 'UGC Tips',
+                'followers' => 9000,
+                'source' => 'firecrawl hit',
+                'seed' => 'firecrawl',
+                'fit_reason' => null,
+            ],
+        ]);
+
+        $this->assertNotNull($rows[0]['fit_reason']);
+        $this->assertStringContainsString('ugctips', $rows[0]['fit_reason']);
+    }
+
+    public function test_verify_accepts_tikhub_instagram_profile_with_followers_and_external_id(): void
+    {
+        $user = User::factory()->create();
+        $brand = BrandProfile::factory()->for($user)->create([
+            'name' => 'UGC Co',
+            'description' => 'UGC strategy',
+        ]);
+
+        $tikhub = $this->createMock(\App\Services\TikHub\Adapters\InstagramAdapter::class);
+        $tikhub->method('resolveProfile')->willReturn([
+            'platform' => Platform::Instagram,
+            'handle' => 'vanessalau',
+            'url' => 'https://instagram.com/vanessalau',
+            'external_id' => '93872',
+            'avatar' => 'https://cdn.example.com/v.jpg',
+            'display_name' => 'Vanessa',
+            'followers' => 418,
+        ]);
+
+        $manager = $this->createMock(PlatformAdapterManager::class);
+        $manager->method('for')->willReturn($tikhub);
+
+        config([
+            'snitch.nanogpt.api_key' => '',
+            'snitch.influencer_find.min_suggestions' => 1,
+            'snitch.influencer_find.max_suggestions' => 6,
+        ]);
+
+        $service = new InfluencerDiscoveryService(
+            $this->createMock(FirecrawlClient::class),
+            $this->createMock(NanoGptClient::class),
+            $manager,
+            $this->createMock(ApifyClient::class),
+            $this->createMock(ApifyMonthlyCapGate::class),
+        );
+
+        $verified = $service->verify(
+            [
+                [
+                    'name' => 'Vanessa',
+                    'platform' => 'instagram',
+                    'handle' => 'vanessalau',
+                    'source' => 'firecrawl hit',
+                    'seed' => 'firecrawl',
+                ],
+            ],
+            $brand,
+            [
+                'platforms' => ['instagram'],
+                'language' => 'English',
+                'min_followers' => 100,
+                'max_followers' => 50000,
+                'brief' => 'UGC creators',
+            ],
+            ['instagram'],
+        );
+
+        $this->assertCount(1, $verified);
+        $this->assertSame('vanessalau', $verified[0]['handle']);
+        $this->assertSame(418, $verified[0]['followers']);
+        $this->assertNull($verified[0]['fit_reason']);
     }
 }

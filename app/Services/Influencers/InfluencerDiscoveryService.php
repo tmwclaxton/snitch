@@ -1370,6 +1370,34 @@ class InfluencerDiscoveryService
     }
 
     /**
+     * Path segments that are never creator handles when scraped from search hits.
+     *
+     * @return list<string>
+     */
+    private function reservedSocialPathSegments(string $platform): array
+    {
+        $shared = [
+            'p', 'reel', 'reels', 'stories', 'explore', 'tv', 'tags', 'tag', 'share', 'accounts',
+            'search', 'discover', 'music', 'live', 'video', 'watch', 'playlist', 'channel', 'user', 'c',
+            'hashtag', 'hashtags', 'location', 'locations', 'place', 'effect', 'effects', 'trending',
+        ];
+
+        return match ($platform) {
+            'instagram' => [...$shared, 'directory', 'topics', 'name', 'legal', 'about'],
+            'tiktok' => [...$shared, 'foryou', 'following'],
+            'youtube' => [...$shared, 'shorts', 'embed', 'feed', 'results', 'post'],
+            'facebook' => [...$shared, 'pages', 'groups', 'people', 'profile.php', 'events', 'marketplace'],
+            'linkedin' => ['company', 'school', 'jobs', 'feed', 'posts', 'pulse', 'search', 'pub'],
+            default => $shared,
+        };
+    }
+
+    private function isReservedSocialPathSegment(string $platform, string $segment): bool
+    {
+        return in_array(strtolower($segment), $this->reservedSocialPathSegments($platform), true);
+    }
+
+    /**
      * @return array{platform: string, handle: string, profile_kind?: string}|null
      */
     private function socialFromUrl(string $url): ?array
@@ -1416,7 +1444,7 @@ class InfluencerDiscoveryService
                     $segments[0] === 'shorts' || $segments[0] === 'watch' || $segments[0] === 'embed' => null,
                     default => ltrim($segments[0], '@'),
                 },
-                'tiktok', 'instagram' => in_array(strtolower($segments[0]), ['p', 'reel', 'reels', 'stories', 'explore', 'tv', 'tags', 'share', 'accounts'], true)
+                'tiktok', 'instagram' => $this->isReservedSocialPathSegment($platform, $segments[0])
                     ? null
                     : ltrim($segments[0], '@'),
                 default => null,
@@ -1828,7 +1856,9 @@ class InfluencerDiscoveryService
                 $profile = $adapter->resolveProfile($resolveTarget);
                 $profiles[$batchIndex] = [
                     'profile' => $profile,
-                    'followers' => null,
+                    'followers' => isset($profile['followers']) && is_numeric($profile['followers'])
+                        ? (int) $profile['followers']
+                        : null,
                 ];
             } catch (Throwable) {
                 $profiles[$batchIndex] = null;
@@ -1963,7 +1993,11 @@ class InfluencerDiscoveryService
             return null;
         }
 
-        if (preg_match('/^(null|none|n\/a|unknown|p|reel|reels|stories|explore|tags|share|accounts|video|watch|shorts|channel|user|c)$/i', $value) === 1) {
+        if (preg_match('/^(null|none|n\/a|unknown|p|reel|reels|stories|explore|tags|tag|share|accounts|video|watch|shorts|channel|user|c|discover|music|search|live|hashtag|trending)$/i', $value) === 1) {
+            return null;
+        }
+
+        if ($platform !== null && $this->isReservedSocialPathSegment($platform, $value)) {
             return null;
         }
 

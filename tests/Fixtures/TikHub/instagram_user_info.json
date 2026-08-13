@@ -1,0 +1,13 @@
+{
+    "code": 200,
+    "data": {
+        "data": {
+            "username": "vanessalau",
+            "id": "93872",
+            "instagram_pk": "93872",
+            "full_name": "Vanessa",
+            "follower_count": 418,
+            "profile_pic_url": "https://cdn.example.com/vanessalau.jpg"
+        }
+    }
+}

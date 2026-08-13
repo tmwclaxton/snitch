@@ -136,16 +136,22 @@ class TikTokAdapter extends AbstractTikHubAdapter
         }
 
         $externalId = $user['id'] ?? $user['uid'] ?? $user['user_id'] ?? null;
+        $followers = $stats['followerCount'] ?? $stats['follower_count'] ?? $user['follower_count'] ?? $user['followers'] ?? null;
 
-        return [
+        $profile = [
             'platform' => $this->platform(),
             'handle' => $resolved,
             'url' => $this->profileUrl($resolved),
             'external_id' => $externalId !== null ? (string) $externalId : null,
             'avatar' => $user['avatarLarger'] ?? $user['avatarThumb'] ?? $user['avatar_larger']['url_list'][0] ?? null,
             'display_name' => $user['nickname'] ?? $user['nick_name'] ?? $resolved,
-            // stats unused in profile contract but kept via raw in callers if needed
         ];
+
+        if (is_numeric($followers) && (int) $followers >= 0) {
+            $profile['followers'] = (int) $followers;
+        }
+
+        return $profile;
     }
 
     protected function mapPost(array $item, string $handle): ?array
