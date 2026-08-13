@@ -81,14 +81,21 @@ SYSTEM,
         );
 
         $text = $this->client->extractAssistantText($response);
+        $usage = $this->client->extractUsage($response);
+        $finishReason = $this->client->extractFinishReason($response);
         $payload = json_decode($this->extractJson($text), true);
 
         if (! is_array($payload)) {
+            Log::warning('Video analysis response was not valid JSON.', [
+                'finish_reason' => $finishReason,
+                'prompt_tokens' => $usage['prompt_tokens'],
+                'completion_tokens' => $usage['completion_tokens'],
+                'assistant_text_snippet' => $this->logSnippet($text),
+                'json_error' => json_last_error_msg(),
+            ]);
+
             throw new RuntimeException('Video analysis did not return valid JSON.');
         }
-
-        $usage = $this->client->extractUsage($response);
-        $finishReason = $this->client->extractFinishReason($response);
 
         if ($finishReason === 'length') {
             Log::warning('Video analysis response hit max_tokens; transcript may be incomplete.', [
@@ -334,6 +341,20 @@ PROMPT;
         }
 
         return $text;
+    }
+
+    private function logSnippet(string $text, int $maxBytes = 500): string
+    {
+        $normalized = preg_replace('/\s+/u', ' ', trim($text)) ?? trim($text);
+        $normalized = preg_replace('/([?&]token=)[^&\s"\']+/i', '$1[redacted]', $normalized) ?? $normalized;
+        $normalized = preg_replace('/(Bearer\s+)[A-Za-z0-9._\-+=\/]+/i', '$1[redacted]', $normalized) ?? $normalized;
+        $normalized = preg_replace('/(api[_-]?key=)[^&\s"\']+/i', '$1[redacted]', $normalized) ?? $normalized;
+
+        if (strlen($normalized) <= $maxBytes) {
+            return $normalized;
+        }
+
+        return substr($normalized, 0, $maxBytes).'...';
     }
 
     private function persistableTranscript(VideoAnalysisResult $result): ?string

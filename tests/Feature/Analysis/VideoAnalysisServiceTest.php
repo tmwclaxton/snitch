@@ -11,6 +11,7 @@ use App\Services\Analysis\VideoAnalysisService;
 use Database\Seeders\AnalysisTermSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class VideoAnalysisServiceTest extends TestCase
@@ -612,5 +613,47 @@ class VideoAnalysisServiceTest extends TestCase
                 && str_contains($userText, 'highest priority when speech is present')
                 && str_contains($userText, 'Never stop mid-sentence or mid-reel');
         });
+    }
+
+    public function test_analyze_url_logs_snippet_when_response_is_not_valid_json(): void
+    {
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'finish_reason' => 'length',
+                    'message' => [
+                        'content' => 'Here is the analysis: {"concept": "broken',
+                    ],
+                ]],
+                'usage' => [
+                    'prompt_tokens' => 900,
+                    'completion_tokens' => 1200,
+                ],
+            ]),
+        ]);
+
+        Log::spy();
+
+        try {
+            app(VideoAnalysisService::class)->analyzeUrl('https://cdn.example.com/reel.mp4');
+            $this->fail('Expected invalid JSON exception.');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('Video analysis did not return valid JSON.', $e->getMessage());
+        }
+
+        Log::shouldHaveReceived('warning')
+            ->once()
+            ->with('Video analysis response was not valid JSON.', \Mockery::on(function (array $context): bool {
+                return ($context['finish_reason'] ?? null) === 'length'
+                    && ($context['prompt_tokens'] ?? null) === 900
+                    && ($context['completion_tokens'] ?? null) === 1200
+                    && str_contains((string) ($context['assistant_text_snippet'] ?? ''), '{"concept": "broken')
+                    && isset($context['json_error']);
+            }));
     }
 }
