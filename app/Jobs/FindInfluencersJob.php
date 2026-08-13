@@ -100,7 +100,6 @@ class FindInfluencersJob implements ShouldQueue
                 ]);
             });
         } catch (InsufficientInfluencerSuggestionsException $exception) {
-            $this->chargeInfluencerFindVendors($user, $charger, $billing);
             $current = $this->payload();
             $this->putStatus([
                 'status' => 'failed',

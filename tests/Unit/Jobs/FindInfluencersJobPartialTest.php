@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Jobs;
 
+use App\Exceptions\InsufficientInfluencerSuggestionsException;
 use App\Jobs\FindInfluencersJob;
 use App\Models\BrandProfile;
 use App\Models\User;
@@ -81,5 +82,56 @@ class FindInfluencersJobPartialTest extends TestCase
         $this->assertSame('completed', $payload['status'] ?? null);
         $this->assertTrue($payload['partial'] ?? false);
         $this->assertCount(2, $payload['suggestions'] ?? []);
+    }
+
+    public function test_zero_verified_run_does_not_charge_vendors(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        app(UsageBillingService::class)->creditClaimBonus($user);
+
+        $runId = (string) Str::uuid();
+        Cache::put(FindInfluencersJob::cacheKeyFor($user->id, $runId), [
+            'status' => 'queued',
+            'filters' => [
+                'platforms' => ['instagram'],
+                'brief' => 'Find creators',
+            ],
+            'brief' => 'Find creators',
+            'suggestions' => [],
+            'decisions' => [],
+            'error' => null,
+        ], now()->addHour());
+
+        $discovery = $this->createMock(InfluencerDiscoveryService::class);
+        $discovery->expects($this->once())
+            ->method('discover')
+            ->willThrowException(new InsufficientInfluencerSuggestionsException(
+                [],
+                'Only 0 verified influencer profiles found (need at least 6).',
+            ));
+
+        $charger = $this->createMock(VendorUsageCharger::class);
+        $charger->expects($this->never())->method('chargeFirecrawl');
+        $charger->expects($this->never())->method('chargeNanoGpt');
+        $charger->expects($this->never())->method('chargePulledApifyRuns');
+        $charger->expects($this->never())->method('chargePulledTikHubRuns');
+
+        $this->app->instance(InfluencerDiscoveryService::class, $discovery);
+
+        (new FindInfluencersJob($user->id, $runId, [
+            'platforms' => ['instagram'],
+            'language' => null,
+            'min_followers' => null,
+            'max_followers' => null,
+            'brief' => 'Find creators',
+        ]))->handle(
+            $discovery,
+            $charger,
+            app(UsageBillingService::class),
+        );
+
+        $payload = Cache::get(FindInfluencersJob::cacheKeyFor($user->id, $runId));
+        $this->assertSame('failed', $payload['status'] ?? null);
     }
 }
