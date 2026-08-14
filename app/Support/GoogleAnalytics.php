@@ -21,6 +21,12 @@ final class GoogleAnalytics
             return false;
         }
 
-        return (bool) config('services.google.analytics_enabled');
+        $flag = config('services.google.analytics_enabled');
+
+        if ($flag === null || $flag === '') {
+            return app()->isProduction();
+        }
+
+        return filter_var($flag, FILTER_VALIDATE_BOOL);
     }
 }

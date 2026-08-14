@@ -66,4 +66,13 @@ class GoogleAnalyticsTest extends TestCase
             $cookies,
         );
     }
+
+    public function test_production_env_example_enables_google_analytics(): void
+    {
+        $example = file_get_contents(base_path('deploy/env.production.example'));
+
+        $this->assertIsString($example);
+        $this->assertStringContainsString('GOOGLE_ANALYTICS_ID=G-Y3VFH257B5', $example);
+        $this->assertStringContainsString('GOOGLE_ANALYTICS_ENABLED=true', $example);
+    }
 }
