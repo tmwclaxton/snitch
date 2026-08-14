@@ -11,6 +11,7 @@ import { initializeTheme } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
+import { initializeGoogleAnalytics } from '@/lib/googleAnalytics';
 
 library.add(fas, far, fab);
 
@@ -61,4 +62,6 @@ if (typeof window !== 'undefined') {
 
     // This will listen for flash toast data from the server...
     initializeFlashToast();
+
+    initializeGoogleAnalytics();
 }

@@ -46,4 +46,12 @@ return [
         'base_url' => env('POSTAL_BASE_URL', 'https://postal.grantgunner.org'),
     ],
 
+    'google' => [
+        'analytics_id' => env('GOOGLE_ANALYTICS_ID', 'G-Y3VFH257B5'),
+        'analytics_enabled' => filter_var(
+            env('GOOGLE_ANALYTICS_ENABLED', env('APP_ENV') === 'production'),
+            FILTER_VALIDATE_BOOL,
+        ),
+    ],
+
 ];

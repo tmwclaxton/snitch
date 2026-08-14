@@ -9,7 +9,7 @@ defineOptions({
 
 <template>
     <div>
-        <LegalDocument title="Privacy policy" updated="9 August 2026">
+        <LegalDocument title="Privacy policy" updated="14 August 2026">
             <p>
                 This policy describes how Snitch ("we") handles information when
                 you use the product at www.snitchsocial.net.
@@ -67,7 +67,11 @@ defineOptions({
             <p>
                 The public Blog and Analytics pages show marketing content and
                 aggregate product counters. They are not used to publish your
-                private workspace data, handles, or captions.
+                private workspace data, handles, or captions. Separately, Google
+                Analytics 4 records page views for the website and installed
+                PWA (including standalone display mode). That usage data is
+                processed by Google; we do not send your email, brand profile,
+                or tracked-account content with those hits.
             </p>
 
             <h2 class="snitch-display text-xl text-snitch-ink">
@@ -75,8 +79,9 @@ defineOptions({
             </h2>
             <p>
                 We use session cookies required to keep you signed in, plus
-                preference cookies such as appearance. See the Cookies page for
-                details.
+                preference cookies such as appearance. We also use Google
+                Analytics 4 cookies to measure site and PWA usage. See the
+                Cookies page for details.
             </p>
 
             <h2 class="snitch-display text-xl text-snitch-ink">

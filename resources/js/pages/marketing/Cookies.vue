@@ -9,7 +9,7 @@ defineOptions({
 
 <template>
     <div>
-        <LegalDocument title="Cookie notice" updated="9 August 2026">
+        <LegalDocument title="Cookie notice" updated="14 August 2026">
             <p>
                 This notice explains cookies used by Snitch on
                 www.snitchsocial.net.
@@ -43,15 +43,21 @@ defineOptions({
                 site.
             </p>
 
-            <h2 class="snitch-display text-xl text-snitch-ink">
+                <h2 class="snitch-display text-xl text-snitch-ink">
                 Analytics
             </h2>
             <p>
-                Snitch does not ship third-party marketing analytics cookies by
-                default. The public Analytics page shows aggregate product
-                counters without advertising trackers. If we add marketing
-                analytics later, this page will be updated before those cookies
-                are enabled.
+                We use Google Analytics 4 (gtag.js, measurement ID
+                G-Y3VFH257B5) to understand how the website and installed PWA
+                are used: page views, display mode (browser vs standalone),
+                and whether the app was installed. Google sets first-party
+                cookies such as <code class="text-sm">_ga</code> and
+                <code class="text-sm">_ga_*</code> on snitchsocial.net. Hits
+                use the Beacon API so they still send when the PWA is
+                backgrounded. We do not send account emails or workspace
+                content to Google. The public Analytics page is a separate
+                product dashboard of aggregate Snitch counters, not this
+                tracker.
             </p>
 
             <h2 class="snitch-display text-xl text-snitch-ink">
