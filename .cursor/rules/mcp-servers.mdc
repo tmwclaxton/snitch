@@ -16,7 +16,6 @@ This project configures MCP servers in `.cursor/mcp.json`:
 | `outline` | Outline knowledge base | `OUTLINE_API_TOKEN` |
 | `google-ads` | Official Google Ads MCP (read) | Google ADC + developer token |
 | `google-analytics` | Official Analytics MCP (read) | Google ADC |
-| `google-search-console` | Search Console SEO data | `GSC_SERVICE_ACCOUNT_PATH` |
 | `nanogpt` | NanoGPT (required for image generation) | `NANOGPT_API_KEY` |
 | `github` | Issues, PRs, CI, repos | `GITHUB_PAT` |
 | `stripe` | Stripe billing / payments | OAuth in Cursor |
@@ -37,7 +36,7 @@ This project configures MCP servers in `.cursor/mcp.json`:
 
 ## Prerequisites
 
-- **Firecrawl / NanoGPT / GSC**: Node/`npx` + the env vars above
+- **Firecrawl / NanoGPT**: Node/`npx` + the env vars above
 - **n8n**: `N8N_MCP_TOKEN` (URL is set in `mcp.json`)
 - **Outline**: `OUTLINE_API_TOKEN` (URL is set in `mcp.json`)
 - **Meta Ads**: Pipeboard MCP at `https://meta-ads.mcp.pipeboard.co/` (no project env var)
