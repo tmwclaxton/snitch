@@ -7,7 +7,12 @@ return [
     | config/billing.php (platform fee + prepaid usage credits).
     */
 
-    'trial_days' => 0,
+    /*
+    | Generic (no-card) trial for claimed website users. Unclaimed MCP agent
+    | accounts never receive this clock. Stripe Checkout stays without a
+    | subscription trial so the first paid invoice still grants plan credits.
+    */
+    'trial_days' => (int) env('SNITCH_TRIAL_DAYS', 7),
 
     'plans' => [
         'none' => [

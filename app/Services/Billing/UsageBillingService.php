@@ -61,8 +61,51 @@ class UsageBillingService
     }
 
     /**
+     * Claimed website users (and claimed agent accounts) get a generic no-card
+     * trial. Unclaimed MCP create_account users never do.
+     */
+    public function isOnWebTrial(User $user): bool
+    {
+        return $user->claimed_at !== null && $user->onGenericTrial();
+    }
+
+    public function trialDays(): int
+    {
+        return max(0, (int) config('subscriptions.trial_days', 7));
+    }
+
+    public function ensureWebTrialStarted(User $user): void
+    {
+        if ($user->claimed_at === null) {
+            return;
+        }
+
+        if ($user->trial_ends_at !== null) {
+            return;
+        }
+
+        $subscribed = $this->hasPlatformSubscription($user);
+        $user->unsetRelation('subscriptions');
+
+        if ($subscribed) {
+            return;
+        }
+
+        $days = $this->trialDays();
+
+        if ($days <= 0) {
+            return;
+        }
+
+        $user->forceFill([
+            'trial_ends_at' => now()->addDays($days),
+        ])->save();
+    }
+
+    /**
      * Balance that counts for product access. Unsubscribed users may only spend
-     * never-expiring claim_bonus (starter £5). Subscribed users use all unexpired lots.
+     * never-expiring claim_bonus (starter £5) during a live web trial.
+     * Subscribed users use all unexpired lots.
      */
     public function accessibleBalancePence(User $user): float
     {
@@ -99,11 +142,14 @@ class UsageBillingService
      */
     public function paywallState(User $user): array
     {
+        $this->ensureWebTrialStarted($user);
+
         $subscribed = $this->hasPlatformSubscription($user);
         $starterExhausted = $this->starterAllowanceExhausted($user);
         $accessible = $this->accessibleBalancePence($user);
         $minExclusive = $this->minRunBalancePence();
         $hasBalance = $accessible > $minExclusive;
+        $onTrial = $this->isOnWebTrial($user);
 
         if ($subscribed) {
             if ($hasBalance) {
@@ -125,7 +171,17 @@ class UsageBillingService
             ];
         }
 
-        if (! $starterExhausted && $hasBalance) {
+        if ($user->claimed_at === null) {
+            return [
+                'blocked' => true,
+                'reason' => 'subscribe',
+                'message' => $this->unclaimedAgentPaywallMessage(),
+                'starter_allowance_exhausted' => false,
+                'can_top_up' => false,
+            ];
+        }
+
+        if ($onTrial && ! $starterExhausted && $hasBalance) {
             return [
                 'blocked' => false,
                 'reason' => null,
@@ -137,13 +193,21 @@ class UsageBillingService
 
         if (! $hasBalance) {
             $this->markStarterAllowanceExhausted($user);
+
+            return [
+                'blocked' => true,
+                'reason' => 'subscribe',
+                'message' => $this->starterExhaustedPaywallMessage(),
+                'starter_allowance_exhausted' => true,
+                'can_top_up' => false,
+            ];
         }
 
         return [
             'blocked' => true,
             'reason' => 'subscribe',
-            'message' => 'Your free £5 starter credit is used up. Subscribe to a paid plan on the Billing page to continue. Top-ups are available after you have a plan.',
-            'starter_allowance_exhausted' => true,
+            'message' => $this->trialEndedPaywallMessage(),
+            'starter_allowance_exhausted' => $starterExhausted,
             'can_top_up' => false,
         ];
     }
@@ -161,6 +225,8 @@ class UsageBillingService
 
     public function assertCanAccessProduct(User $user, float $estimatedPence = 1): void
     {
+        $this->ensureWebTrialStarted($user);
+
         $subscribed = $this->hasPlatformSubscription($user);
         $accessible = $this->accessibleBalancePence($user);
         $minExclusive = $this->minRunBalancePence();
@@ -169,17 +235,23 @@ class UsageBillingService
         $hasBalance = $accessible > $minExclusive && $accessible >= $estimate;
 
         if (! $subscribed) {
-            if ($this->starterAllowanceExhausted($user) || ! $hasBalance) {
-                if (! $hasBalance) {
-                    $this->markStarterAllowanceExhausted($user);
-                }
-
-                throw new PlatformSubscriptionRequiredException(
-                    'Your free £5 starter credit is used up. Subscribe to a paid plan on the Billing page to continue. Top-ups are available after you have a plan.',
-                );
+            if ($user->claimed_at === null) {
+                throw new PlatformSubscriptionRequiredException($this->unclaimedAgentPaywallMessage());
             }
 
-            return;
+            $onTrial = $this->isOnWebTrial($user);
+
+            if ($onTrial && ! $this->starterAllowanceExhausted($user) && $hasBalance) {
+                return;
+            }
+
+            if (! $hasBalance) {
+                $this->markStarterAllowanceExhausted($user);
+
+                throw new PlatformSubscriptionRequiredException($this->starterExhaustedPaywallMessage());
+            }
+
+            throw new PlatformSubscriptionRequiredException($this->trialEndedPaywallMessage());
         }
 
         if (! $hasBalance) {
@@ -192,6 +264,25 @@ class UsageBillingService
                 ),
             );
         }
+    }
+
+    private function unclaimedAgentPaywallMessage(): string
+    {
+        $days = $this->trialDays();
+
+        return "Agent accounts start at £0. Claim this account in the browser for a {$days}-day trial and £5 usage, or subscribe.";
+    }
+
+    private function starterExhaustedPaywallMessage(): string
+    {
+        return 'Your free £5 starter credit is used up. Subscribe to a paid plan on the Billing page to continue. Top-ups are available after you have a plan.';
+    }
+
+    private function trialEndedPaywallMessage(): string
+    {
+        $days = $this->trialDays();
+
+        return "Your {$days}-day trial has ended. Subscribe to the platform plan to keep using Snitch. Remaining starter credit stays in your balance.";
     }
 
     public function assertCanTopUp(User $user): void

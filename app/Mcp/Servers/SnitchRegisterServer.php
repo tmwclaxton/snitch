@@ -10,7 +10,7 @@ use Laravel\Mcp\Server\Attributes\Version;
 
 #[Name('Snitch Register')]
 #[Version('1.0.0')]
-#[Instructions('Create a Snitch agent account and receive an API token. Humans claim the account at the returned claim URL. Billable tools need a credit balance above 20p after claim/top-up or a platform plan.')]
+#[Instructions('Create a Snitch agent account and receive an API token. Agent accounts start at £0 with no trial. Humans claim the account at the returned claim URL to get a 7-day trial and £5 usage.')]
 class SnitchRegisterServer extends Server
 {
     public int $defaultPaginationLength = 50;

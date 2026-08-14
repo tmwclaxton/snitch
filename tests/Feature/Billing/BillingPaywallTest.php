@@ -123,7 +123,11 @@ class BillingPaywallTest extends TestCase
         $this->travel(400)->days();
 
         $this->assertSame(500.0, $this->billing->balancePence($user));
-        $this->assertTrue($this->billing->canAccessProduct($user));
+        $this->assertFalse($this->billing->canAccessProduct($user));
+
+        $this->subscribe($user);
+
+        $this->assertTrue($this->billing->canAccessProduct($user->fresh()));
     }
 
     public function test_subscription_bonus_expires_at_month_end(): void
@@ -376,6 +380,37 @@ class BillingPaywallTest extends TestCase
 
         $this->assertFalse($this->billing->canAccessProduct($user));
         $this->assertSame(0.0, $this->billing->balancePence($user));
+        $this->assertNull($user->trial_ends_at);
+        $this->assertFalse($this->billing->isOnWebTrial($user));
+    }
+
+    public function test_claimed_web_user_starts_trial_with_starter_credit(): void
+    {
+        $user = User::factory()->create();
+
+        $this->assertTrue($user->onGenericTrial());
+        $this->assertTrue($this->billing->isOnWebTrial($user));
+        $this->assertSame(500.0, $this->billing->balancePence($user));
+        $this->assertTrue($this->billing->canAccessProduct($user));
+        $this->assertFalse($this->billing->paywallState($user)['blocked']);
+    }
+
+    public function test_trial_end_blocks_access_even_with_remaining_starter(): void
+    {
+        $user = User::factory()->create();
+
+        $this->assertTrue($this->billing->canAccessProduct($user));
+
+        $this->travel(8)->days();
+
+        $state = $this->billing->paywallState($user->fresh());
+
+        $this->assertFalse($this->billing->isOnWebTrial($user->fresh()));
+        $this->assertSame(500.0, $this->billing->balancePence($user->fresh()));
+        $this->assertTrue($state['blocked']);
+        $this->assertSame('subscribe', $state['reason']);
+        $this->assertStringContainsString('trial has ended', (string) $state['message']);
+        $this->assertFalse($this->billing->canAccessProduct($user->fresh()));
     }
 
     public function test_mcp_http_blocks_product_tools_with_402_when_paywalled(): void

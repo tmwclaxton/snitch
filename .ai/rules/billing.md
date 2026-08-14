@@ -29,11 +29,13 @@ paths:
 Platform fee (£19/mo via `STRIPE_PRICE_PLATFORM`) plus prepaid usage credits (packs in `config/billing.php`). Seat caps for competitors/influencers are retired - money is the limit. Internal price uses vendor COGS × `price_multiplier` (default 1.75 = base + 75%); never show markup/COGS/"75%" in UI or MCP copy - only charged GBP amounts.
 
 ## Credits
-Agent MCP `create_account` starts at £0. Claiming/confirming (WorkOS bind or web signup) grants `claim_bonus_pence` (£5) once (`idempotency_key` `claim_bonus:{user_id}`). Each paid platform subscription invoice grants `subscription_bonus_pence` (£30) once per invoice (`idempotency_key` `subscription_bonus:invoice:{invoice_id}`) via Stripe `invoice.paid`.
+Agent MCP `create_account` starts at £0 with **no trial**. Claiming (WorkOS bind) or website signup grants `claim_bonus_pence` (£5) once (`idempotency_key` `claim_bonus:{user_id}`) and starts a generic no-card trial of `subscriptions.trial_days` (default 7) on `users.trial_ends_at`. Unclaimed MCP users never get `trial_ends_at`. Each paid platform subscription invoice grants `subscription_bonus_pence` (£30) once per invoice (`idempotency_key` `subscription_bonus:invoice:{invoice_id}`) via Stripe `invoice.paid`. Stripe Checkout must **not** add a subscription trial - the first paid invoice should still grant plan credits. Subscribing clears `users.trial_ends_at`.
 
-### Paywall (after free starter)
-- Free starter (£5 claim bonus) may be spent without a platform plan. Unsubscribed product access counts **only** claim_bonus remaining (never expires).
-- Once starter is exhausted (`credit_balances.starter_allowance_exhausted`, set when claim remaining hits the floor), an **active paid platform subscription** is required for product use (web data screens + MCP tools). Top-up alone must not bypass this.
+### Paywall (trial + free starter)
+- Claimed website users (and claimed agent accounts) may spend starter credit **during the 7-day trial** without a platform plan. Unsubscribed product access counts **only** claim_bonus remaining (never expires).
+- Unclaimed agent accounts are blocked until claim or subscribe.
+- When the trial ends, leftover starter stays in the wallet but product access requires an **active paid platform subscription**.
+- Once starter is exhausted (`credit_balances.starter_allowance_exhausted`, set when claim remaining hits the floor), an **active paid platform subscription** is required even if the trial is still running. Top-up alone must not bypass this.
 - **Top-ups require a paid plan** (HTTP checkout, MCP `create_credit_checkout`, Stripe webhook ignores credit sessions without a plan).
 - With a plan, access needs spendable unexpired balance above `billing.min_run_balance_pence` (default 20p). Hitting the floor is the same blocked experience as over-monthly-spend.
 - UI: shared Inertia `subscription.paywall` + `BillingPaywall` blur/modal (billing routes exempt). Mutations under `EnsureProductAccess` redirect to Billing. Non-Inertia JSON/XHR under that middleware returns 402 with no product payload. Safe Inertia GETs may still render the shell + paywall UI, but controllers must omit product data (empty stubs / redirects for show pages) - security is server-side omission, not CSS. Shared `competitors_used` / `influencers_used` are zeroed when blocked. MCP: `EnsureMcpProductAccess` allows only billing/auth tools when blocked; product list/get tools also call `McpAuth::requireProductAccess`.

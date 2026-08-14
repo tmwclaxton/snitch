@@ -71,6 +71,7 @@ class AccountClaimService
             ])->save();
 
             $this->usage->creditClaimBonus($user);
+            $this->usage->ensureWebTrialStarted($user);
             $this->referrals->bindToUser($user);
 
             return $user->fresh() ?? $user;
@@ -90,6 +91,7 @@ class AccountClaimService
         ])->save();
 
         $this->usage->creditClaimBonus($user);
+        $this->usage->ensureWebTrialStarted($user);
 
         return $user->fresh() ?? $user;
     }

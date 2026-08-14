@@ -18,8 +18,8 @@ const props = defineProps<{
             <h1 class="font-display text-3xl">Claim this Snitch account</h1>
             <p class="text-sm text-[var(--snitch-ink)]/75">
                 An agent created <strong>{{ name }}</strong>
-                <span v-if="email"> ({{ email }})</span>. Sign in with WorkOS to take ownership and receive £5
-                usage credit once.
+                <span v-if="email"> ({{ email }})</span>. Sign in with WorkOS to take ownership. Claimed
+                accounts get a 7-day trial and £5 usage credit once.
             </p>
             <Form :action="`/claim/${props.claimToken}`" method="post" class="flex flex-col gap-3">
                 <button type="submit" class="snitch-btn">Continue to sign in</button>

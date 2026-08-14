@@ -29,6 +29,7 @@ class SharedInertiaPropsTest extends TestCase
                     ->where('subscribed', false)
                     ->where('can_run_billable', true)
                     ->where('balance_pence', 500)
+                    ->where('on_trial', true)
                     ->where('min_run_balance_pence', 20)
                     ->where('paywall.blocked', false)
                     ->has('plan')

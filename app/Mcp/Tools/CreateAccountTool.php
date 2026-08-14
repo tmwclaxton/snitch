@@ -12,7 +12,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('create_account')]
-#[Description('Create a Snitch agent account. Returns an API token and claim URL. No free usage until a human claims the account and subscribes to the platform plan.')]
+#[Description('Create a Snitch agent account. Returns an API token and claim URL. Agent accounts start at £0 with no trial. A human claim in the browser grants a 7-day trial and £5 usage.')]
 class CreateAccountTool extends Tool
 {
     public function handle(Request $request, AccountClaimService $claims): Response
@@ -33,7 +33,7 @@ class CreateAccountTool extends Tool
             'api_token' => $created['plain_text_token'],
             'claim_url' => $created['claim_url'],
             'mcp_url' => url('/mcp'),
-            'note' => 'Use Authorization: Bearer <api_token> against /mcp. Billable tools need a balance above 20p - subscribe for plan value or top up. Claim grants £5 once.',
+            'note' => 'Use Authorization: Bearer <api_token> against /mcp. Agent accounts start at £0 with no trial. Claim in the browser for a 7-day trial and £5 usage, then subscribe for monthly plan value.',
         ]);
     }
 

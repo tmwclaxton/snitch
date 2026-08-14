@@ -34,9 +34,9 @@ defineProps<{
                     Connect Snitch over MCP
                 </h1>
                 <p class="mt-4 max-w-2xl text-snitch-ink/80">
-                    Snitch is a data layer for social marketing agents. Create an account from your agent, claim
-                    it in the browser, keep a balance above 20p (subscribe for plan value or top up), then sync snitches, find influencers, and
-                    analyse posts.
+                    Snitch is a data layer for social marketing agents. Create an account from your agent,
+                    then claim it in the browser for a 7-day trial and £5 usage (unclaimed agents stay at
+                    £0). Keep a balance above 20p, then sync snitches, find influencers, and analyse posts.
                 </p>
 
                 <div class="mt-12">

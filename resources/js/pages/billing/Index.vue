@@ -146,9 +146,10 @@ function vendorAccent(key: SpendVendorKey): string {
                         Billing
                     </h1>
                     <p class="mt-1.5 max-w-2xl text-sm text-snitch-ink/65 sm:text-base">
-                        Keep more than 20p of usage credit to run sync, analysis, and discovery. After
-                        your free £5 starter, a paid plan is required. See the expiry breakdown below
-                        for when each credit lot runs out.
+                        Keep more than 20p of usage credit to run sync, analysis, and discovery. Website
+                        accounts start with a 7-day trial and £5. After the trial, or after the starter
+                        is spent, a paid plan is required. See the expiry breakdown below for when each
+                        credit lot runs out.
                     </p>
                 </div>
                 <Link

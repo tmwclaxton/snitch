@@ -9,7 +9,7 @@ defineOptions({
 
 <template>
     <div>
-        <LegalDocument title="Terms of use" updated="9 August 2026">
+        <LegalDocument title="Terms of use" updated="14 August 2026">
             <p>
                 These terms govern use of Snitch at www.snitchsocial.net.
             </p>
@@ -21,19 +21,22 @@ defineOptions({
                 Snitch is a personal social tracker for accounts you choose. You may create
                 one personal workspace, track public accounts you choose, view
                 analysis of public posts, filter craft terms in Explore, and
-                configure winner rules. Usage is prepaid by your plan
-                (Free, Basic, or Pro).
+                configure winner rules. Usage is prepaid: a monthly platform
+                fee plus usage credits. New website accounts include a 7-day
+                trial and £5 to spend.
             </p>
 
             <h2 class="snitch-display text-xl text-snitch-ink">
                 Trials and billing
             </h2>
             <p>
-                New accounts may start with a time-limited trial at Basic
-                usage limits without entering a card. After the trial, you
-                stay on Free unless you subscribe. Paid plans are billed through
+                New website accounts start with a 7-day trial and £5 of usage
+                credit without entering a card. Unclaimed agent accounts created
+                over MCP start at £0 with no trial until a human claims them.
+                After the trial, or after starter credit is spent, you need a
+                paid platform plan to keep using the product. Paid plans are billed through
                 Stripe. You can manage or cancel a subscription in the billing
-                portal. Prices and caps may change; material changes will be
+                portal. Prices may change; material changes will be
                 reflected on the Pricing page.
             </p>
 

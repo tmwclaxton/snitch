@@ -157,8 +157,9 @@ async function copyText(value: string, label: string): Promise<void> {
                 <span class="snitch-tape right-5 -top-2" aria-hidden="true" />
                 <h2 class="snitch-display text-2xl text-snitch-ink">Billing notes</h2>
                 <ul class="list-disc space-y-2 pl-5 text-sm text-snitch-ink/80">
-                    <li>Agent-created accounts start with £0 usage until claimed.</li>
-                    <li>Claiming in the browser grants £5 once.</li>
+                    <li>Agent-created accounts start with £0 and no trial until claimed.</li>
+                    <li>Claiming in the browser starts a 7-day trial and grants £5 once.</li>
+                    <li>Website signups get the same 7-day trial and £5 on account create.</li>
                     <li>The £19/mo platform plan includes £30 usage credits each billing period.</li>
                     <li>Billable tools need a balance above 20p - subscribe for plan value or top up credits.</li>
                     <li>Usage on the billing page is shown for Apify, NanoGPT, Firecrawl, and TikHub.</li>

@@ -71,7 +71,9 @@ Route::middleware(['guest'])->group(function () {
                     'claimed_at' => now(),
                 ]);
 
-                app(UsageBillingService::class)->creditClaimBonus($user);
+                $usage = app(UsageBillingService::class);
+                $usage->creditClaimBonus($user);
+                $usage->ensureWebTrialStarted($user);
                 app(ReferralAttribution::class)->bindToUser($user, $request);
 
                 return $user;

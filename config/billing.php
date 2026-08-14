@@ -27,10 +27,13 @@ return [
     | Billable runs and product data access require balance strictly greater
     | than this (GBP pence). At or below: blocked (same as monthly overage).
     |
-    | Free starter: claim_bonus (£5) may be spent without a platform plan.
-    | Once that starter allowance is exhausted (denormalized on credit_balances),
-    | an active paid platform subscription is required. Credit top-ups are only
-    | allowed for subscribed users - top-up alone cannot bypass the paywall.
+    | Free starter: claim_bonus (£5) is granted when a human creates or claims
+    | an account (website signup or agent claim). Unclaimed MCP create_account
+    | stays at £0. Claimed users also get a generic 7-day trial
+    | (subscriptions.trial_days) to spend that starter without a card.
+    | Once the trial ends, or starter is exhausted, an active paid platform
+    | subscription is required. Credit top-ups are only allowed for subscribed
+    | users - top-up alone cannot bypass the paywall.
     */
     'min_run_balance_pence' => (int) env('SNITCH_MIN_RUN_BALANCE_PENCE', 20),
 

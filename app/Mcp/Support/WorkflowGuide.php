@@ -263,7 +263,7 @@ final class WorkflowGuide
             ],
             'do_not_skip' => [
                 'Billable tools need balance strictly above 20p.',
-                'Agent create_account starts at £0 until claim/subscribe/top-up.',
+                'Agent create_account starts at £0 with no trial until a human claims the account.',
             ],
             'steps' => [
                 self::step(1, 'whoami', 'See subscription summary + runtime.'),
@@ -271,7 +271,7 @@ final class WorkflowGuide
                 self::step(3, 'create_platform_checkout', '£19/mo platform plan (includes periodic usage credits).'),
                 self::step(4, 'create_credit_checkout', 'Top up a credit pack when balance is low.'),
                 self::step(5, 'billing_portal', 'Open Stripe portal for existing customers.'),
-                self::step(6, 'claim_info', 'If agent-created: claim URL for browser bind (+ claim bonus once).'),
+                self::step(6, 'claim_info', 'If agent-created: claim URL for browser bind (7-day trial + £5 once).'),
             ],
             'notes' => [
                 'UI/MCP show charged GBP only - never markup or COGS.',

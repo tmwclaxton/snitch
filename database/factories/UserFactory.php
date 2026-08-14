@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\User;
+use App\Services\Billing\PlanEntitlementService;
 use App\Services\Billing\UsageBillingService;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -26,7 +27,13 @@ class UserFactory extends Factory
         self::$skipStarterCredit ??= new \WeakMap;
 
         return $this->afterCreating(function (User $user): void {
-            if ($user->claimed_at === null || isset(self::$skipStarterCredit[$user])) {
+            if ($user->claimed_at === null) {
+                return;
+            }
+
+            app(PlanEntitlementService::class)->ensureTrialStarted($user);
+
+            if (isset(self::$skipStarterCredit[$user])) {
                 return;
             }
 
@@ -88,7 +95,7 @@ class UserFactory extends Factory
     }
 
     /**
-     * Active app trial (Basic entitlements, no Stripe subscription).
+     * Active generic web trial (no Stripe subscription).
      */
     public function onTrial(?int $days = 7): static
     {
@@ -98,7 +105,7 @@ class UserFactory extends Factory
     }
 
     /**
-     * Expired trial / Free plan (no active subscription).
+     * Expired generic trial (no active subscription).
      */
     public function freePlan(): static
     {

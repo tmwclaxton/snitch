@@ -71,7 +71,8 @@ function formatAverage(pence: number): string {
                 </h1>
                 <p class="mt-4 max-w-2xl text-snitch-ink/80">
                     A simple monthly platform fee, then prepaid credits for Apify syncs, NanoGPT analysis, and
-                    Firecrawl discovery. No snitch seat caps - you pay for the work you run.
+                    Firecrawl discovery. Website signups start with a 7-day trial and £5 to spend. Agent
+                    accounts stay at £0 until claimed. No snitch seat caps - you pay for the work you run.
                 </p>
 
                 <div class="snitch-contact-reveal mt-12 grid gap-6 md:grid-cols-2">
@@ -114,7 +115,11 @@ function formatAverage(pence: number): string {
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                £5 once when you claim your account
+                                £5 usage when you create or claim your account
+                            </li>
+                            <li class="flex gap-2">
+                                <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
+                                7-day trial for website users (not unclaimed agent accounts)
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />

@@ -43,6 +43,7 @@ class PlanEntitlementServiceTest extends TestCase
     {
         $user = User::factory()->create();
         $this->assertFalse($this->entitlements->summary($user)['subscribed']);
+        $this->assertTrue($this->entitlements->summary($user)['on_trial']);
 
         $this->createSubscription($user, 'price_platform_test');
         $user->refresh();
@@ -65,6 +66,7 @@ class PlanEntitlementServiceTest extends TestCase
 
         $this->assertSame('none', $shared['plan']);
         $this->assertFalse($shared['subscribed']);
+        $this->assertTrue($shared['on_trial']);
         $this->assertTrue($shared['can_upgrade']);
         $this->assertSame(2, $shared['competitors_used']);
         $this->assertSame(1, $shared['influencers_used']);

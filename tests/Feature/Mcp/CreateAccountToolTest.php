@@ -29,5 +29,7 @@ class CreateAccountToolTest extends TestCase
         $this->assertNull($user->claimed_at);
         $this->assertNotNull($user->claim_token);
         $this->assertSame(0, (int) ($user->creditBalance?->balance_pence ?? 0));
+        $this->assertNull($user->trial_ends_at);
+        $this->assertFalse($user->onGenericTrial());
     }
 }

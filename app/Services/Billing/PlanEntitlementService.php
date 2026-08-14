@@ -81,9 +81,14 @@ class PlanEntitlementService
         return $query;
     }
 
+    public function trialDays(): int
+    {
+        return $this->usage->trialDays();
+    }
+
     public function onTrial(User $user): bool
     {
-        return false;
+        return $this->usage->isOnWebTrial($user);
     }
 
     /**
@@ -116,6 +121,7 @@ class PlanEntitlementService
         $subscribed = $this->hasPlatformSubscription($user);
         $usage = $this->usage->summary($user);
         $paywall = $this->usage->paywallState($user);
+        $onTrial = $this->onTrial($user);
         $competitorsUsed = $paywall['blocked']
             ? 0
             : $user->trackedAccounts()->competitors()->count();
@@ -134,8 +140,8 @@ class PlanEntitlementService
             'influencers_used' => $influencersUsed,
             'influencers_remaining' => null,
             'over_quota_influencers' => 0,
-            'on_trial' => false,
-            'trial_ends_at' => null,
+            'on_trial' => $onTrial,
+            'trial_ends_at' => $onTrial ? $user->trial_ends_at?->toIso8601String() : null,
             'subscribed' => $subscribed,
             'billing_interval' => $subscribed ? 'month' : null,
             'can_upgrade' => ! $subscribed,
@@ -184,6 +190,7 @@ class PlanEntitlementService
 
         $subscribed = $this->hasPlatformSubscription($user);
         $paywall = $this->usage->paywallState($user);
+        $onTrial = $this->onTrial($user);
         $balancePence = $this->usage->balancePence($user);
         $minRunBalancePence = $this->usage->minRunBalancePence();
         $competitorsUsed = $paywall['blocked']
@@ -204,8 +211,8 @@ class PlanEntitlementService
             'influencers_used' => $influencersUsed,
             'influencers_remaining' => null,
             'over_quota_influencers' => 0,
-            'on_trial' => false,
-            'trial_ends_at' => null,
+            'on_trial' => $onTrial,
+            'trial_ends_at' => $onTrial ? $user->trial_ends_at?->toIso8601String() : null,
             'subscribed' => $subscribed,
             'billing_interval' => $subscribed ? 'month' : null,
             'can_upgrade' => ! $subscribed,
@@ -219,7 +226,7 @@ class PlanEntitlementService
 
     public function ensureTrialStarted(User $user): void
     {
-        // Seat trials retired. Claim bonus is granted on account claim/confirm.
+        $this->usage->ensureWebTrialStarted($user);
     }
 
     public function platformStripePriceId(): ?string
