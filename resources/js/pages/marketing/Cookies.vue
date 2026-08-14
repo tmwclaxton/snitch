@@ -50,8 +50,9 @@ defineOptions({
                 We use Google Analytics 4 (gtag.js, measurement ID
                 G-Y3VFH257B5) to understand how the website and installed PWA
                 are used: page views, display mode (browser vs standalone),
-                and whether the app was installed. Google sets first-party
-                cookies such as <code class="text-sm">_ga</code> and
+                and whether the app was installed. Google Ads
+                (AW-18219075665) measures website sign-up conversions. Google
+                sets first-party cookies such as <code class="text-sm">_ga</code> and
                 <code class="text-sm">_ga_*</code> on snitchsocial.net. Hits
                 use the Beacon API so they still send when the PWA is
                 backgrounded. We do not send account emails or workspace

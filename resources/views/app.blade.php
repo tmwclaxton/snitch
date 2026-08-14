@@ -8,6 +8,8 @@
             $gaId = \App\Support\GoogleAnalytics::measurementId();
             $gaEnabled = \App\Support\GoogleAnalytics::enabled();
             $gaEvents = $gaEnabled ? \App\Support\GoogleAnalytics::takeEvents() : [];
+            $adsId = \App\Support\GoogleAnalytics::adsId();
+            $adsSignupSendTo = \App\Support\GoogleAnalytics::adsSignupSendTo();
         @endphp
         @if ($gaEnabled && is_string($gaId))
             <!-- Google tag (gtag.js) -->
@@ -18,7 +20,27 @@
               gtag('js', new Date());
 
               gtag('config', '{{ $gaId }}');
+              @if (is_string($adsId))
+              gtag('config', '{{ $adsId }}');
+              @endif
             </script>
+            @if (is_string($adsSignupSendTo))
+            <!-- Event snippet for Website sign-up conversion -->
+            <script>
+              function gtag_report_conversion(url) {
+                var callback = function () {
+                  if (typeof(url) != 'undefined') {
+                    window.location = url;
+                  }
+                };
+                gtag('event', 'conversion', {
+                    'send_to': '{{ $adsSignupSendTo }}',
+                    'event_callback': callback
+                });
+                return false;
+              }
+            </script>
+            @endif
             <script>
               window.gtag = gtag;
               window.__SNITCH_GA_EVENTS__ = @json($gaEvents);

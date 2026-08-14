@@ -49,6 +49,8 @@ return [
     'google' => [
         'analytics_id' => env('GOOGLE_ANALYTICS_ID', 'G-Y3VFH257B5'),
         'analytics_enabled' => env('GOOGLE_ANALYTICS_ENABLED'),
+        'ads_id' => env('GOOGLE_ADS_ID', 'AW-18219075665'),
+        'ads_signup_send_to' => env('GOOGLE_ADS_SIGNUP_SEND_TO', 'AW-18219075665/xFpFCIDTldQcENGQxO9D'),
     ],
 
 ];

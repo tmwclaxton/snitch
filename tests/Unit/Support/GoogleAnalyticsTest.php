@@ -49,6 +49,15 @@ class GoogleAnalyticsTest extends TestCase
         $this->assertSame('G-Y3VFH257B5', GoogleAnalytics::measurementId());
     }
 
+    public function test_ads_signup_conversion_ids_are_configured(): void
+    {
+        $this->assertSame('AW-18219075665', GoogleAnalytics::adsId());
+        $this->assertSame(
+            'AW-18219075665/xFpFCIDTldQcENGQxO9D',
+            GoogleAnalytics::adsSignupSendTo(),
+        );
+    }
+
     public function test_queued_events_are_taken_once(): void
     {
         GoogleAnalytics::queueEvent('login', ['method' => 'WorkOS']);

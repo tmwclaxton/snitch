@@ -4,6 +4,7 @@ declare global {
     interface Window {
         dataLayer: unknown[];
         gtag?: (...args: unknown[]) => void;
+        gtag_report_conversion?: (url?: string) => boolean;
         __SNITCH_GA_EVENTS__?: Array<{
             name: string;
             params?: Record<string, unknown>;

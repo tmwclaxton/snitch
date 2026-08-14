@@ -30,6 +30,28 @@ final class GoogleAnalytics
         return filter_var($flag, FILTER_VALIDATE_BOOL);
     }
 
+    public static function adsId(): ?string
+    {
+        $id = config('services.google.ads_id');
+
+        if (! is_string($id) || $id === '') {
+            return null;
+        }
+
+        return $id;
+    }
+
+    public static function adsSignupSendTo(): ?string
+    {
+        $sendTo = config('services.google.ads_signup_send_to');
+
+        if (! is_string($sendTo) || $sendTo === '') {
+            return null;
+        }
+
+        return $sendTo;
+    }
+
     /**
      * @param  array<string, mixed>  $params
      */

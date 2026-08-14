@@ -16,7 +16,8 @@ class GoogleAnalyticsTest extends TestCase
         $this->get(route('home'))
             ->assertOk()
             ->assertDontSee('googletagmanager.com/gtag/js', false)
-            ->assertDontSee('G-Y3VFH257B5', false);
+            ->assertDontSee('G-Y3VFH257B5', false)
+            ->assertDontSee('AW-18219075665', false);
     }
 
     public function test_home_includes_pwa_aware_gtag_when_analytics_are_enabled(): void
@@ -32,6 +33,9 @@ class GoogleAnalyticsTest extends TestCase
         $this->assertStringContainsString('<!-- Google tag (gtag.js) -->', $html);
         $this->assertStringContainsString('https://www.googletagmanager.com/gtag/js?id=G-Y3VFH257B5', $html);
         $this->assertStringContainsString("gtag('config', 'G-Y3VFH257B5');", $html);
+        $this->assertStringContainsString("gtag('config', 'AW-18219075665');", $html);
+        $this->assertStringContainsString('AW-18219075665/xFpFCIDTldQcENGQxO9D', $html);
+        $this->assertStringContainsString('function gtag_report_conversion', $html);
         $this->assertLessThan(
             1200,
             strpos($html, "gtag('config', 'G-Y3VFH257B5');") ?: PHP_INT_MAX,
@@ -53,6 +57,7 @@ class GoogleAnalyticsTest extends TestCase
         $this->assertStringContainsString('pwa_display', $source);
         $this->assertStringContainsString("gtag('config', '{{ \$gaId }}');", file_get_contents(resource_path('views/app.blade.php')));
         $this->assertStringContainsString('__SNITCH_GA_EVENTS__', $source);
+        $this->assertStringContainsString('gtag_report_conversion', $source);
         $this->assertStringContainsString('initializeGoogleAnalytics', $app);
         $this->assertStringContainsString("typeof window !== 'undefined'", $app);
         $this->assertStringContainsString('appinstalled', $source);
@@ -93,5 +98,10 @@ class GoogleAnalyticsTest extends TestCase
         $this->assertIsString($example);
         $this->assertStringContainsString('GOOGLE_ANALYTICS_ID=G-Y3VFH257B5', $example);
         $this->assertStringContainsString('GOOGLE_ANALYTICS_ENABLED=true', $example);
+        $this->assertStringContainsString('GOOGLE_ADS_ID=AW-18219075665', $example);
+        $this->assertStringContainsString(
+            'GOOGLE_ADS_SIGNUP_SEND_TO=AW-18219075665/xFpFCIDTldQcENGQxO9D',
+            $example,
+        );
     }
 }

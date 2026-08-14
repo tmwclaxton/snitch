@@ -65,6 +65,13 @@ function sendQueuedEvent(event: GaEvent): void {
         pwa_display: pwaDisplayMode(),
         ...(event.params ?? {}),
     });
+
+    if (
+        event.name === 'sign_up' &&
+        typeof window.gtag_report_conversion === 'function'
+    ) {
+        window.gtag_report_conversion();
+    }
 }
 
 function flushQueuedEvents(): void {
