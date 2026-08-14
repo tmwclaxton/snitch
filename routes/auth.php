@@ -4,6 +4,7 @@ use App\Http\Controllers\ClaimController;
 use App\Services\Billing\AccountClaimService;
 use App\Services\Billing\UsageBillingService;
 use App\Services\Referrals\ReferralAttribution;
+use App\Support\GoogleAnalytics;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Route;
 use Laravel\WorkOS\Http\Requests\AuthKitAuthenticationRequest;
@@ -26,9 +27,10 @@ Route::middleware(['guest'])->group(function () {
 
         /** @var AccountClaimService $claims */
         $claims = app(AccountClaimService::class);
+        $gaAuthEvent = 'login';
 
         $request->authenticate(
-            findUsing: function (WorkOsUser $workOsUser) use ($claims): ?Authenticatable {
+            findUsing: function (WorkOsUser $workOsUser) use ($claims, &$gaAuthEvent): ?Authenticatable {
                 $userModel = config('auth.providers.users.model');
 
                 $byWorkOs = $userModel::query()->where('workos_id', $workOsUser->id)->first();
@@ -44,6 +46,7 @@ Route::middleware(['guest'])->group(function () {
 
                     if ($unclaimed !== null) {
                         session()->forget('snitch_claim_token');
+                        $gaAuthEvent = 'sign_up';
 
                         return $claims->claim($unclaimed, $workOsUser);
                     }
@@ -52,12 +55,16 @@ Route::middleware(['guest'])->group(function () {
                 $byEmail = $claims->findUnclaimedByEmail($workOsUser->email);
 
                 if ($byEmail !== null) {
+                    $gaAuthEvent = 'sign_up';
+
                     return $claims->claim($byEmail, $workOsUser);
                 }
 
                 return null;
             },
-            createUsing: function (WorkOsUser $workOsUser) use ($request): Authenticatable {
+            createUsing: function (WorkOsUser $workOsUser) use ($request, &$gaAuthEvent): Authenticatable {
+                $gaAuthEvent = 'sign_up';
+
                 $userModel = config('auth.providers.users.model');
 
                 $user = $userModel::query()->create([
@@ -79,6 +86,10 @@ Route::middleware(['guest'])->group(function () {
                 return $user;
             },
         );
+
+        GoogleAnalytics::queueEvent($gaAuthEvent, [
+            'method' => 'WorkOS',
+        ]);
 
         return redirect()->intended(route('dashboard'));
     });

@@ -4,6 +4,10 @@ declare global {
     interface Window {
         dataLayer: unknown[];
         gtag?: (...args: unknown[]) => void;
+        __SNITCH_GA_EVENTS__?: Array<{
+            name: string;
+            params?: Record<string, unknown>;
+        }>;
     }
 }
 

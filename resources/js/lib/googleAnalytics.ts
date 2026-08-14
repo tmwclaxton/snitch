@@ -1,5 +1,10 @@
 import { router } from '@inertiajs/vue3';
 
+type GaEvent = {
+    name: string;
+    params?: Record<string, unknown>;
+};
+
 function gtag(...args: unknown[]): void {
     if (typeof window.gtag === 'function') {
         window.gtag(...args);
@@ -55,6 +60,19 @@ function sendPageView(): void {
     });
 }
 
+function sendQueuedEvent(event: GaEvent): void {
+    gtag('event', event.name, {
+        pwa_display: pwaDisplayMode(),
+        ...(event.params ?? {}),
+    });
+}
+
+function flushQueuedEvents(): void {
+    const queued = window.__SNITCH_GA_EVENTS__ ?? [];
+    window.__SNITCH_GA_EVENTS__ = [];
+    queued.forEach(sendQueuedEvent);
+}
+
 export function initializeGoogleAnalytics(): void {
     if (typeof window === 'undefined') {
         return;
@@ -65,6 +83,7 @@ export function initializeGoogleAnalytics(): void {
     }
 
     syncDisplayMode();
+    flushQueuedEvents();
 
     let lastPath = pagePath();
 
@@ -78,6 +97,7 @@ export function initializeGoogleAnalytics(): void {
         lastPath = path;
         syncDisplayMode();
         sendPageView();
+        flushQueuedEvents();
     });
 
     window.addEventListener('appinstalled', () => {

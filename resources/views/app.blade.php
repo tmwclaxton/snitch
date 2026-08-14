@@ -4,6 +4,39 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
+        @php
+            $gaId = \App\Support\GoogleAnalytics::measurementId();
+            $gaEnabled = \App\Support\GoogleAnalytics::enabled();
+            $gaEvents = $gaEnabled ? \App\Support\GoogleAnalytics::takeEvents() : [];
+        @endphp
+        @if ($gaEnabled && is_string($gaId))
+            <!-- Google tag (gtag.js) -->
+            <script async src="https://www.googletagmanager.com/gtag/js?id={{ $gaId }}"></script>
+            <script>
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+
+              gtag('config', '{{ $gaId }}');
+            </script>
+            <script>
+              window.gtag = gtag;
+              window.__SNITCH_GA_EVENTS__ = @json($gaEvents);
+              (function () {
+                var displayMode = 'browser';
+                if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+                  displayMode = 'standalone';
+                } else if (window.matchMedia('(display-mode: fullscreen)').matches) {
+                  displayMode = 'fullscreen';
+                } else if (window.matchMedia('(display-mode: minimal-ui)').matches) {
+                  displayMode = 'minimal-ui';
+                }
+                gtag('set', { transport_type: 'beacon' });
+                gtag('set', 'user_properties', { pwa_display: displayMode });
+              })();
+            </script>
+        @endif
+
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
             (function() {
@@ -71,48 +104,6 @@
         @endif
 
         @fonts
-
-        @php
-            $gaId = \App\Support\GoogleAnalytics::measurementId();
-            $gaEnabled = \App\Support\GoogleAnalytics::enabled();
-        @endphp
-
-        @if ($gaEnabled && is_string($gaId))
-            <link rel="preconnect" href="https://www.googletagmanager.com">
-            <link rel="dns-prefetch" href="https://www.google-analytics.com">
-            {{-- First-byte gtag so installed PWA / standalone shells still measure before Vite boots. send_page_view is off; the first view is sent below, later Inertia visits in googleAnalytics.ts. --}}
-            <script async src="https://www.googletagmanager.com/gtag/js?id={{ $gaId }}"></script>
-            <script>
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                window.gtag = gtag;
-                gtag('js', new Date());
-                (function () {
-                    var displayMode = 'browser';
-                    var standaloneQuery = window.matchMedia('(display-mode: standalone)');
-                    if (standaloneQuery.matches || window.navigator.standalone === true) {
-                        displayMode = 'standalone';
-                    } else if (window.matchMedia('(display-mode: fullscreen)').matches) {
-                        displayMode = 'fullscreen';
-                    } else if (window.matchMedia('(display-mode: minimal-ui)').matches) {
-                        displayMode = 'minimal-ui';
-                    }
-                    gtag('set', 'user_properties', { pwa_display: displayMode });
-                    gtag('config', @json($gaId), {
-                        send_page_view: false,
-                        transport_type: 'beacon',
-                        cookie_domain: 'auto',
-                        cookie_flags: 'SameSite=Lax;Secure'
-                    });
-                    gtag('event', 'page_view', {
-                        page_title: document.title,
-                        page_location: window.location.href,
-                        page_path: window.location.pathname + window.location.search,
-                        pwa_display: displayMode
-                    });
-                })();
-            </script>
-        @endif
 
         @vite(['resources/css/app.css', 'resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
         <x-inertia::head>

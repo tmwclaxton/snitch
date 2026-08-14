@@ -26,15 +26,20 @@ class GoogleAnalyticsTest extends TestCase
             'services.google.analytics_enabled' => true,
         ]);
 
-        $this->get(route('home'))
-            ->assertOk()
-            ->assertSee('https://www.googletagmanager.com/gtag/js?id=G-Y3VFH257B5', false)
-            ->assertSee("gtag('config'", false)
-            ->assertSee('send_page_view: false', false)
-            ->assertSee("transport_type: 'beacon'", false)
-            ->assertSee('pwa_display', false)
-            ->assertSee('display-mode: standalone', false)
-            ->assertSee("cookie_flags: 'SameSite=Lax;Secure'", false);
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        $this->assertIsString($html);
+        $this->assertStringContainsString('<!-- Google tag (gtag.js) -->', $html);
+        $this->assertStringContainsString('https://www.googletagmanager.com/gtag/js?id=G-Y3VFH257B5', $html);
+        $this->assertStringContainsString("gtag('config', 'G-Y3VFH257B5');", $html);
+        $this->assertLessThan(
+            1200,
+            strpos($html, "gtag('config', 'G-Y3VFH257B5');") ?: PHP_INT_MAX,
+            'Google tag config must sit at the top of head so GA can detect it',
+        );
+        $this->assertStringContainsString('pwa_display', $html);
+        $this->assertStringContainsString('display-mode: standalone', $html);
+        $this->assertStringContainsString("transport_type: 'beacon'", $html);
     }
 
     public function test_spa_tracker_sends_inertia_page_views_and_pwa_display(): void
@@ -46,7 +51,8 @@ class GoogleAnalyticsTest extends TestCase
         $this->assertIsString($app);
         $this->assertStringContainsString("router.on('navigate'", $source);
         $this->assertStringContainsString('pwa_display', $source);
-        $this->assertStringContainsString('transport_type', file_get_contents(resource_path('views/app.blade.php')));
+        $this->assertStringContainsString("gtag('config', '{{ \$gaId }}');", file_get_contents(resource_path('views/app.blade.php')));
+        $this->assertStringContainsString('__SNITCH_GA_EVENTS__', $source);
         $this->assertStringContainsString('initializeGoogleAnalytics', $app);
         $this->assertStringContainsString("typeof window !== 'undefined'", $app);
         $this->assertStringContainsString('appinstalled', $source);
@@ -65,6 +71,19 @@ class GoogleAnalyticsTest extends TestCase
             'does not ship third-party marketing analytics cookies',
             $cookies,
         );
+    }
+
+    public function test_auth_and_billing_queue_recommended_ga_events(): void
+    {
+        $auth = file_get_contents(base_path('routes/auth.php'));
+        $checkout = file_get_contents(base_path('app/Services/Billing/StripeCheckoutSyncService.php'));
+
+        $this->assertIsString($auth);
+        $this->assertIsString($checkout);
+        $this->assertStringContainsString('GoogleAnalytics::queueEvent($gaAuthEvent', $auth);
+        $this->assertStringContainsString("'sign_up'", $auth);
+        $this->assertStringContainsString("'login'", $auth);
+        $this->assertStringContainsString('GoogleAnalytics::queuePurchase($session)', $checkout);
     }
 
     public function test_production_env_example_enables_google_analytics(): void

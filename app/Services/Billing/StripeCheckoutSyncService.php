@@ -3,6 +3,7 @@
 namespace App\Services\Billing;
 
 use App\Models\User;
+use App\Support\GoogleAnalytics;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Laravel\Cashier\Cashier;
@@ -105,6 +106,7 @@ class StripeCheckoutSyncService
 
         if ($applied) {
             $this->entitlements->forgetSharedSummary($user);
+            GoogleAnalytics::queuePurchase($session);
         }
 
         return $applied;

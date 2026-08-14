@@ -48,4 +48,35 @@ class GoogleAnalyticsTest extends TestCase
         $this->assertTrue(GoogleAnalytics::enabled());
         $this->assertSame('G-Y3VFH257B5', GoogleAnalytics::measurementId());
     }
+
+    public function test_queued_events_are_taken_once(): void
+    {
+        GoogleAnalytics::queueEvent('login', ['method' => 'WorkOS']);
+        GoogleAnalytics::queueEvent('sign_up', ['method' => 'WorkOS']);
+
+        $first = GoogleAnalytics::takeEvents();
+        $second = GoogleAnalytics::takeEvents();
+
+        $this->assertSame(['login', 'sign_up'], array_column($first, 'name'));
+        $this->assertSame($first, $second);
+    }
+
+    public function test_purchase_queue_is_idempotent_per_checkout_session(): void
+    {
+        $session = [
+            'id' => 'cs_ga_once',
+            'amount_total' => 1900,
+            'currency' => 'gbp',
+            'metadata' => ['snitch_product' => 'platform'],
+        ];
+
+        GoogleAnalytics::queuePurchase($session);
+        GoogleAnalytics::queuePurchase($session);
+
+        $events = GoogleAnalytics::takeEvents();
+
+        $this->assertCount(1, $events);
+        $this->assertSame('purchase', $events[0]['name']);
+        $this->assertSame(19.0, $events[0]['params']['value']);
+    }
 }

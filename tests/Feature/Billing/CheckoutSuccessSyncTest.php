@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\Billing\PlanEntitlementService;
 use App\Services\Billing\StripeCheckoutSyncService;
 use App\Services\Billing\UsageBillingService;
+use App\Support\GoogleAnalytics;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -38,6 +39,8 @@ class CheckoutSuccessSyncTest extends TestCase
             'mode' => 'subscription',
             'status' => 'complete',
             'payment_status' => 'paid',
+            'amount_total' => 1900,
+            'currency' => 'gbp',
             'invoice' => [
                 'id' => 'in_checkout_sync_1',
                 'status' => 'paid',
@@ -81,6 +84,12 @@ class CheckoutSuccessSyncTest extends TestCase
         $this->assertTrue($user->subscribed('default'));
         $this->assertTrue(app(PlanEntitlementService::class)->hasPlatformSubscription($user));
         $this->assertSame(3000.0, app(UsageBillingService::class)->balancePence($user));
+
+        $events = GoogleAnalytics::takeEvents();
+        $this->assertSame('purchase', $events[0]['name'] ?? null);
+        $this->assertSame('cs_test_platform', $events[0]['params']['transaction_id'] ?? null);
+        $this->assertSame(19.0, $events[0]['params']['value'] ?? null);
+        $this->assertSame('GBP', $events[0]['params']['currency'] ?? null);
     }
 
     public function test_apply_checkout_session_credits_top_up_when_subscribed(): void
@@ -105,6 +114,8 @@ class CheckoutSuccessSyncTest extends TestCase
             'mode' => 'payment',
             'status' => 'complete',
             'payment_status' => 'paid',
+            'amount_total' => 1000,
+            'currency' => 'gbp',
             'metadata' => [
                 'snitch_product' => 'credits',
                 'credit_pack' => 'pack_10',
@@ -115,6 +126,7 @@ class CheckoutSuccessSyncTest extends TestCase
 
         $this->assertTrue($applied);
         $this->assertSame($before + 1000.0, app(UsageBillingService::class)->balancePence($user));
+        $this->assertSame('credits', GoogleAnalytics::takeEvents()[0]['params']['items'][0]['item_id'] ?? null);
     }
 
     public function test_apply_checkout_session_rejects_customer_mismatch(): void
