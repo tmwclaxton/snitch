@@ -22,9 +22,9 @@ use App\Http\Controllers\WinnerController;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureBrandProfile;
 use App\Http\Middleware\EnsureProductAccess;
+use App\Http\Middleware\ValidateSessionWithWorkOS;
 use App\Support\Seo;
 use Illuminate\Support\Facades\Route;
-use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
 
 Route::inertia('/', 'Welcome')->name('home');
 Route::inertia('/about', 'marketing/About')->name('about');

@@ -2,8 +2,8 @@
 
 use App\Http\Controllers\Settings\BillingController;
 use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Middleware\ValidateSessionWithWorkOS;
 use Illuminate\Support\Facades\Route;
-use Laravel\WorkOS\Http\Middleware\ValidateSessionWithWorkOS;
 
 Route::middleware([
     'auth',

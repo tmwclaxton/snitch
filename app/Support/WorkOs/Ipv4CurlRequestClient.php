@@ -7,14 +7,19 @@ use WorkOS\Exception\GenericException;
 use WorkOS\RequestClient\RequestClientInterface;
 
 /**
- * WorkOS SDK HTTP client that forces IPv4 and short timeouts.
+ * WorkOS SDK HTTP client that forces IPv4, short timeouts, and brief retries.
  *
  * Docker bridges on the production host often have broken IPv6 egress. WorkOS
  * DNS returns A+AAAA, and the stock curl client hangs for ~60s on IPv6, which
  * stalls every authenticated page behind ValidateSessionWithWorkOS.
+ *
+ * Transient DNS / connect blips still happen on IPv4; retry a couple of times
+ * before surfacing GenericException so session refresh survives brief flaps.
  */
 class Ipv4CurlRequestClient implements RequestClientInterface
 {
+    private const MAX_ATTEMPTS = 3;
+
     /**
      * @param  array<int, string>|null  $headers
      * @param  array<string, mixed>|null  $params
@@ -71,39 +76,68 @@ class Ipv4CurlRequestClient implements RequestClientInterface
     }
 
     /**
+     * Curl transport failures that are worth a short retry (DNS / connect / timeout).
+     */
+    public static function isTransientCurlFailure(int $errno, string $message): bool
+    {
+        if (in_array($errno, [\CURLE_COULDNT_RESOLVE_HOST, \CURLE_COULDNT_CONNECT, \CURLE_OPERATION_TIMEDOUT], true)) {
+            return true;
+        }
+
+        $haystack = strtolower($message);
+
+        return str_contains($haystack, 'timed out')
+            || str_contains($haystack, 'timeout')
+            || str_contains($haystack, 'could not resolve')
+            || str_contains($haystack, 'failed to connect')
+            || str_contains($haystack, 'resolving timed out');
+    }
+
+    /**
      * @param  array<int, mixed>  $opts
      * @return array{0: string, 1: array<string, string>, 2: int}
      */
     private function execute(array $opts): array
     {
-        $curl = curl_init();
-        $responseHeaders = [];
+        $lastErrno = 0;
+        $lastMessage = '';
 
-        $opts[\CURLOPT_HEADERFUNCTION] = function ($curl, string $headerLine) use (&$responseHeaders): int {
-            if (! str_contains($headerLine, ':')) {
+        for ($attempt = 1; $attempt <= self::MAX_ATTEMPTS; $attempt++) {
+            $curl = curl_init();
+            $responseHeaders = [];
+
+            $opts[\CURLOPT_HEADERFUNCTION] = function ($curl, string $headerLine) use (&$responseHeaders): int {
+                if (! str_contains($headerLine, ':')) {
+                    return strlen($headerLine);
+                }
+
+                [$key, $value] = explode(':', trim($headerLine), 2);
+                $responseHeaders[trim($key)] = trim($value);
+
                 return strlen($headerLine);
+            };
+
+            curl_setopt_array($curl, $opts);
+            $result = curl_exec($curl);
+
+            if ($result !== false) {
+                $statusCode = (int) curl_getinfo($curl, \CURLINFO_RESPONSE_CODE);
+                curl_close($curl);
+
+                return [$result, $responseHeaders, $statusCode];
             }
 
-            [$key, $value] = explode(':', trim($headerLine), 2);
-            $responseHeaders[trim($key)] = trim($value);
-
-            return strlen($headerLine);
-        };
-
-        curl_setopt_array($curl, $opts);
-        $result = curl_exec($curl);
-
-        if ($result === false) {
-            $errno = curl_errno($curl);
-            $msg = curl_error($curl);
+            $lastErrno = curl_errno($curl);
+            $lastMessage = curl_error($curl);
             curl_close($curl);
 
-            throw new GenericException($msg, ['curlErrno' => $errno]);
+            if ($attempt >= self::MAX_ATTEMPTS || ! self::isTransientCurlFailure($lastErrno, $lastMessage)) {
+                break;
+            }
+
+            usleep(100_000 * $attempt);
         }
 
-        $statusCode = (int) curl_getinfo($curl, \CURLINFO_RESPONSE_CODE);
-        curl_close($curl);
-
-        return [$result, $responseHeaders, $statusCode];
+        throw new GenericException($lastMessage, ['curlErrno' => $lastErrno]);
     }
 }
