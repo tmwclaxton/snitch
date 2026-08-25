@@ -18,6 +18,9 @@ Use `docker/production/supervisord.conf` (include workers + `web.conf` only). Do
 ## IPv4 preference
 Docker bridges and the VPS host often lack working IPv6 egress. WorkOS DNS returns A+AAAA; without `/etc/gai.conf` preferring IPv4 (`precedence :ffff:0:0/96  100`), JWKS and refresh-token calls hang ~60s. The same broken AAAA path breaks host GHCR / GitHub package blob pulls (`TLS handshake timeout`) during `Production Deploy`.
 
+## WorkOS session validation soft-fail
+`App\Support\WorkOs\Ipv4CurlRequestClient` forces IPv4 and retries transient curl DNS/connect/timeout failures (3 attempts). Authenticated routes use `App\Http\Middleware\ValidateSessionWithWorkOS` (not the stock laravel/workos middleware): transient network errors log as WARNING and still log the user out; other WorkOSException paths keep `report()` + logout. Do not treat brief `api.workos.com` resolve/connect timeouts as production.ERROR.
+
 ## Production image delivery
 CI must not rely on the VPS pulling from GHCR. Pull the sha-tagged app image **and** edge `nginx:1.27-alpine` on the Actions runner, stream `docker save | gzip` over SSH into `docker load`, tag app `:latest`, then run `SKIP_GHCR_PULL=1 ./deploy-production.sh` with blue/green slot swap (`compose up -d --no-deps --pull never` on app slots and edge). `deploy-production.sh` also calls `ensure_edge_image` so a missing nginx image is pulled on the host as a fallback. Keep timed host GHCR pull (with IPv4 preference + flock) only as a manual fallback. Workflow `concurrency: production-deploy` (`cancel-in-progress: false`) serializes overlapping main pushes.
 
