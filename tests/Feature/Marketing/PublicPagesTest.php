@@ -139,6 +139,34 @@ class PublicPagesTest extends TestCase
         }
     }
 
+    public function test_beta_landing_page_is_standalone(): void
+    {
+        $this->get(route('beta'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('marketing/Beta')
+            );
+
+        $contents = file_get_contents(resource_path('js/pages/marketing/Beta.vue'));
+
+        $this->assertNotFalse($contents, 'Missing Beta.vue source');
+        $this->assertStringContainsString('https://calendly.com/dan-olympuslab/30min', $contents);
+        $this->assertStringContainsString('Book a free intro call', $contents);
+        $this->assertStringNotContainsString('PublicLayout', $contents);
+        $this->assertStringNotContainsString('PublicNav', $contents);
+        $this->assertStringNotContainsString('PublicFooter', $contents);
+        $this->assertStringNotContainsString('@/routes', $contents,
+            'Beta landing must not import route helpers - no links into the rest of the site');
+    }
+
+    public function test_beta_landing_page_stays_out_of_sitemap(): void
+    {
+        $response = $this->get(route('sitemap'));
+
+        $response->assertOk();
+        $response->assertDontSee(route('beta', absolute: true), false);
+    }
+
     public function test_footer_routes_resolve_for_guests(): void
     {
         foreach (['about', 'how-it-works', 'pricing', 'agents', 'analytics', 'contact', 'privacy', 'terms', 'cookies', 'blog.index'] as $route) {
