@@ -101,6 +101,7 @@ onUnmounted(() => {
                     <div
                         class="relative mx-auto flex max-w-6xl flex-col items-center px-5 py-20 text-center sm:px-8 sm:py-28"
                     >
+                        <!-- Static mascot on mobile; desktop gets the peek. -->
                         <img
                             src="/images/marketing/hero/mascot-binos.png"
                             alt=""
@@ -108,50 +109,99 @@ onUnmounted(() => {
                             height="130"
                             decoding="async"
                             fetchpriority="high"
-                            class="h-24 w-auto rotate-[-2deg] select-none [filter:drop-shadow(4px_4px_0_var(--snitch-spot))] sm:h-32"
+                            class="h-24 w-auto rotate-[-2deg] select-none [filter:drop-shadow(4px_4px_0_var(--snitch-spot))] md:hidden"
                         />
-                        <h1
-                            class="snitch-display mt-8 text-[clamp(2.5rem,5.4vw,4.75rem)] leading-[1.04] tracking-[-0.02em] text-pretty text-snitch-ink"
-                        >
-                            <span class="relative block">
-                                <span
-                                    class="pointer-events-none absolute inset-0 translate-x-[2px] translate-y-[1.5px] text-snitch-spot opacity-60 mix-blend-multiply select-none dark:mix-blend-plus-lighter dark:opacity-70"
-                                    aria-hidden="true"
-                                >Better social media performance.</span>
-                                <span class="relative">Better social media performance.</span>
-                            </span>
-                            <span class="relative block">
-                                <span
-                                    class="pointer-events-none absolute inset-0 translate-x-[2px] translate-y-[1.5px] text-snitch-spot opacity-60 mix-blend-multiply select-none dark:mix-blend-plus-lighter dark:opacity-70"
-                                    aria-hidden="true"
-                                >Without manual research.</span>
-                                <span class="relative">Without manual research.</span>
-                            </span>
-                        </h1>
-                        <p
-                            class="mx-auto mt-6 max-w-xl text-base leading-relaxed text-snitch-ink/80 md:text-lg"
-                        >
-                            Track your competitors and see the exact gap between
-                            you and them. What's working, what you're missing,
-                            delivered instantly.
-                        </p>
-                        <div class="mt-8 flex justify-center sm:mt-10">
-                            <a
-                                :href="CALENDLY_URL"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="snitch-btn snitch-btn-spot"
+
+                        <div class="relative mt-10 w-full max-w-2xl md:mt-14">
+                            <!--
+                              Detective peek (same as the main landing hero):
+                              slides up from behind the title card, binos raise
+                              on a shorter loop. Hidden below md.
+                            -->
+                            <div
+                                class="snitch-hero-mascot pointer-events-none absolute right-4 hidden md:block lg:right-7"
+                                aria-hidden="true"
                             >
-                                <span
-                                    class="relative z-10 inline-flex items-center gap-2"
+                                <div
+                                    class="snitch-hero-mascot-peek origin-bottom"
                                 >
-                                    {{ CTA_TEXT }}
-                                    <ArrowUpRight
-                                        class="size-3.5 shrink-0"
-                                        aria-hidden="true"
-                                    />
-                                </span>
-                            </a>
+                                    <div
+                                        class="snitch-hero-mascot-frame relative select-none overflow-hidden"
+                                    >
+                                        <img
+                                            src="/images/marketing/hero/mascot-character.png"
+                                            alt=""
+                                            draggable="false"
+                                            class="snitch-hero-mascot-character absolute inset-0 h-full w-full object-contain"
+                                            width="140"
+                                            height="140"
+                                            decoding="async"
+                                        />
+                                        <img
+                                            src="/images/marketing/hero/mascot-binos.png"
+                                            alt=""
+                                            draggable="false"
+                                            class="snitch-hero-mascot-binos absolute left-1/2"
+                                            width="98"
+                                            height="65"
+                                            decoding="async"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="snitch-hero-copy-shell relative z-[5]">
+                                <div
+                                    class="snitch-hero-copy relative px-6 py-10 text-center sm:px-10 sm:py-12"
+                                >
+                                    <h1
+                                        class="snitch-display text-[clamp(2.1rem,4.4vw,3.5rem)] leading-[1.06] tracking-[-0.02em] text-pretty text-snitch-ink"
+                                    >
+                                        <span class="relative block">
+                                            <span
+                                                class="pointer-events-none absolute inset-0 translate-x-[2px] translate-y-[1.5px] text-snitch-spot opacity-60 mix-blend-multiply select-none dark:mix-blend-plus-lighter dark:opacity-70"
+                                                aria-hidden="true"
+                                            >Better social media performance.</span>
+                                            <span class="relative">Better social media performance.</span>
+                                        </span>
+                                        <span class="relative block">
+                                            <span
+                                                class="pointer-events-none absolute inset-0 translate-x-[2px] translate-y-[1.5px] text-snitch-spot opacity-60 mix-blend-multiply select-none dark:mix-blend-plus-lighter dark:opacity-70"
+                                                aria-hidden="true"
+                                            >Without manual research.</span>
+                                            <span class="relative">Without manual research.</span>
+                                        </span>
+                                    </h1>
+                                    <p
+                                        class="mx-auto mt-6 max-w-xl text-base leading-relaxed text-snitch-ink/80 md:text-lg"
+                                    >
+                                        Track your competitors and see the
+                                        exact gap between you and them. What's
+                                        working, what you're missing, delivered
+                                        instantly.
+                                    </p>
+                                    <div
+                                        class="mt-8 flex justify-center sm:mt-10"
+                                    >
+                                        <a
+                                            :href="CALENDLY_URL"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="snitch-btn snitch-btn-spot"
+                                        >
+                                            <span
+                                                class="relative z-10 inline-flex items-center gap-2"
+                                            >
+                                                {{ CTA_TEXT }}
+                                                <ArrowUpRight
+                                                    class="size-3.5 shrink-0"
+                                                    aria-hidden="true"
+                                                />
+                                            </span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>

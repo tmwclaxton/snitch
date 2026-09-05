@@ -152,6 +152,9 @@ class PublicPagesTest extends TestCase
         $this->assertNotFalse($contents, 'Missing Beta.vue source');
         $this->assertStringContainsString('https://calendly.com/dan-olympuslab/30min', $contents);
         $this->assertStringContainsString('Book a free intro call', $contents);
+        $this->assertStringContainsString('snitch-hero-mascot-peek', $contents,
+            'Beta hero must reuse the main landing page mascot peek animation');
+        $this->assertStringContainsString('snitch-hero-copy', $contents);
         $this->assertStringNotContainsString('PublicLayout', $contents);
         $this->assertStringNotContainsString('PublicNav', $contents);
         $this->assertStringNotContainsString('PublicFooter', $contents);
