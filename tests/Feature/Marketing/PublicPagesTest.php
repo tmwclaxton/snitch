@@ -155,6 +155,11 @@ class PublicPagesTest extends TestCase
         $this->assertStringContainsString('snitch-hero-mascot-peek', $contents,
             'Beta hero must reuse the main landing page mascot peek animation');
         $this->assertStringContainsString('snitch-hero-copy', $contents);
+        $this->assertStringContainsString('snitch-hero-marquee-track', $contents,
+            'Beta hero must reuse the main landing page sliding platform wall');
+        $this->assertStringContainsString('/images/marketing/hero/platforms-front.png', $contents);
+        $this->assertStringContainsString('heroBackdropReady', $contents,
+            'Beta hero wall must wait for decode before reveal');
         $this->assertStringNotContainsString('PublicLayout', $contents);
         $this->assertStringNotContainsString('PublicNav', $contents);
         $this->assertStringNotContainsString('PublicFooter', $contents);
