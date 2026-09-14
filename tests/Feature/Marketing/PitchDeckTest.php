@@ -14,6 +14,7 @@ class PitchDeckTest extends TestCase
         $this->get(route('pitch'))
             ->assertOk()
             ->assertSee('content="noindex, nofollow"', false)
+            ->assertSee('Know what works.', false)
             ->assertSee('Outperform your market', false)
             ->assertSee('Fund the proof.', false)
             ->assertSee('£10', false)
@@ -24,9 +25,7 @@ class PitchDeckTest extends TestCase
             ->assertDontSee('TAM:', false)
             ->assertSee('container-type: size', false)
             ->assertSee('class="deck"', false)
-            ->assertSee('class="chrome"', false)
-            ->assertDontSee('grid-template-columns: 6fr 3fr 1fr', false)
-            ->assertSee('The winning posts are already public', false);
+            ->assertSee('class="chrome"', false);
     }
 
     public function test_pitch_deck_stays_out_of_the_sitemap(): void

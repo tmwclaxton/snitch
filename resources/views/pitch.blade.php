@@ -4,33 +4,27 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>Snitch - Brand pitch</title>
+    <title>Snitch - Pitch</title>
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=caveat:500,600|figtree:400,500,600,700|young-serif:400" rel="stylesheet">
+    <link href="https://fonts.bunny.net/css?family=caveat:500,600|figtree:500,700|young-serif:400" rel="stylesheet">
     <style>
         :root {
             --paper: #efe6d8;
-            --fog: #e4d9c8;
             --ink: #1c1b1a;
             --spot: #f0c400;
-            --teal: #3a5f6b;
-            --lift: #fffdf8;
-            --press: #1c1b1a;
             --display: "Young Serif", Georgia, serif;
-            --sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
-            --note: "Caveat", "Segoe Print", cursive;
-            --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Ccircle cx='2' cy='2' r='1.1' fill='%231c1b1a' fill-opacity='0.18'/%3E%3C/svg%3E");
-            --grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
-            --ticket: polygon(0% 10%, 4% 0, 14% 6%, 26% 0, 40% 5%, 54% 0, 68% 6%, 82% 0, 94% 5%, 100% 12%, 98% 50%, 100% 88%, 94% 100%, 80% 95%, 66% 100%, 50% 94%, 36% 100%, 20% 95%, 8% 100%, 0 88%);
+            --sans: "Figtree", ui-sans-serif, sans-serif;
+            --note: "Caveat", cursive;
+            --halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Ccircle cx='2' cy='2' r='1.1' fill='%231c1b1a' fill-opacity='0.16'/%3E%3C/svg%3E");
         }
 
         * { box-sizing: border-box; }
-        html, body { margin: 0; height: 100%; background: #1c1b1a; color: var(--ink); font-family: var(--sans); }
+        html, body { margin: 0; height: 100%; background: #111; color: var(--ink); font-family: var(--sans); }
         body { overflow: hidden; }
 
-        .room { min-height: 100dvh; display: grid; place-items: center; background: #141311; }
+        .room { min-height: 100dvh; display: grid; place-items: center; }
 
         .stage {
             position: relative;
@@ -40,766 +34,308 @@
             height: min(100dvh, calc(100vw * 9 / 16));
             overflow: hidden;
             background: var(--paper);
-            isolation: isolate;
             container-type: size;
             container-name: deck;
-            box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+            isolation: isolate;
         }
 
         .stage::before {
             content: "";
             position: absolute;
             inset: 0;
-            z-index: 2;
+            z-index: 1;
             pointer-events: none;
             background-image: var(--halftone);
-            background-size: 7px 7px;
-            opacity: 0.42;
+            background-size: 8px 8px;
+            opacity: 0.4;
             mix-blend-mode: multiply;
         }
 
-        .stage::after {
-            content: "";
-            position: absolute;
-            inset: -18%;
-            z-index: 1;
-            pointer-events: none;
-            background-image: var(--grain);
-            opacity: 0.11;
-        }
-
-        .deck { position: relative; z-index: 3; min-height: 0; overflow: hidden; }
-
+        .deck { position: relative; z-index: 2; min-height: 0; }
         .slide {
             position: absolute;
             inset: 0;
             display: none;
-            padding: clamp(0.8rem, 3cqi, 1.65rem);
+            padding: clamp(1.2rem, 4.5cqi, 2.6rem);
             min-height: 0;
-            overflow: hidden;
+        }
+        .slide.is-on { display: grid; }
+
+        .wm { position: relative; font-family: var(--display); line-height: 0.86; letter-spacing: -0.04em; }
+        .wm b {
+            position: absolute;
+            inset: 0;
+            color: var(--spot);
+            transform: translate(2px, 1px);
+            opacity: 0.38;
+            mix-blend-mode: multiply;
+            pointer-events: none;
+            font-weight: 400;
         }
 
-        .slide.is-on { display: grid; gap: clamp(0.5rem, 1.5cqh, 0.9rem); animation: settle 280ms ease both; }
-        @keyframes settle { from { opacity: 0; } to { opacity: 1; } }
-
-        .wordmark { position: relative; font-family: var(--display); letter-spacing: -0.03em; line-height: 0.9; }
-        .wordmark .ghost {
-            position: absolute; inset: 0; color: var(--spot);
-            transform: translate(1px, 1px); opacity: 0.32; mix-blend-mode: multiply; pointer-events: none;
+        h1, h2, p { margin: 0; }
+        .huge {
+            font-family: var(--display);
+            font-weight: 400;
+            line-height: 0.86;
+            letter-spacing: -0.045em;
+            font-size: clamp(3.8rem, 12cqi, 8.2rem);
+            max-width: 11ch;
         }
-
-        .kicker {
-            font-size: clamp(0.6rem, 1.35cqi, 0.72rem);
-            letter-spacing: 0.18em;
+        .giant {
+            font-family: var(--display);
+            line-height: 0.78;
+            letter-spacing: -0.06em;
+            font-size: clamp(7.5rem, 28cqi, 18rem);
+        }
+        .line {
+            font-size: clamp(1.15rem, 2.4cqi, 1.7rem);
+            max-width: 22ch;
+            line-height: 1.2;
+        }
+        .meta {
+            font-size: 0.72rem;
+            letter-spacing: 0.2em;
             text-transform: uppercase;
             font-weight: 700;
-            color: color-mix(in oklab, var(--ink) 55%, var(--paper));
+            opacity: 0.5;
         }
 
-        h1, h2, h3, p { margin: 0; }
-        h1, h2 { font-family: var(--display); font-weight: 400; line-height: 0.95; letter-spacing: -0.03em; }
-        .title { font-size: clamp(1.45rem, 4.3cqi, 2.75rem); max-width: 20ch; }
-        .lede { font-size: clamp(0.88rem, 1.65cqi, 1.08rem); line-height: 1.35; max-width: 36ch; color: color-mix(in oklab, var(--ink) 76%, var(--paper)); }
-        .note { font-family: var(--note); line-height: 1.08; }
+        .fill { place-content: center start; align-content: center; }
+        .center { place-items: center; text-align: center; }
+        .center .line { max-width: 18ch; }
+        .spot { background: var(--spot); }
+        .ink { background: var(--ink); color: var(--paper); }
+        .ink .wm b { mix-blend-mode: plus-lighter; opacity: 0.55; }
+
+        .split { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); align-items: stretch; }
+        .art { min-width: 0; min-height: 0; display: grid; align-items: end; justify-items: center; }
+        .art img { width: 100%; height: 100%; object-fit: contain; object-position: bottom center; }
+
+        .cols { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; padding: 0; }
+        .cols article {
+            display: grid;
+            align-content: space-between;
+            min-width: 0;
+            padding: clamp(1.1rem, 3.2cqi, 2rem);
+            border-right: 1px solid color-mix(in oklab, var(--ink) 14%, transparent);
+        }
+        .cols article:last-child { border-right: 0; background: var(--spot); }
+        .cols h2 { font-family: var(--display); font-size: clamp(1.5rem, 3.4cqi, 2.4rem); line-height: 0.95; }
+        .cols p { font-size: clamp(1.05rem, 2.1cqi, 1.45rem); max-width: 12ch; }
+        .cols strong { font-family: var(--display); font-size: clamp(2rem, 5cqi, 3.4rem); }
+
+        .pair { grid-template-columns: 1fr 1fr; }
+        .pair div { display: grid; align-content: end; min-width: 0; padding-right: 0.6rem; }
+        .pair .who { font-family: var(--display); font-size: clamp(2.6rem, 7cqi, 5rem); line-height: 0.9; }
+
+        .nums { grid-template-columns: 1.4fr 1fr; align-items: end; }
+        .side { display: grid; gap: 1.1rem; align-content: end; }
+        .side b { display: block; font-family: var(--display); font-size: clamp(2.4rem, 6cqi, 4.2rem); line-height: 0.9; }
+        .side span { display: block; font-size: clamp(0.95rem, 1.8cqi, 1.2rem); opacity: 0.7; }
+
+        .steps { align-content: center; gap: 0.15em; }
+        .steps h2 { font-size: clamp(3.2rem, 9.5cqi, 6.6rem); }
 
         .chrome {
-            z-index: 6;
+            z-index: 4;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.55rem;
-            padding: 0.5rem 0.8rem 0.65rem;
-            background: color-mix(in oklab, var(--paper) 86%, var(--fog));
-            border-top: 1px solid color-mix(in oklab, var(--ink) 10%, transparent);
-        }
-
-        .chrome button, .dots button { font: inherit; cursor: pointer; }
-        .brand-slot { display: flex; align-items: center; gap: 0.4rem; min-width: 6.2rem; }
-        .brand-slot img { width: 1.65rem; height: 1.65rem; object-fit: contain; }
-        .folio { font-family: var(--note); font-size: 1rem; min-width: 2.6rem; }
-
-        .ticket {
-            border: 0;
-            color: var(--press);
-            background: var(--spot);
-            padding: 0.38rem 0.72rem;
-            clip-path: var(--ticket);
-            box-shadow: 2px 2px 0 color-mix(in oklab, var(--ink) 18%, transparent);
-            font-weight: 700;
-            font-size: 0.7rem;
-            letter-spacing: 0.04em;
+            padding: 0.45rem 0.9rem 0.55rem;
+            font-size: 0.78rem;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
         }
-        .ticket:disabled { opacity: 0.32; cursor: default; box-shadow: none; }
+        .chrome button {
+            font: inherit;
+            letter-spacing: inherit;
+            text-transform: inherit;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            padding: 0.2rem 0;
+        }
+        .chrome button:disabled { opacity: 0.25; cursor: default; }
+        .folio { font-family: var(--note); text-transform: none; letter-spacing: 0; font-size: 1.05rem; }
 
-        .dots { display: flex; gap: 0.26rem; justify-content: center; flex-wrap: wrap; }
-        .dots button { width: 0.46rem; height: 0.46rem; border: 0; padding: 0; background: color-mix(in oklab, var(--ink) 20%, var(--paper)); }
-        .dots button.is-on { background: var(--spot); box-shadow: 1px 1px 0 var(--ink); }
-
-        .stack { grid-template-rows: auto minmax(0, 1fr); }
-        .cards-2, .cards-3, .cards-4, .chips, .why-grid, .meter, .outcomes {
-            display: grid; gap: 0.6rem; min-height: 0; align-items: stretch;
-        }
-        .cards-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .cards-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-        .cards-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-
-        .tape {
-            height: 0.7rem;
-            width: 38%;
-            margin: -0.85rem auto 0.45rem;
-            background:
-                repeating-linear-gradient(90deg, color-mix(in oklab, var(--spot) 55%, transparent) 0 6px, transparent 6px 8px),
-                color-mix(in oklab, var(--spot) 48%, var(--paper));
-            box-shadow: 0 1px 0 color-mix(in oklab, var(--ink) 12%, transparent);
-            opacity: 0.9;
-        }
-
-        .film {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 0.18rem;
-            height: 3.15rem;
-            padding: 0.28rem;
-            background: var(--ink);
-            flex: 0 0 auto;
-        }
-
-        .film i {
-            display: block;
-            height: 100%;
-            background:
-                linear-gradient(180deg, color-mix(in oklab, var(--spot) 16%, #2c2823), #141210);
-            box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--spot) 20%, transparent);
-        }
-
-        .film i.win {
-            background:
-                linear-gradient(180deg, var(--spot), color-mix(in oklab, var(--spot) 58%, #2f2a08));
-        }
-
-        .film.thin { grid-template-columns: repeat(3, minmax(0, 1fr)); height: 2.35rem; }
-
-        .mark {
-            display: inline-grid;
-            place-items: center;
-            width: 1.15rem;
-            height: 1.15rem;
-            font-family: var(--note);
-            font-size: 0.95rem;
-            line-height: 1;
-            flex: 0 0 auto;
-        }
-        .mark.ok { background: var(--spot); color: var(--press); }
-        .mark.no { background: color-mix(in oklab, var(--ink) 12%, var(--paper)); color: color-mix(in oklab, var(--ink) 55%, var(--paper)); }
-
-        .cover {
-            grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
-        }
-        .cover-copy { display: grid; align-content: center; gap: 0.7rem; min-width: 0; }
-        .cover h1 { font-size: clamp(3.3rem, 12cqi, 6.8rem); }
-        .cover .line { font-size: clamp(1.05rem, 2.35cqi, 1.55rem); max-width: 16ch; }
-        .cover .lede { max-width: 28ch; }
-
-        .platforms { display: flex; gap: 0.38rem; align-items: center; }
-        .platforms span {
-            display: grid; place-items: center;
-            width: 2rem; height: 2rem;
-            background: var(--lift);
-            box-shadow: 2px 2px 0 color-mix(in oklab, var(--ink) 14%, transparent);
-        }
-        .platforms img { width: 1.15rem; height: 1.15rem; }
-
-        .cover-art {
-            min-width: 0;
-            min-height: 0;
-            display: grid;
-            align-items: end;
-            background: linear-gradient(180deg, transparent 62%, var(--spot) 62%);
-        }
-        .cover-art img { width: 100%; height: 100%; object-fit: contain; object-position: bottom center; }
-
-        .quote {
-            display: grid;
-            place-items: center;
-            min-height: 0;
-            padding: 0.7rem 1rem;
-            background: color-mix(in oklab, var(--spot) 55%, var(--paper));
-            box-shadow: 6px 6px 0 var(--ink);
-            font-family: var(--note);
-            font-size: clamp(1.55rem, 4.2cqi, 2.55rem);
-            text-align: center;
-        }
-
-        .chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-        .chip {
-            display: flex;
-            flex-direction: column;
-            gap: 0.35rem;
-            min-height: 0;
-            padding: 0.5rem 0.45rem 0.6rem;
-            background: var(--lift);
-            box-shadow: 3px 4px 0 color-mix(in oklab, var(--ink) 14%, transparent);
-            text-align: center;
-        }
-        .chip b { font-family: var(--note); font-size: clamp(1.05rem, 2.1cqi, 1.35rem); font-weight: 600; }
-        .chip small { font-size: 0.68rem; letter-spacing: 0.04em; text-transform: uppercase; color: color-mix(in oklab, var(--ink) 50%, var(--paper)); }
-
-        .scrap, .cutout, .col, .stat, .poster, .outcome, .bar {
-            min-width: 0; min-height: 0;
-        }
-
-        .scrap {
-            display: flex;
-            flex-direction: column;
-            gap: 0.28rem;
-            padding: 0.7rem 0.65rem 0.75rem;
-            background: color-mix(in oklab, var(--lift) 80%, var(--paper));
-            box-shadow: 4px 5px 0 color-mix(in oklab, var(--spot) 40%, transparent);
-        }
-        .scrap h3 { font-family: var(--display); font-size: clamp(1.2rem, 2.3cqi, 1.6rem); margin: 0.25rem 0 0.2rem; }
-        .scrap .num { font-family: var(--note); color: var(--teal); font-size: 1.25rem; }
-        .scrap p { font-size: clamp(0.82rem, 1.45cqi, 0.98rem); }
-        .press {
-            flex: 1;
-            min-height: 1.6rem;
-            margin-top: 0.35rem;
-            background:
-                repeating-linear-gradient(
-                    90deg,
-                    color-mix(in oklab, var(--ink) 9%, var(--paper)) 0 7px,
-                    transparent 7px 14px
-                ),
-                color-mix(in oklab, var(--spot) 14%, var(--paper));
-        }
-
-        .polaroid {
-            display: grid;
-            grid-template-rows: auto minmax(0, 1fr) auto;
-            height: 100%;
-            min-height: 0;
-            padding: 0.35rem 0.4rem 0.55rem;
-            background: var(--lift);
-            box-shadow: 6px 7px 0 color-mix(in oklab, var(--spot) 52%, transparent);
-        }
-        .polaroid img { width: 100%; height: 100%; min-height: 0; object-fit: contain; background: color-mix(in oklab, var(--spot) 22%, var(--paper)); }
-        .polaroid figcaption { font-family: var(--note); text-align: center; font-size: clamp(1.05rem, 2cqi, 1.3rem); padding-top: 0.3rem; }
-
-        .stat {
-            display: grid;
-            grid-template-rows: auto 1fr auto;
-            padding: 0.5rem 0.55rem 0.65rem;
-            background: var(--lift);
-            box-shadow: 4px 5px 0 var(--spot);
-        }
-        .stat strong { display: block; font-family: var(--display); font-size: clamp(2rem, 5.6cqi, 3.4rem); line-height: 0.88; align-self: end; }
-        .stat span { font-size: clamp(0.74rem, 1.4cqi, 0.9rem); }
-
-        .why-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-        .poster {
-            display: grid;
-            grid-template-rows: auto 1fr auto;
-            padding: 0.65rem 0.7rem;
-            background: color-mix(in oklab, var(--spot) 16%, var(--paper));
-            box-shadow: 5px 6px 0 color-mix(in oklab, var(--ink) 16%, transparent);
-        }
-        .poster:nth-child(2) { background: color-mix(in oklab, var(--spot) 48%, var(--paper)); }
-        .poster:nth-child(3) { background: color-mix(in oklab, var(--teal) 18%, var(--paper)); }
-        .poster h3 { font-family: var(--display); font-size: clamp(1.15rem, 2.4cqi, 1.55rem); }
-        .poster p { font-size: clamp(0.8rem, 1.45cqi, 0.95rem); align-self: end; }
-
-        .cutout {
-            display: grid;
-            grid-template-rows: auto auto 1fr auto;
-            padding: 0.7rem;
-            background: color-mix(in oklab, var(--spot) 18%, var(--paper));
-            box-shadow: 6px 6px 0 color-mix(in oklab, var(--ink) 15%, transparent);
-        }
-        .cutout h3 { font-family: var(--display); font-size: clamp(1.3rem, 2.7cqi, 1.85rem); }
-        .cutout .lede { max-width: 26ch; }
-        .sticker { display: inline-block; background: var(--spot); color: var(--press); font-family: var(--note); padding: 0.08rem 0.45rem; width: fit-content; }
-
-        .people { display: flex; gap: 0.35rem; margin: 0.55rem 0 auto; }
-        .people i {
-            width: 1.7rem; height: 1.7rem;
-            background: var(--lift);
-            box-shadow: 2px 2px 0 color-mix(in oklab, var(--ink) 12%, transparent);
-            background-image: url("/images/brand/mascot-mark.png");
-            background-size: 80%;
-            background-repeat: no-repeat;
-            background-position: center;
-        }
-        .people.agency i:nth-child(2),
-        .people.agency i:nth-child(3) { opacity: 0.55; }
-
-        .col {
-            display: flex;
-            flex-direction: column;
-            gap: 0.45rem;
-            padding: 0.65rem 0.65rem 0.7rem;
-            background: var(--lift);
-            box-shadow: 4px 4px 0 color-mix(in oklab, var(--ink) 12%, transparent);
-        }
-        .col.win { background: color-mix(in oklab, var(--spot) 46%, var(--paper)); box-shadow: 4px 5px 0 var(--ink); }
-        .col h3 { font-family: var(--display); font-size: clamp(1.05rem, 2.1cqi, 1.4rem); margin-bottom: 0.45rem; }
-        .col ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.38rem; font-size: clamp(0.78rem, 1.4cqi, 0.92rem); }
-        .col li { display: flex; align-items: center; gap: 0.4rem; }
-        .price { margin-top: 0.7rem; font-family: var(--note); font-size: clamp(1.15rem, 2.1cqi, 1.4rem); }
-
-        .money { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; }
-        .ticket-xl {
-            display: grid;
-            place-content: center;
-            text-align: center;
-            min-height: 0;
-            background: var(--spot);
-            color: var(--press);
-            clip-path: var(--ticket);
-            box-shadow: 8px 8px 0 var(--ink);
-            padding: 1rem;
-        }
-        .giant { font-family: var(--display); font-size: clamp(3.8rem, 12cqi, 7.2rem); line-height: 0.85; }
-        .econ { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
-        .econ b {
-            display: grid;
-            padding: 0.45rem 0.55rem;
-            background: var(--lift);
-            box-shadow: 3px 3px 0 color-mix(in oklab, var(--spot) 40%, transparent);
-            font-family: var(--display);
-            font-size: clamp(1.05rem, 2.2cqi, 1.4rem);
-            font-weight: 400;
-        }
-        .econ span { display: block; font-family: var(--sans); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; color: color-mix(in oklab, var(--ink) 55%, var(--paper)); }
-
-        .bar {
-            display: grid;
-            grid-template-columns: 4.8rem minmax(0, 1fr);
-            gap: 0.7rem;
-            align-items: center;
-            padding: 0.65rem 0.8rem;
-        }
-        .bar.a { background: color-mix(in oklab, var(--spot) 42%, var(--paper)); }
-        .bar.b { background: color-mix(in oklab, var(--teal) 24%, var(--paper)); }
-        .bar.c { background: color-mix(in oklab, var(--ink) 9%, var(--paper)); }
-        .bar strong { font-family: var(--display); font-size: clamp(1.55rem, 3.4cqi, 2.2rem); }
-        .track { height: 0.72rem; margin-top: 0.35rem; background: color-mix(in oklab, var(--ink) 10%, var(--paper)); overflow: hidden; }
-        .track i { display: block; height: 100%; background: var(--press); }
-        .bar.a .track i { background: var(--press); }
-        .bar.b .track i { background: var(--teal); }
-        .bar.c .track i { background: color-mix(in oklab, var(--ink) 45%, var(--paper)); }
-
-        .ask { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); }
-        .outcomes { margin: 0; padding: 0; }
-        .outcome {
-            display: grid;
-            grid-template-columns: 1.7rem minmax(0, 1fr);
-            gap: 0.55rem;
-            align-items: center;
-            padding: 0.55rem 0.65rem;
-            background: var(--lift);
-            box-shadow: 3px 3px 0 color-mix(in oklab, var(--spot) 50%, transparent);
-            list-style: none;
-            font-size: clamp(0.85rem, 1.55cqi, 1.02rem);
-        }
-        .outcome i {
-            display: grid; place-items: center;
-            width: 1.55rem; height: 1.55rem;
-            background: var(--spot);
-            font-family: var(--note);
-            font-size: 1.1rem;
-            font-style: normal;
-        }
-
-        .close {
-            place-items: center;
-            text-align: center;
-        }
-        .close-inner {
-            display: grid;
-            justify-items: center;
-            gap: 0.4rem;
-            padding: 1rem 1.4rem 1.1rem;
-            background: color-mix(in oklab, var(--spot) 55%, var(--paper));
-            box-shadow: 8px 8px 0 var(--ink);
-        }
-        .close h2 { font-size: clamp(3.1rem, 10cqi, 5.6rem); }
-        .close img { width: min(20cqi, 8.8rem); height: auto; }
-        .close .note { font-size: clamp(1.2rem, 2.5cqi, 1.7rem); }
-
-        @container deck (max-width: 760px) {
-            .cover, .money, .ask { grid-template-columns: 1fr; }
-            .cover-art { max-height: 36%; }
-            .chips, .cards-4, .cards-3, .why-grid { grid-template-columns: 1fr 1fr; }
+        @container deck (max-width: 720px) {
+            .split, .pair, .nums, .cols { grid-template-columns: 1fr; }
+            .art { max-height: 40%; }
+            .cols article { border-right: 0; border-top: 1px solid color-mix(in oklab, var(--ink) 14%, transparent); }
         }
 
         @media print {
-            body, .room { background: var(--paper); }
-            .stage { width: 100%; height: auto; box-shadow: none; overflow: visible; grid-template-rows: auto; }
-            .deck { overflow: visible; }
-            .slide { position: relative; display: grid !important; height: 100vh; page-break-after: always; animation: none; }
+            .stage { width: 100%; height: auto; grid-template-rows: auto; }
+            .slide { position: relative; display: grid !important; height: 100vh; page-break-after: always; }
             .chrome { display: none; }
         }
     </style>
 </head>
 <body>
     <div class="room">
-        <div class="stage" id="stage">
+        <div class="stage">
             <div class="deck">
-                <section class="slide cover is-on" data-slide>
-                    <div class="cover-copy">
-                        <p class="kicker">Brand pitch</p>
-                        <h1 class="wordmark"><span class="ghost" aria-hidden="true">Snitch</span><span>Snitch</span></h1>
-                        <p class="line">Outperform your market by knowing exactly what works.</p>
-                        <p class="lede">The winning posts are already public. We assemble the formula.</p>
-                        <div class="platforms" aria-hidden="true">
-                            <span><img src="/images/platforms/instagram.svg" alt=""></span>
-                            <span><img src="/images/platforms/tiktok.svg" alt=""></span>
-                            <span><img src="/images/platforms/facebook.svg" alt=""></span>
-                            <span><img src="/images/platforms/linkedin.svg" alt=""></span>
-                        </div>
+                <section class="slide split is-on" data-slide>
+                    <div style="align-self:center;display:grid;gap:1.1rem">
+                        <p class="meta">Snitch</p>
+                        <h1 class="wm huge"><b>Know what works.</b>Know what works.</h1>
+                        <p class="line">Outperform your market. Stop guessing what to post.</p>
                     </div>
-                    <div class="cover-art">
+                    <div class="art">
                         <img src="/images/marketing/hero/mascot-character.png" alt="">
                     </div>
                 </section>
 
-                <section class="slide stack" data-slide>
+                <section class="slide fill spot" data-slide>
                     <div>
-                        <p class="kicker">The problem</p>
-                        <h2 class="title">They ship into the void every week.</h2>
-                        <p class="lede" style="margin-top:0.4rem">Businesses do not know how to get the most from social. They post, they boost, they still cannot say what worked.</p>
-                    </div>
-                    <div class="stack" style="gap:0.55rem;min-height:0">
-                        <p class="quote">“What do we post this week?”</p>
-                        <div class="chips">
-                            <article class="chip">
-                                <div class="film thin" aria-hidden="true"><i></i><i></i><i></i></div>
-                                <b>What</b>
-                                <small>The idea</small>
-                            </article>
-                            <article class="chip">
-                                <div class="film thin" aria-hidden="true"><i></i><i class="win"></i><i></i></div>
-                                <b>When</b>
-                                <small>The timing</small>
-                            </article>
-                            <article class="chip">
-                                <div class="film thin" aria-hidden="true"><i></i><i></i><i class="win"></i></div>
-                                <b>Captions</b>
-                                <small>The words</small>
-                            </article>
-                            <article class="chip">
-                                <div class="film thin" aria-hidden="true"><i class="win"></i><i></i><i></i></div>
-                                <b>Ads or organic?</b>
-                                <small>The spend</small>
-                            </article>
-                        </div>
+                        <p class="meta">Problem</p>
+                        <h2 class="huge" style="margin-top:0.4rem">Nobody knows what to post this week.</h2>
                     </div>
                 </section>
 
-                <section class="slide stack" data-slide>
+                <section class="slide steps" data-slide>
+                    <p class="meta">Solution</p>
+                    <h2 class="wm"><b>Track it.</b>Track it.</h2>
+                    <h2 class="wm"><b>See what won.</b>See what won.</h2>
+                    <h2 class="wm"><b>Post that.</b>Post that.</h2>
+                </section>
+
+                <section class="slide fill ink" data-slide>
                     <div>
-                        <p class="kicker">Solution</p>
-                        <h2 class="title">Real posts. Real winners. No guesswork.</h2>
-                        <p class="lede" style="margin-top:0.4rem">Snitch tracks what competitors publish, then shows the formula that is actually working. Head-to-head gap, then the next post.</p>
-                    </div>
-                    <div class="cards-3">
-                        <article class="scrap">
-                            <div class="tape" aria-hidden="true"></div>
-                            <div class="film" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-                            <p class="num">01 Track</p>
-                            <h3>One sheet</h3>
-                            <p>Their public posts, pulled into one contact board.</p>
-                            <div class="press" aria-hidden="true"></div>
-                        </article>
-                        <article class="scrap">
-                            <div class="tape" aria-hidden="true"></div>
-                            <div class="film" aria-hidden="true"><i></i><i class="win"></i><i></i><i class="win"></i></div>
-                            <p class="num">02 Reveal</p>
-                            <h3>The winners</h3>
-                            <p>What is performing best in your market, not a vibe.</p>
-                            <div class="press" aria-hidden="true"></div>
-                        </article>
-                        <article class="scrap">
-                            <div class="tape" aria-hidden="true"></div>
-                            <div class="film" aria-hidden="true"><i class="win"></i><i class="win"></i><i></i><i></i></div>
-                            <p class="num">03 Remake</p>
-                            <h3>Your move</h3>
-                            <p>Copy the move in your voice. That is the product.</p>
-                            <div class="press" aria-hidden="true"></div>
-                        </article>
+                        <p class="meta">Why now</p>
+                        <h2 class="huge" style="margin-top:0.4rem">Social is the channel. Guessing is the tax.</h2>
                     </div>
                 </section>
 
-                <section class="slide stack" data-slide>
+                <section class="slide pair" data-slide>
                     <div>
-                        <p class="kicker">Founders</p>
-                        <h2 class="title">We felt this pain first.</h2>
-                        <p class="lede" style="margin-top:0.4rem">Two operators who could not tell what to post, until we built the board we needed. We are raising to prove it, not to pose as finished.</p>
+                        <p class="meta">Who</p>
+                        <p class="who">Solos</p>
+                        <p class="line">In-house. No research team. Still have to post.</p>
                     </div>
-                    <div class="cards-2">
-                        <figure class="polaroid">
-                            <div class="tape" aria-hidden="true"></div>
-                            <img src="/images/marketing/hero/mascot-character.png" alt="">
-                            <figcaption>Dan Smyth</figcaption>
-                        </figure>
-                        <figure class="polaroid">
-                            <div class="tape" aria-hidden="true"></div>
-                            <img src="/images/marketing/hero/mascot-binos.png" alt="">
-                            <figcaption>Toby Claxton</figcaption>
-                        </figure>
+                    <div>
+                        <p class="meta">&nbsp;</p>
+                        <p class="who">Micro-agencies</p>
+                        <p class="line">Priced out of Socialinsider and Rival IQ.</p>
                     </div>
                 </section>
 
-                <section class="slide stack" data-slide>
-                    <div>
-                        <p class="kicker">Early traction</p>
-                        <h2 class="title">Proof of interest. Not a finished machine.</h2>
-                        <p class="lede" style="margin-top:0.35rem">Signal before scale. The raise is to turn this into paying habit.</p>
-                    </div>
-                    <div class="cards-4">
-                        <article class="stat">
-                            <div class="film thin" aria-hidden="true"><i class="win"></i><i></i><i></i></div>
-                            <strong>214</strong>
-                            <span>cold emails sent</span>
-                        </article>
-                        <article class="stat">
-                            <div class="film thin" aria-hidden="true"><i class="win"></i><i class="win"></i><i></i></div>
-                            <strong>69%</strong>
-                            <span>open rate</span>
-                        </article>
-                        <article class="stat">
-                            <div class="film thin" aria-hidden="true"><i></i><i class="win"></i><i></i></div>
-                            <strong>14%</strong>
-                            <span>click through</span>
-                        </article>
-                        <article class="stat">
-                            <div class="film thin" aria-hidden="true"><i></i><i></i><i class="win"></i></div>
-                            <strong>15</strong>
-                            <span>private beta seats</span>
-                        </article>
-                    </div>
+                <section class="slide cols" data-slide>
+                    <article>
+                        <h2>Socialinsider</h2>
+                        <p>Data for teams.</p>
+                        <strong>£66+</strong>
+                    </article>
+                    <article>
+                        <h2>Rival IQ</h2>
+                        <p>Dashboards for agencies.</p>
+                        <strong>£177+</strong>
+                    </article>
+                    <article>
+                        <h2>Snitch</h2>
+                        <p>The next post.</p>
+                        <strong>£10</strong>
+                    </article>
                 </section>
 
-                <section class="slide stack" data-slide>
+                <section class="slide center spot" data-slide>
                     <div>
-                        <p class="kicker">Why now</p>
-                        <h2 class="title">The channel is social. The gap is what to post.</h2>
-                    </div>
-                    <div class="why-grid">
-                        <article class="poster">
-                            <p class="sticker">01</p>
-                            <h3>Social is the bet</h3>
-                            <p>Small businesses put growth on social. They cannot staff a research desk.</p>
-                        </article>
-                        <article class="poster">
-                            <p class="sticker">02</p>
-                            <h3>Posting is the jam</h3>
-                            <p>The bottleneck is not tools. It is knowing what to post this week.</p>
-                        </article>
-                        <article class="poster">
-                            <p class="sticker">03</p>
-                            <h3>Seats got expensive</h3>
-                            <p>Incumbents sell dashboards to teams. AI made the answer cheap enough for £10.</p>
-                        </article>
-                    </div>
-                </section>
-
-                <section class="slide stack" data-slide>
-                    <div>
-                        <p class="kicker">Who it is for</p>
-                        <h2 class="title">Start where the incumbents cannot sell.</h2>
-                        <p class="lede" style="margin-top:0.35rem">One product. Two nearby buyers. Beachhead first, not a TAM slide.</p>
-                    </div>
-                    <div class="cards-2">
-                        <article class="cutout">
-                            <p class="sticker">A</p>
-                            <h3>Solo marketers</h3>
-                            <p class="lede">In-house people who have to post, and do not have a research team.</p>
-                            <div class="people" aria-hidden="true"><i></i></div>
-                        </article>
-                        <article class="cutout">
-                            <p class="sticker">B</p>
-                            <h3>Micro-agencies</h3>
-                            <p class="lede">Small shops priced out of Rival IQ and Socialinsider.</p>
-                            <div class="people agency" aria-hidden="true"><i></i><i></i><i></i></div>
-                        </article>
-                    </div>
-                </section>
-
-                <section class="slide stack" data-slide>
-                    <div>
-                        <p class="kicker">Why Snitch</p>
-                        <h2 class="title">They show numbers. We show the gap.</h2>
-                        <p class="lede" style="margin-top:0.35rem">Wedge: tell a solo what to change, at a price they can actually pay.</p>
-                    </div>
-                    <div class="cards-3">
-                        <article class="col">
-                            <h3>Socialinsider</h3>
-                            <ul>
-                                <li><span class="mark ok">+</span> Competitor data</li>
-                                <li><span class="mark no">x</span> Built for teams</li>
-                                <li><span class="mark no">x</span> No “what to change”</li>
-                            </ul>
-                            <p class="price">£66+</p>
-                        </article>
-                        <article class="col">
-                            <h3>Rival IQ</h3>
-                            <ul>
-                                <li><span class="mark ok">+</span> You vs them</li>
-                                <li><span class="mark no">x</span> Built for agencies</li>
-                                <li><span class="mark no">x</span> Still a dashboard</li>
-                            </ul>
-                            <p class="price">£177+</p>
-                        </article>
-                        <article class="col win">
-                            <h3>Snitch</h3>
-                            <ul>
-                                <li><span class="mark ok">+</span> Solo + micro-agency</li>
-                                <li><span class="mark ok">+</span> Head-to-head gap</li>
-                                <li><span class="mark ok">+</span> What to post next</li>
-                            </ul>
-                            <p class="price">£10 to £30</p>
-                        </article>
-                    </div>
-                </section>
-
-                <section class="slide money" data-slide>
-                    <div style="align-self:center">
-                        <p class="kicker">How we make money</p>
-                        <h2 class="title">One model. Subscription.</h2>
-                        <p class="lede" style="margin-top:0.55rem">Validated at £10+ a month. Costs under £1 a month per user at scale. That is the whole story.</p>
-                        <div class="econ">
-                            <b><span>Charge</span>£10</b>
-                            <b><span>Run</span>&lt; £1</b>
-                        </div>
-                    </div>
-                    <div class="ticket-xl">
                         <p class="giant">£10</p>
-                        <p class="note" style="font-size:1.55rem;margin-top:0.25rem">per month. Nothing else.</p>
+                        <p class="line" style="margin-top:0.5rem">A month. Under £1 to run.</p>
                     </div>
                 </section>
 
-                <section class="slide stack" data-slide>
+                <section class="slide nums" data-slide>
                     <div>
-                        <p class="kicker">Use of funds</p>
-                        <h2 class="title">Buy the answers. Keep the unit economics honest.</h2>
+                        <p class="meta">Traction</p>
+                        <p class="giant">69%</p>
+                        <p class="line">opened the cold email.</p>
                     </div>
-                    <div class="meter">
-                        <article class="bar a">
-                            <strong>60%</strong>
-                            <div>
-                                <p><b>Find the channel.</b> Outreach, content, ads, affiliates.</p>
-                                <div class="track" aria-hidden="true"><i style="width:60%"></i></div>
-                            </div>
-                        </article>
-                        <article class="bar b">
-                            <strong>30%</strong>
-                            <div>
-                                <p><b>Keep it running.</b> Hosting, scrape, AI, admin.</p>
-                                <div class="track" aria-hidden="true"><i style="width:30%"></i></div>
-                            </div>
-                        </article>
-                        <article class="bar c">
-                            <strong>10%</strong>
-                            <div>
-                                <p><b>Show up.</b> Marketing rooms where buyers already are.</p>
-                                <div class="track" aria-hidden="true"><i style="width:10%"></i></div>
-                            </div>
-                        </article>
+                    <div class="side">
+                        <p><b>214</b><span>emails sent</span></p>
+                        <p><b>14%</b><span>clicked</span></p>
+                        <p><b>15</b><span>in private beta</span></p>
                     </div>
                 </section>
 
-                <section class="slide ask" data-slide>
+                <section class="slide pair" data-slide>
+                    <div>
+                        <p class="meta">Team</p>
+                        <p class="who">Dan Smyth</p>
+                        <p class="line">Felt the pain. Runs the hustle.</p>
+                    </div>
+                    <div>
+                        <img src="/images/marketing/hero/mascot-binos.png" alt="" style="width:min(38cqi,11rem);justify-self:end">
+                        <p class="who">Toby Claxton</p>
+                        <p class="line">Felt the pain. Builds the board.</p>
+                    </div>
+                </section>
+
+                <section class="slide fill" data-slide>
+                    <div>
+                        <p class="meta">The ask</p>
+                        <h2 class="huge" style="margin-top:0.35rem">Fund the proof.</h2>
+                        <p class="line" style="margin-top:1rem">Not a finished, profitable company. Money to find the buyer, the channel, and the first paying customers.</p>
+                    </div>
+                </section>
+
+                <section class="slide split spot" data-slide>
                     <div style="align-self:center">
-                        <p class="kicker">The ask</p>
-                        <h2 class="title">Fund the proof.</h2>
-                        <p class="lede" style="margin-top:0.55rem">This is a POC. You are not buying a finished, profitable company. You are funding the work that makes it possible.</p>
+                        <h1 class="wm huge"><b>Know what works.</b>Know what works.</h1>
                     </div>
-                    <ul class="outcomes">
-                        <li class="outcome"><i>1</i> Which buyer sticks: solo or agency</li>
-                        <li class="outcome"><i>2</i> Which channel actually signs people up</li>
-                        <li class="outcome"><i>3</i> Paying customers by the end of the grant</li>
-                        <li class="outcome"><i>4</i> A GTM we can take to the next conversation</li>
-                    </ul>
-                </section>
-
-                <section class="slide close" data-slide>
-                    <div class="close-inner">
+                    <div class="art">
                         <img src="/images/marketing/hero/mascot-binos.png" alt="">
-                        <h2 class="wordmark"><span class="ghost" aria-hidden="true">Snitch</span><span>Snitch</span></h2>
-                        <p class="note">Know what works. Then post it.</p>
                     </div>
                 </section>
             </div>
 
-            <nav class="chrome" aria-label="Deck controls">
-                <div class="brand-slot">
-                    <img src="/images/brand/mascot-mark.png" alt="">
-                    <button class="ticket" type="button" id="prev">Back</button>
-                </div>
-                <p class="folio" id="folio">01 / 12</p>
-                <div class="dots" id="dots"></div>
-                <button class="ticket" type="button" id="next">Next</button>
+            <nav class="chrome">
+                <button type="button" id="prev">Back</button>
+                <span class="folio" id="folio">01 / 11</span>
+                <span style="display:flex;align-items:center;gap:0.7rem">
+                    <img src="/images/brand/mascot-mark.png" alt="" width="26" height="26">
+                    <button type="button" id="next">Next</button>
+                </span>
             </nav>
         </div>
     </div>
-
     <script>
         (function () {
             const slides = Array.from(document.querySelectorAll('[data-slide]'));
-            const dots = document.getElementById('dots');
             const prev = document.getElementById('prev');
             const next = document.getElementById('next');
             const folio = document.getElementById('folio');
             let index = 0;
 
-            slides.forEach((_, i) => {
-                const dot = document.createElement('button');
-                dot.type = 'button';
-                dot.setAttribute('aria-label', 'Slide ' + (i + 1));
-                dot.addEventListener('click', () => go(i));
-                dots.appendChild(dot);
-            });
-
-            function go(nextIndex) {
-                index = Math.max(0, Math.min(slides.length - 1, nextIndex));
-                slides.forEach((slide, i) => slide.classList.toggle('is-on', i === index));
-                Array.from(dots.children).forEach((dot, i) => dot.classList.toggle('is-on', i === index));
+            function go(n) {
+                index = Math.max(0, Math.min(slides.length - 1, n));
+                slides.forEach((s, i) => s.classList.toggle('is-on', i === index));
                 prev.disabled = index === 0;
                 next.disabled = index === slides.length - 1;
                 folio.textContent = String(index + 1).padStart(2, '0') + ' / ' + String(slides.length).padStart(2, '0');
                 history.replaceState(null, '', '#' + (index + 1));
             }
 
-            prev.addEventListener('click', () => go(index - 1));
-            next.addEventListener('click', () => go(index + 1));
-
-            document.addEventListener('keydown', (event) => {
-                if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(event.key)) {
-                    event.preventDefault();
-                    go(index + 1);
-                }
-                if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(event.key)) {
-                    event.preventDefault();
-                    go(index - 1);
-                }
-                if (event.key === 'Home') go(0);
-                if (event.key === 'End') go(slides.length - 1);
+            prev.onclick = () => go(index - 1);
+            next.onclick = () => go(index + 1);
+            document.addEventListener('keydown', (e) => {
+                if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); go(index + 1); }
+                if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); go(index - 1); }
+                if (e.key === 'Home') go(0);
+                if (e.key === 'End') go(slides.length - 1);
             });
-
-            let startX = null;
-            document.addEventListener('touchstart', (event) => {
-                startX = event.changedTouches[0].clientX;
-            }, { passive: true });
-            document.addEventListener('touchend', (event) => {
-                if (startX === null) return;
-                const delta = event.changedTouches[0].clientX - startX;
-                if (Math.abs(delta) > 40) go(index + (delta < 0 ? 1 : -1));
-                startX = null;
+            let x = null;
+            document.addEventListener('touchstart', (e) => { x = e.changedTouches[0].clientX; }, { passive: true });
+            document.addEventListener('touchend', (e) => {
+                if (x === null) return;
+                const d = e.changedTouches[0].clientX - x;
+                if (Math.abs(d) > 40) go(index + (d < 0 ? 1 : -1));
+                x = null;
             });
-
-            const fromHash = Number.parseInt(window.location.hash.replace('#', ''), 10);
-            go(Number.isFinite(fromHash) ? fromHash - 1 : 0);
+            const h = Number.parseInt(location.hash.replace('#', ''), 10);
+            go(Number.isFinite(h) ? h - 1 : 0);
         })();
     </script>
 </body>
