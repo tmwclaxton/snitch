@@ -21,7 +21,11 @@ class PitchDeckTest extends TestCase
             ->assertSee('/images/marketing/hero/mascot-binos.png', false)
             ->assertSee('/images/brand/mascot-mark.png', false)
             ->assertSee('Socialinsider', false)
-            ->assertDontSee('TAM:', false);
+            ->assertDontSee('TAM:', false)
+            ->assertSee('container-type: size', false)
+            ->assertSee('class="deck"', false)
+            ->assertSee('class="chrome"', false)
+            ->assertDontSee('grid-template-columns: 6fr 3fr 1fr', false);
     }
 
     public function test_pitch_deck_stays_out_of_the_sitemap(): void
