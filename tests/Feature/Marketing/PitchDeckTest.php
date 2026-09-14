@@ -25,7 +25,8 @@ class PitchDeckTest extends TestCase
             ->assertSee('container-type: size', false)
             ->assertSee('class="deck"', false)
             ->assertSee('class="chrome"', false)
-            ->assertDontSee('grid-template-columns: 6fr 3fr 1fr', false);
+            ->assertDontSee('grid-template-columns: 6fr 3fr 1fr', false)
+            ->assertSee('The winning posts are already public', false);
     }
 
     public function test_pitch_deck_stays_out_of_the_sitemap(): void
