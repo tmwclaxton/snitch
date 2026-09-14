@@ -37,6 +37,7 @@ Route::inertia('/terms', 'marketing/Terms')->name('terms');
 Route::inertia('/cookies', 'marketing/Cookies')->name('cookies');
 // Standalone special landing page - deliberately no nav/footer links into the app.
 Route::inertia('/beta', 'marketing/Beta')->name('beta');
+Route::view('/pitch', 'pitch')->name('pitch');
 
 Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
 Route::get('/analytics.json', [AnalyticsController::class, 'json'])->name('analytics.json');
