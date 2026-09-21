@@ -218,7 +218,7 @@ function accountHref(post: RecentPost): string | null {
                     </p>
                 </div>
 
-                <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(16rem,0.9fr)]">
+                <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(15rem,0.75fr)]">
                     <div class="grid gap-4">
                         <div class="snitch-scrap relative p-5 pt-6">
                             <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
@@ -236,22 +236,6 @@ function accountHref(post: RecentPost): string | null {
                         </div>
                         <div class="snitch-scrap relative p-5 pt-6">
                             <span class="snitch-tape right-6 -top-2" aria-hidden="true" />
-                            <TimeOfDayChart
-                                v-if="activity"
-                                :hours="activity.by_time_of_day"
-                            />
-                            <SnitchSkeleton
-                                v-else
-                                variant="scrap"
-                                height="12rem"
-                                label="Loading time of day chart"
-                            />
-                        </div>
-                    </div>
-
-                    <div class="grid gap-4">
-                        <div class="snitch-scrap relative p-5 pt-6">
-                            <span class="snitch-tape right-4 -top-2" aria-hidden="true" />
                             <WeeklyVolumeChart
                                 v-if="activity"
                                 :weeks="activity.weekly"
@@ -263,6 +247,9 @@ function accountHref(post: RecentPost): string | null {
                                 label="Loading weekly volume chart"
                             />
                         </div>
+                    </div>
+
+                    <div class="grid gap-4 self-start">
                         <div class="snitch-scrap relative p-5 pt-6">
                             <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
                             <PlatformSplitChart
@@ -274,6 +261,20 @@ function accountHref(post: RecentPost): string | null {
                                 variant="scrap"
                                 height="8rem"
                                 label="Loading platform split chart"
+                            />
+                        </div>
+                        <div class="snitch-scrap relative p-4 pt-5">
+                            <span class="snitch-tape right-4 -top-2" aria-hidden="true" />
+                            <TimeOfDayChart
+                                v-if="activity"
+                                compact
+                                :hours="activity.by_time_of_day"
+                            />
+                            <SnitchSkeleton
+                                v-else
+                                variant="scrap"
+                                height="8rem"
+                                label="Loading time of day chart"
                             />
                         </div>
                     </div>

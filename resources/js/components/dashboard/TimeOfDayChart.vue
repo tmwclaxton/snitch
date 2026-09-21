@@ -8,24 +8,30 @@ export type TimeOfDayBucket = {
     count: number;
 };
 
-const props = defineProps<{
-    hours: TimeOfDayBucket[];
-}>();
+const props = withDefaults(
+    defineProps<{
+        hours: TimeOfDayBucket[];
+        compact?: boolean;
+    }>(),
+    {
+        compact: false,
+    },
+);
 
 const yAxisLabel = 'No. of Posts';
 const xAxisLabel = 'Hour posted';
 
-const leftPad = 62;
+const leftPad = computed(() => (props.compact ? 44 : 62));
 const rightPad = 10;
 const topPad = 10;
-const plotHeight = 168;
-const plotWidth = 440;
-const xLabelOffset = 18;
-const xTitleOffset = 36;
-const bottomPad = 50;
-const chartWidth = leftPad + plotWidth + rightPad;
-const chartHeight = topPad + plotHeight + bottomPad;
-const barGap = 2.4;
+const plotHeight = computed(() => (props.compact ? 92 : 168));
+const plotWidth = computed(() => (props.compact ? 280 : 440));
+const xLabelOffset = computed(() => (props.compact ? 14 : 18));
+const xTitleOffset = computed(() => (props.compact ? 28 : 36));
+const bottomPad = computed(() => (props.compact ? 40 : 50));
+const chartWidth = computed(() => leftPad.value + plotWidth.value + rightPad);
+const chartHeight = computed(() => topPad + plotHeight.value + bottomPad.value);
+const barGap = computed(() => (props.compact ? 1.6 : 2.4));
 
 const maxCount = computed(() =>
     Math.max(1, ...props.hours.map((row) => row.count)),
@@ -61,7 +67,7 @@ const total = computed(() =>
 const barWidth = computed(() => {
     const n = Math.max(props.hours.length, 1);
 
-    return (plotWidth - barGap * (n - 1)) / n;
+    return (plotWidth.value - barGap.value * (n - 1)) / n;
 });
 
 const yTicks = computed(() => {
@@ -74,12 +80,12 @@ const yTicks = computed(() => {
 
     return values.map((value) => ({
         value,
-        y: topPad + (1 - value / niceMax) * plotHeight,
+        y: topPad + (1 - value / niceMax) * plotHeight.value,
     }));
 });
 
 function barHeight(count: number): number {
-    return (count / yScale.value.niceMax) * plotHeight;
+    return (count / yScale.value.niceMax) * plotHeight.value;
 }
 
 function drawnHeight(count: number): number {
@@ -87,20 +93,23 @@ function drawnHeight(count: number): number {
 }
 
 function barX(index: number): number {
-    return leftPad + index * (barWidth.value + barGap);
+    return leftPad.value + index * (barWidth.value + barGap.value);
 }
 
 function barY(count: number): number {
-    return topPad + plotHeight - drawnHeight(count);
+    return topPad + plotHeight.value - drawnHeight(count);
 }
 
 function showLabel(hour: number): boolean {
-    return hour % 2 === 0;
+    return props.compact ? hour % 4 === 0 : hour % 2 === 0;
 }
 </script>
 
 <template>
-    <div class="snitch-time-of-day">
+    <div
+        class="snitch-time-of-day"
+        :class="compact ? 'snitch-time-of-day--compact' : ''"
+    >
         <div class="flex items-baseline justify-between gap-3">
             <p class="snitch-ink-label">Time of day</p>
             <p class="tabular-nums text-xs text-snitch-ink/55">
