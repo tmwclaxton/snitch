@@ -74,6 +74,11 @@ class DashboardTest extends TestCase
         ]);
 
         $ready = Post::factory()->forAccount($account)->create([
+            'platform' => Platform::Instagram,
+            'media_url' => 'https://cdn.example.com/ig1.mp4',
+            'raw_payload' => [
+                'displayUrl' => 'https://cdn.example.com/ig1.jpg',
+            ],
             'metrics' => [
                 'views' => 12500,
                 'likes' => 840,
@@ -118,6 +123,7 @@ class DashboardTest extends TestCase
                     ->where('top_winners.0.post.analysis.hook', 'Starts on the total')
                     ->where('top_winners.0.post.analysis.concept', 'Receipt cold open')
                     ->has('top_winners.0.post.embed')
+                    ->where('top_winners.0.post.cover_url', 'https://cdn.example.com/ig1.jpg')
                 )
                 ->loadDeferredProps('activity', fn (Assert $page) => $page
                     ->has('activity.heatmap')

@@ -1,12 +1,12 @@
-# Platform embeds (lazy + concurrency)
+# Platform covers (not official embeds)
 
-Instagram/TikTok official embed iframes rate-limit when many load at once. The in-iframe "Server error / Something is wrong on our end" copy is the platform's error page, not Snitch's.
+Official Instagram/TikTok/Facebook iframes fight the print frames and rate-limit in grids. Do not load those players in product UI.
 
 ## Rules
 
-- `PlatformEmbed` defaults to `lazy: true` (IntersectionObserver, ~120px rootMargin).
-- Feed/explore/backlog/competitor grids use `FeedContactCell` which must leave the default lazy on. Do not pass `:lazy="false"` on multi-embed lists (Dashboard winners strip, Winners page, contact sheets).
-- Single-post detail (`feed/Show`) may use `:lazy="false"` for one immediate player.
-- Concurrent iframe starts are capped by `resources/js/lib/embedLoadQueue.ts` (max 2). Do not raise that aggressively.
-- Keep thumbnail/`media_url` fallback visible until the iframe fires `load`, so reserved frames stay filled while waiting on visibility or the queue.
-- Contact-cell frame CSS (`aspect-ratio: 3/4`) plus embed `aspect` metadata must stay so lazy placeholders do not collapse layout.
+- `PlatformEmbed` shows a still cover (`cover_url` from `PostCover`) and falls back to image `media_url`, then a muted video first frame.
+- Do not add `<iframe>` players back to `PlatformEmbed`, `FeedContactCell`, Dashboard winners, Winners, or `feed/Show`.
+- `Post` appends `cover_url`. Resolve covers from payload stills (displayUrl, originCover, thumbnails) or YouTube `hqdefault`. Never prefer a video file over a still.
+- Keep thumbnail/`media_url` fallback visible so 3/4 contact frames and polaroids stay filled.
+- `embedLoadQueue.ts` stays for any leftover iframe experiments. Do not wire it back into list or detail views.
+- Contact-cell frame CSS (`aspect-ratio: 3/4`) must stay so covers do not collapse layout.

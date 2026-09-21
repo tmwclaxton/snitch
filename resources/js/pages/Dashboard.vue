@@ -35,6 +35,7 @@ type RecentPost = {
     type: string;
     url: string | null;
     media_url: string | null;
+    cover_url?: string | null;
     media_availability?: string | null;
     metrics?: PostMetrics | null;
     embed?: EmbedConfig | null;
@@ -68,6 +69,7 @@ type TopWinner = {
         platform: string;
         url: string | null;
         media_url: string | null;
+        cover_url?: string | null;
         metrics?: PostMetrics | null;
         embed?: EmbedConfig | null;
         tracked_account?: { handle: string } | null;
@@ -423,6 +425,7 @@ function accountHref(post: RecentPost): string | null {
                                     <div class="snitch-polaroid-frame overflow-hidden">
                                         <PlatformEmbed
                                             :embed="winner.post.embed"
+                                            :cover-url="winner.post.cover_url"
                                             :media-url="winner.post.media_url"
                                             :post-url="winner.post.url"
                                             :platform="winner.post.platform"

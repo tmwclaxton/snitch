@@ -61,6 +61,7 @@ const props = defineProps<{
         url: string;
         caption: string | null;
         media_url: string | null;
+        cover_url?: string | null;
         media_availability?: string | null;
         unavailable_reason?: string | null;
         posted_at?: string | null;
@@ -387,10 +388,10 @@ function openTranscript(): void {
                             <div class="snitch-polaroid-frame !aspect-auto overflow-hidden">
                                 <PlatformEmbed
                                     :embed="post.embed"
+                                    :cover-url="post.cover_url"
                                     :media-url="post.media_url"
                                     :post-url="post.url"
                                     :platform="post.platform"
-                                    :lazy="false"
                                 />
                             </div>
                         </div>

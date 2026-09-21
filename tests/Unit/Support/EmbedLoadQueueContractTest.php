@@ -19,14 +19,14 @@ class EmbedLoadQueueContractTest extends TestCase
     }
 
     #[Test]
-    public function feed_contact_cell_keeps_default_lazy_embeds(): void
+    public function feed_contact_cell_shows_covers_not_iframes(): void
     {
         $source = file_get_contents(base_path('resources/js/components/FeedContactCell.vue'));
 
         $this->assertIsString($source);
         $this->assertStringContainsString('<PlatformEmbed', $source);
-        $this->assertStringNotContainsString(':lazy="false"', $source);
-        $this->assertStringNotContainsString('lazy="false"', $source);
+        $this->assertStringContainsString(':cover-url="post.cover_url"', $source);
+        $this->assertStringNotContainsString('<iframe', $source);
     }
 
     #[Test]
@@ -81,27 +81,15 @@ class EmbedLoadQueueContractTest extends TestCase
     }
 
     #[Test]
-    public function platform_embed_defaults_to_lazy_and_uses_queue(): void
+    public function platform_embed_renders_covers_instead_of_iframes(): void
     {
         $source = file_get_contents(base_path('resources/js/components/PlatformEmbed.vue'));
 
         $this->assertIsString($source);
-        $this->assertStringContainsString('lazy: true', $source);
-        $this->assertStringContainsString('acquireEmbedSlot', $source);
-        $this->assertStringContainsString('IntersectionObserver', $source);
-    }
-
-    #[Test]
-    public function platform_embed_applies_facebook_colorscheme_and_skips_compact_aspect(): void
-    {
-        $source = file_get_contents(base_path('resources/js/components/PlatformEmbed.vue'));
-
-        $this->assertIsString($source);
-        $this->assertStringContainsString('applyEmbedTheme', $source);
-        $this->assertStringContainsString("url.searchParams.set('colorscheme'", $source);
-        $this->assertStringContainsString("dark ? 'dark' : 'light'", $source);
-        $this->assertStringContainsString('colorScheme: isDark ? \'dark\' : \'light\'', $source);
-        $this->assertStringContainsString('props.compact || !props.embed', $source);
+        $this->assertStringContainsString('coverUrl', $source);
+        $this->assertStringContainsString('usableCoverUrl', $source);
+        $this->assertStringNotContainsString('<iframe', $source);
+        $this->assertStringNotContainsString('acquireEmbedSlot', $source);
     }
 
     #[Test]

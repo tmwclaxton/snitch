@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { acquireEmbedSlot, releaseEmbedSlot } from '@/lib/embedLoadQueue';
+import { computed, ref, watch } from 'vue';
 import { platformLabel } from '@/lib/platforms';
 
 export type EmbedConfig = {
@@ -13,6 +12,7 @@ export type EmbedConfig = {
 const props = withDefaults(
     defineProps<{
         embed?: EmbedConfig | null;
+        coverUrl?: string | null;
         mediaUrl?: string | null;
         postUrl?: string | null;
         platform?: string;
@@ -21,6 +21,7 @@ const props = withDefaults(
     }>(),
     {
         embed: null,
+        coverUrl: null,
         mediaUrl: null,
         postUrl: null,
         platform: undefined,
@@ -29,66 +30,16 @@ const props = withDefaults(
     },
 );
 
-const root = ref<HTMLElement | null>(null);
-const isVisible = ref(!props.lazy);
-const shouldLoad = ref(false);
-const iframeReady = ref(false);
-const embedFailed = ref(false);
+const coverFailed = ref(false);
 const mediaFailed = ref(false);
-let observer: IntersectionObserver | null = null;
-let slotHeld = false;
-let cancelled = false;
-let loadGeneration = 0;
-let slotTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
-const isDark = ref(false);
-let themeObserver: MutationObserver | null = null;
-
-function syncTheme(): void {
-    if (typeof document === 'undefined') {
-        return;
+const usableCoverUrl = computed(() => {
+    if (coverFailed.value || !props.coverUrl) {
+        return null;
     }
 
-    isDark.value = document.documentElement.classList.contains('dark');
-}
-
-function applyEmbedTheme(src: string, provider: string, dark: boolean): string {
-    try {
-        const url = new URL(src);
-
-        if (provider === 'facebook') {
-            url.searchParams.set('colorscheme', dark ? 'dark' : 'light');
-        }
-
-        return url.toString();
-    } catch {
-        return src;
-    }
-}
-
-const themedSrc = computed(() => {
-    const src = props.embed?.src;
-
-    if (!src) {
-        return '';
-    }
-
-    return applyEmbedTheme(src, props.embed?.provider ?? '', isDark.value);
+    return props.coverUrl;
 });
-
-const frameAspect = computed(() => {
-    if (props.compact || !props.embed || embedFailed.value) {
-        return undefined;
-    }
-
-    return props.embed.aspect;
-});
-
-const canEmbed = computed(
-    () => Boolean(themedSrc.value) && shouldLoad.value && !embedFailed.value,
-);
-
-const showFallback = computed(() => !canEmbed.value || !iframeReady.value);
 
 const usableMediaUrl = computed(() => {
     if (mediaFailed.value || !props.mediaUrl) {
@@ -104,113 +55,20 @@ const isVideoMedia = computed(() => {
     return /\.(mp4|webm|ogg|m4v)$/i.test(url);
 });
 
+function onCoverError(): void {
+    coverFailed.value = true;
+}
+
 function onMediaError(): void {
     mediaFailed.value = true;
 }
 
-function clearSlotTimeout(): void {
-    if (slotTimeoutId === null) {
-        return;
-    }
-
-    clearTimeout(slotTimeoutId);
-    slotTimeoutId = null;
-}
-
-async function requestLoad(generation: number): Promise<void> {
-    if (!props.embed?.src || shouldLoad.value || cancelled) {
-        return;
-    }
-
-    await acquireEmbedSlot();
-
-    if (cancelled || generation !== loadGeneration || !isVisible.value) {
-        releaseEmbedSlot();
-
-        return;
-    }
-
-    slotHeld = true;
-    shouldLoad.value = true;
-
-    // Platforms sometimes never fire load/error; free the queue anyway.
-    clearSlotTimeout();
-    slotTimeoutId = setTimeout(() => {
-        if (generation === loadGeneration) {
-            releaseSlotIfHeld();
-        }
-    }, 10000);
-}
-
-function releaseSlotIfHeld(): void {
-    if (!slotHeld) {
-        return;
-    }
-
-    slotHeld = false;
-    clearSlotTimeout();
-    releaseEmbedSlot();
-}
-
-function onIframeSettled(): void {
-    iframeReady.value = true;
-    releaseSlotIfHeld();
-}
-
-function onEmbedError(): void {
-    embedFailed.value = true;
-    iframeReady.value = false;
-    releaseSlotIfHeld();
-}
-
-function startObserving(): void {
-    if (!props.lazy) {
-        isVisible.value = true;
-        void requestLoad(loadGeneration);
-
-        return;
-    }
-
-    if (isVisible.value || !root.value) {
-        return;
-    }
-
-    if (typeof IntersectionObserver === 'undefined') {
-        isVisible.value = true;
-        void requestLoad(loadGeneration);
-
-        return;
-    }
-
-    observer = new IntersectionObserver(
-        (entries) => {
-            if (entries.some((entry) => entry.isIntersecting)) {
-                isVisible.value = true;
-                observer?.disconnect();
-                observer = null;
-                void requestLoad(loadGeneration);
-            }
-        },
-        { rootMargin: '120px 0px' },
-    );
-
-    observer.observe(root.value);
-}
-
-function resetForEmbedChange(): void {
-    cancelled = true;
-    loadGeneration += 1;
-    cancelled = false;
-    observer?.disconnect();
-    observer = null;
-    releaseSlotIfHeld();
-    clearSlotTimeout();
-    isVisible.value = !props.lazy;
-    shouldLoad.value = false;
-    iframeReady.value = false;
-    embedFailed.value = false;
-    mediaFailed.value = false;
-}
+watch(
+    () => props.coverUrl,
+    () => {
+        coverFailed.value = false;
+    },
+);
 
 watch(
     () => props.mediaUrl,
@@ -218,77 +76,40 @@ watch(
         mediaFailed.value = false;
     },
 );
-
-onMounted(() => {
-    syncTheme();
-
-    if (typeof MutationObserver !== 'undefined') {
-        themeObserver = new MutationObserver(syncTheme);
-        themeObserver.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ['class'],
-        });
-    }
-
-    startObserving();
-});
-
-onBeforeUnmount(() => {
-    cancelled = true;
-    observer?.disconnect();
-    observer = null;
-    themeObserver?.disconnect();
-    themeObserver = null;
-    releaseSlotIfHeld();
-    clearSlotTimeout();
-});
-
-watch(
-    () => props.embed?.src,
-    () => {
-        resetForEmbedChange();
-        startObserving();
-    },
-);
-
-watch(
-    () => props.lazy,
-    () => {
-        resetForEmbedChange();
-        startObserving();
-    },
-);
 </script>
 
 <template>
     <div
-        ref="root"
         class="snitch-platform-embed"
         :class="compact ? 'snitch-platform-embed-compact' : 'snitch-platform-embed-detail'"
         :data-embed-provider="embed?.provider"
-        :style="frameAspect ? { aspectRatio: frameAspect } : undefined"
     >
-        <div
-            v-if="showFallback"
-            class="snitch-platform-embed-fallback"
-            aria-hidden="true"
-        >
-            <video
-                v-if="usableMediaUrl && isVideoMedia"
-                :src="usableMediaUrl"
+        <div class="snitch-platform-embed-fallback">
+            <img
+                v-if="usableCoverUrl"
+                :src="usableCoverUrl"
+                alt=""
                 class="snitch-platform-embed-fallback-img"
-                muted
-                playsinline
-                preload="metadata"
-                @error="onMediaError"
+                loading="lazy"
+                decoding="async"
+                @error="onCoverError"
             />
             <img
-                v-else-if="usableMediaUrl"
+                v-else-if="usableMediaUrl && !isVideoMedia"
                 :src="usableMediaUrl"
                 alt=""
                 class="snitch-platform-embed-fallback-img"
                 loading="lazy"
                 decoding="async"
+                @error="onMediaError"
+            />
+            <video
+                v-else-if="usableMediaUrl && isVideoMedia"
+                :src="usableMediaUrl"
+                class="snitch-platform-embed-fallback-img"
+                muted
+                playsinline
+                preload="metadata"
                 @error="onMediaError"
             />
             <div
@@ -299,28 +120,13 @@ watch(
                     {{ platform ? platformLabel(platform) : 'Post' }}
                 </p>
                 <p class="mt-1 text-xs text-snitch-paper/55">
-                    {{ embedFailed ? 'Embed unavailable' : 'No preview' }}
+                    No preview
                 </p>
             </div>
         </div>
 
-        <iframe
-            v-if="canEmbed"
-            :src="themedSrc"
-            :title="embed!.title"
-            class="snitch-platform-embed-frame"
-            :class="{ 'snitch-platform-embed-frame-ready': iframeReady }"
-            :style="{ colorScheme: isDark ? 'dark' : 'light' }"
-            loading="lazy"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen
-            referrerpolicy="strict-origin-when-cross-origin"
-            @load="onIframeSettled"
-            @error="onEmbedError"
-        />
-
         <a
-            v-if="postUrl && (embedFailed || !embed)"
+            v-if="postUrl"
             :href="postUrl"
             target="_blank"
             rel="noopener noreferrer"

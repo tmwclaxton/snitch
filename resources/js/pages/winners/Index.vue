@@ -45,6 +45,7 @@ type Winner = {
         id: number;
         url: string | null;
         media_url: string | null;
+        cover_url?: string | null;
         platform: string;
         metrics?: PostMetrics | null;
         embed?: EmbedConfig | null;
@@ -310,6 +311,7 @@ onUnmounted(() => {
                                 <div class="snitch-polaroid-frame !aspect-auto overflow-hidden">
                                     <PlatformEmbed
                                         :embed="winner.post.embed"
+                                        :cover-url="winner.post.cover_url"
                                         :media-url="winner.post.media_url"
                                         :post-url="winner.post.url"
                                         :platform="winner.post.platform"

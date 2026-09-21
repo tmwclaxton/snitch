@@ -35,6 +35,7 @@ const props = defineProps<{
         url: string | null;
         caption?: string | null;
         media_url: string | null;
+        cover_url?: string | null;
         media_availability?: string | null;
         metrics?: PostMetrics | null;
         embed?: EmbedConfig | null;
@@ -167,6 +168,7 @@ const winnerScore = computed(() => {
             <div class="snitch-contact-cell-frame">
                 <PlatformEmbed
                     :embed="post.embed"
+                    :cover-url="post.cover_url"
                     :media-url="post.media_url"
                     :post-url="post.url"
                     :platform="post.platform"

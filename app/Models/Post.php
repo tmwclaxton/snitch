@@ -6,9 +6,11 @@ use App\Enums\AnalysisStatus;
 use App\Enums\MediaAvailability;
 use App\Enums\Platform;
 use App\Enums\PostType;
+use App\Support\PostCover;
 use Database\Factories\PostFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -33,6 +35,23 @@ class Post extends Model
 {
     /** @use HasFactory<PostFactory> */
     use HasFactory;
+
+    /**
+     * @var list<string>
+     */
+    protected $appends = [
+        'cover_url',
+    ];
+
+    /**
+     * Still image for grids and polaroids. Prefer payload covers over video files.
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function coverUrl(): Attribute
+    {
+        return Attribute::get(fn (): ?string => PostCover::resolve($this));
+    }
 
     /**
      * @return array<string, string>
