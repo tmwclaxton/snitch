@@ -16,6 +16,8 @@ use App\Services\Billing\VendorUsageCharger;
 use App\Services\Scraping\YoutubeMediaHydrator;
 use App\Services\Winners\WinnerScorer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Mockery;
 use RuntimeException;
@@ -226,6 +228,42 @@ class AnalyzePostJobUnavailableTest extends TestCase
                 'HTTP request returned status code 400:'."\n".
                 '{"error":{"message":"Invalid request parameters. Please check your input and try again.","type":"invalid_request_error"}}',
             ));
+        $this->app->instance(VideoAnalysisService::class, $analysis);
+
+        $scorer = Mockery::mock(WinnerScorer::class);
+        $scorer->shouldNotReceive('scoreAndPersist');
+
+        $this->runAnalyzeJob($post->id, $scorer);
+
+        $this->assertSame(MediaAvailability::Available, $post->fresh()->media_availability);
+    }
+
+    public function test_invalid_nanogpt_api_key_does_not_rethrow_for_queue_retries(): void
+    {
+        Http::fake([
+            'https://cdn.example.com/clip.mp4' => Http::response(null, 200),
+        ]);
+
+        $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+            'media_url' => 'https://cdn.example.com/clip.mp4',
+            'posted_at' => now()->subDay(),
+            'media_availability' => MediaAvailability::Available,
+        ]);
+
+        $response = new Response(new \GuzzleHttp\Psr7\Response(
+            401,
+            ['Content-Type' => 'application/json'],
+            '{"error":{"message":"Invalid session","type":"invalid_api_key","code":"invalid_api_key","status":401}}',
+        ));
+
+        $analysis = Mockery::mock(VideoAnalysisService::class);
+        $analysis->shouldReceive('analyzePost')
+            ->once()
+            ->andThrow(new RequestException($response));
         $this->app->instance(VideoAnalysisService::class, $analysis);
 
         $scorer = Mockery::mock(WinnerScorer::class);

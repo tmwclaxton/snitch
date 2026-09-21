@@ -94,6 +94,7 @@ class SyncTrackedAccountJob implements ShouldQueue
         $recencyDays = $syncOptions->resolvedRecencyDays();
         $cutoff = CarbonImmutable::now()->subDays($recencyDays);
         $scrapeDriver = $adapters->driverFor($account->platform);
+        $triedTikHub = $scrapeDriver === 'tikhub';
 
         try {
             $adapter = $adapters->for($account->platform);
@@ -138,7 +139,8 @@ class SyncTrackedAccountJob implements ShouldQueue
 
             // Apify sometimes finishes with an empty dataset (and $0 usage) while
             // TikHub still has reels. Fall back so sync does not "succeed" with nothing.
-            if ($posts === [] && $scrapeDriver === 'apify') {
+            // Do not bounce back to TikHub if we already tried it (cap 0 / prior 400).
+            if ($posts === [] && $scrapeDriver === 'apify' && ! $triedTikHub) {
                 $tikHubAdapter = $adapters->tikHubAdapter($account->platform);
 
                 if ($tikHubAdapter !== null && filled(config('snitch.tikhub.api_key'))) {
@@ -147,9 +149,18 @@ class SyncTrackedAccountJob implements ShouldQueue
                         'platform' => $account->platform->value,
                     ]);
 
-                    $adapter = $tikHubAdapter;
-                    $scrapeDriver = 'tikhub';
-                    $posts = $adapter->listRecentPosts($account->handle, $limit, $since);
+                    try {
+                        $adapter = $tikHubAdapter;
+                        $scrapeDriver = 'tikhub';
+                        $posts = $adapter->listRecentPosts($account->handle, $limit, $since);
+                    } catch (Throwable $tikHubEmptyFallback) {
+                        Log::info('SyncTrackedAccountJob kept empty Apify result after TikHub fallback failed', [
+                            'tracked_account_id' => $this->trackedAccountId,
+                            'platform' => $account->platform->value,
+                            'error' => SafeExceptionMessage::forUsers($tikHubEmptyFallback, 'TikHub scrape failed.'),
+                        ]);
+                        $posts = [];
+                    }
                 }
             }
 

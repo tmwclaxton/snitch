@@ -12,7 +12,7 @@ QUEUE_CONNECTION=database. SyncTrackedAccountJob, AnalyzePostJob, and GenerateIn
 YouTube hydrate stores MP4s under `storage/app/public/youtube-media` and sets `media_url` to `{APP_URL}/storage/...`. Probe those with `PublicDiskMedia::existsOnPublicDisk` only. HTTP HEAD against localhost (or any host without `public/storage` linked) returns 403 and must not mark the post unavailable. Loopback analysis inlines (and may ffmpeg-compress) those files for NanoGPT; see adapters.md.
 
 ## AnalyzePostJob soft-fails permanent NanoGPT client errors
-`VideoAnalysisService` already marks the analysis Failed and logs a warning. `AnalyzePostJob` must not rethrow checklist failures, `Video analysis did not return valid JSON.`, or NanoGPT HTTP 400 / `invalid_request_error` responses - retries will not fix bad request params / bad model JSON and escalate to production.ERROR / failed_jobs noise. Keep WARNING-level logging; leave true transport/5xx failures to retry.
+`VideoAnalysisService` already marks the analysis Failed and logs a warning. `AnalyzePostJob` must not rethrow checklist failures, `Video analysis did not return valid JSON.`, NanoGPT HTTP 400 / `invalid_request_error`, or dead-key 401 / `invalid_api_key` / `Invalid session` (including 429 after repeated invalid credentials). Retries will not fix those and they fill failed_jobs. Keep WARNING-level logging; leave true transport/5xx failures to retry.
 
 ## Backlog and sync drop posts outside recency after hydrate
 YouTube list payloads often omit `published_time`, so null `posted_at` passes the pre-import cutoff. Hydrate (or AnalyzePostJob) may then backfill a date years ago. Sync must re-check cutoff after `hydrateMediaUrls` and skip those payloads. `Post::analysisQueue` / `analysisFailed` / `analysisBacklog` use `withinAnalysisRecency` so `/backlog` never shows unanalyzable archive ghosts as Waiting forever.
@@ -27,7 +27,7 @@ Firecrawl + Apify verify can exceed a short worker window, and deploys can SIGTE
 Unless force=true, the job no-ops when TrackedAccount::isDueForSync() is false (successful sync within snitch.sync.min_interval_days). Manual UI and MCP sync always dispatch with force=true. Do not register snitch:sync-accounts on the scheduler - agents/users kick sync intentionally. The artisan command remains for ops only and still filters by isDueForSync(). Product UI shows Sync status (Manual / last synced date / Syncing), never a next-auto-sync countdown.
 
 ## TikHub failure or empty list falls back to Apify
-If `driverFor` is tikhub and resolveProfile / listRecentPosts throws or returns `[]`, SyncTrackedAccountJob retries those calls on `apifyAdapter`. Empty Apify `[]` still falls back to TikHub.
+If `driverFor` is tikhub and resolveProfile / listRecentPosts throws or returns `[]`, SyncTrackedAccountJob retries those calls on `apifyAdapter`. Empty Apify `[]` still falls back to TikHub only when TikHub was not already tried. Do not bounce back to TikHub after a TikHub 400 plus empty Apify, or the job fails instead of marking empty.
 
 ## Sync is resolve-sparing and new-posts-only
 Skip resolveProfile unless force or profile fields are incomplete. Import only new external_ids; soft-retry Failed analysis for known posts without re-scraping. TikTok hydrateMediaUrls (paid download) runs only for new candidates.

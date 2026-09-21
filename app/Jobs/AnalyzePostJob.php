@@ -298,14 +298,19 @@ class AnalyzePostJob implements ShouldQueue
     {
         $message = $e->getMessage();
 
-        if (str_contains($message, 'invalid_request_error')) {
+        if (str_contains($message, 'invalid_request_error')
+            || str_contains($message, 'invalid_api_key')
+            || str_contains($message, 'Invalid session')
+            || str_contains($message, 'repeated invalid credentials')) {
             return true;
         }
 
-        if ($e instanceof RequestException && $e->response !== null && $e->response->status() === 400) {
+        $status = $e instanceof RequestException ? $e->response?->status() : null;
+
+        if (in_array($status, [400, 401, 403], true)) {
             return true;
         }
 
-        return (bool) preg_match('/HTTP request returned status code 400\b/i', $message);
+        return (bool) preg_match('/HTTP request returned status code (400|401|403)\b/i', $message);
     }
 }

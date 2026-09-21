@@ -37,6 +37,7 @@ class LetsGoSocialDemoSeederTest extends TestCase
         $this->assertSame("Let's Go Social", $user->brandProfile?->name);
         $this->assertSame('@letsgosocialuk', $user->brandProfile?->own_handles['instagram'] ?? null);
         $this->assertSame(3, $user->trackedAccounts()->count());
+        $this->assertTrue($user->trackedAccounts()->where('handle', 'latermedia')->exists());
         $this->assertFalse($user->trackedAccounts()->where('handle', 'brex')->exists());
         $this->assertSame(0, Post::query()->where('external_id', 'like', 'demo-%')->count());
 

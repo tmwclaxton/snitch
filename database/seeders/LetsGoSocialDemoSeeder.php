@@ -60,7 +60,7 @@ class LetsGoSocialDemoSeeder extends Seeder
         return [
             ['handle' => 'socialchain', 'name' => 'Social Chain'],
             ['handle' => 'wearesocial', 'name' => 'We Are Social'],
-            ['handle' => 'later', 'name' => 'Later'],
+            ['handle' => 'latermedia', 'name' => 'Later'],
         ];
     }
 
