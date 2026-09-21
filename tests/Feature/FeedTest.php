@@ -382,6 +382,7 @@ class FeedTest extends TestCase
 
         $this->assertIsString($indexVue);
         $this->assertStringContainsString('Proof sheet', $indexVue);
+        $this->assertStringContainsString('snitch-contact-sheet-proof-fill', $indexVue);
         $this->assertStringNotContainsString('frameCount', $indexVue);
         $this->assertStringNotContainsString('exposures', $indexVue);
         $this->assertStringNotContainsString("'Frame' : 'Frames'", $indexVue);

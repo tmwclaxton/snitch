@@ -144,6 +144,7 @@ class EmbedLoadQueueContractTest extends TestCase
         $feed = file_get_contents(base_path('resources/js/pages/feed/Index.vue'));
         $this->assertIsString($feed);
         $this->assertStringContainsString('snitch-contact-sheet-proof', $feed);
+        $this->assertStringContainsString('snitch-contact-sheet-proof-fill', $feed);
         $this->assertStringNotContainsString('xl:grid-cols-5', $feed);
 
         $explore = file_get_contents(base_path('resources/js/pages/explore/Index.vue'));
