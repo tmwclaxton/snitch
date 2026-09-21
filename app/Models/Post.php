@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'posted_at',
     'caption',
     'media_url',
+    'cover_url',
     'media_availability',
     'unavailable_at',
     'unavailable_reason',
@@ -50,7 +51,13 @@ class Post extends Model
      */
     protected function coverUrl(): Attribute
     {
-        return Attribute::get(fn (): ?string => PostCover::resolve($this));
+        return Attribute::get(function (?string $value): ?string {
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+
+            return PostCover::resolve($this);
+        });
     }
 
     /**

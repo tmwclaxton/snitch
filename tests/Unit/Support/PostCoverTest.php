@@ -68,6 +68,28 @@ class PostCoverTest extends TestCase
         $this->assertNull(PostCover::resolve($post));
     }
 
+    public function test_reads_tiktok_aweme_cover_url_list(): void
+    {
+        $post = new Post([
+            'platform' => Platform::TikTok,
+            'url' => 'https://www.tiktok.com/@rivalbakery/video/1',
+            'media_url' => 'https://cdn.example.com/tt1.mp4',
+            'raw_payload' => [
+                'aweme' => [
+                    'video' => [
+                        'cover' => [
+                            'url_list' => [
+                                'https://cdn.example.com/tt1-aweme.jpg',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->assertSame('https://cdn.example.com/tt1-aweme.jpg', PostCover::resolve($post));
+    }
+
     public function test_uses_image_media_url_when_payload_has_no_cover(): void
     {
         $post = new Post([

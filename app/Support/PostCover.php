@@ -12,6 +12,8 @@ class PostCover
     private const PAYLOAD_KEYS = [
         'displayUrl',
         'display_url',
+        'thumbnailSrc',
+        'thumbnail_src',
         'originCover',
         'origin_cover',
         'dynamicCover',
@@ -22,6 +24,28 @@ class PostCover
         'thumbnail_url',
         'thumbnail',
         'cover',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    private const NESTED_PATHS = [
+        'video.cover.url_list.0',
+        'video.origin_cover.url_list.0',
+        'video.dynamic_cover.url_list.0',
+        'video.cover.url',
+        'video.originCover',
+        'aweme.video.cover.url_list.0',
+        'aweme.video.origin_cover.url_list.0',
+        'aweme_detail.video.cover.url_list.0',
+        'videoMeta.originCover',
+        'videoMeta.cover',
+        'covers.default',
+        'covers.origin',
+        'display_resources.0.src',
+        'images.0',
+        'images.0.url',
+        'image',
     ];
 
     public static function resolve(Post $post): ?string
@@ -40,7 +64,15 @@ class PostCover
     private static function fromPayload(array $payload): ?string
     {
         foreach (self::PAYLOAD_KEYS as $key) {
-            $url = self::imageUrl($payload[$key] ?? null);
+            $url = self::stillFromValue($payload[$key] ?? null);
+
+            if ($url !== null) {
+                return $url;
+            }
+        }
+
+        foreach (self::NESTED_PATHS as $path) {
+            $url = self::stillFromValue(data_get($payload, $path));
 
             if ($url !== null) {
                 return $url;
@@ -57,13 +89,41 @@ class PostCover
             }
         }
 
+        $video = $payload['video'] ?? null;
+
+        if (is_array($video)) {
+            $fromVideo = self::fromPayload($video);
+
+            if ($fromVideo !== null) {
+                return $fromVideo;
+            }
+        }
+
         $covers = $payload['covers'] ?? null;
 
         if (is_array($covers)) {
-            return self::imageUrl($covers['default'] ?? $covers['origin'] ?? null);
+            return self::stillFromValue($covers['default'] ?? $covers['origin'] ?? null);
         }
 
         return null;
+    }
+
+    private static function stillFromValue(mixed $value): ?string
+    {
+        $direct = self::imageUrl($value);
+
+        if ($direct !== null) {
+            return $direct;
+        }
+
+        if (! is_array($value)) {
+            return null;
+        }
+
+        return self::imageUrl($value['url_list'][0] ?? null)
+            ?? self::imageUrl($value['url'] ?? null)
+            ?? self::imageUrl($value['src'] ?? null)
+            ?? self::imageUrl($value[0] ?? null);
     }
 
     private static function fromYoutube(?string $url): ?string

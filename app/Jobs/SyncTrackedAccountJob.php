@@ -12,6 +12,7 @@ use App\Models\TrackedAccount;
 use App\Services\Apify\PlatformAdapterManager;
 use App\Services\Billing\VendorUsageCharger;
 use App\Services\SnitchAnalyticsService;
+use App\Services\Tracking\PostCoverHydrator;
 use App\Support\SafeExceptionMessage;
 use App\Support\SyncOptions;
 use Carbon\CarbonImmutable;
@@ -37,6 +38,7 @@ class SyncTrackedAccountJob implements ShouldQueue
         PlatformAdapterManager $adapters,
         SnitchAnalyticsService $analytics,
         VendorUsageCharger $charger,
+        PostCoverHydrator $covers = new PostCoverHydrator,
     ): void {
         $account = TrackedAccount::query()->with(['user', 'socialAccount'])->find($this->trackedAccountId);
 
@@ -207,6 +209,7 @@ class SyncTrackedAccountJob implements ShouldQueue
                 ]);
 
                 $analytics->recordPostSynced($account->platform);
+                $covers->persist($post);
 
                 $this->dispatchAnalysisIfNeeded($post->fresh('analysis'), (int) $account->user_id, $recencyDays);
             }
