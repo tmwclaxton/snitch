@@ -8,7 +8,7 @@ import {
     Trophy,
     Users,
 } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { computed } from 'vue';
 import type { Component } from 'vue';
 import { index as backlog } from '@/actions/App/Http/Controllers/BacklogController';
 import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
@@ -22,8 +22,6 @@ import FeedContactCell from '@/components/FeedContactCell.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
-import WatchingYouModal from '@/components/WatchingYouModal.vue';
-import type { WatchingPayload } from '@/components/WatchingYouModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { winnerStatPills } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
@@ -89,19 +87,7 @@ const props = defineProps<{
     activity?: ActivityPayload | null;
     recent_posts?: RecentPost[] | null;
     top_winners?: TopWinner[] | null;
-    watching?: WatchingPayload;
 }>();
-
-const watchingOpen = ref(Boolean(props.watching?.check?.handle));
-
-watch(
-    () => props.watching?.check?.handle,
-    (handle) => {
-        if (handle) {
-            watchingOpen.value = true;
-        }
-    },
-);
 
 defineOptions({
     layout: AppLayout,
@@ -504,18 +490,6 @@ function accountHref(post: RecentPost): string | null {
                     <span class="relative z-10">Open queue</span>
                 </Link>
             </section>
-
-            <div class="mt-16 flex justify-start">
-                <button
-                    type="button"
-                    class="snitch-btn snitch-btn-ghost px-3 py-2 text-sm"
-                    @click="watchingOpen = true"
-                >
-                    <span class="relative z-10">Am I being tracked?</span>
-                </button>
-            </div>
-
-            <WatchingYouModal v-model:open="watchingOpen" :watching="watching" />
         </div>
     </div>
 </template>

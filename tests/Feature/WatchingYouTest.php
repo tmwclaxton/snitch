@@ -59,23 +59,11 @@ class WatchingYouTest extends TestCase
 
         $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
         $this->assertIsString($dashboard);
-        $this->assertStringContainsString('Am I being tracked?', $dashboard);
-        $this->assertStringContainsString('WatchingYouModal', $dashboard);
-        $this->assertStringNotContainsString('<details', $dashboard);
+        $this->assertStringNotContainsString('Am I being tracked?', $dashboard);
+        $this->assertStringNotContainsString('WatchingYouModal', $dashboard);
         $this->assertStringNotContainsString('Watchers', $dashboard);
-        $this->assertStringNotContainsString('Checks your brand handles', $dashboard);
         $this->assertStringNotContainsString('never who', $dashboard);
         $this->assertStringNotContainsString('watcher email', $dashboard);
-        $this->assertTrue(
-            strpos($dashboard, 'Latest frames') < strpos($dashboard, 'Am I being tracked?'),
-            'Watching check belongs below the main dashboard work',
-        );
-
-        $modal = file_get_contents(resource_path('js/components/WatchingYouModal.vue'));
-        $this->assertIsString($modal);
-        $this->assertStringContainsString('platformIconSrc', $modal);
-        $this->assertStringContainsString('v-if="resultRows.length"', $modal);
-        $this->assertStringNotContainsString('Add your handles', $modal);
     }
 
     public function test_check_requires_a_handle(): void
