@@ -90,6 +90,25 @@ class PostCoverTest extends TestCase
         $this->assertSame('https://cdn.example.com/tt1-aweme.jpg', PostCover::resolve($post));
     }
 
+    public function test_reads_facebook_reel_thumbnail_from_media(): void
+    {
+        $post = new Post([
+            'platform' => Platform::Facebook,
+            'url' => 'https://www.facebook.com/reel/2547789652321098/',
+            'media_url' => 'https://video.xx.fbcdn.net/v/clip.mp4',
+            'raw_payload' => [
+                'media' => [
+                    [
+                        'thumbnail' => 'https://cdn.example.com/fb-thumb.jpg',
+                        'url' => 'https://video.xx.fbcdn.net/v/clip.mp4',
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->assertSame('https://cdn.example.com/fb-thumb.jpg', PostCover::resolve($post));
+    }
+
     public function test_uses_image_media_url_when_payload_has_no_cover(): void
     {
         $post = new Post([

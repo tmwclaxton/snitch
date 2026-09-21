@@ -12,10 +12,10 @@ use Illuminate\Console\Command;
 #[Signature('snitch:backfill-covers
     {--platform=* : Restrict to platforms (instagram, tiktok, youtube, facebook, linkedin)}
     {--limit=0 : Max posts to process (0 = all)}
-    {--fetch : Call TikTok oEmbed when the payload has no still}
+    {--fetch : When a signed still will not download, fetch a fresh one (Instagram media, Facebook og:image, TikTok oEmbed)}
     {--force : Recompute even when cover_url is already stored}
     {--dry-run : Report matches without writing}')]
-#[Description('Persist still covers for existing posts from payload, YouTube thumbs, or TikTok oEmbed')]
+#[Description('Copy still covers onto local storage so signed CDN links cannot expire in the grids')]
 class BackfillPostCoversCommand extends Command
 {
     public function handle(PostCoverHydrator $hydrator): int
@@ -34,7 +34,12 @@ class BackfillPostCoversCommand extends Command
 
         if (! $force) {
             $query->where(function ($inner): void {
-                $inner->whereNull('cover_url')->orWhere('cover_url', '');
+                $inner->whereNull('cover_url')
+                    ->orWhere('cover_url', '')
+                    ->orWhere(function ($remote): void {
+                        $remote->where('cover_url', 'like', 'http%')
+                            ->where('cover_url', 'not like', '%ytimg.com%');
+                    });
             });
         }
 

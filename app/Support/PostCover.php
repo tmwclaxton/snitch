@@ -46,6 +46,12 @@ class PostCover
         'images.0',
         'images.0.url',
         'image',
+        'image.uri',
+        'media.0.thumbnail',
+        'media.0.thumbnailImage.uri',
+        'media.0.image.uri',
+        'media.0.preferred_thumbnail.image.uri',
+        'media.0.preferred_thumbnail.image',
     ];
 
     public static function resolve(Post $post): ?string
@@ -122,6 +128,7 @@ class PostCover
 
         return self::imageUrl($value['url_list'][0] ?? null)
             ?? self::imageUrl($value['url'] ?? null)
+            ?? self::imageUrl($value['uri'] ?? null)
             ?? self::imageUrl($value['src'] ?? null)
             ?? self::imageUrl($value[0] ?? null);
     }

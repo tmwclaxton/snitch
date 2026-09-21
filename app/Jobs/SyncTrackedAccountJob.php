@@ -196,7 +196,12 @@ class SyncTrackedAccountJob implements ShouldQueue
                 $externalId = (string) ($payload['external_id'] ?? md5((string) $payload['url']));
 
                 if ($existingPosts->has($externalId)) {
-                    $this->dispatchAnalysisIfNeeded($existingPosts->get($externalId), (int) $account->user_id, $recencyDays);
+                    $existing = $existingPosts->get($externalId);
+
+                    if ($existing instanceof Post) {
+                        $covers->persist($existing, fetchRemote: true, mapped: $payload);
+                        $this->dispatchAnalysisIfNeeded($existing, (int) $account->user_id, $recencyDays);
+                    }
 
                     continue;
                 }
@@ -241,7 +246,7 @@ class SyncTrackedAccountJob implements ShouldQueue
                 ]);
 
                 $analytics->recordPostSynced($account->platform);
-                $covers->persist($post);
+                $covers->persist($post, fetchRemote: true);
 
                 $this->dispatchAnalysisIfNeeded($post->fresh('analysis'), (int) $account->user_id, $recencyDays);
             }
