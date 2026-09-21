@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import {
-    ArrowRight,
     Clapperboard,
     Hourglass,
-    ListChecks,
     Trophy,
     Users,
 } from '@lucide/vue';
@@ -161,6 +159,30 @@ const heatmapTotal = computed(() =>
     (props.activity?.heatmap ?? []).reduce((sum, day) => sum + day.count, 0),
 );
 
+const playbookLine = computed(() => {
+    const book = props.insights?.playbook;
+
+    if (!book) {
+        return null;
+    }
+
+    const parts: string[] = [];
+
+    if (book.peak_hour_label) {
+        parts.push(`They post most around ${book.peak_hour_label}.`);
+    }
+
+    if (book.top_format) {
+        parts.push(`Format lean is ${book.top_format}.`);
+    }
+
+    if (book.top_hashtag) {
+        parts.push(`Top tag #${book.top_hashtag}.`);
+    }
+
+    return parts.length ? parts.join(' ') : null;
+});
+
 const statCards = computed(() => [
     {
         label: 'Accounts',
@@ -213,7 +235,7 @@ function accountHref(post: RecentPost): string | null {
         <div class="snitch-grain" aria-hidden="true" />
 
         <div class="snitch-app-canvas">
-            <header class="flex items-center justify-between gap-6 border-b border-snitch-ink/10 pb-5">
+            <header class="flex flex-wrap items-end justify-between gap-4 border-b border-snitch-ink/10 pb-4">
                 <div class="min-w-0">
                     <h1 class="snitch-display relative text-3xl text-snitch-ink sm:text-4xl">
                         <span
@@ -222,43 +244,90 @@ function accountHref(post: RecentPost): string | null {
                         >Snitch</span>
                         <span class="relative">Snitch</span>
                     </h1>
-                    <p class="mt-1.5 max-w-lg text-sm text-snitch-ink/65 sm:text-base">
-                        Cadence, mix, captions, and winners - what rivals posted and what to remake.
+                    <p class="mt-1.5 max-w-xl text-sm text-snitch-ink/65">
+                        {{ playbookLine ?? 'Cadence, mix, captions, and winners - what rivals posted and what to remake.' }}
                     </p>
                 </div>
             </header>
 
-            <div class="snitch-contact-reveal mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="snitch-dash-rail mt-4">
                 <Link
-                    v-for="(card, index) in statCards"
+                    v-for="card in statCards"
                     :key="card.label"
                     :href="card.href"
-                    class="snitch-scrap relative block p-5 pt-6 transition hover:-translate-y-0.5"
-                    :style="{
-                        '--snitch-tilt': index % 2 === 0 ? '-0.8deg' : '0.9deg',
-                    }"
+                    class="snitch-dash-rail-item"
                 >
-                    <span
-                        class="snitch-tape"
-                        :class="index % 2 === 0 ? 'left-5 -top-2' : 'right-4 -top-2'"
-                        aria-hidden="true"
-                    />
                     <span class="flex items-center justify-between gap-2">
                         <span class="snitch-ink-label">{{ card.label }}</span>
                         <component
                             :is="card.icon"
-                            class="size-4 shrink-0 text-snitch-ink/45"
+                            class="size-3.5 shrink-0 opacity-60"
                             aria-hidden="true"
                         />
                     </span>
-                    <p class="snitch-display mt-2 text-3xl tabular-nums text-snitch-ink">
-                        {{ card.value }}
-                    </p>
-                    <p class="mt-1 text-xs text-snitch-ink/55">{{ card.hint }}</p>
+                    <span class="snitch-display text-2xl tabular-nums">{{ card.value }}</span>
+                    <span class="text-[11px] leading-snug text-snitch-ink/55">{{ card.hint }}</span>
                 </Link>
+                <div
+                    v-if="insights"
+                    class="snitch-dash-rail-item"
+                >
+                    <span class="snitch-ink-label">Avg views</span>
+                    <span class="snitch-display text-2xl tabular-nums">{{ formatFollowers(insights.engagement.avg_views) }}</span>
+                </div>
+                <div
+                    v-if="insights"
+                    class="snitch-dash-rail-item"
+                >
+                    <span class="snitch-ink-label">Avg likes</span>
+                    <span class="snitch-display text-2xl tabular-nums">{{ formatFollowers(insights.engagement.avg_likes) }}</span>
+                </div>
+                <div
+                    v-if="insights"
+                    class="snitch-dash-rail-item"
+                >
+                    <span class="snitch-ink-label">Engagement rate</span>
+                    <span class="snitch-display text-2xl tabular-nums">{{ insights.engagement.avg_rate.toFixed(2) }}%</span>
+                </div>
+                <div
+                    v-if="insights"
+                    class="snitch-dash-rail-item"
+                >
+                    <span class="snitch-ink-label">Growth</span>
+                    <span class="snitch-display text-2xl tabular-nums">{{ formatFollowers(insights.growth.followers) }}</span>
+                    <span
+                        v-if="insights.growth.week_delta != null"
+                        class="text-[11px] leading-snug text-snitch-ink/55"
+                    >
+                        <span class="tabular-nums">{{ formatDelta(insights.growth.week_delta) }}</span>
+                        this week
+                        <span
+                            v-if="insights.growth.week_pct != null"
+                            class="tabular-nums"
+                        >
+                            ({{ formatDelta(insights.growth.week_pct) }}%)
+                        </span>
+                    </span>
+                    <span
+                        v-else
+                        class="text-[11px] leading-snug text-snitch-ink/55"
+                    >No earlier count yet</span>
+                </div>
+                <div
+                    v-if="insights"
+                    class="snitch-dash-rail-item"
+                >
+                    <span class="snitch-ink-label">CTA clicks</span>
+                    <span class="snitch-display text-2xl tabular-nums">{{ formatFollowers(insights.cta_clicks.clicks) }}</span>
+                    <span class="text-[11px] leading-snug text-snitch-ink/55">
+                        {{ insights.cta_clicks.posts_with_cta }}
+                        {{ insights.cta_clicks.posts_with_cta === 1 ? 'post' : 'posts' }}
+                        with an ask
+                    </span>
+                </div>
             </div>
 
-            <section class="mt-10">
+            <section class="mt-5">
                 <div class="flex flex-wrap items-end justify-between gap-3">
                     <div>
                         <p class="snitch-ink-label">Cadence</p>
@@ -271,9 +340,9 @@ function accountHref(post: RecentPost): string | null {
                     </p>
                 </div>
 
-                <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(15rem,0.75fr)]">
-                    <div class="grid gap-4">
-                        <div class="snitch-scrap relative p-5 pt-6">
+                <div class="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(15rem,0.75fr)]">
+                    <div class="grid gap-3">
+                        <div class="snitch-scrap relative p-3 pt-4">
                             <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
                             <p class="snitch-ink-label mb-3">Heat map</p>
                             <PostingHeatmap
@@ -287,7 +356,7 @@ function accountHref(post: RecentPost): string | null {
                                 label="Loading heat map"
                             />
                         </div>
-                        <div class="snitch-scrap relative p-5 pt-6">
+                        <div class="snitch-scrap relative p-3 pt-4">
                             <span class="snitch-tape right-6 -top-2" aria-hidden="true" />
                             <FormatMixChart
                                 v-if="insights"
@@ -302,8 +371,8 @@ function accountHref(post: RecentPost): string | null {
                         </div>
                     </div>
 
-                    <div class="grid gap-4 self-start">
-                        <div class="snitch-scrap relative p-5 pt-6">
+                    <div class="grid gap-3 self-start">
+                        <div class="snitch-scrap relative p-3 pt-4">
                             <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
                             <PlatformSplitChart
                                 v-if="activity"
@@ -348,7 +417,7 @@ function accountHref(post: RecentPost): string | null {
                 </div>
             </section>
 
-            <section class="mt-10">
+            <section class="mt-5">
                 <div class="flex flex-wrap items-end justify-between gap-3">
                     <div>
                         <p class="snitch-ink-label">Mix and captions</p>
@@ -374,170 +443,59 @@ function accountHref(post: RecentPost): string | null {
                         height="6rem"
                     />
                 </div>
-                <template v-else>
-                    <div
-                        v-if="insights.playbook.peak_hour_label || insights.playbook.top_format"
-                        class="snitch-scrap relative mt-5 p-4 pt-5"
-                    >
-                        <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
-                        <p class="snitch-ink-label">Playbook</p>
-                        <p class="mt-2 text-sm text-snitch-ink/80">
-                            <span v-if="insights.playbook.peak_hour_label">
-                                They post most around {{ insights.playbook.peak_hour_label }}.
-                            </span>
-                            <span v-if="insights.playbook.top_format">
-                                Format lean is {{ insights.playbook.top_format }}.
-                            </span>
-                            <span v-if="insights.playbook.top_hashtag">
-                                Top tag #{{ insights.playbook.top_hashtag }}.
-                            </span>
-                        </p>
-                    </div>
-
-                    <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <div class="snitch-scrap relative p-4 pt-5">
-                            <p class="snitch-ink-label">Avg views</p>
-                            <p class="snitch-display mt-1 text-2xl tabular-nums">
-                                {{ formatFollowers(insights.engagement.avg_views) }}
-                            </p>
-                        </div>
-                        <div class="snitch-scrap relative p-4 pt-5">
-                            <p class="snitch-ink-label">Avg likes</p>
-                            <p class="snitch-display mt-1 text-2xl tabular-nums">
-                                {{ formatFollowers(insights.engagement.avg_likes) }}
-                            </p>
-                        </div>
-                        <div class="snitch-scrap relative p-4 pt-5">
-                            <p class="snitch-ink-label">Engagement rate</p>
-                            <p class="snitch-display mt-1 text-2xl tabular-nums">
-                                {{ insights.engagement.avg_rate.toFixed(2) }}%
-                            </p>
-                        </div>
-                        <div class="snitch-scrap relative p-4 pt-5">
-                            <p class="snitch-ink-label">Growth</p>
-                            <p class="snitch-display mt-1 text-2xl tabular-nums">
-                                {{ formatFollowers(insights.growth.followers) }}
-                            </p>
-                            <p
-                                v-if="insights.growth.week_delta != null"
-                                class="mt-1 text-sm text-snitch-ink/65"
-                            >
-                                <span class="tabular-nums">{{ formatDelta(insights.growth.week_delta) }}</span>
-                                this week
-                                <span
-                                    v-if="insights.growth.week_pct != null"
-                                    class="tabular-nums"
-                                >
-                                    ({{ formatDelta(insights.growth.week_pct) }}%)
-                                </span>
-                            </p>
-                            <p v-else class="mt-1 text-sm text-snitch-ink/65">
-                                No earlier count yet
-                            </p>
-                        </div>
-                        <div class="snitch-scrap relative p-4 pt-5">
-                            <p class="snitch-ink-label">CTA clicks</p>
-                            <p class="snitch-display mt-1 text-2xl tabular-nums">
-                                {{ formatFollowers(insights.cta_clicks.clicks) }}
-                            </p>
-                            <p class="mt-1 text-sm text-snitch-ink/65">
-                                {{ insights.cta_clicks.posts_with_cta }}
-                                {{ insights.cta_clicks.posts_with_cta === 1 ? 'post' : 'posts' }}
-                                with an ask
-                            </p>
-                        </div>
-                        <div class="snitch-scrap relative p-4 pt-5">
-                            <p class="snitch-ink-label">Format mix</p>
-                            <p class="mt-1 text-sm text-snitch-ink/75">
-                                <span
-                                    v-for="row in insights.format_mix"
-                                    :key="row.type"
-                                    class="mr-2"
-                                >
-                                    {{ row.type }} {{ row.count }}
-                                </span>
-                                <span v-if="!insights.format_mix.length">No posts yet</span>
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 grid gap-4 lg:grid-cols-2">
-                        <div class="snitch-scrap relative p-4 pt-5">
-                            <p class="snitch-ink-label">Hashtags</p>
-                            <div
-                                v-if="insights.hashtags.length"
-                                class="mt-2 flex flex-wrap gap-1.5"
-                            >
-                                <span
-                                    v-for="row in insights.hashtags"
-                                    :key="`hash-${row.term}`"
-                                    class="snitch-glance-tag"
-                                >
-                                    #{{ row.term }}
-                                    <span class="tabular-nums text-snitch-ink/50">{{ row.count }}</span>
-                                </span>
-                            </div>
-                            <p
-                                v-else
-                                class="mt-2 text-sm text-snitch-ink/60"
-                            >
-                                No hashtags in recent captions.
-                            </p>
-                        </div>
-                        <div class="snitch-scrap relative p-4 pt-5">
-                            <p class="snitch-ink-label">Keywords</p>
-                            <div
-                                v-if="insights.keywords.length"
-                                class="mt-2 flex flex-wrap gap-1.5"
-                            >
-                                <span
-                                    v-for="row in insights.keywords"
-                                    :key="`key-${row.term}`"
-                                    class="snitch-glance-tag"
-                                >
-                                    {{ row.term }}
-                                    <span class="tabular-nums text-snitch-ink/50">{{ row.count }}</span>
-                                </span>
-                            </div>
-                            <p
-                                v-else
-                                class="mt-2 text-sm text-snitch-ink/60"
-                            >
-                                No caption keywords yet.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="snitch-scrap relative mt-4 p-4 pt-5">
-                        <p class="snitch-ink-label">Active ads</p>
+                <div
+                    v-else
+                    class="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+                >
+                    <div class="min-w-0">
+                        <p class="snitch-ink-label mb-2">Hashtags</p>
                         <div
-                            v-if="insights.ads.length"
-                            class="mt-2 space-y-2"
+                            v-if="insights.hashtags.length"
+                            class="flex flex-wrap gap-1.5"
                         >
-                            <a
-                                v-for="ad in insights.ads"
-                                :key="ad.id"
-                                :href="ad.url"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="block text-sm text-snitch-ink underline decoration-snitch-ink/20 underline-offset-4 transition hover:decoration-snitch-ink/50"
+                            <span
+                                v-for="row in insights.hashtags"
+                                :key="`hash-${row.term}`"
+                                class="snitch-glance-tag"
                             >
-                                {{ ad.title }}
-                            </a>
+                                #{{ row.term }}
+                                <span class="tabular-nums text-snitch-ink/50">{{ row.count }}</span>
+                            </span>
                         </div>
                         <p
                             v-else
-                            class="mt-2 text-sm text-snitch-ink/60"
+                            class="text-sm text-snitch-ink/60"
                         >
-                            No library ads found yet. Sync a Facebook or Instagram snitch to pull the Ad Library.
+                            No hashtags in recent captions.
                         </p>
                     </div>
-
-                    <div class="snitch-scrap relative mt-4 p-4 pt-5">
-                        <p class="snitch-ink-label">CTA language</p>
+                    <div class="min-w-0">
+                        <p class="snitch-ink-label mb-2">Keywords</p>
+                        <div
+                            v-if="insights.keywords.length"
+                            class="flex flex-wrap gap-1.5"
+                        >
+                            <span
+                                v-for="row in insights.keywords"
+                                :key="`key-${row.term}`"
+                                class="snitch-glance-tag"
+                            >
+                                {{ row.term }}
+                                <span class="tabular-nums text-snitch-ink/50">{{ row.count }}</span>
+                            </span>
+                        </div>
+                        <p
+                            v-else
+                            class="text-sm text-snitch-ink/60"
+                        >
+                            No caption keywords yet.
+                        </p>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="snitch-ink-label mb-2">CTA language</p>
                         <div
                             v-if="insights.ctas.length"
-                            class="mt-2 flex flex-wrap gap-1.5"
+                            class="flex flex-wrap gap-1.5"
                         >
                             <span
                                 v-for="row in insights.ctas"
@@ -550,15 +508,39 @@ function accountHref(post: RecentPost): string | null {
                         </div>
                         <p
                             v-else
-                            class="mt-2 text-sm text-snitch-ink/60"
+                            class="text-sm text-snitch-ink/60"
                         >
-                            No analysed CTAs yet. Finish reel analysis to fill this.
+                            No analysed CTAs yet.
                         </p>
                     </div>
-                </template>
+                    <div class="min-w-0">
+                        <p class="snitch-ink-label mb-2">Active ads</p>
+                        <div
+                            v-if="insights.ads.length"
+                            class="space-y-1.5"
+                        >
+                            <a
+                                v-for="ad in insights.ads"
+                                :key="ad.id"
+                                :href="ad.url"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="block text-sm text-snitch-ink underline decoration-snitch-ink/20 underline-offset-4"
+                            >
+                                {{ ad.title }}
+                            </a>
+                        </div>
+                        <p
+                            v-else
+                            class="text-sm text-snitch-ink/60"
+                        >
+                            No library ads yet.
+                        </p>
+                    </div>
+                </div>
             </section>
 
-            <div class="mt-10 space-y-10">
+            <div class="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.7fr)]">
                 <section>
                     <div class="flex flex-wrap items-end justify-between gap-3">
                         <div>
@@ -646,7 +628,7 @@ function accountHref(post: RecentPost): string | null {
 
                     <div
                         v-if="top_winners === undefined || top_winners === null"
-                        class="snitch-tear-board mt-5 grid gap-4 p-3 sm:p-4 xl:grid-cols-2"
+                        class="snitch-tear-board mt-3 grid gap-3 p-3"
                         aria-live="polite"
                     >
                         <div
@@ -669,7 +651,7 @@ function accountHref(post: RecentPost): string | null {
                     </div>
                     <div
                         v-else-if="top_winners.length"
-                        class="snitch-tear-board mt-5 grid gap-4 p-3 sm:p-4 xl:grid-cols-2"
+                        class="snitch-tear-board mt-3 grid gap-3 p-3"
                     >
                         <article
                             v-for="(winner, index) in top_winners"
@@ -741,33 +723,6 @@ function accountHref(post: RecentPost): string | null {
                     </div>
                 </section>
             </div>
-
-            <section
-                v-if="stats.analysis_backlog > 0 || stats.analysis_failed > 0"
-                class="snitch-scrap relative mt-10 max-w-2xl p-5"
-            >
-                <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
-                <p class="flex items-center gap-2 snitch-ink-label">
-                    <ListChecks class="size-3.5 shrink-0" aria-hidden="true" />
-                    Analyse queue
-                </p>
-                <p class="snitch-display mt-2 text-xl text-snitch-ink">
-                    {{ stats.analysis_backlog }} waiting
-                    <span v-if="stats.analysis_failed > 0">
-                        · {{ stats.analysis_failed }} failed
-                    </span>
-                </p>
-                <p class="mt-2 text-sm text-snitch-ink/65">
-                    Pending reels stay on the feed with a quiet status stamp until analysis finishes.
-                </p>
-                <Link
-                    :href="backlog.url()"
-                    class="snitch-btn snitch-btn-ghost mt-4 px-3 py-1.5 text-sm"
-                >
-                    <ArrowRight class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
-                    <span class="relative z-10">Open queue</span>
-                </Link>
-            </section>
         </div>
     </div>
 </template>

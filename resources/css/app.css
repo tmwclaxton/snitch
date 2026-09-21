@@ -806,6 +806,53 @@
         opacity: 1;
     }
 
+    .snitch-dash-rail {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 14%, transparent);
+        background: color-mix(in oklab, var(--snitch-lift) 42%, var(--snitch-paper));
+    }
+
+    .snitch-dash-rail-item {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 0.15rem;
+        padding: 0.65rem 0.8rem 0.75rem;
+        border-right: 1px dashed color-mix(in oklab, var(--snitch-ink) 12%, transparent);
+        border-bottom: 1px dashed color-mix(in oklab, var(--snitch-ink) 12%, transparent);
+        color: inherit;
+        text-decoration: none;
+        transition: background 160ms ease;
+    }
+
+    a.snitch-dash-rail-item:hover,
+    a.snitch-dash-rail-item:focus-visible {
+        background: color-mix(in oklab, var(--snitch-spot) 28%, var(--snitch-paper));
+    }
+
+    @media (min-width: 640px) {
+        .snitch-dash-rail {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @media (min-width: 1280px) {
+        .snitch-dash-rail {
+            grid-template-columns: repeat(9, minmax(0, 1fr));
+        }
+    }
+
+    .snitch-heatmap-cell {
+        transition: transform 160ms ease;
+    }
+
+    .snitch-heatmap-grid .snitch-heatmap-cell:hover {
+        z-index: 1;
+        transform: scale(1.45);
+    }
+
     /* Custom platform listbox - paper field + ink menu, not generic SaaS select */
     .snitch-platform-select-trigger {
         display: flex;
