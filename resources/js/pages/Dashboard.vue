@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import {
+    ArrowRight,
     Clapperboard,
     Hourglass,
     ListChecks,
@@ -10,6 +11,7 @@ import {
 import { computed } from 'vue';
 import type { Component } from 'vue';
 import { index as backlog } from '@/actions/App/Http/Controllers/BacklogController';
+import { edit as brand } from '@/actions/App/Http/Controllers/BrandProfileController';
 import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feed, show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import WatchingYouController from '@/actions/App/Http/Controllers/WatchingYouController';
@@ -111,17 +113,13 @@ function submitWatchingCheck(): void {
     });
 }
 
-function watchingLabel(row: WatchingRow): string {
-    if (!row.handle) {
-        return 'Enter a username to check.';
+const watchingOpen = computed(() => {
+    if (props.watching?.check) {
+        return true;
     }
 
-    if (row.watched) {
-        return `Yes - @${row.handle} is already on someone's snitch list.`;
-    }
-
-    return `No - @${row.handle} is not being tracked on Snitch yet.`;
-}
+    return (props.watching?.brand ?? []).some((row) => row.watched);
+});
 
 defineOptions({
     layout: AppLayout,
@@ -208,69 +206,6 @@ function accountHref(post: RecentPost): string | null {
                     </p>
                 </div>
             </header>
-
-            <section class="snitch-scrap relative mt-6 p-5 pt-6">
-                <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
-                <p class="snitch-ink-label">Am I being tracked?</p>
-                <h2 class="snitch-display mt-1 text-2xl text-snitch-ink">
-                    Watchers
-                </h2>
-                <p class="mt-2 max-w-2xl text-sm text-snitch-ink/70">
-                    Checks your brand handles against other Snitch users. We only say yes or no - never who.
-                </p>
-
-                <ul
-                    v-if="watching?.brand?.length"
-                    class="mt-4 space-y-2 text-sm"
-                >
-                    <li
-                        v-for="row in watching.brand"
-                        :key="`${row.platform}-${row.handle}`"
-                    >
-                        <span class="snitch-ink-label mr-2">{{ row.platform }}</span>
-                        {{ watchingLabel(row) }}
-                    </li>
-                </ul>
-                <p
-                    v-else
-                    class="mt-4 text-sm text-snitch-ink/60"
-                >
-                    Add your own handles on Brand to check automatically.
-                </p>
-
-                <p
-                    v-if="watching?.check"
-                    class="mt-4 text-sm font-medium text-snitch-ink"
-                    data-test="watching-check-result"
-                >
-                    {{ watchingLabel(watching.check) }}
-                </p>
-
-                <form
-                    class="mt-4 flex flex-wrap items-end gap-3"
-                    @submit.prevent="submitWatchingCheck"
-                >
-                    <label class="min-w-[12rem] flex-1">
-                        <span class="snitch-ink-label">Check a username</span>
-                        <input
-                            v-model="watchingForm.handle"
-                            type="text"
-                            name="handle"
-                            maxlength="80"
-                            autocomplete="off"
-                            class="mt-1 w-full border border-snitch-ink/15 bg-snitch-paper px-3 py-2 text-sm text-snitch-ink"
-                            placeholder="@yourbrand"
-                        />
-                    </label>
-                    <button
-                        type="submit"
-                        class="snitch-btn snitch-btn-ghost px-3 py-2 text-sm"
-                        :disabled="watchingForm.processing"
-                    >
-                        <span class="relative z-10">Check</span>
-                    </button>
-                </form>
-            </section>
 
             <div class="snitch-contact-reveal mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Link
@@ -586,6 +521,71 @@ function accountHref(post: RecentPost): string | null {
                     <span class="relative z-10">Open queue</span>
                 </Link>
             </section>
+
+            <details
+                class="snitch-doc mt-16 border-t border-snitch-ink/10 pt-5"
+                :open="watchingOpen"
+            >
+                <summary class="snitch-ink-label cursor-pointer select-none text-snitch-ink/55">
+                    Am I being tracked?
+                </summary>
+
+                <div class="mt-4 max-w-xl space-y-4 text-sm text-snitch-ink/80">
+                    <ul
+                        v-if="watching?.brand?.length"
+                        class="divide-y divide-snitch-ink/10"
+                    >
+                        <li
+                            v-for="row in watching.brand"
+                            :key="`${row.platform}-${row.handle}`"
+                            class="flex items-baseline justify-between gap-4 py-1.5"
+                        >
+                            <span>
+                                <span class="text-snitch-ink/45">{{ platformLabel(row.platform ?? '') }}</span>
+                                <span class="ml-2">@{{ row.handle }}</span>
+                            </span>
+                            <span class="tabular-nums text-snitch-ink">{{ row.watched ? 'Yes' : 'No' }}</span>
+                        </li>
+                    </ul>
+                    <p v-else class="text-snitch-ink/55">
+                        <Link :href="brand.url()" class="underline decoration-snitch-ink/25 underline-offset-2">
+                            Add your handles
+                        </Link>
+                    </p>
+
+                    <p
+                        v-if="watching?.check?.handle"
+                        class="flex items-baseline justify-between gap-4"
+                        data-test="watching-check-result"
+                    >
+                        <span>@{{ watching.check.handle }}</span>
+                        <span class="tabular-nums text-snitch-ink">{{ watching.check.watched ? 'Yes' : 'No' }}</span>
+                    </p>
+
+                    <form
+                        class="flex flex-wrap items-center gap-2"
+                        @submit.prevent="submitWatchingCheck"
+                    >
+                        <input
+                            v-model="watchingForm.handle"
+                            type="text"
+                            name="handle"
+                            maxlength="80"
+                            autocomplete="off"
+                            aria-label="Username"
+                            class="min-w-[10rem] flex-1 border-0 border-b border-snitch-ink/20 bg-transparent px-0 py-1 text-sm text-snitch-ink placeholder:text-snitch-ink/35"
+                            placeholder="@handle"
+                        />
+                        <button
+                            type="submit"
+                            class="text-sm text-snitch-ink/60 underline decoration-snitch-ink/25 underline-offset-2 disabled:opacity-50"
+                            :disabled="watchingForm.processing"
+                        >
+                            Check
+                        </button>
+                    </form>
+                </div>
+            </details>
         </div>
     </div>
 </template>

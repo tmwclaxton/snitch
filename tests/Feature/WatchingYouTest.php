@@ -60,7 +60,15 @@ class WatchingYouTest extends TestCase
         $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
         $this->assertIsString($dashboard);
         $this->assertStringContainsString('Am I being tracked?', $dashboard);
+        $this->assertStringContainsString('<details', $dashboard);
+        $this->assertStringNotContainsString('Watchers', $dashboard);
+        $this->assertStringNotContainsString('Checks your brand handles', $dashboard);
+        $this->assertStringNotContainsString('never who', $dashboard);
         $this->assertStringNotContainsString('watcher email', $dashboard);
+        $this->assertTrue(
+            strpos($dashboard, 'Latest frames') < strpos($dashboard, 'Am I being tracked?'),
+            'Watching check belongs below the main dashboard work',
+        );
     }
 
     public function test_check_requires_a_handle(): void
