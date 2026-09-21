@@ -89,6 +89,7 @@ class CompetitorInsightsBuilder
             'activity' => $this->activity->forUser($user, $socialAccountId),
             ...$this->summarise($posts),
             'growth' => $this->growth($user, $socialAccountId),
+            'follower_series' => $this->followerSeries($socialAccountId),
             'ads' => $this->ads([$socialAccountId]),
         ];
     }
@@ -377,7 +378,7 @@ class CompetitorInsightsBuilder
     }
 
     /**
-     * @return array{followers: int, week_delta: int, week_pct: float|null, month_delta: int, month_pct: float|null}
+     * @return array{followers: int, week_delta: int|null, week_pct: float|null, month_delta: int|null, month_pct: float|null}
      */
     private function growth(User $user, ?int $socialAccountId = null): array
     {
@@ -398,17 +399,65 @@ class CompetitorInsightsBuilder
         $week = CarbonImmutable::now()->subDays(7)->toDateString();
         $month = CarbonImmutable::now()->subDays(30)->toDateString();
 
-        $current = $this->followersOnOrBefore($ids, $today);
-        $weekAgo = $this->followersOnOrBefore($ids, $week);
-        $monthAgo = $this->followersOnOrBefore($ids, $month);
+        $current = 0;
+        $weekNow = 0;
+        $weekThen = 0;
+        $weekMatched = false;
+        $monthNow = 0;
+        $monthThen = 0;
+        $monthMatched = false;
+
+        foreach ($ids as $id) {
+            $now = $this->latestFollowersOnOrBefore($id, $today);
+            $weekAgo = $this->latestFollowersOnOrBefore($id, $week);
+            $monthAgo = $this->latestFollowersOnOrBefore($id, $month);
+
+            if ($now !== null) {
+                $current += $now;
+            }
+
+            if ($now !== null && $weekAgo !== null) {
+                $weekMatched = true;
+                $weekNow += $now;
+                $weekThen += $weekAgo;
+            }
+
+            if ($now !== null && $monthAgo !== null) {
+                $monthMatched = true;
+                $monthNow += $now;
+                $monthThen += $monthAgo;
+            }
+        }
 
         return [
             'followers' => $current,
-            'week_delta' => $current - $weekAgo,
-            'week_pct' => $this->pct($current, $weekAgo),
-            'month_delta' => $current - $monthAgo,
-            'month_pct' => $this->pct($current, $monthAgo),
+            'week_delta' => $weekMatched ? $weekNow - $weekThen : null,
+            'week_pct' => $weekMatched ? $this->pct($weekNow, $weekThen) : null,
+            'month_delta' => $monthMatched ? $monthNow - $monthThen : null,
+            'month_pct' => $monthMatched ? $this->pct($monthNow, $monthThen) : null,
         ];
+    }
+
+    /**
+     * @return list<array{captured_on: string, label: string, followers: int}>
+     */
+    private function followerSeries(?int $socialAccountId): array
+    {
+        if ($socialAccountId === null) {
+            return [];
+        }
+
+        return FollowerSnapshot::query()
+            ->where('social_account_id', $socialAccountId)
+            ->orderBy('captured_on')
+            ->limit(104)
+            ->get(['captured_on', 'followers'])
+            ->map(fn (FollowerSnapshot $snapshot): array => [
+                'captured_on' => $snapshot->captured_on->toDateString(),
+                'label' => $snapshot->captured_on->format('j M'),
+                'followers' => (int) $snapshot->followers,
+            ])
+            ->all();
     }
 
     /**
@@ -445,28 +494,15 @@ class CompetitorInsightsBuilder
         }
     }
 
-    /**
-     * @param  list<int>  $socialAccountIds
-     */
-    private function followersOnOrBefore(array $socialAccountIds, string $date): int
+    private function latestFollowersOnOrBefore(int $socialAccountId, string $date): ?int
     {
-        if ($socialAccountIds === []) {
-            return 0;
-        }
+        $followers = FollowerSnapshot::query()
+            ->where('social_account_id', $socialAccountId)
+            ->whereDate('captured_on', '<=', $date)
+            ->orderByDesc('captured_on')
+            ->value('followers');
 
-        $total = 0;
-
-        foreach ($socialAccountIds as $id) {
-            $followers = FollowerSnapshot::query()
-                ->where('social_account_id', $id)
-                ->whereDate('captured_on', '<=', $date)
-                ->orderByDesc('captured_on')
-                ->value('followers');
-
-            $total += (int) ($followers ?? 0);
-        }
-
-        return $total;
+        return $followers === null ? null : (int) $followers;
     }
 
     private function pct(int $current, int $previous): ?float

@@ -141,6 +141,14 @@ return [
     ],
 
     /*
+    | Profile-only follower refresh. Not a post sync. Runs while at least one
+    | person still tracks the social account, then stops.
+    */
+    'followers' => [
+        'refresh_interval_days' => (int) env('SNITCH_FOLLOWER_REFRESH_DAYS', 6),
+    ],
+
+    /*
     | Music recognition: platform metadata (in PostAnalysis.music via
     | PlatformMusicExtractor) beats provider lookups. When platform music is
     | absent, MusicRecognitionService tries AcoustID (with a chromaprint

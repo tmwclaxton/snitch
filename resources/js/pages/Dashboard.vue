@@ -81,9 +81,9 @@ type InsightsPayload = {
     };
     growth: {
         followers: number;
-        week_delta: number;
+        week_delta: number | null;
         week_pct: number | null;
-        month_delta: number;
+        month_delta: number | null;
         month_pct: number | null;
     };
     ads: Array<{
@@ -418,7 +418,10 @@ function accountHref(post: RecentPost): string | null {
                             <p class="snitch-display mt-1 text-2xl tabular-nums">
                                 {{ formatFollowers(insights.growth.followers) }}
                             </p>
-                            <p class="mt-1 text-sm text-snitch-ink/65">
+                            <p
+                                v-if="insights.growth.week_delta != null"
+                                class="mt-1 text-sm text-snitch-ink/65"
+                            >
                                 <span class="tabular-nums">{{ formatDelta(insights.growth.week_delta) }}</span>
                                 this week
                                 <span
@@ -427,6 +430,9 @@ function accountHref(post: RecentPost): string | null {
                                 >
                                     ({{ formatDelta(insights.growth.week_pct) }}%)
                                 </span>
+                            </p>
+                            <p v-else class="mt-1 text-sm text-snitch-ink/65">
+                                No earlier count yet
                             </p>
                         </div>
                         <div class="snitch-scrap relative p-4 pt-5">

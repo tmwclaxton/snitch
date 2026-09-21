@@ -25,7 +25,7 @@ Web and MCP must call `SuggestCompetitorsJob::beginRun()` before dispatch so `co
 `CompetitorInsightsBuilder` keywords are topic-ish tokens (min 4 letters) after a stopword list (`should`, `these`, `today`, `start`, …). Do not rank "the / should / say". Hashtags stay raw `#tags`. Show them as wrapping glance chips, not a tall count list.
 
 ## Index table counts all importable posts
-Snitches Index shows `posts_count` (reels, videos, images, carousels). Keep `reels_count` for analysis backlog. Analysis still reel/video only. Follower growth uses `follower_snapshots`, not a guessed rate.
+Snitches Index shows `posts_count` (reels, videos, images, carousels). Keep `reels_count` for analysis backlog. Analysis still reel/video only. Follower growth uses `follower_snapshots`, not a guessed rate. A weekly profile refresh records the current count while someone still tracks the account. The account page charts that series. A missing earlier snapshot leaves week_delta null instead of treating the whole follower count as growth.
 
 ## Bulk select floating bar
 Suggested snitches and tracked snitches use independent checkbox selection. Shared `BulkActionBar` scrap floats with Confirm/Dismiss (suggestions) or Sync/Remove (tracked). Batch routes: `competitors.batch-sync`, `competitors.batch-destroy`. Prefer the shared component over a second inline scrap bar.

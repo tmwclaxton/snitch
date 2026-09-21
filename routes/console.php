@@ -13,3 +13,9 @@ Artisan::command('inspire', function () {
 Schedule::command('blog:generate --length=long')
     ->weeklyOn(1, '9:00')
     ->appendOutputTo(storage_path('logs/blog-generate.log'));
+
+// Current follower count only. Does not import posts. Skips accounts nobody tracks.
+Schedule::command('snitch:refresh-followers')
+    ->weeklyOn(1, '6:00')
+    ->withoutOverlapping()
+    ->onOneServer();

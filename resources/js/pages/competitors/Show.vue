@@ -14,6 +14,8 @@ import {
     index as competitorsIndex,
 } from '@/actions/App/Http/Controllers/CompetitorController';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
+import FollowerHistoryChart from '@/components/dashboard/FollowerHistoryChart.vue';
+import type { FollowerPoint } from '@/components/dashboard/FollowerHistoryChart.vue';
 import FormatMixChart from '@/components/dashboard/FormatMixChart.vue';
 import PostingHeatmap from '@/components/dashboard/PostingHeatmap.vue';
 import TimeOfDayChart from '@/components/dashboard/TimeOfDayChart.vue';
@@ -101,11 +103,12 @@ type Insights = {
     };
     growth?: {
         followers: number;
-        week_delta: number;
+        week_delta: number | null;
         week_pct: number | null;
-        month_delta: number;
+        month_delta: number | null;
         month_pct: number | null;
     };
+    follower_series?: FollowerPoint[];
     ads?: Array<{
         id: number;
         title: string;
@@ -439,9 +442,15 @@ function askRemove(): void {
                             <p class="snitch-display mt-1 text-2xl tabular-nums">
                                 {{ formatFollowers(insights?.growth?.followers ?? account.followers ?? 0) }}
                             </p>
-                            <p class="mt-1 text-sm text-snitch-ink/65">
-                                {{ (insights?.growth?.week_delta ?? 0) > 0 ? '+' : '' }}{{ insights?.growth?.week_delta ?? 0 }}
+                            <p
+                                v-if="insights?.growth?.week_delta != null"
+                                class="mt-1 text-sm text-snitch-ink/65"
+                            >
+                                {{ insights.growth.week_delta > 0 ? '+' : '' }}{{ insights.growth.week_delta }}
                                 this week
+                            </p>
+                            <p v-else class="mt-1 text-sm text-snitch-ink/65">
+                                No earlier count yet
                             </p>
                         </div>
                         <div class="snitch-scrap relative p-4 pt-5">
@@ -470,6 +479,10 @@ function askRemove(): void {
                         <div class="snitch-scrap relative p-5 pt-6">
                             <FormatMixChart :formats="insights?.format_mix ?? []" />
                         </div>
+                    </div>
+
+                    <div class="snitch-scrap relative mt-4 p-5 pt-6">
+                        <FollowerHistoryChart :points="insights?.follower_series ?? []" />
                     </div>
 
                     <div class="snitch-scrap relative mt-4 p-4 pt-5">

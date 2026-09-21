@@ -26,6 +26,9 @@ Firecrawl + Apify verify can exceed a short worker window, and deploys can SIGTE
 ## SyncTrackedAccountJob respects weekly min interval for ops/force gates
 Unless force=true, the job no-ops when TrackedAccount::isDueForSync() is false (successful sync within snitch.sync.min_interval_days). Manual UI and MCP sync always dispatch with force=true. Do not register snitch:sync-accounts on the scheduler - agents/users kick sync intentionally. The artisan command remains for ops only and still filters by isDueForSync(). Product UI shows Sync status (Manual / last synced date / Syncing), never a next-auto-sync countdown.
 
+## Weekly follower refresh is profile-only
+`snitch:refresh-followers` is scheduled weekly and queues `RefreshFollowerCountJob` for social accounts that still have a tracker and no snapshot inside `snitch.followers.refresh_interval_days`. It calls resolveProfile and writes `follower_snapshots`. It does not import posts, mark sync running, or bill a user. When the last tracker is removed, that social account drops out. Platforms only return the current count, so do not invent older points.
+
 ## TikHub failure or empty list falls back to Apify
 If `driverFor` is tikhub and resolveProfile / listRecentPosts throws or returns `[]`, SyncTrackedAccountJob retries those calls on `apifyAdapter`. Empty Apify `[]` still falls back to TikHub only when TikHub was not already tried. Do not bounce back to TikHub after a TikHub 400 plus empty Apify, or the job fails instead of marking empty.
 
