@@ -153,6 +153,28 @@ class Post extends Model
     }
 
     /**
+     * Proof sheet: omit analyses we could not process. Those stay on /backlog.
+     *
+     * @param  Builder<Post>  $query
+     * @return Builder<Post>
+     */
+    public function scopeVisibleOnFeed(Builder $query): Builder
+    {
+        return $query
+            ->where(function (Builder $query): void {
+                $query
+                    ->whereNull('media_availability')
+                    ->orWhere('media_availability', '!=', MediaAvailability::Unavailable);
+            })
+            ->whereDoesntHave('analysis', function (Builder $analysis): void {
+                $analysis->whereIn('status', [
+                    AnalysisStatus::Failed,
+                    AnalysisStatus::Unavailable,
+                ]);
+            });
+    }
+
+    /**
      * Reels whose analysis failed and may need another pass.
      *
      * @param  Builder<Post>  $query

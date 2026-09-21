@@ -34,6 +34,7 @@ class ListFeedTool extends Tool
 
         $posts = Post::query()
             ->forUser($user)
+            ->visibleOnFeed()
             ->reelLike()
             ->with('socialAccount:id,handle,platform')
             ->latest('posted_at')

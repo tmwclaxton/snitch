@@ -68,6 +68,7 @@ class FeedController extends Controller
     {
         $query = Post::query()
             ->forUser($user)
+            ->visibleOnFeed()
             ->with([
                 'socialAccount',
                 'analysis.terms',

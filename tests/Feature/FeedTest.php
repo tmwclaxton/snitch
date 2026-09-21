@@ -119,6 +119,49 @@ class FeedTest extends TestCase
             );
     }
 
+    public function test_feed_omits_failed_and_unavailable_analyses(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+
+        $account = TrackedAccount::factory()->for($user)->create();
+        $kept = Post::factory()->forAccount($account)->create();
+        PostAnalysis::factory()->for($kept)->create([
+            'status' => AnalysisStatus::Completed,
+        ]);
+
+        $failed = Post::factory()->forAccount($account)->create();
+        PostAnalysis::factory()->for($failed)->create([
+            'status' => AnalysisStatus::Failed,
+            'error_message' => 'NanoGPT 429',
+        ]);
+
+        $unavailable = Post::factory()->forAccount($account)->create();
+        PostAnalysis::factory()->for($unavailable)->create([
+            'status' => AnalysisStatus::Unavailable,
+        ]);
+
+        $deadMedia = Post::factory()->forAccount($account)->create([
+            'media_availability' => MediaAvailability::Unavailable,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('feed.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('feed/Index')
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 1)
+                    ->where('posts.data.0.id', $kept->id)
+                )
+            );
+
+        $this->assertDatabaseHas('posts', ['id' => $failed->id]);
+        $this->assertDatabaseHas('posts', ['id' => $unavailable->id]);
+        $this->assertDatabaseHas('posts', ['id' => $deadMedia->id]);
+    }
+
     public function test_feed_includes_platform_embed_payload(): void
     {
         $user = User::factory()->create();
@@ -242,7 +285,7 @@ class FeedTest extends TestCase
             );
     }
 
-    public function test_feed_includes_image_posts_and_exposes_failed_vs_unavailable(): void
+    public function test_feed_includes_image_posts_and_keeps_failed_off_the_sheet(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -268,7 +311,7 @@ class FeedTest extends TestCase
             'hook' => null,
         ]);
 
-        Post::factory()->forAccount($account)->create([
+        $image = Post::factory()->forAccount($account)->create([
             'type' => PostType::Image,
         ]);
 
@@ -280,7 +323,8 @@ class FeedTest extends TestCase
                 ->where('types', ['reel', 'video', 'carousel', 'image', 'text'])
                 ->missing('posts')
                 ->loadDeferredProps('default', fn (Assert $page) => $page
-                    ->has('posts.data', 3)
+                    ->has('posts.data', 1)
+                    ->where('posts.data.0.id', $image->id)
                 )
             );
 
