@@ -446,7 +446,10 @@ function openTranscript(): void {
                                 <p class="mt-1 text-snitch-ink">{{ post.analysis.concept }}</p>
                             </div>
 
-                            <div class="snitch-sticker">
+                            <div
+                                v-if="post.analysis.hook"
+                                class="snitch-sticker"
+                            >
                                 <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
                                     <component
                                         :is="analysisDimensionIcon('hook_type')"

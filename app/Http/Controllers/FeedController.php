@@ -16,6 +16,7 @@ use App\Services\Billing\PlanEntitlementService;
 use App\Support\PlatformEmbed;
 use App\Support\PostAccountPresenter;
 use App\Support\SafeMarkdown;
+use App\Support\UsableAnalysisCopy;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -160,6 +161,7 @@ class FeedController extends Controller
         );
 
         if ($post->analysis !== null) {
+            UsableAnalysisCopy::applyToAnalysis($post->analysis);
             $post->analysis->setAttribute(
                 'how_to_copy_html',
                 SafeMarkdown::toHtml($post->analysis->how_to_copy),

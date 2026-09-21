@@ -461,4 +461,35 @@ class FeedTest extends TestCase
                 ->where('post.analysis.term_labels.0.dimension', 'topic')
             );
     }
+
+    public function test_feed_show_omits_unprocessed_analysis_copy(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+        ]);
+        PostAnalysis::factory()->for($post)->create([
+            'status' => AnalysisStatus::Completed,
+            'idea' => 'Illo fugit aut maiores.',
+            'visual_summary' => 'Quia voluptas ut voluptatem a dolorum nulla impedit.',
+            'concept' => 'Agency process as entertainment',
+            'music' => [
+                'title' => 'eligendi omnis et',
+                'artist' => 'Evalyn Rempel',
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('feed.show', $post))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('feed/Show')
+                ->where('post.analysis.idea', null)
+                ->where('post.analysis.visual_summary', null)
+                ->where('post.analysis.music', null)
+                ->where('post.analysis.concept', 'Agency process as entertainment')
+            );
+    }
 }

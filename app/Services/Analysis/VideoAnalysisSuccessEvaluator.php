@@ -3,6 +3,7 @@
 namespace App\Services\Analysis;
 
 use App\DataTransferObjects\VideoAnalysisResult;
+use App\Support\UsableAnalysisCopy;
 
 class VideoAnalysisSuccessEvaluator
 {
@@ -62,6 +63,10 @@ class VideoAnalysisSuccessEvaluator
             $failures[] = 'generic AI filler without named mechanic';
         }
 
+        if ($this->looksLikePlaceholderCopy($result)) {
+            $failures[] = 'placeholder or unprocessed copy';
+        }
+
         if ($caption !== null && $this->looksLikeCaptionEcho($result, $caption, (float) ($config['max_caption_overlap_ratio'] ?? 0.65))) {
             $failures[] = 'analysis echoes caption/script too closely';
         }
@@ -95,6 +100,23 @@ class VideoAnalysisSuccessEvaluator
 
         // Han / CJK Unified Ideographs (common failure mode for Qwen and similar models).
         return preg_match('/\p{Han}/u', $blob) === 1;
+    }
+
+    private function looksLikePlaceholderCopy(VideoAnalysisResult $result): bool
+    {
+        foreach ([$result->hook, $result->idea, $result->concept, $result->visualSummary, $result->howToCopy, $result->cta] as $field) {
+            if (trim($field) !== '' && UsableAnalysisCopy::looksLikePlaceholder($field)) {
+                return true;
+            }
+        }
+
+        foreach ([$result->musicTitle, $result->musicArtist] as $field) {
+            if (is_string($field) && trim($field) !== '' && UsableAnalysisCopy::looksLikePlaceholder($field)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function looksLikeGenericSlop(VideoAnalysisResult $result): bool

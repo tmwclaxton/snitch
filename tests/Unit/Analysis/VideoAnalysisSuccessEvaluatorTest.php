@@ -137,4 +137,23 @@ class VideoAnalysisSuccessEvaluatorTest extends TestCase
         $this->assertFalse($evaluation['passed']);
         $this->assertContains('analysis must be English', $evaluation['failures']);
     }
+
+    public function test_fails_placeholder_latin_copy(): void
+    {
+        $result = VideoAnalysisResult::fromModelPayload([
+            'concept' => 'Agency process as entertainment',
+            'hook' => 'Open on the brief, land on the proof.',
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+            'visual_summary' => 'Quia voluptas ut voluptatem a dolorum nulla impedit. Quia eos non maiores similique.',
+            'idea' => 'Illo fugit aut maiores.',
+            'cta' => 'Save this for the next content meeting',
+            'how_to_copy' => "1. Open on the messy brief.\n2. Cut to the still that proves it.\n3. End on the ask.",
+            'sfx' => [],
+        ], 'qwen3.7-flash');
+
+        $evaluation = app(VideoAnalysisSuccessEvaluator::class)->evaluate($result);
+
+        $this->assertFalse($evaluation['passed']);
+        $this->assertContains('placeholder or unprocessed copy', $evaluation['failures']);
+    }
 }

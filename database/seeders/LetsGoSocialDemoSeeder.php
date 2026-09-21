@@ -182,11 +182,6 @@ class LetsGoSocialDemoSeeder extends Seeder
             if ($post->analysis === null) {
                 PostAnalysis::factory()->for($post)->create([
                     'status' => AnalysisStatus::Completed,
-                    'hook' => 'Open on the brief, land on the proof.',
-                    'concept' => 'Agency process as entertainment',
-                    'topics' => ['social_media', 'agency'],
-                    'cta' => 'Save this for the next content meeting',
-                    'how_to_copy' => "1. Open on the messy brief.\n2. Cut to the still that proves it.\n3. End on the ask.",
                     'analyzed_at' => now(),
                 ]);
             }
