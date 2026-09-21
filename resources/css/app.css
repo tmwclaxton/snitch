@@ -1618,7 +1618,7 @@
     }
 
     .snitch-dashboard-winner-media {
-        width: 5.75rem;
+        width: 8.25rem;
         flex-shrink: 0;
     }
 
@@ -1664,7 +1664,13 @@
 
     @media (min-width: 640px) {
         .snitch-dashboard-winner-media {
-            width: 6.75rem;
+            width: 9.5rem;
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .snitch-dashboard-winner-media {
+            width: 10.5rem;
         }
     }
 

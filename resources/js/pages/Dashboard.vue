@@ -187,7 +187,7 @@ function accountHref(post: RecentPost): string | null {
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
+    <div class="snitch-app-shell relative min-h-full px-3 py-6 sm:px-4 sm:py-8 lg:px-5">
         <Head title="Dashboard" />
         <div class="snitch-grain" aria-hidden="true" />
 
@@ -400,7 +400,7 @@ function accountHref(post: RecentPost): string | null {
 
                     <div
                         v-if="top_winners === undefined || top_winners === null"
-                        class="snitch-tear-board mt-5 grid gap-4 p-4 sm:p-5"
+                        class="snitch-tear-board mt-5 grid gap-4 p-3 sm:p-4"
                         aria-live="polite"
                     >
                         <div
@@ -410,8 +410,8 @@ function accountHref(post: RecentPost): string | null {
                         >
                             <SnitchSkeleton
                                 variant="polaroid"
-                                width="6rem"
-                                height="8rem"
+                                width="9rem"
+                                height="12rem"
                                 :label="`Loading winner ${index}`"
                             />
                             <div class="flex min-w-0 flex-1 flex-col gap-2">
@@ -423,7 +423,7 @@ function accountHref(post: RecentPost): string | null {
                     </div>
                     <div
                         v-else-if="top_winners.length"
-                        class="snitch-tear-board mt-5 grid gap-4 p-4 sm:p-5"
+                        class="snitch-tear-board mt-5 grid gap-4 p-3 sm:p-4"
                     >
                         <article
                             v-for="(winner, index) in top_winners"

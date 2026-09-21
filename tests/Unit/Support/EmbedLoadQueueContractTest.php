@@ -112,6 +112,13 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertIsString($css);
         $this->assertStringContainsString('.snitch-dashboard-winner-media .snitch-polaroid-frame .snitch-platform-embed', $css);
         $this->assertStringContainsString('aspect-ratio: auto', $css);
+        $this->assertStringContainsString('width: 8.25rem', $css);
+        $this->assertStringContainsString('width: 10.5rem', $css);
         $this->assertStringNotContainsString('min-height: 14rem', $css);
+
+        $dashboard = file_get_contents(base_path('resources/js/pages/Dashboard.vue'));
+        $this->assertIsString($dashboard);
+        $this->assertStringContainsString('px-3 py-6 sm:px-4 sm:py-8 lg:px-5', $dashboard);
+        $this->assertStringNotContainsString('px-5 py-6 sm:px-8 sm:py-8', $dashboard);
     }
 }
