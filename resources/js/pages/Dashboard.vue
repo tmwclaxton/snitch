@@ -315,7 +315,7 @@ function accountHref(post: RecentPost): string | null {
                     <div>
                         <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
                             <h2 class="snitch-display text-2xl text-snitch-ink">
-                                What they post
+                                What your tracked accounts post
                             </h2>
                             <SnitchFacePile :snitches="snitches" />
                         </div>
