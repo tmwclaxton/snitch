@@ -739,6 +739,73 @@
         background: color-mix(in oklab, var(--snitch-teal) 20%, var(--snitch-paper));
     }
 
+    /*
+     * Stacked snitch faces. Hover (or keyboard focus) gives each face
+     * its own slot and reveals the name.
+     */
+    .snitch-face-pile {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        min-height: 2.25rem;
+    }
+
+    .snitch-face-pile-item {
+        display: inline-flex;
+        align-items: center;
+        margin-inline-start: -0.85rem;
+        transition: margin 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .snitch-face-pile-item:first-child {
+        margin-inline-start: 0;
+    }
+
+    .snitch-face-pile:hover .snitch-face-pile-item,
+    .snitch-face-pile:focus-within .snitch-face-pile-item {
+        margin-inline-start: 0.7rem;
+    }
+
+    .snitch-face-pile:hover .snitch-face-pile-item:first-child,
+    .snitch-face-pile:focus-within .snitch-face-pile-item:first-child {
+        margin-inline-start: 0;
+    }
+
+    .snitch-face-pile-mark {
+        display: grid;
+        padding: 2px;
+        background: var(--snitch-paper);
+        box-shadow: 1px 1px 0 color-mix(in oklab, var(--snitch-ink) 28%, transparent);
+        transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .snitch-face-pile-item:hover .snitch-face-pile-mark,
+    .snitch-face-pile-item:focus-visible .snitch-face-pile-mark {
+        transform: translateY(-2px);
+    }
+
+    .snitch-face-pile-name {
+        max-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        opacity: 0;
+        font-family: var(--font-sans);
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--snitch-ink);
+        transition:
+            max-width 320ms cubic-bezier(0.2, 0.8, 0.2, 1),
+            opacity 200ms ease,
+            margin 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .snitch-face-pile:hover .snitch-face-pile-name,
+    .snitch-face-pile:focus-within .snitch-face-pile-name {
+        max-width: 9rem;
+        margin-inline-start: 0.4rem;
+        opacity: 1;
+    }
+
     /* Custom platform listbox - paper field + ink menu, not generic SaaS select */
     .snitch-platform-select-trigger {
         display: flex;

@@ -22,6 +22,8 @@ import WeeklyVolumeChart from '@/components/dashboard/WeeklyVolumeChart.vue';
 import FeedContactCell from '@/components/FeedContactCell.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
+import SnitchFacePile from '@/components/SnitchFacePile.vue';
+import type { SnitchFace } from '@/components/SnitchFacePile.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatFollowers, winnerStatPills } from '@/lib/metrics';
@@ -129,6 +131,7 @@ const props = defineProps<{
     insights?: InsightsPayload | null;
     recent_posts?: RecentPost[] | null;
     top_winners?: TopWinner[] | null;
+    snitches: SnitchFace[];
 }>();
 
 defineOptions({
@@ -349,9 +352,12 @@ function accountHref(post: RecentPost): string | null {
                 <div class="flex flex-wrap items-end justify-between gap-3">
                     <div>
                         <p class="snitch-ink-label">Mix and captions</p>
-                        <h2 class="snitch-display mt-1 text-2xl text-snitch-ink">
-                            What they post
-                        </h2>
+                        <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
+                            <h2 class="snitch-display text-2xl text-snitch-ink">
+                                What they post
+                            </h2>
+                            <SnitchFacePile :snitches="snitches" />
+                        </div>
                     </div>
                 </div>
 

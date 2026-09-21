@@ -19,7 +19,7 @@ Snitches Index/Show show Sync status only: Manual, last synced date, or Syncing.
 Web and MCP must call `SuggestCompetitorsJob::beginRun()` before dispatch so `competitor-suggest-active:{userId}` is set. Snitches Index reads that pointer as `suggestRun` and polls until terminal. Do not seed only `latest` / status `queued` - the UI will miss in-progress agent jobs.
 
 ## Dashboard mix board uses the same insights as Snitch Show
-`CompetitorInsightsBuilder::forUser` powers Dashboard mix, hashtags, keywords, CTA language, growth, CTA clicks, Ad Library hits, and a short playbook. Per-snitch Show still uses `forAccount`. Growth comes from daily `follower_snapshots` written on sync. Ads come from Firecrawl Ad Library search on Instagram/Facebook sync. CTA clicks use payload `clicks` / link-click fields plus analysed asks. Never print "not in this build" on product UI.
+`CompetitorInsightsBuilder::forUser` powers Dashboard mix, hashtags, keywords, CTA language, growth, CTA clicks, Ad Library hits, and a short playbook. Per-snitch Show still uses `forAccount`. Growth comes from daily `follower_snapshots` written on sync. Ads come from Firecrawl Ad Library search on Instagram/Facebook sync. CTA clicks use payload `clicks` / link-click fields plus analysed asks. Never print "not in this build" on product UI. The mix heading shows a face pile of those snitches (`snitches` prop). Faces overlap until hover or focus, then each takes its own slot and shows the name.
 
 ## Caption keywords skip filler
 `CompetitorInsightsBuilder` keywords are topic-ish tokens (min 4 letters) after a stopword list (`should`, `these`, `today`, `start`, …). Do not rank "the / should / say". Hashtags stay raw `#tags`. Show them as wrapping glance chips, not a tall count list.

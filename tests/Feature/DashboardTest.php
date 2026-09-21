@@ -43,6 +43,7 @@ class DashboardTest extends TestCase
                 ->where('stats.posts', 0)
                 ->where('stats.winners', 0)
                 ->where('stats.analysis_backlog', 0)
+                ->has('snitches', 0)
                 ->missing('recent_posts')
                 ->missing('top_winners')
                 ->missing('activity')
@@ -116,6 +117,8 @@ class DashboardTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
                 ->where('stats.tracked_accounts', 1)
+                ->has('snitches', 1)
+                ->where('snitches.0.handle', $account->handle)
                 ->where('stats.posts', 3)
                 ->where('stats.winners', 1)
                 ->where('stats.analysis_backlog', 2)
@@ -232,6 +235,14 @@ class DashboardTest extends TestCase
             ['activity' => ['activity', 'insights'], 'content' => ['recent_posts', 'top_winners']],
             $page['deferredProps'] ?? null,
         );
+
+        $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
+        $pile = file_get_contents(resource_path('js/components/SnitchFacePile.vue'));
+
+        $this->assertIsString($dashboard);
+        $this->assertIsString($pile);
+        $this->assertStringContainsString('SnitchFacePile', $dashboard);
+        $this->assertStringContainsString('snitch-face-pile', $pile);
     }
 
     public function test_authenticated_users_without_brand_are_sent_to_onboarding(): void

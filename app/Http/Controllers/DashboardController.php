@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Platform;
 use App\Http\Controllers\Concerns\OmitsProductDataWhenPaywalled;
 use App\Models\Post;
 use App\Models\TrackedAccount;
@@ -86,6 +87,7 @@ class DashboardController extends Controller
                     'brand' => [],
                     'check' => null,
                 ],
+                'snitches' => [],
             ]);
         }
 
@@ -141,6 +143,7 @@ class DashboardController extends Controller
                 'brand' => $watching->forBrandHandles($user),
                 'check' => $request->session()->get('watching_check'),
             ],
+            'snitches' => $this->snitchFaces($user),
         ]);
     }
 
@@ -207,6 +210,29 @@ class DashboardController extends Controller
         });
 
         return $topWinners;
+    }
+
+    /**
+     * @return list<array{id: int, handle: string, display_name: string|null, avatar: string|null, platform: string}>
+     */
+    private function snitchFaces(User $user): array
+    {
+        return $user->trackedAccounts()
+            ->orderBy('display_name')
+            ->orderBy('handle')
+            ->get(['id', 'handle', 'display_name', 'avatar', 'platform'])
+            ->map(function (TrackedAccount $account): array {
+                $platform = $account->platform;
+
+                return [
+                    'id' => $account->id,
+                    'handle' => $account->handle,
+                    'display_name' => $account->display_name,
+                    'avatar' => $account->avatar,
+                    'platform' => $platform instanceof Platform ? $platform->value : (string) $platform,
+                ];
+            })
+            ->all();
     }
 
     /**
