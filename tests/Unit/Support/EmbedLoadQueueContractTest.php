@@ -144,5 +144,7 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertIsString($show);
         $this->assertStringContainsString('minmax(0,12rem)', $show);
         $this->assertStringNotContainsString('minmax(0,18rem)', $show);
+        $this->assertStringNotContainsString('!aspect-auto', $show);
+        $this->assertStringContainsString('compact', $show);
     }
 }

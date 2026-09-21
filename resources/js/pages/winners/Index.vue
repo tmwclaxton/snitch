@@ -308,7 +308,7 @@ onUnmounted(() => {
                                     :class="index % 2 === 0 ? 'left-4' : 'right-4'"
                                     aria-hidden="true"
                                 />
-                                <div class="snitch-polaroid-frame !aspect-auto overflow-hidden">
+                                <div class="snitch-polaroid-frame overflow-hidden">
                                     <PlatformEmbed
                                         :embed="winner.post.embed"
                                         :cover-url="winner.post.cover_url"

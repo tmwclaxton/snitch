@@ -385,13 +385,14 @@ function openTranscript(): void {
                             style="--snitch-tilt: -0.6deg"
                         >
                             <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
-                            <div class="snitch-polaroid-frame !aspect-auto overflow-hidden">
+                            <div class="snitch-polaroid-frame overflow-hidden">
                                 <PlatformEmbed
                                     :embed="post.embed"
                                     :cover-url="post.cover_url"
                                     :media-url="post.media_url"
                                     :post-url="post.url"
                                     :platform="post.platform"
+                                    compact
                                 />
                             </div>
                         </div>
