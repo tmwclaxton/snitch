@@ -7,7 +7,6 @@ import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController'
 import AnalysisTermChip from '@/components/AnalysisTermChip.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
-import { exploreHrefForTerm } from '@/lib/analysisTerms';
 import { metricPairs } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
@@ -140,6 +139,12 @@ const winnerScore = computed(() => {
 
 <template>
     <article class="snitch-contact-cell group">
+        <Link
+            :href="feedShow.url(post.id)"
+            class="snitch-contact-cell-hit"
+        >
+            <span class="sr-only">{{ primaryTitle }}</span>
+        </Link>
         <header class="snitch-contact-cell-header">
             <span class="snitch-contact-cell-index">{{ frameIndex }}</span>
             <span class="snitch-contact-cell-platform">
@@ -177,14 +182,9 @@ const winnerScore = computed(() => {
             </div>
         </div>
         <div class="snitch-contact-cell-body">
-            <Link
-                :href="feedShow.url(post.id)"
-                class="snitch-contact-cell-body-link"
-            >
-                <p class="snitch-glance-title line-clamp-2">
-                    {{ primaryTitle }}
-                </p>
-            </Link>
+            <p class="snitch-glance-title line-clamp-2">
+                {{ primaryTitle }}
+            </p>
             <ul
                 v-if="metrics.length"
                 class="snitch-glance-metrics"
@@ -242,7 +242,6 @@ const winnerScore = computed(() => {
                         :dimension="tag.dimension"
                         :section="tag.section"
                         :slug="tag.slug"
-                        :href="exploreHrefForTerm(tag)"
                     />
                 </div>
             </div>

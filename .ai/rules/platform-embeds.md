@@ -12,3 +12,4 @@ Official Instagram/TikTok/Facebook iframes fight the print frames and rate-limit
 - `embedLoadQueue.ts` stays for any leftover iframe experiments. Do not wire it back into list or detail views.
 - Contact-cell frame CSS (`aspect-ratio: 3/4`) must stay so covers do not collapse layout.
 - Proof sheets use `.snitch-contact-sheet-proof` (`auto-fill` 8.5-10.75rem cards). Do not stretch frames with `grid-cols-*` / `1fr` on the wide canvas.
+- `FeedContactCell` uses a stretched hit `Link` to the post show page. Only `Open on {platform}` and the `@handle` profile `Link` sit above it. Do not wrap the card in a second `<a>`.

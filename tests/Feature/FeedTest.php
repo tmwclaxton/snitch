@@ -412,7 +412,7 @@ class FeedTest extends TestCase
         $this->assertIsString($chipVue);
         $this->assertIsString($helper);
         $this->assertStringContainsString('exploreHrefForTerm', $showVue);
-        $this->assertStringContainsString('exploreHrefForTerm', $cellVue);
+        $this->assertStringNotContainsString('exploreHrefForTerm', $cellVue);
         $this->assertStringContainsString(':href="exploreHrefForTerm', $showVue);
         $this->assertStringContainsString('hook_types', $helper);
         $this->assertStringContainsString('visual_crafts', $helper);

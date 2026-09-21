@@ -38,6 +38,10 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('snitch-contact-cell-header', $source);
         $this->assertStringContainsString('snitch-contact-cell-window', $source);
         $this->assertStringContainsString('snitch-contact-cell-body', $source);
+        $this->assertStringContainsString('snitch-contact-cell-hit', $source);
+        $this->assertStringContainsString('feedShow.url(post.id)', $source);
+        $this->assertStringContainsString('snitch-glance-account-link', $source);
+        $this->assertStringNotContainsString('snitch-contact-cell-body-link', $source);
         $this->assertStringContainsString('<ul', $source);
         $this->assertStringContainsString('snitch-glance-metrics', $source);
         $this->assertStringContainsString('snitch-glance-metric-value', $source);
@@ -109,6 +113,7 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('aspect-ratio: auto', $css);
         $this->assertStringContainsString('width: 6.5rem', $css);
         $this->assertStringContainsString('width: 7.75rem', $css);
+        $this->assertStringContainsString('.snitch-contact-cell-hit', $css);
         $this->assertStringContainsString('.snitch-contact-sheet-proof', $css);
         $this->assertStringContainsString(
             'repeat(auto-fill, minmax(8.5rem, 10.75rem))',
