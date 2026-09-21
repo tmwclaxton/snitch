@@ -1088,6 +1088,16 @@
         justify-content: start;
     }
 
+    /*
+     * Dashboard Latest frames: grow cards across the canvas so the
+     * sheet is never a left-aligned strip of capped proof tiles.
+     */
+    .snitch-contact-sheet-proof-fill {
+        width: 100%;
+        grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+        justify-content: stretch;
+    }
+
     .snitch-contact-sheet-rail {
         position: relative;
         z-index: 1;

@@ -119,6 +119,11 @@ class EmbedLoadQueueContractTest extends TestCase
             'repeat(auto-fill, minmax(8.5rem, 10.75rem))',
             $css,
         );
+        $this->assertStringContainsString('.snitch-contact-sheet-proof-fill', $css);
+        $this->assertStringContainsString(
+            'repeat(auto-fit, minmax(10rem, 1fr))',
+            $css,
+        );
         $this->assertStringNotContainsString('min-height: 14rem', $css);
 
         $dashboard = file_get_contents(base_path('resources/js/pages/Dashboard.vue'));
@@ -126,6 +131,7 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('px-2 py-6 sm:px-3 sm:py-8', $dashboard);
         $this->assertStringContainsString('snitch-app-canvas', $dashboard);
         $this->assertStringContainsString('snitch-contact-sheet-proof', $dashboard);
+        $this->assertStringContainsString('snitch-contact-sheet-proof-fill', $dashboard);
         $this->assertStringNotContainsString('xl:grid-cols-5', $dashboard);
         $this->assertStringNotContainsString('max-w-6xl', $dashboard);
         $this->assertStringNotContainsString('px-5 py-6 sm:px-8 sm:py-8', $dashboard);

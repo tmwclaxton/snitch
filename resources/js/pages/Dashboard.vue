@@ -300,7 +300,7 @@ function accountHref(post: RecentPost): string | null {
 
                     <div
                         v-if="recent_posts === undefined || recent_posts === null"
-                        class="snitch-contact-sheet snitch-contact-sheet-proof mt-5 grid"
+                        class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill mt-5 grid"
                         aria-live="polite"
                     >
                         <div
@@ -317,7 +317,7 @@ function accountHref(post: RecentPost): string | null {
                     </div>
                     <div
                         v-else-if="recent_posts.length"
-                        class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-reveal mt-5 grid"
+                        class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill snitch-contact-reveal mt-5 grid"
                     >
                         <FeedContactCell
                             v-for="(post, index) in recent_posts"
