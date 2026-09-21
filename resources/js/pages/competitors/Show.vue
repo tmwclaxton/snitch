@@ -92,6 +92,7 @@ type Insights = {
     format_mix: Array<{ type: string; count: number }>;
     hashtags: Array<{ term: string; count: number }>;
     keywords: Array<{ term: string; count: number }>;
+    ctas?: Array<{ term: string; count: number }>;
 };
 
 type SyncDefaults = {
@@ -469,6 +470,29 @@ function askRemove(): void {
                             class="mt-2 text-sm text-snitch-ink/60"
                         >
                             No caption keywords yet.
+                        </p>
+                        <p class="snitch-ink-label mt-4">CTA language</p>
+                        <p class="mt-1 text-xs text-snitch-ink/50">
+                            Asks on analysed reels. Not conversion.
+                        </p>
+                        <div
+                            v-if="(insights?.ctas ?? []).length"
+                            class="mt-2 flex flex-wrap gap-1.5"
+                        >
+                            <span
+                                v-for="row in insights?.ctas ?? []"
+                                :key="`cta-${row.term}`"
+                                class="snitch-glance-tag"
+                            >
+                                {{ row.term }}
+                                <span class="tabular-nums text-snitch-ink/50">{{ row.count }}</span>
+                            </span>
+                        </div>
+                        <p
+                            v-else
+                            class="mt-2 text-sm text-snitch-ink/60"
+                        >
+                            No analysed CTAs yet.
                         </p>
                     </div>
                 </template>

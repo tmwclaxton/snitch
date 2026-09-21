@@ -8,6 +8,7 @@ use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Models\WinnerInsight;
 use App\Services\Billing\PlanEntitlementService;
+use App\Services\Competitors\CompetitorInsightsBuilder;
 use App\Services\Dashboard\DashboardActivityBuilder;
 use App\Services\Tracking\WatchingYouService;
 use App\Support\PlatformEmbed;
@@ -24,6 +25,7 @@ class DashboardController extends Controller
     public function __invoke(
         Request $request,
         DashboardActivityBuilder $activity,
+        CompetitorInsightsBuilder $insights,
         PlanEntitlementService $entitlements,
         WatchingYouService $watching,
     ): Response {
@@ -38,12 +40,32 @@ class DashboardController extends Controller
                     'analysis_backlog' => 0,
                     'analysis_failed' => 0,
                     'last_synced_at' => null,
+                    'followers' => 0,
                 ],
                 'activity' => [
                     'heatmap' => [],
                     'weekly' => [],
                     'by_platform' => [],
                     'by_time_of_day' => [],
+                ],
+                'insights' => [
+                    'engagement' => [
+                        'posts' => 0,
+                        'avg_views' => 0,
+                        'avg_likes' => 0,
+                        'avg_comments' => 0,
+                        'avg_shares' => 0,
+                        'avg_rate' => 0,
+                    ],
+                    'format_mix' => [],
+                    'hashtags' => [],
+                    'keywords' => [],
+                    'ctas' => [],
+                    'playbook' => [
+                        'peak_hour_label' => null,
+                        'top_format' => null,
+                        'top_hashtag' => null,
+                    ],
                 ],
                 'recent_posts' => [],
                 'top_winners' => [],
@@ -90,8 +112,10 @@ class DashboardController extends Controller
                 'analysis_backlog' => $analysisBacklog,
                 'analysis_failed' => $analysisFailed,
                 'last_synced_at' => $lastSyncedAt,
+                'followers' => (int) $user->trackedAccounts()->sum('followers'),
             ],
             'activity' => Inertia::defer(fn () => $activity->forUser($user), 'activity'),
+            'insights' => Inertia::defer(fn () => $insights->forUser($user), 'activity'),
             'recent_posts' => Inertia::defer(
                 fn () => $this->recentPosts($user),
                 'content',

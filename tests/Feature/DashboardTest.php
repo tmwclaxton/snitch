@@ -46,8 +46,14 @@ class DashboardTest extends TestCase
                 ->missing('recent_posts')
                 ->missing('top_winners')
                 ->missing('activity')
+                ->missing('insights')
                 ->loadDeferredProps('activity', fn (Assert $page) => $page
                     ->has('activity.heatmap', DashboardActivityBuilder::HEATMAP_WEEKS * 7)
+                    ->has('insights.format_mix', 0)
+                    ->has('insights.hashtags', 0)
+                    ->has('insights.keywords', 0)
+                    ->has('insights.ctas', 0)
+                    ->where('insights.playbook.peak_hour_label', null)
                     ->has('activity.weekly', DashboardActivityBuilder::WEEKLY_WEEKS)
                     ->has('activity.by_platform', 0)
                     ->has('activity.by_time_of_day', 24)
@@ -113,6 +119,7 @@ class DashboardTest extends TestCase
                 ->missing('recent_posts')
                 ->missing('top_winners')
                 ->missing('activity')
+                ->missing('insights')
                 ->loadDeferredProps('content', fn (Assert $page) => $page
                     ->has('recent_posts', 3)
                     ->has('top_winners', 1)
@@ -165,7 +172,10 @@ class DashboardTest extends TestCase
                 ->assertInertia(fn (Assert $page) => $page
                     ->component('Dashboard')
                     ->missing('activity')
+                    ->missing('insights')
                     ->loadDeferredProps('activity', fn (Assert $page) => $page
+                        ->has('insights.format_mix')
+                        ->has('insights.playbook')
                         ->has('activity.heatmap', DashboardActivityBuilder::HEATMAP_WEEKS * 7)
                         ->where('activity.heatmap.0.date', '2026-04-19')
                         ->where('activity.weekly.0.week_start', '2026-05-17')
@@ -216,7 +226,7 @@ class DashboardTest extends TestCase
         $page = json_decode(json_encode($response->viewData('page')), true);
 
         $this->assertSame(
-            ['activity' => ['activity'], 'content' => ['recent_posts', 'top_winners']],
+            ['activity' => ['activity', 'insights'], 'content' => ['recent_posts', 'top_winners']],
             $page['deferredProps'] ?? null,
         );
     }

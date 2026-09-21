@@ -23,7 +23,7 @@ import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { winnerStatPills } from '@/lib/metrics';
+import { formatFollowers, winnerStatPills } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
 import { platformLabel } from '@/lib/platforms';
 
@@ -58,6 +58,26 @@ type ActivityPayload = {
     }>;
 };
 
+type InsightsPayload = {
+    engagement: {
+        posts: number;
+        avg_views: number;
+        avg_likes: number;
+        avg_comments: number;
+        avg_shares: number;
+        avg_rate: number;
+    };
+    format_mix: Array<{ type: string; count: number }>;
+    hashtags: Array<{ term: string; count: number }>;
+    keywords: Array<{ term: string; count: number }>;
+    ctas: Array<{ term: string; count: number }>;
+    playbook: {
+        peak_hour_label: string | null;
+        top_format: string | null;
+        top_hashtag: string | null;
+    };
+};
+
 type TopWinner = {
     id: number;
     score: number;
@@ -83,8 +103,10 @@ const props = defineProps<{
         analysis_backlog: number;
         analysis_failed: number;
         last_synced_at: string | null;
+        followers?: number;
     };
     activity?: ActivityPayload | null;
+    insights?: InsightsPayload | null;
     recent_posts?: RecentPost[] | null;
     top_winners?: TopWinner[] | null;
 }>();
@@ -113,14 +135,14 @@ const statCards = computed(() => [
         label: 'Accounts',
         value: props.stats.tracked_accounts,
         href: competitors.url(),
-        hint: lastSyncLabel.value,
+        hint: `${formatFollowers(props.stats.followers ?? 0)} followers · ${lastSyncLabel.value}`,
         icon: Users as Component,
     },
     {
-        label: 'Reels',
+        label: 'Posts',
         value: props.stats.posts,
         href: feed.url(),
-        hint: 'On the contact sheet',
+        hint: 'Reels, stills, and carousels',
         icon: Clapperboard as Component,
     },
     {
@@ -170,7 +192,7 @@ function accountHref(post: RecentPost): string | null {
                         <span class="relative">Snitch</span>
                     </h1>
                     <p class="mt-1.5 max-w-lg text-sm text-snitch-ink/65 sm:text-base">
-                        Counts, cadence, and winners - what rivals posted and what to remake.
+                        Cadence, mix, captions, and winners - what rivals posted and what to remake.
                     </p>
                 </div>
             </header>
@@ -279,6 +301,161 @@ function accountHref(post: RecentPost): string | null {
                         </div>
                     </div>
                 </div>
+            </section>
+
+            <section class="mt-10">
+                <div class="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <p class="snitch-ink-label">Mix and captions</p>
+                        <h2 class="snitch-display mt-1 text-2xl text-snitch-ink">
+                            What they post
+                        </h2>
+                    </div>
+                    <p class="text-xs text-snitch-ink/55">
+                        Across tracked snitches. Ads, growth rate, and CTA clicks are not in this build.
+                    </p>
+                </div>
+
+                <div
+                    v-if="insights == null"
+                    class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+                    aria-live="polite"
+                    aria-label="Loading mix and captions"
+                >
+                    <SnitchSkeleton
+                        v-for="row in 4"
+                        :key="`insight-skel-${row}`"
+                        variant="scrap"
+                        height="6rem"
+                    />
+                </div>
+                <template v-else>
+                    <div
+                        v-if="insights.playbook.peak_hour_label || insights.playbook.top_format"
+                        class="snitch-scrap relative mt-5 p-4 pt-5"
+                    >
+                        <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
+                        <p class="snitch-ink-label">Playbook</p>
+                        <p class="mt-2 text-sm text-snitch-ink/80">
+                            <span v-if="insights.playbook.peak_hour_label">
+                                They post most around {{ insights.playbook.peak_hour_label }}.
+                            </span>
+                            <span v-if="insights.playbook.top_format">
+                                Format lean is {{ insights.playbook.top_format }}.
+                            </span>
+                            <span v-if="insights.playbook.top_hashtag">
+                                Top tag #{{ insights.playbook.top_hashtag }}.
+                            </span>
+                        </p>
+                    </div>
+
+                    <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <div class="snitch-scrap relative p-4 pt-5">
+                            <p class="snitch-ink-label">Avg views</p>
+                            <p class="snitch-display mt-1 text-2xl tabular-nums">
+                                {{ formatFollowers(insights.engagement.avg_views) }}
+                            </p>
+                        </div>
+                        <div class="snitch-scrap relative p-4 pt-5">
+                            <p class="snitch-ink-label">Avg likes</p>
+                            <p class="snitch-display mt-1 text-2xl tabular-nums">
+                                {{ formatFollowers(insights.engagement.avg_likes) }}
+                            </p>
+                        </div>
+                        <div class="snitch-scrap relative p-4 pt-5">
+                            <p class="snitch-ink-label">Engagement rate</p>
+                            <p class="snitch-display mt-1 text-2xl tabular-nums">
+                                {{ insights.engagement.avg_rate.toFixed(2) }}%
+                            </p>
+                        </div>
+                        <div class="snitch-scrap relative p-4 pt-5">
+                            <p class="snitch-ink-label">Format mix</p>
+                            <p class="mt-1 text-sm text-snitch-ink/75">
+                                <span
+                                    v-for="row in insights.format_mix"
+                                    :key="row.type"
+                                    class="mr-2"
+                                >
+                                    {{ row.type }} {{ row.count }}
+                                </span>
+                                <span v-if="!insights.format_mix.length">No posts yet</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 grid gap-4 lg:grid-cols-2">
+                        <div class="snitch-scrap relative p-4 pt-5">
+                            <p class="snitch-ink-label">Hashtags</p>
+                            <div
+                                v-if="insights.hashtags.length"
+                                class="mt-2 flex flex-wrap gap-1.5"
+                            >
+                                <span
+                                    v-for="row in insights.hashtags"
+                                    :key="`hash-${row.term}`"
+                                    class="snitch-glance-tag"
+                                >
+                                    #{{ row.term }}
+                                    <span class="tabular-nums text-snitch-ink/50">{{ row.count }}</span>
+                                </span>
+                            </div>
+                            <p
+                                v-else
+                                class="mt-2 text-sm text-snitch-ink/60"
+                            >
+                                No hashtags in recent captions.
+                            </p>
+                        </div>
+                        <div class="snitch-scrap relative p-4 pt-5">
+                            <p class="snitch-ink-label">Keywords</p>
+                            <div
+                                v-if="insights.keywords.length"
+                                class="mt-2 flex flex-wrap gap-1.5"
+                            >
+                                <span
+                                    v-for="row in insights.keywords"
+                                    :key="`key-${row.term}`"
+                                    class="snitch-glance-tag"
+                                >
+                                    {{ row.term }}
+                                    <span class="tabular-nums text-snitch-ink/50">{{ row.count }}</span>
+                                </span>
+                            </div>
+                            <p
+                                v-else
+                                class="mt-2 text-sm text-snitch-ink/60"
+                            >
+                                No caption keywords yet.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="snitch-scrap relative mt-4 p-4 pt-5">
+                        <p class="snitch-ink-label">CTA language</p>
+                        <p class="mt-1 text-xs text-snitch-ink/50">
+                            What they ask for on analysed reels. Not click-through or conversion.
+                        </p>
+                        <div
+                            v-if="insights.ctas.length"
+                            class="mt-2 flex flex-wrap gap-1.5"
+                        >
+                            <span
+                                v-for="row in insights.ctas"
+                                :key="`cta-${row.term}`"
+                                class="snitch-glance-tag"
+                            >
+                                {{ row.term }}
+                                <span class="tabular-nums text-snitch-ink/50">{{ row.count }}</span>
+                            </span>
+                        </div>
+                        <p
+                            v-else
+                            class="mt-2 text-sm text-snitch-ink/60"
+                        >
+                            No analysed CTAs yet. Finish reel analysis to fill this.
+                        </p>
+                    </div>
+                </template>
             </section>
 
             <div class="mt-10 space-y-10">

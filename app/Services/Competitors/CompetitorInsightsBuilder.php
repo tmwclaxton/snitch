@@ -77,14 +77,62 @@ class CompetitorInsightsBuilder
         $posts = Post::query()
             ->where('social_account_id', $socialAccountId)
             ->whereNotNull('posted_at')
-            ->get(['caption', 'type', 'metrics']);
+            ->with('analysis')
+            ->get(['id', 'social_account_id', 'caption', 'type', 'metrics']);
 
         return [
             'activity' => $this->activity->forUser($user, $socialAccountId),
+            ...$this->summarise($posts),
+        ];
+    }
+
+    /**
+     * Corpus-level Build 1 board for the dashboard (all in-quota snitches).
+     *
+     * @return array{
+     *     engagement: array{posts: int, avg_views: float, avg_likes: float, avg_comments: float, avg_shares: float, avg_rate: float},
+     *     format_mix: list<array{type: string, count: int}>,
+     *     hashtags: list<array{term: string, count: int}>,
+     *     keywords: list<array{term: string, count: int}>,
+     *     ctas: list<array{term: string, count: int}>,
+     *     playbook: array{peak_hour_label: string|null, top_format: string|null, top_hashtag: string|null}
+     * }
+     */
+    public function forUser(User $user): array
+    {
+        $posts = Post::query()
+            ->forUser($user)
+            ->whereNotNull('posted_at')
+            ->with('analysis')
+            ->get(['id', 'social_account_id', 'caption', 'type', 'metrics', 'posted_at']);
+
+        $summary = $this->summarise($posts);
+        $activity = $this->activity->forUser($user);
+
+        return [
+            ...$summary,
+            'playbook' => $this->playbook($activity['by_time_of_day'] ?? [], $summary['format_mix'], $summary['hashtags']),
+        ];
+    }
+
+    /**
+     * @param  Collection<int, Post>  $posts
+     * @return array{
+     *     engagement: array{posts: int, avg_views: float, avg_likes: float, avg_comments: float, avg_shares: float, avg_rate: float},
+     *     format_mix: list<array{type: string, count: int}>,
+     *     hashtags: list<array{term: string, count: int}>,
+     *     keywords: list<array{term: string, count: int}>,
+     *     ctas: list<array{term: string, count: int}>
+     * }
+     */
+    private function summarise(Collection $posts): array
+    {
+        return [
             'engagement' => $this->engagement($posts),
             'format_mix' => $this->formatMix($posts),
             'hashtags' => $this->topHashtags($posts),
             'keywords' => $this->topKeywords($posts),
+            'ctas' => $this->topCtas($posts),
         ];
     }
 
@@ -235,6 +283,58 @@ class CompetitorInsightsBuilder
         }
 
         return $this->sortedTerms($counts);
+    }
+
+    /**
+     * @param  Collection<int, Post>  $posts
+     * @return list<array{term: string, count: int}>
+     */
+    private function topCtas(Collection $posts): array
+    {
+        $counts = [];
+
+        foreach ($posts as $post) {
+            $cta = trim((string) ($post->analysis?->cta ?? ''));
+
+            if ($cta === '' || strcasecmp($cta, 'No explicit CTA') === 0) {
+                continue;
+            }
+
+            $term = mb_strtolower($cta);
+
+            if (mb_strlen($term) > 80) {
+                $term = mb_substr($term, 0, 77).'...';
+            }
+
+            $counts[$term] = ($counts[$term] ?? 0) + 1;
+        }
+
+        return $this->sortedTerms($counts);
+    }
+
+    /**
+     * @param  list<array{hour: int, label: string, count: int}>  $hours
+     * @param  list<array{type: string, count: int}>  $mix
+     * @param  list<array{term: string, count: int}>  $hashtags
+     * @return array{peak_hour_label: string|null, top_format: string|null, top_hashtag: string|null}
+     */
+    private function playbook(array $hours, array $mix, array $hashtags): array
+    {
+        $peak = null;
+        $peakCount = 0;
+
+        foreach ($hours as $row) {
+            if ($row['count'] > $peakCount) {
+                $peakCount = $row['count'];
+                $peak = $row['label'];
+            }
+        }
+
+        return [
+            'peak_hour_label' => $peakCount > 0 ? $peak : null,
+            'top_format' => $mix[0]['type'] ?? null,
+            'top_hashtag' => $hashtags[0]['term'] ?? null,
+        ];
     }
 
     private function isNoiseKeyword(string $word): bool
