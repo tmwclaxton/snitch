@@ -121,7 +121,7 @@ class EmbedLoadQueueContractTest extends TestCase
         );
         $this->assertStringContainsString('.snitch-contact-sheet-proof-fill', $css);
         $this->assertStringContainsString(
-            'repeat(auto-fit, minmax(10rem, 1fr))',
+            'repeat(auto-fit, minmax(12rem, 1fr))',
             $css,
         );
         $this->assertStringNotContainsString('min-height: 14rem', $css);
@@ -145,6 +145,10 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertIsString($feed);
         $this->assertStringContainsString('snitch-contact-sheet-proof', $feed);
         $this->assertStringNotContainsString('xl:grid-cols-5', $feed);
+
+        $explore = file_get_contents(base_path('resources/js/pages/explore/Index.vue'));
+        $this->assertIsString($explore);
+        $this->assertStringContainsString('snitch-contact-sheet-proof-fill', $explore);
 
         $show = file_get_contents(base_path('resources/js/pages/feed/Show.vue'));
         $this->assertIsString($show);

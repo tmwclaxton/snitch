@@ -560,7 +560,7 @@ function paginationLabel(label: string): string {
 
             <div
                 v-if="!postsLoaded"
-                class="snitch-contact-sheet snitch-contact-sheet-proof mt-6 grid"
+                class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill mt-6 grid"
                 aria-live="polite"
                 aria-busy="true"
             >
@@ -584,7 +584,7 @@ function paginationLabel(label: string): string {
 
             <div
                 v-else-if="posts && posts.data.length"
-                class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-reveal mt-6 grid"
+                class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill snitch-contact-reveal mt-6 grid"
             >
                 <div class="snitch-contact-sheet-rail col-span-full">
                     <p>Explore sheet</p>

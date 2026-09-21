@@ -13,6 +13,6 @@ Official Instagram/TikTok/Facebook iframes fight the print frames and rate-limit
 - `embedLoadQueue.ts` stays for any leftover iframe experiments. Do not wire it back into list or detail views.
 - Contact-cell frame CSS (`aspect-ratio: 3/4`) must stay so covers do not collapse layout.
 - Instagram sync imports stills and carousels as well as reels. Feed and Snitch Show list every imported type. AnalyzePostJob stays reel/video only.
-- Proof sheets use `.snitch-contact-sheet-proof` (`auto-fill` 8.5-10.75rem cards). Do not stretch feed / explore / snitch frames with `grid-cols-*` / `1fr` on the wide canvas.
-- Dashboard Latest frames also uses `.snitch-contact-sheet-proof-fill` (`auto-fit` + `1fr`) so that board spans the canvas on every viewport. Keep 3/4 frames.
+- Proof sheets use `.snitch-contact-sheet-proof` (`auto-fill` 8.5-10.75rem cards). Do not stretch feed / snitch frames with `grid-cols-*` / `1fr` on the wide canvas.
+- Dashboard Latest frames and Explore use `.snitch-contact-sheet-proof-fill` (`auto-fit` + `1fr`, min 12rem) so the board spans the canvas instead of a left-aligned strip. Keep 3/4 frames.
 - `FeedContactCell` uses a stretched hit `Link` to the post show page. Only `Open on {platform}` and the `@handle` profile `Link` sit above it. Do not wrap the card in a second `<a>`.
