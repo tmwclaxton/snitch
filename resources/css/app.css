@@ -1165,6 +1165,22 @@
         justify-content: stretch;
     }
 
+    /*
+     * Account recent posts: about two rows, stretched so the sheet
+     * is not a short strip of capped tiles with an empty gutter.
+     */
+    .snitch-contact-sheet-rows {
+        width: 100%;
+        grid-template-columns: repeat(var(--snitch-sheet-cols, 3), minmax(0, 1fr));
+        justify-content: stretch;
+    }
+
+    @media (max-width: 640px) {
+        .snitch-contact-sheet-rows {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
     .snitch-contact-sheet-rail {
         position: relative;
         z-index: 1;

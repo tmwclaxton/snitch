@@ -14,6 +14,7 @@ import {
     index as competitorsIndex,
 } from '@/actions/App/Http/Controllers/CompetitorController';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
+import FormatMixChart from '@/components/dashboard/FormatMixChart.vue';
 import PostingHeatmap from '@/components/dashboard/PostingHeatmap.vue';
 import TimeOfDayChart from '@/components/dashboard/TimeOfDayChart.vue';
 import WeeklyVolumeChart from '@/components/dashboard/WeeklyVolumeChart.vue';
@@ -132,6 +133,18 @@ const props = defineProps<{
 const postsList = computed<Post[]>(() => props.posts ?? []);
 const winnersList = computed<Winner[]>(() => props.winners ?? []);
 const postsLoaded = computed(() => Array.isArray(props.posts));
+const recentSheetColumns = computed(() => {
+    const count = postsLoaded.value ? postsList.value.length : 6;
+
+    if (count <= 1) {
+        return 1;
+    }
+
+    return Math.min(6, Math.ceil(count / 2));
+});
+const recentSheetStyle = computed(() => ({
+    '--snitch-sheet-cols': String(recentSheetColumns.value),
+}));
 const winnersLoaded = computed(() => Array.isArray(props.winners));
 const insightsLoaded = computed(() => props.insights != null);
 
@@ -402,7 +415,7 @@ function askRemove(): void {
                     />
                 </div>
                 <template v-else>
-                    <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                         <div class="snitch-scrap relative p-4 pt-5">
                             <p class="snitch-ink-label">Avg views</p>
                             <p class="snitch-display mt-1 text-2xl tabular-nums">
@@ -441,19 +454,6 @@ function askRemove(): void {
                                 with an ask
                             </p>
                         </div>
-                        <div class="snitch-scrap relative p-4 pt-5">
-                            <p class="snitch-ink-label">Format mix</p>
-                            <p class="mt-1 text-sm text-snitch-ink/75">
-                                <span
-                                    v-for="row in insights?.format_mix ?? []"
-                                    :key="row.type"
-                                    class="mr-2"
-                                >
-                                    {{ row.type }} {{ row.count }}
-                                </span>
-                                <span v-if="!(insights?.format_mix ?? []).length">No posts yet</span>
-                            </p>
-                        </div>
                     </div>
 
                     <div class="mt-4 grid gap-4 lg:grid-cols-2">
@@ -466,6 +466,9 @@ function askRemove(): void {
                         </div>
                         <div class="snitch-scrap relative p-5 pt-6">
                             <WeeklyVolumeChart :weeks="insights?.activity.weekly ?? []" />
+                        </div>
+                        <div class="snitch-scrap relative p-5 pt-6">
+                            <FormatMixChart :formats="insights?.format_mix ?? []" />
                         </div>
                     </div>
 
@@ -568,12 +571,13 @@ function askRemove(): void {
 
                 <div
                     v-if="!postsLoaded"
-                    class="snitch-contact-sheet snitch-contact-sheet-proof mt-5 grid"
+                    class="snitch-contact-sheet snitch-contact-sheet-rows mt-5 grid"
+                    :style="recentSheetStyle"
                     aria-live="polite"
                     aria-label="Loading recent posts"
                 >
                     <SnitchSkeleton
-                        v-for="row in 8"
+                        v-for="row in 6"
                         :key="`post-skel-${row}`"
                         variant="polaroid"
                         width="100%"
@@ -581,7 +585,8 @@ function askRemove(): void {
                 </div>
                 <div
                     v-else-if="postsList.length"
-                    class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-reveal mt-5 grid"
+                    class="snitch-contact-sheet snitch-contact-sheet-rows snitch-contact-reveal mt-5 grid"
+                    :style="recentSheetStyle"
                 >
                     <FeedContactCell
                         v-for="(post, index) in postsList"
