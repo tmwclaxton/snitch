@@ -106,7 +106,14 @@ class EmbedLoadQueueContractTest extends TestCase
 
         $dashboard = file_get_contents(base_path('resources/js/pages/Dashboard.vue'));
         $this->assertIsString($dashboard);
-        $this->assertStringContainsString('px-3 py-6 sm:px-4 sm:py-8 lg:px-5', $dashboard);
+        $this->assertStringContainsString('px-2 py-6 sm:px-3 sm:py-8', $dashboard);
+        $this->assertStringContainsString('snitch-app-canvas', $dashboard);
+        $this->assertStringNotContainsString('max-w-6xl', $dashboard);
         $this->assertStringNotContainsString('px-5 py-6 sm:px-8 sm:py-8', $dashboard);
+
+        $css = file_get_contents(base_path('resources/css/app.css'));
+        $this->assertIsString($css);
+        $this->assertStringContainsString('.snitch-app-canvas', $css);
+        $this->assertStringContainsString('max-width: none', $css);
     }
 }

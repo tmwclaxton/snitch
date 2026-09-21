@@ -24,10 +24,10 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
+    <div class="snitch-app-shell relative min-h-full px-2 py-6 sm:px-3 sm:py-8">
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="relative z-10 mx-auto max-w-5xl">
+        <div class="snitch-app-canvas">
             <header class="mb-6 border-b border-snitch-ink/10 pb-5">
                 <p class="snitch-ink-label">Snitch / Account</p>
                 <h1 class="snitch-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">

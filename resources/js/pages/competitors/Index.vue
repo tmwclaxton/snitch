@@ -747,13 +747,13 @@ const syncSelectedTitle = computed(() => {
 
 <template>
     <div
-        class="snitch-app-shell relative min-h-full min-w-0 px-5 py-6 sm:px-8 sm:py-8"
+        class="snitch-app-shell relative min-h-full min-w-0 px-2 py-6 sm:px-3 sm:py-8"
         :class="showAnyActionBar ? 'pb-28 sm:pb-32' : ''"
     >
         <Head title="Snitches" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="relative z-10 mx-auto w-full min-w-0 max-w-6xl">
+        <div class="snitch-app-canvas min-w-0">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div class="min-w-0">
                     <h1 class="snitch-display text-3xl text-snitch-ink sm:text-4xl">

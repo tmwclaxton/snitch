@@ -16,7 +16,7 @@ defineOptions({
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
+    <div class="snitch-app-shell relative min-h-full px-2 py-6 sm:px-3 sm:py-8">
         <Head title="Brand" />
         <div class="snitch-grain" aria-hidden="true" />
 

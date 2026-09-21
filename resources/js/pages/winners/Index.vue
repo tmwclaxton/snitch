@@ -211,11 +211,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
+    <div class="snitch-app-shell relative min-h-full px-2 py-6 sm:px-3 sm:py-8">
         <Head title="Winners" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="relative z-10 mx-auto max-w-6xl">
+        <div class="snitch-app-canvas">
             <div class="flex flex-wrap items-end justify-between gap-4">
                 <div>
                     <h1 class="snitch-display text-3xl text-snitch-ink sm:text-4xl">

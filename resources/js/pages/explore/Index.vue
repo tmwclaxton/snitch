@@ -353,11 +353,11 @@ function paginationLabel(label: string): string {
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
+    <div class="snitch-app-shell relative min-h-full px-2 py-6 sm:px-3 sm:py-8">
         <Head title="Explore" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="relative z-10 mx-auto max-w-6xl">
+        <div class="snitch-app-canvas">
             <header class="border-b border-snitch-ink/10 pb-5">
                 <p class="snitch-ink-label">Snitch / Explore</p>
                 <h1 class="snitch-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
@@ -560,7 +560,7 @@ function paginationLabel(label: string): string {
 
             <div
                 v-if="!postsLoaded"
-                class="snitch-contact-sheet mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                class="snitch-contact-sheet mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                 aria-live="polite"
                 aria-busy="true"
             >
@@ -584,7 +584,7 @@ function paginationLabel(label: string): string {
 
             <div
                 v-else-if="posts && posts.data.length"
-                class="snitch-contact-sheet snitch-contact-reveal mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                class="snitch-contact-sheet snitch-contact-reveal mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
             >
                 <div class="snitch-contact-sheet-rail col-span-full">
                     <p>Explore sheet</p>

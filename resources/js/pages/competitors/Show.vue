@@ -236,11 +236,11 @@ function askRemove(): void {
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
+    <div class="snitch-app-shell relative min-h-full px-2 py-6 sm:px-3 sm:py-8">
         <Head :title="`@${account.handle}`" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="relative z-10 mx-auto max-w-6xl">
+        <div class="snitch-app-canvas">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <Link
                     :href="profileHref"
@@ -473,7 +473,7 @@ function askRemove(): void {
 
                 <div
                     v-if="!postsLoaded"
-                    class="snitch-contact-sheet mt-5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                    class="snitch-contact-sheet mt-5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                     aria-live="polite"
                     aria-label="Loading recent posts"
                 >
@@ -486,7 +486,7 @@ function askRemove(): void {
                 </div>
                 <div
                     v-else-if="postsList.length"
-                    class="snitch-contact-sheet snitch-contact-reveal mt-5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                    class="snitch-contact-sheet snitch-contact-reveal mt-5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                 >
                     <FeedContactCell
                         v-for="(post, index) in postsList"

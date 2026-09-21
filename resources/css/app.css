@@ -297,6 +297,13 @@
         mix-blend-mode: var(--snitch-print-blend);
     }
 
+    .snitch-app-canvas {
+        position: relative;
+        z-index: 10;
+        width: 100%;
+        max-width: none;
+    }
+
     .snitch-app-shell {
         position: relative;
         isolation: isolate;

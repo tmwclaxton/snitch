@@ -139,11 +139,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
+    <div class="snitch-app-shell relative min-h-full px-2 py-6 sm:px-3 sm:py-8">
         <Head title="Analyse queue" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="relative z-10 mx-auto max-w-6xl">
+        <div class="snitch-app-canvas">
             <header class="border-b border-snitch-ink/10 pb-5">
                 <Link
                     :href="dashboard()"
@@ -188,7 +188,7 @@ onUnmounted(() => {
 
             <div
                 v-if="!postsLoaded"
-                class="snitch-contact-sheet mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                class="snitch-contact-sheet mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                 aria-label="Loading analyse queue"
             >
                 <div class="snitch-contact-sheet-rail col-span-full">
@@ -206,7 +206,7 @@ onUnmounted(() => {
 
             <div
                 v-else-if="postsData.length"
-                class="snitch-contact-sheet snitch-contact-reveal mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                class="snitch-contact-sheet snitch-contact-reveal mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
             >
                 <div class="snitch-contact-sheet-rail col-span-full">
                     <p>Analyse queue</p>

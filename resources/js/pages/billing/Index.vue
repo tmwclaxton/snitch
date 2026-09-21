@@ -134,11 +134,11 @@ function vendorAccent(key: SpendVendorKey): string {
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
+    <div class="snitch-app-shell relative min-h-full px-2 py-6 sm:px-3 sm:py-8">
         <Head title="Billing" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="relative z-10 mx-auto max-w-6xl">
+        <div class="snitch-app-canvas">
             <header class="flex flex-wrap items-end justify-between gap-4 border-b border-snitch-ink/10 pb-5">
                 <div class="min-w-0">
                     <p class="snitch-ink-label">Account</p>

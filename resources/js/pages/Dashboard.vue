@@ -155,11 +155,11 @@ function accountHref(post: RecentPost): string | null {
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-3 py-6 sm:px-4 sm:py-8 lg:px-5">
+    <div class="snitch-app-shell relative min-h-full px-2 py-6 sm:px-3 sm:py-8">
         <Head title="Dashboard" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="relative z-10 mx-auto max-w-6xl">
+        <div class="snitch-app-canvas">
             <header class="flex items-center justify-between gap-6 border-b border-snitch-ink/10 pb-5">
                 <div class="min-w-0">
                     <h1 class="snitch-display relative text-3xl text-snitch-ink sm:text-4xl">
@@ -300,7 +300,7 @@ function accountHref(post: RecentPost): string | null {
 
                     <div
                         v-if="recent_posts === undefined || recent_posts === null"
-                        class="snitch-contact-sheet mt-5 grid grid-cols-2 sm:grid-cols-3"
+                        class="snitch-contact-sheet mt-5 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
                         aria-live="polite"
                     >
                         <div
@@ -317,7 +317,7 @@ function accountHref(post: RecentPost): string | null {
                     </div>
                     <div
                         v-else-if="recent_posts.length"
-                        class="snitch-contact-sheet snitch-contact-reveal mt-5 grid grid-cols-2 sm:grid-cols-3"
+                        class="snitch-contact-sheet snitch-contact-reveal mt-5 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
                     >
                         <FeedContactCell
                             v-for="(post, index) in recent_posts"
@@ -368,7 +368,7 @@ function accountHref(post: RecentPost): string | null {
 
                     <div
                         v-if="top_winners === undefined || top_winners === null"
-                        class="snitch-tear-board mt-5 grid gap-4 p-3 sm:p-4"
+                        class="snitch-tear-board mt-5 grid gap-4 p-3 sm:p-4 xl:grid-cols-2"
                         aria-live="polite"
                     >
                         <div
@@ -391,7 +391,7 @@ function accountHref(post: RecentPost): string | null {
                     </div>
                     <div
                         v-else-if="top_winners.length"
-                        class="snitch-tear-board mt-5 grid gap-4 p-3 sm:p-4"
+                        class="snitch-tear-board mt-5 grid gap-4 p-3 sm:p-4 xl:grid-cols-2"
                     >
                         <article
                             v-for="(winner, index) in top_winners"

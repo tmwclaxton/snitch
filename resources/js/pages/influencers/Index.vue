@@ -747,12 +747,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full min-w-0 px-5 py-6 sm:px-8 sm:py-8">
+    <div class="snitch-app-shell relative min-h-full min-w-0 px-2 py-6 sm:px-3 sm:py-8">
         <Head title="Find Influencers" />
         <div class="snitch-grain" aria-hidden="true" />
 
         <div
-            class="relative z-10 mx-auto w-full min-w-0 max-w-6xl"
+            class="snitch-app-canvas min-w-0"
             :class="{ 'pb-28': showAnyBulkBar }"
         >
             <header>
