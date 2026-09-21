@@ -323,11 +323,11 @@ abstract class AbstractTikHubAdapter implements PlatformAdapter
     }
 
     /**
-     * @return array{views: int, likes: int, comments: int, shares: int}
+     * @return array{views: int, likes: int, comments: int, shares: int, clicks: int}
      */
     protected function metrics(mixed ...$values): array
     {
-        $keys = ['views', 'likes', 'comments', 'shares'];
+        $keys = ['views', 'likes', 'comments', 'shares', 'clicks'];
         $metrics = [];
 
         foreach ($keys as $index => $key) {
@@ -335,5 +335,19 @@ abstract class AbstractTikHubAdapter implements PlatformAdapter
         }
 
         return $metrics;
+    }
+
+    /**
+     * @param  array<string, mixed>  $item
+     */
+    protected function clicksFrom(array $item): int
+    {
+        foreach (['clicks', 'linkClicks', 'link_clicks', 'clicksCount', 'ctaClicks', 'cta_clicks'] as $key) {
+            if (isset($item[$key]) && is_numeric($item[$key])) {
+                return max(0, (int) $item[$key]);
+            }
+        }
+
+        return 0;
     }
 }

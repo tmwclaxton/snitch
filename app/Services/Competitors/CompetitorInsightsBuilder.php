@@ -2,11 +2,16 @@
 
 namespace App\Services\Competitors;
 
+use App\Enums\Platform;
 use App\Enums\PostType;
+use App\Models\FollowerSnapshot;
 use App\Models\Post;
+use App\Models\SocialAd;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Dashboard\DashboardActivityBuilder;
+use App\Services\Tracking\FollowerSnapshotRecorder;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
 class CompetitorInsightsBuilder
@@ -78,11 +83,13 @@ class CompetitorInsightsBuilder
             ->where('social_account_id', $socialAccountId)
             ->whereNotNull('posted_at')
             ->with('analysis')
-            ->get(['id', 'social_account_id', 'caption', 'type', 'metrics']);
+            ->get(['id', 'social_account_id', 'caption', 'type', 'metrics', 'raw_payload']);
 
         return [
             'activity' => $this->activity->forUser($user, $socialAccountId),
             ...$this->summarise($posts),
+            'growth' => $this->growth($user, $socialAccountId),
+            'ads' => $this->ads([$socialAccountId]),
         ];
     }
 
@@ -104,14 +111,25 @@ class CompetitorInsightsBuilder
             ->forUser($user)
             ->whereNotNull('posted_at')
             ->with('analysis')
-            ->get(['id', 'social_account_id', 'caption', 'type', 'metrics', 'posted_at']);
+            ->get(['id', 'social_account_id', 'caption', 'type', 'metrics', 'posted_at', 'raw_payload']);
 
         $summary = $this->summarise($posts);
         $activity = $this->activity->forUser($user);
 
+        $socialIds = TrackedAccount::query()
+            ->where('user_id', $user->id)
+            ->whereNotNull('social_account_id')
+            ->pluck('social_account_id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
         return [
             ...$summary,
             'playbook' => $this->playbook($activity['by_time_of_day'] ?? [], $summary['format_mix'], $summary['hashtags']),
+            'growth' => $this->growth($user),
+            'ads' => $this->ads($socialIds),
         ];
     }
 
@@ -133,6 +151,7 @@ class CompetitorInsightsBuilder
             'hashtags' => $this->topHashtags($posts),
             'keywords' => $this->topKeywords($posts),
             'ctas' => $this->topCtas($posts),
+            'cta_clicks' => $this->ctaClicks($posts),
         ];
     }
 
@@ -310,6 +329,181 @@ class CompetitorInsightsBuilder
         }
 
         return $this->sortedTerms($counts);
+    }
+
+    /**
+     * @param  Collection<int, Post>  $posts
+     * @return array{clicks: int, posts_with_cta: int, posts: int}
+     */
+    private function ctaClicks(Collection $posts): array
+    {
+        $clicks = 0;
+        $withCta = 0;
+
+        foreach ($posts as $post) {
+            $clicks += $this->clicksFromPost($post);
+
+            $cta = trim((string) ($post->analysis?->cta ?? ''));
+
+            if ($cta !== '' && strcasecmp($cta, 'No explicit CTA') !== 0) {
+                $withCta++;
+            }
+        }
+
+        return [
+            'clicks' => $clicks,
+            'posts_with_cta' => $withCta,
+            'posts' => $posts->count(),
+        ];
+    }
+
+    private function clicksFromPost(Post $post): int
+    {
+        $metrics = is_array($post->metrics) ? $post->metrics : [];
+
+        if (isset($metrics['clicks']) && is_numeric($metrics['clicks'])) {
+            return max(0, (int) $metrics['clicks']);
+        }
+
+        $raw = is_array($post->raw_payload) ? $post->raw_payload : [];
+
+        foreach (['clicks', 'linkClicks', 'link_clicks', 'clicksCount', 'ctaClicks', 'cta_clicks'] as $key) {
+            if (isset($raw[$key]) && is_numeric($raw[$key])) {
+                return max(0, (int) $raw[$key]);
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * @return array{followers: int, week_delta: int, week_pct: float|null, month_delta: int, month_pct: float|null}
+     */
+    private function growth(User $user, ?int $socialAccountId = null): array
+    {
+        $ids = $socialAccountId !== null
+            ? [$socialAccountId]
+            : TrackedAccount::query()
+                ->where('user_id', $user->id)
+                ->whereNotNull('social_account_id')
+                ->pluck('social_account_id')
+                ->map(fn (mixed $id): int => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
+
+        $this->seedSnapshots($user, $ids);
+
+        $today = CarbonImmutable::now()->toDateString();
+        $week = CarbonImmutable::now()->subDays(7)->toDateString();
+        $month = CarbonImmutable::now()->subDays(30)->toDateString();
+
+        $current = $this->followersOnOrBefore($ids, $today);
+        $weekAgo = $this->followersOnOrBefore($ids, $week);
+        $monthAgo = $this->followersOnOrBefore($ids, $month);
+
+        return [
+            'followers' => $current,
+            'week_delta' => $current - $weekAgo,
+            'week_pct' => $this->pct($current, $weekAgo),
+            'month_delta' => $current - $monthAgo,
+            'month_pct' => $this->pct($current, $monthAgo),
+        ];
+    }
+
+    /**
+     * @param  list<int>  $socialAccountIds
+     */
+    private function seedSnapshots(User $user, array $socialAccountIds): void
+    {
+        if ($socialAccountIds === []) {
+            return;
+        }
+
+        $recorder = app(FollowerSnapshotRecorder::class);
+        $have = FollowerSnapshot::query()
+            ->whereIn('social_account_id', $socialAccountIds)
+            ->pluck('social_account_id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->unique()
+            ->all();
+
+        $accounts = TrackedAccount::query()
+            ->where('user_id', $user->id)
+            ->whereIn('social_account_id', $socialAccountIds)
+            ->whereNotNull('followers')
+            ->get(['social_account_id', 'followers']);
+
+        foreach ($accounts as $account) {
+            $id = (int) $account->social_account_id;
+
+            if (in_array($id, $have, true)) {
+                continue;
+            }
+
+            $recorder->record($id, (int) $account->followers);
+        }
+    }
+
+    /**
+     * @param  list<int>  $socialAccountIds
+     */
+    private function followersOnOrBefore(array $socialAccountIds, string $date): int
+    {
+        if ($socialAccountIds === []) {
+            return 0;
+        }
+
+        $total = 0;
+
+        foreach ($socialAccountIds as $id) {
+            $followers = FollowerSnapshot::query()
+                ->where('social_account_id', $id)
+                ->whereDate('captured_on', '<=', $date)
+                ->orderByDesc('captured_on')
+                ->value('followers');
+
+            $total += (int) ($followers ?? 0);
+        }
+
+        return $total;
+    }
+
+    private function pct(int $current, int $previous): ?float
+    {
+        if ($previous <= 0) {
+            return null;
+        }
+
+        return round((($current - $previous) / $previous) * 100, 1);
+    }
+
+    /**
+     * @param  list<int>  $socialAccountIds
+     * @return list<array{id: int, title: string, body: string|null, url: string, platform: string}>
+     */
+    private function ads(array $socialAccountIds): array
+    {
+        if ($socialAccountIds === []) {
+            return [];
+        }
+
+        return SocialAd::query()
+            ->whereIn('social_account_id', $socialAccountIds)
+            ->where('is_active', true)
+            ->latest('last_seen_at')
+            ->limit(8)
+            ->get()
+            ->map(fn (SocialAd $ad): array => [
+                'id' => $ad->id,
+                'title' => $ad->title,
+                'body' => $ad->body,
+                'url' => $ad->url,
+                'platform' => $ad->platform instanceof Platform
+                    ? $ad->platform->value
+                    : (string) $ad->platform,
+            ])
+            ->all();
     }
 
     /**

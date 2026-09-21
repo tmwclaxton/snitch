@@ -47,4 +47,20 @@ class SocialAccount extends Model
     {
         return $this->hasMany(Post::class);
     }
+
+    /**
+     * @return HasMany<FollowerSnapshot, $this>
+     */
+    public function followerSnapshots(): HasMany
+    {
+        return $this->hasMany(FollowerSnapshot::class);
+    }
+
+    /**
+     * @return HasMany<SocialAd, $this>
+     */
+    public function ads(): HasMany
+    {
+        return $this->hasMany(SocialAd::class);
+    }
 }

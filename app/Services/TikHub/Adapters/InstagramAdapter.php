@@ -209,6 +209,7 @@ class InstagramAdapter extends AbstractTikHubAdapter
                 $media['like_count'] ?? 0,
                 $media['comment_count'] ?? 0,
                 $media['share_count'] ?? 0,
+                $this->clicksFrom(is_array($media) ? $media : []),
             ),
             'raw_payload' => $item,
         ];

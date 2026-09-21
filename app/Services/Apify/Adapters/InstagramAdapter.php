@@ -221,6 +221,7 @@ class InstagramAdapter extends AbstractPlatformAdapter
                 $item['likesCount'] ?? $item['likeCount'] ?? 0,
                 $item['commentsCount'] ?? $item['commentCount'] ?? 0,
                 $item['sharesCount'] ?? 0,
+                $this->clicksFrom(is_array($item) ? $item : []),
             ),
             'raw_payload' => array_merge($item, is_array($music) ? ['normalized_music' => $music] : []),
         ];

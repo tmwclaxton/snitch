@@ -61,6 +61,19 @@ class DashboardController extends Controller
                     'hashtags' => [],
                     'keywords' => [],
                     'ctas' => [],
+                    'cta_clicks' => [
+                        'clicks' => 0,
+                        'posts_with_cta' => 0,
+                        'posts' => 0,
+                    ],
+                    'growth' => [
+                        'followers' => 0,
+                        'week_delta' => 0,
+                        'week_pct' => null,
+                        'month_delta' => 0,
+                        'month_pct' => null,
+                    ],
+                    'ads' => [],
                     'playbook' => [
                         'peak_hour_label' => null,
                         'top_format' => null,

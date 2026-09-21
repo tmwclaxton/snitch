@@ -12,7 +12,9 @@ use App\Models\TrackedAccount;
 use App\Services\Apify\Contracts\PlatformAdapter;
 use App\Services\Apify\PlatformAdapterManager;
 use App\Services\Billing\VendorUsageCharger;
+use App\Services\Competitors\CompetitorAdsFinder;
 use App\Services\SnitchAnalyticsService;
+use App\Services\Tracking\FollowerSnapshotRecorder;
 use App\Services\Tracking\PostCoverHydrator;
 use App\Support\SafeExceptionMessage;
 use App\Support\SyncOptions;
@@ -273,6 +275,17 @@ class SyncTrackedAccountJob implements ShouldQueue
                     'last_sync_status' => 'success',
                     'last_sync_error' => null,
                 ])->save();
+            }
+
+            app(FollowerSnapshotRecorder::class)->recordFromAccount($account->fresh() ?? $account);
+
+            try {
+                app(CompetitorAdsFinder::class)->refresh($account->fresh() ?? $account);
+            } catch (Throwable $adsError) {
+                Log::warning('Competitor ads refresh failed', [
+                    'tracked_account_id' => $this->trackedAccountId,
+                    'error' => SafeExceptionMessage::forUsers($adsError, 'Ads refresh failed.'),
+                ]);
             }
 
             ScoreWinnersJob::queueFor($account->user_id);

@@ -93,6 +93,25 @@ type Insights = {
     hashtags: Array<{ term: string; count: number }>;
     keywords: Array<{ term: string; count: number }>;
     ctas?: Array<{ term: string; count: number }>;
+    cta_clicks?: {
+        clicks: number;
+        posts_with_cta: number;
+        posts: number;
+    };
+    growth?: {
+        followers: number;
+        week_delta: number;
+        week_pct: number | null;
+        month_delta: number;
+        month_pct: number | null;
+    };
+    ads?: Array<{
+        id: number;
+        title: string;
+        body: string | null;
+        url: string;
+        platform: string;
+    }>;
 };
 
 type SyncDefaults = {
@@ -403,6 +422,26 @@ function askRemove(): void {
                             </p>
                         </div>
                         <div class="snitch-scrap relative p-4 pt-5">
+                            <p class="snitch-ink-label">Growth</p>
+                            <p class="snitch-display mt-1 text-2xl tabular-nums">
+                                {{ formatFollowers(insights?.growth?.followers ?? account.followers ?? 0) }}
+                            </p>
+                            <p class="mt-1 text-sm text-snitch-ink/65">
+                                {{ (insights?.growth?.week_delta ?? 0) > 0 ? '+' : '' }}{{ insights?.growth?.week_delta ?? 0 }}
+                                this week
+                            </p>
+                        </div>
+                        <div class="snitch-scrap relative p-4 pt-5">
+                            <p class="snitch-ink-label">CTA clicks</p>
+                            <p class="snitch-display mt-1 text-2xl tabular-nums">
+                                {{ formatFollowers(insights?.cta_clicks?.clicks ?? 0) }}
+                            </p>
+                            <p class="mt-1 text-sm text-snitch-ink/65">
+                                {{ insights?.cta_clicks?.posts_with_cta ?? 0 }}
+                                with an ask
+                            </p>
+                        </div>
+                        <div class="snitch-scrap relative p-4 pt-5">
                             <p class="snitch-ink-label">Format mix</p>
                             <p class="mt-1 text-sm text-snitch-ink/75">
                                 <span
@@ -471,10 +510,29 @@ function askRemove(): void {
                         >
                             No caption keywords yet.
                         </p>
-                        <p class="snitch-ink-label mt-4">CTA language</p>
-                        <p class="mt-1 text-xs text-snitch-ink/50">
-                            Asks on analysed reels. Not conversion.
+                        <p class="snitch-ink-label mt-4">Active ads</p>
+                        <div
+                            v-if="(insights?.ads ?? []).length"
+                            class="mt-2 space-y-2"
+                        >
+                            <a
+                                v-for="ad in insights?.ads ?? []"
+                                :key="ad.id"
+                                :href="ad.url"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="block text-sm text-snitch-ink underline decoration-snitch-ink/20 underline-offset-4"
+                            >
+                                {{ ad.title }}
+                            </a>
+                        </div>
+                        <p
+                            v-else
+                            class="mt-2 text-sm text-snitch-ink/60"
+                        >
+                            No library ads found yet.
                         </p>
+                        <p class="snitch-ink-label mt-4">CTA language</p>
                         <div
                             v-if="(insights?.ctas ?? []).length"
                             class="mt-2 flex flex-wrap gap-1.5"

@@ -86,6 +86,7 @@ class FacebookAdapter extends AbstractPlatformAdapter
                 $item['likes'] ?? $item['likesCount'] ?? 0,
                 $item['comments'] ?? $item['commentsCount'] ?? 0,
                 $item['shares'] ?? $item['sharesCount'] ?? 0,
+                $this->clicksFrom(is_array($item) ? $item : []),
             ),
             'raw_payload' => $item,
         ];

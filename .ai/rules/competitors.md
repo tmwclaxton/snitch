@@ -19,13 +19,13 @@ Snitches Index/Show show Sync status only: Manual, last synced date, or Syncing.
 Web and MCP must call `SuggestCompetitorsJob::beginRun()` before dispatch so `competitor-suggest-active:{userId}` is set. Snitches Index reads that pointer as `suggestRun` and polls until terminal. Do not seed only `latest` / status `queued` - the UI will miss in-progress agent jobs.
 
 ## Dashboard mix board uses the same insights as Snitch Show
-`CompetitorInsightsBuilder::forUser` powers Dashboard mix, hashtags, keywords, CTA language, and a short playbook (peak hour / top format / top tag). Per-snitch Show still uses `forAccount`. Do not invent follower growth, Ad Library, or CTA conversion.
+`CompetitorInsightsBuilder::forUser` powers Dashboard mix, hashtags, keywords, CTA language, growth, CTA clicks, Ad Library hits, and a short playbook. Per-snitch Show still uses `forAccount`. Growth comes from daily `follower_snapshots` written on sync. Ads come from Firecrawl Ad Library search on Instagram/Facebook sync. CTA clicks use payload `clicks` / link-click fields plus analysed asks. Never print "not in this build" on product UI.
 
 ## Caption keywords skip filler
 `CompetitorInsightsBuilder` keywords are topic-ish tokens (min 4 letters) after a stopword list (`should`, `these`, `today`, `start`, …). Do not rank "the / should / say". Hashtags stay raw `#tags`. Show them as wrapping glance chips, not a tall count list.
 
 ## Index table counts all importable posts
-Snitches Index shows `posts_count` (reels, videos, images, carousels). Keep `reels_count` for analysis backlog. Analysis still reel/video only. Do not invent follower growth not stored on TrackedAccount.
+Snitches Index shows `posts_count` (reels, videos, images, carousels). Keep `reels_count` for analysis backlog. Analysis still reel/video only. Follower growth uses `follower_snapshots`, not a guessed rate.
 
 ## Bulk select floating bar
 Suggested snitches and tracked snitches use independent checkbox selection. Shared `BulkActionBar` scrap floats with Confirm/Dismiss (suggestions) or Sync/Remove (tracked). Batch routes: `competitors.batch-sync`, `competitors.batch-destroy`. Prefer the shared component over a second inline scrap bar.
