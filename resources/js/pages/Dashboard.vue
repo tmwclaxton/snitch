@@ -420,8 +420,7 @@ function accountHref(post: RecentPost): string | null {
             <section class="mt-5">
                 <div class="flex flex-wrap items-end justify-between gap-3">
                     <div>
-                        <p class="snitch-ink-label">Mix and captions</p>
-                        <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
                             <h2 class="snitch-display text-2xl text-snitch-ink">
                                 What they post
                             </h2>
