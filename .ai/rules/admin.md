@@ -25,6 +25,7 @@ Additional web-only admin routes:
 - `GET /admin/activity` (`admin.activity`) - platform activity graphs and merged recent-event log from `credit_ledger_entries`, `mcp_tool_invocations`, `users`, and `post_analyses` (no separate audit table).
 - `GET /admin/users` (`admin.users.index`) - paginated user list with search, plan filter, sort.
 - `GET /admin/users/{user}` (`admin.users.show`) - user profile, spend/usage charts, per-user activity log (ledger + MCP).
+- Referral admin (`/admin/referrals`) is hidden. `snitch.show_admin_referrals` is false, those routes 404, and the sidebar has no Referrals item. Public referral attribution still runs. Turn the flag on and restore the sidebar item to bring the screen back.
 
 Activity logs aggregate existing first-party signals only. MCP invocation logging remains in `LogMcpToolInvocation` (no argument payloads).
 

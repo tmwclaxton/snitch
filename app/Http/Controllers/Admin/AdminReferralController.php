@@ -18,11 +18,15 @@ class AdminReferralController extends Controller
 
     public function index(): Response
     {
+        $this->ensureVisible();
+
         return Inertia::render('admin/Referrals', $this->referrals->index());
     }
 
     public function store(StoreReferralCodeRequest $request): RedirectResponse
     {
+        $this->ensureVisible();
+
         $this->referrals->create($request->validated(), $request->user());
 
         return redirect()->route('admin.referrals.index');
@@ -30,6 +34,8 @@ class AdminReferralController extends Controller
 
     public function show(Request $request, ReferralCode $referral): Response
     {
+        $this->ensureVisible();
+
         $grain = (string) $request->string('grain', 'day');
         $periods = $request->integer('periods') ?: null;
         $search = $request->string('search')->toString();
@@ -51,8 +57,15 @@ class AdminReferralController extends Controller
 
     public function update(UpdateReferralCodeRequest $request, ReferralCode $referral): RedirectResponse
     {
+        $this->ensureVisible();
+
         $this->referrals->update($referral, $request->validated());
 
         return redirect()->back();
+    }
+
+    private function ensureVisible(): void
+    {
+        abort_unless((bool) config('snitch.show_admin_referrals'), 404);
     }
 }

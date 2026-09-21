@@ -26,7 +26,33 @@ class AdminReferralTest extends TestCase
             'snitch.admin_emails' => [
                 'admin@example.com',
             ],
+            'snitch.show_admin_referrals' => true,
         ]);
+    }
+
+    public function test_referral_admin_pages_are_hidden_by_default(): void
+    {
+        config(['snitch.show_admin_referrals' => false]);
+
+        $admin = User::factory()->create(['email' => 'admin@example.com']);
+        BrandProfile::factory()->for($admin)->create();
+        $referral = ReferralCode::factory()->create();
+        $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
+
+        $this->assertIsString($sidebar);
+        $this->assertStringNotContainsString('Referrals', $sidebar);
+        $this->assertStringNotContainsString('admin/referrals', $sidebar);
+
+        $this->actingAs($admin)->get(route('admin.referrals.index'))->assertNotFound();
+        $this->actingAs($admin)->post(route('admin.referrals.store'), [
+            'code' => 'hidden',
+            'name' => 'Hidden',
+        ])->assertNotFound();
+        $this->actingAs($admin)->get(route('admin.referrals.show', $referral))->assertNotFound();
+        $this->actingAs($admin)->patch(route('admin.referrals.update', $referral), [
+            'name' => 'Nope',
+        ])->assertNotFound();
+        $this->assertNull(ReferralCode::query()->where('code', 'hidden')->first());
     }
 
     public function test_non_admin_cannot_access_referral_admin_routes(): void

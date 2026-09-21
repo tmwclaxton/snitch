@@ -12,6 +12,12 @@ return [
     ))),
 
     /*
+    | Admin referral pages (/admin/referrals) stay off until the screen is ready.
+    | Attribution from public referral links still runs.
+    */
+    'show_admin_referrals' => false,
+
+    /*
     | Public support address shown on marketing pages. Contact form deliveries
     | go to contact_to (defaults to the same address when unset).
     */
