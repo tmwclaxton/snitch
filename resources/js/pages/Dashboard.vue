@@ -14,6 +14,7 @@ import { index as backlog } from '@/actions/App/Http/Controllers/BacklogControll
 import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feed, show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import { index as winners } from '@/actions/App/Http/Controllers/WinnerController';
+import FormatMixChart from '@/components/dashboard/FormatMixChart.vue';
 import PlatformSplitChart from '@/components/dashboard/PlatformSplitChart.vue';
 import PostingHeatmap from '@/components/dashboard/PostingHeatmap.vue';
 import TimeOfDayChart from '@/components/dashboard/TimeOfDayChart.vue';
@@ -285,15 +286,15 @@ function accountHref(post: RecentPost): string | null {
                         </div>
                         <div class="snitch-scrap relative p-5 pt-6">
                             <span class="snitch-tape right-6 -top-2" aria-hidden="true" />
-                            <WeeklyVolumeChart
-                                v-if="activity"
-                                :weeks="activity.weekly"
+                            <FormatMixChart
+                                v-if="insights"
+                                :formats="insights.format_mix"
                             />
                             <SnitchSkeleton
                                 v-else
                                 variant="scrap"
                                 height="12rem"
-                                label="Loading weekly volume chart"
+                                label="Loading format mix chart"
                             />
                         </div>
                     </div>
@@ -324,6 +325,20 @@ function accountHref(post: RecentPost): string | null {
                                 variant="scrap"
                                 height="8rem"
                                 label="Loading time of day chart"
+                            />
+                        </div>
+                        <div class="snitch-scrap relative p-4 pt-5">
+                            <span class="snitch-tape left-4 -top-2" aria-hidden="true" />
+                            <WeeklyVolumeChart
+                                v-if="activity"
+                                compact
+                                :weeks="activity.weekly"
+                            />
+                            <SnitchSkeleton
+                                v-else
+                                variant="scrap"
+                                height="8rem"
+                                label="Loading weekly volume chart"
                             />
                         </div>
                     </div>

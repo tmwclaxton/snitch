@@ -47,8 +47,13 @@ class StippleChartContractTest extends TestCase
             strpos($dashboard, '<PlatformSplitChart') ?: PHP_INT_MAX,
         );
         $this->assertLessThan(
-            strpos($dashboard, '<TimeOfDayChart') ?: PHP_INT_MAX,
             strpos($dashboard, '<WeeklyVolumeChart') ?: PHP_INT_MAX,
+            strpos($dashboard, '<TimeOfDayChart') ?: PHP_INT_MAX,
+        );
+        $this->assertStringContainsString('<FormatMixChart', $dashboard);
+        $this->assertLessThan(
+            strpos($dashboard, '<WeeklyVolumeChart') ?: PHP_INT_MAX,
+            strpos($dashboard, '<FormatMixChart') ?: PHP_INT_MAX,
         );
         $this->assertStringContainsString('compact', $dashboard);
         $this->assertStringContainsString("yAxisLabel: 'No. of Posts'", $weekly);

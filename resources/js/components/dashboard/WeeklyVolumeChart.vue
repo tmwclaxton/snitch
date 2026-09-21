@@ -20,6 +20,7 @@ const props = withDefaults(
         yAxisLabel?: string;
         xAxisLabel?: string;
         periodGrain?: VolumePeriodGrain;
+        compact?: boolean;
     }>(),
     {
         title: 'Weekly volume',
@@ -28,6 +29,7 @@ const props = withDefaults(
         yAxisLabel: 'No. of Posts',
         xAxisLabel: undefined,
         periodGrain: undefined,
+        compact: false,
     },
 );
 
@@ -47,10 +49,10 @@ const resolvedXAxisLabel = computed(() => {
     return 'Week starting';
 });
 
-const leftPad = 62;
+const leftPad = computed(() => (props.compact ? 44 : 62));
 const rightPad = 10;
 const topPad = 10;
-const plotHeight = 168;
+const plotHeight = computed(() => (props.compact ? 92 : 168));
 
 const maxCount = computed(() =>
     Math.max(1, ...props.weeks.map((week) => week.count)),
@@ -93,8 +95,8 @@ const labelPad = computed(() => (tiltXLabels.value ? 54 : 44));
 const plotWidth = computed(() =>
     Math.max(slotWidth.value, props.weeks.length * slotWidth.value),
 );
-const chartWidth = computed(() => leftPad + plotWidth.value + rightPad);
-const chartHeight = computed(() => topPad + plotHeight + labelPad.value);
+const chartWidth = computed(() => leftPad.value + plotWidth.value + rightPad);
+const chartHeight = computed(() => topPad + plotHeight.value + labelPad.value);
 const barWidth = computed(() =>
     Math.min(maxBarWidth, Math.max(5, slotWidth.value - 14)),
 );
@@ -109,7 +111,7 @@ const yTicks = computed(() => {
 
     return values.map((value) => ({
         value,
-        y: topPad + (1 - value / niceMax) * plotHeight,
+        y: topPad + (1 - value / niceMax) * plotHeight.value,
     }));
 });
 
@@ -136,7 +138,7 @@ const summaryLabel = computed(() => {
 });
 
 function barHeight(count: number): number {
-    return (count / yScale.value.niceMax) * plotHeight;
+    return (count / yScale.value.niceMax) * plotHeight.value;
 }
 
 function drawnHeight(count: number): number {
@@ -144,15 +146,15 @@ function drawnHeight(count: number): number {
 }
 
 function barX(index: number): number {
-    return leftPad + index * slotWidth.value + (slotWidth.value - barWidth.value) / 2;
+    return leftPad.value + index * slotWidth.value + (slotWidth.value - barWidth.value) / 2;
 }
 
 function barY(count: number): number {
-    return topPad + plotHeight - drawnHeight(count);
+    return topPad + plotHeight.value - drawnHeight(count);
 }
 
 function labelY(): number {
-    return topPad + plotHeight + (tiltXLabels.value ? 20 : 16);
+    return topPad + plotHeight.value + (tiltXLabels.value ? 20 : 16);
 }
 </script>
 
