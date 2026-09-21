@@ -5,12 +5,13 @@ Official Instagram/TikTok/Facebook iframes fight the print frames and rate-limit
 ## Rules
 
 - `PlatformEmbed` shows a still cover (`cover_url` from `PostCover`) and falls back to image `media_url`, then a muted video first frame.
-- Do not add `<iframe>` players back to `PlatformEmbed`, `FeedContactCell`, Dashboard winners, Winners, or `feed/Show`.
+- Feed, Explore, Dashboard, Winners, and Snitch Show sheets stay covers. Do not put `<iframe>` players in those grids.
+- The post page (`feed/Show`) is the exception: pass `interactive` so one official player loads in `.snitch-post-player` (wide enough to use, not the 3/4 polaroid crop). Instagram uses `/embed/` there so the carousel can be swiped. Keep the "Open on platform" control off that player.
 - `Post` appends `cover_url`. Prefer the stored `posts.cover_url` column, then payload stills (displayUrl, TikTok `video.cover.url_list`, originCover), then YouTube `hqdefault`. Never prefer a video file over a still.
 - Backfill existing rows with `php artisan snitch:backfill-covers` (add `--fetch` for TikTok oEmbed). Sync persists a cover from the payload on create. Do not Firecrawl every post for og:image.
 - Keep thumbnail/`media_url` fallback visible so 3/4 contact frames and polaroids stay filled.
 - Never put `!aspect-auto` on `.snitch-polaroid-frame` around `PlatformEmbed`. The still is `position: absolute`, so a frame without 3/4 height collapses to zero.
-- `embedLoadQueue.ts` stays for any leftover iframe experiments. Do not wire it back into list or detail views.
+- `embedLoadQueue.ts` stays for any leftover iframe experiments. Do not wire it back into list views. The post page loads its single player directly.
 - Contact-cell frame CSS (`aspect-ratio: 3/4`) must stay so covers do not collapse layout.
 - Instagram sync imports stills and carousels as well as reels. Feed and Snitch Show list every imported type. AnalyzePostJob stays reel/video only.
 - Proof sheets use `.snitch-contact-sheet-proof` (`auto-fill` 8.5-10.75rem cards) unless the board should span the canvas.

@@ -99,7 +99,9 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertIsString($source);
         $this->assertStringContainsString('coverUrl', $source);
         $this->assertStringContainsString('usableCoverUrl', $source);
-        $this->assertStringNotContainsString('<iframe', $source);
+        $this->assertStringContainsString('v-if="interactiveSrc"', $source);
+        $this->assertStringContainsString("'/embed/captioned/'", $source);
+        $this->assertStringContainsString("'/embed/'", $source);
         $this->assertStringNotContainsString('acquireEmbedSlot', $source);
     }
 
@@ -153,9 +155,11 @@ class EmbedLoadQueueContractTest extends TestCase
 
         $show = file_get_contents(base_path('resources/js/pages/feed/Show.vue'));
         $this->assertIsString($show);
-        $this->assertStringContainsString('minmax(0,12rem)', $show);
-        $this->assertStringNotContainsString('minmax(0,18rem)', $show);
+        $this->assertStringContainsString('minmax(20rem,28rem)', $show);
+        $this->assertStringContainsString('snitch-post-player', $show);
+        $this->assertStringContainsString('interactive', $show);
+        $this->assertStringNotContainsString('minmax(0,12rem)', $show);
         $this->assertStringNotContainsString('!aspect-auto', $show);
-        $this->assertStringContainsString('compact', $show);
+        $this->assertStringNotContainsString('compact', $show);
     }
 }

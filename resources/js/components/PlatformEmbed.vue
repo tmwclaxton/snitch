@@ -17,6 +17,7 @@ const props = withDefaults(
         postUrl?: string | null;
         platform?: string;
         compact?: boolean;
+        interactive?: boolean;
         lazy?: boolean;
     }>(),
     {
@@ -26,12 +27,26 @@ const props = withDefaults(
         postUrl: null,
         platform: undefined,
         compact: false,
+        interactive: false,
         lazy: true,
     },
 );
 
 const coverFailed = ref(false);
 const mediaFailed = ref(false);
+const frameReady = ref(false);
+
+const interactiveSrc = computed(() => {
+    if (!props.interactive || !props.embed?.src) {
+        return null;
+    }
+
+    if (props.embed.provider === 'instagram') {
+        return props.embed.src.replace('/embed/captioned/', '/embed/');
+    }
+
+    return props.embed.src;
+});
 
 const usableCoverUrl = computed(() => {
     if (coverFailed.value || !props.coverUrl) {
@@ -76,6 +91,10 @@ watch(
         mediaFailed.value = false;
     },
 );
+
+watch(interactiveSrc, () => {
+    frameReady.value = false;
+});
 </script>
 
 <template>
@@ -84,6 +103,17 @@ watch(
         :class="compact ? 'snitch-platform-embed-compact' : 'snitch-platform-embed-detail'"
         :data-embed-provider="embed?.provider"
     >
+        <iframe
+            v-if="interactiveSrc"
+            :src="interactiveSrc"
+            :title="embed?.title ?? 'Post'"
+            class="snitch-platform-embed-frame"
+            :class="{ 'snitch-platform-embed-frame-ready': frameReady }"
+            loading="lazy"
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            referrerpolicy="strict-origin-when-cross-origin"
+            @load="frameReady = true"
+        />
         <div class="snitch-platform-embed-fallback">
             <img
                 v-if="usableCoverUrl"
@@ -126,7 +156,7 @@ watch(
         </div>
 
         <a
-            v-if="postUrl"
+            v-if="postUrl && !interactiveSrc"
             :href="postUrl"
             target="_blank"
             rel="noopener noreferrer"

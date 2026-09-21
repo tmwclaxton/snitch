@@ -378,23 +378,17 @@ function openTranscript(): void {
             </header>
 
             <div class="mt-6 space-y-6">
-                <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,12rem)_minmax(0,1fr)] lg:gap-8">
+                <div class="grid items-start gap-6 lg:grid-cols-[minmax(20rem,28rem)_minmax(0,1fr)] lg:gap-8">
                     <div>
-                        <div
-                            class="snitch-polaroid relative w-full"
-                            style="--snitch-tilt: -0.6deg"
-                        >
-                            <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
-                            <div class="snitch-polaroid-frame overflow-hidden">
-                                <PlatformEmbed
-                                    :embed="post.embed"
-                                    :cover-url="post.cover_url"
-                                    :media-url="post.media_url"
-                                    :post-url="post.url"
-                                    :platform="post.platform"
-                                    compact
-                                />
-                            </div>
+                        <div class="snitch-post-player">
+                            <PlatformEmbed
+                                :embed="post.embed"
+                                :cover-url="post.cover_url"
+                                :media-url="post.media_url"
+                                :post-url="post.url"
+                                :platform="post.platform"
+                                interactive
+                            />
                         </div>
 
                         <div

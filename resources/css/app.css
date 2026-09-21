@@ -1688,6 +1688,49 @@
         z-index: 2;
     }
 
+    .snitch-post-player {
+        width: 100%;
+        overflow: hidden;
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 14%, transparent);
+        background: var(--snitch-press);
+        box-shadow: 4px 4px 0 color-mix(in oklab, var(--snitch-spot) 70%, transparent);
+    }
+
+    .snitch-post-player .snitch-platform-embed,
+    .snitch-post-player .snitch-platform-embed-detail {
+        position: relative;
+        height: auto;
+        min-height: 0;
+        aspect-ratio: auto;
+        overflow: hidden;
+        background: var(--snitch-press);
+    }
+
+    .snitch-post-player .snitch-platform-embed-fallback {
+        pointer-events: none;
+    }
+
+    .snitch-post-player .snitch-platform-embed-frame {
+        position: relative;
+        inset: auto;
+        z-index: 2;
+        display: block;
+        width: 100%;
+        height: 52rem;
+        border: 0;
+    }
+
+    .snitch-post-player [data-embed-provider='tiktok'] .snitch-platform-embed-frame,
+    .snitch-post-player [data-embed-provider='youtube'] .snitch-platform-embed-frame {
+        height: auto;
+        aspect-ratio: 9 / 16;
+    }
+
+    .snitch-post-player [data-embed-provider='facebook'] .snitch-platform-embed-frame,
+    .snitch-post-player [data-embed-provider='linkedin'] .snitch-platform-embed-frame {
+        height: 32rem;
+    }
+
     .snitch-platform-embed-fallback-img {
         display: block;
         width: 100%;
