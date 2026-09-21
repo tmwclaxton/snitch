@@ -8,16 +8,15 @@ use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Http\Controllers\Concerns\OmitsProductDataWhenPaywalled;
 use App\Models\Post;
-use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Analysis\AnalysisTermCatalogue;
 use App\Services\Billing\ExploreBillingService;
-use App\Services\Billing\PlanEntitlementService;
 use App\Support\PlatformEmbed;
 use App\Support\PostAccountPresenter;
 use App\Support\SafeMarkdown;
 use App\Support\UsableAnalysisCopy;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -29,7 +28,6 @@ class FeedController extends Controller
 
     public function __construct(
         private AnalysisTermCatalogue $catalogue,
-        private PlanEntitlementService $entitlements,
         private ExploreBillingService $exploreBilling,
     ) {}
 
@@ -39,9 +37,9 @@ class FeedController extends Controller
 
         $user = $request->user();
         $filters = [
+            'q' => $this->searchQuery($request),
             'platform' => $request->string('platform')->toString() ?: null,
             'type' => $request->string('type')->toString() ?: null,
-            'account' => $request->integer('account') ?: null,
         ];
         $platforms = collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values();
         $types = collect(PostType::cases())->map(fn (PostType $t) => $t->value)->values();
@@ -52,29 +50,21 @@ class FeedController extends Controller
                 'filters' => $filters,
                 'platforms' => $platforms,
                 'types' => $types,
-                'accounts' => [],
             ]);
         }
 
-        $inQuotaIds = $this->entitlements->inQuotaTrackedAccountIds($user);
-
         return Inertia::render('feed/Index', [
-            'posts' => Inertia::defer(fn () => $this->paginatedPosts($request, $user, $inQuotaIds)),
+            'posts' => Inertia::defer(fn () => $this->paginatedPosts($request, $user)),
             'filters' => $filters,
             'platforms' => $platforms,
             'types' => $types,
-            'accounts' => $user->trackedAccounts()
-                ->whereIn('id', $inQuotaIds === [] ? [-1] : $inQuotaIds)
-                ->orderBy('handle')
-                ->get(['id', 'handle', 'platform', 'display_name', 'avatar']),
         ]);
     }
 
     /**
-     * @param  list<int>  $inQuotaIds
      * @return LengthAwarePaginator<int, Post>
      */
-    private function paginatedPosts(Request $request, User $user, array $inQuotaIds): LengthAwarePaginator
+    private function paginatedPosts(Request $request, User $user): LengthAwarePaginator
     {
         $query = Post::query()
             ->forUser($user)
@@ -96,12 +86,10 @@ class FeedController extends Controller
             }
         }
 
-        if ($request->filled('account')) {
-            $accountId = $request->integer('account');
-            $socialId = in_array($accountId, $inQuotaIds, true)
-                ? TrackedAccount::query()->whereKey($accountId)->value('social_account_id')
-                : null;
-            $query->where('social_account_id', $socialId ?? -1);
+        $search = $this->searchQuery($request);
+
+        if ($search !== null) {
+            $this->constrainByLikeSearch($query, $search);
         }
 
         $posts = $query->paginate(24)->withQueryString();
@@ -182,5 +170,44 @@ class FeedController extends Controller
         return Inertia::render('feed/Show', [
             'post' => $post,
         ]);
+    }
+
+    private function searchQuery(Request $request): ?string
+    {
+        $query = trim($request->string('q')->toString());
+
+        if ($query === '') {
+            return null;
+        }
+
+        return mb_substr($query, 0, 80);
+    }
+
+    /**
+     * @param  Builder<Post>  $query
+     */
+    private function constrainByLikeSearch(Builder $query, string $queryText): void
+    {
+        $needle = ltrim($queryText, '@');
+        $like = '%'.$needle.'%';
+
+        $query->where(function (Builder $builder) use ($like): void {
+            $builder
+                ->where('caption', 'like', $like)
+                ->orWhereHas('socialAccount', function (Builder $account) use ($like): void {
+                    $account
+                        ->where('handle', 'like', $like)
+                        ->orWhere('display_name', 'like', $like);
+                })
+                ->orWhereHas('analysis', function (Builder $analysis) use ($like): void {
+                    $analysis
+                        ->where('hook', 'like', $like)
+                        ->orWhere('concept', 'like', $like)
+                        ->orWhere('idea', 'like', $like)
+                        ->orWhere('visual_summary', 'like', $like)
+                        ->orWhere('topics', 'like', $like)
+                        ->orWhere('custom_tags', 'like', $like);
+                });
+        });
     }
 }

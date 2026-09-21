@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Clapperboard, FilterX } from '@lucide/vue';
-import { computed } from 'vue';
+import { Clapperboard, FilterX, Search, X } from '@lucide/vue';
+import { computed, ref, watch } from 'vue';
 import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feedIndex } from '@/actions/App/Http/Controllers/FeedController';
 import FeedContactCell from '@/components/FeedContactCell.vue';
@@ -40,13 +40,12 @@ const props = defineProps<{
         links: Array<{ url: string | null; label: string; active: boolean }>;
     } | null;
     filters: {
+        q: string | null;
         platform: string | null;
         type: string | null;
-        account: number | null;
     };
     platforms: string[];
     types: string[];
-    accounts: Array<{ id: number; handle: string; platform: string; display_name: string | null }>;
 }>();
 
 defineOptions({
@@ -70,35 +69,32 @@ const typeOptions = computed(() => [
     })),
 ]);
 
-const accountOptions = computed(() => [
-    { value: 'all', label: 'All accounts' },
-    ...props.accounts.map((account) => ({
-        value: String(account.id),
-        label: `@${account.handle}`,
-        iconSrc: platformIconSrc(account.platform),
-    })),
-]);
+const searchDraft = ref(props.filters.q ?? '');
+
+watch(
+    () => props.filters.q,
+    (value) => {
+        searchDraft.value = value ?? '';
+    },
+);
 
 const selectedPlatform = computed(() => props.filters.platform ?? 'all');
 const selectedType = computed(() => props.filters.type ?? 'all');
-const selectedAccount = computed(() =>
-    props.filters.account != null ? String(props.filters.account) : 'all',
-);
 
 const postsLoaded = computed(() => props.posts != null);
 const paginationLinks = computed(() => props.posts?.links ?? []);
 
 const hasActiveFilters = computed(
     () =>
+        props.filters.q != null ||
         props.filters.platform != null ||
-        props.filters.type != null ||
-        props.filters.account != null,
+        props.filters.type != null,
 );
 
 function visitFilters(next: {
+    q: string | null;
     platform: string | null;
     type: string | null;
-    account: number | null;
 }): void {
     router.get(feedIndex.url(), next, {
         preserveState: true,
@@ -106,35 +102,38 @@ function visitFilters(next: {
     });
 }
 
-function onPlatformChange(value: string): void {
-    visitFilters({
-        platform: value === 'all' ? null : value,
+function currentFilters(overrides: Partial<{
+    q: string | null;
+    platform: string | null;
+    type: string | null;
+}> = {}) {
+    return {
+        q: props.filters.q,
+        platform: props.filters.platform,
         type: props.filters.type,
-        account: props.filters.account,
-    });
+        ...overrides,
+    };
+}
+
+function onSearchSubmit(): void {
+    const trimmed = searchDraft.value.trim();
+    visitFilters(currentFilters({ q: trimmed === '' ? null : trimmed }));
+}
+
+function onPlatformChange(value: string): void {
+    visitFilters(currentFilters({ platform: value === 'all' ? null : value }));
 }
 
 function onTypeChange(value: string): void {
-    visitFilters({
-        platform: props.filters.platform,
-        type: value === 'all' ? null : value,
-        account: props.filters.account,
-    });
-}
-
-function onAccountChange(value: string): void {
-    visitFilters({
-        platform: props.filters.platform,
-        type: props.filters.type,
-        account: value === 'all' ? null : Number(value),
-    });
+    visitFilters(currentFilters({ type: value === 'all' ? null : value }));
 }
 
 function clearFilters(): void {
+    searchDraft.value = '';
     visitFilters({
+        q: null,
         platform: null,
         type: null,
-        account: null,
     });
 }
 
@@ -175,7 +174,31 @@ function paginationLabel(label: string): string {
                 </div>
             </header>
 
-            <div class="snitch-filter-bar mt-6">
+            <form
+                class="snitch-filter-bar snitch-explore-filters mt-6"
+                @submit.prevent="onSearchSubmit"
+            >
+                <label class="snitch-filter-field snitch-explore-search">
+                    <span>Search</span>
+                    <div class="flex min-w-0 gap-2">
+                        <input
+                            v-model="searchDraft"
+                            type="search"
+                            class="snitch-platform-select-trigger min-w-0 flex-1 rounded-none px-2 py-1.5 text-sm text-snitch-ink outline-none placeholder:text-snitch-ink/35"
+                            placeholder="Caption, handle, concept, hook…"
+                            aria-label="Search feed"
+                        >
+                        <button
+                            type="submit"
+                            class="snitch-btn snitch-btn-spot shrink-0 px-3 py-1.5 text-sm"
+                        >
+                            <span class="relative z-10 inline-flex items-center gap-1.5">
+                                <Search class="size-3.5 shrink-0" aria-hidden="true" />
+                                Search
+                            </span>
+                        </button>
+                    </div>
+                </label>
                 <label class="snitch-filter-field">
                     <span>Platform</span>
                     <PaperSelect
@@ -196,25 +219,26 @@ function paginationLabel(label: string): string {
                         @update:model-value="onTypeChange"
                     />
                 </label>
-                <label class="snitch-filter-field">
-                    <span>Account</span>
-                    <PaperSelect
-                        id="feed-filter-account"
-                        :model-value="selectedAccount"
-                        :options="accountOptions"
-                        aria-label="Filter by account"
-                        @update:model-value="onAccountChange"
-                    />
-                </label>
-            </div>
+            </form>
 
             <div
                 v-if="hasActiveFilters"
-                class="mt-3 flex justify-end"
+                class="mt-3 flex flex-wrap items-center gap-2"
             >
                 <button
+                    v-if="filters.q"
                     type="button"
-                    class="inline-flex items-center gap-1.5 text-sm font-medium text-snitch-ink/55 underline decoration-snitch-ink/20 underline-offset-4 transition hover:text-snitch-ink"
+                    class="inline-flex items-center gap-1.5 border border-snitch-ink/15 bg-[color-mix(in_oklab,var(--snitch-spot)_22%,var(--snitch-paper))] px-2.5 py-1 text-xs font-medium text-snitch-ink shadow-[1px_1px_0_color-mix(in_oklab,var(--snitch-spot)_25%,transparent)] transition hover:border-snitch-ink/35"
+                    :aria-label="`Remove search ${filters.q}`"
+                    @click="searchDraft = ''; visitFilters(currentFilters({ q: null }))"
+                >
+                    <Search class="size-3 shrink-0 opacity-70" aria-hidden="true" />
+                    <span>Search: {{ filters.q }}</span>
+                    <X class="size-3 shrink-0 text-snitch-ink/45" aria-hidden="true" />
+                </button>
+                <button
+                    type="button"
+                    class="ms-auto inline-flex items-center gap-1.5 text-sm font-medium text-snitch-ink/55 underline decoration-snitch-ink/20 underline-offset-4 transition hover:text-snitch-ink"
                     @click="clearFilters"
                 >
                     <FilterX class="size-3.5 shrink-0" aria-hidden="true" />
@@ -288,7 +312,7 @@ function paginationLabel(label: string): string {
                 </p>
                 <p class="mt-2 text-sm text-snitch-ink/65">
                     <template v-if="hasActiveFilters">
-                        Try another platform, type, or account - or clear the filters.
+                        Try another search, platform, or type - or clear the filters.
                     </template>
                     <template v-else>
                         Add snitches and sync to fill the contact sheet.

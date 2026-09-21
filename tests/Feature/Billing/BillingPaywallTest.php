@@ -220,7 +220,7 @@ class BillingPaywallTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('subscription.paywall.blocked', true)
                 ->where('subscription.can_run_billable', false)
-                ->where('accounts', [])
+                ->missing('accounts')
                 ->where('posts.data', [])
                 ->where('posts.total', 0)
             );

@@ -462,6 +462,71 @@ class FeedTest extends TestCase
             );
     }
 
+    public function test_feed_index_uses_search_instead_of_an_account_dropdown(): void
+    {
+        $index = file_get_contents(resource_path('js/pages/feed/Index.vue'));
+
+        $this->assertIsString($index);
+        $this->assertStringContainsString('snitch-explore-search', $index);
+        $this->assertStringContainsString('Search feed', $index);
+        $this->assertStringNotContainsString('feed-filter-account', $index);
+        $this->assertStringNotContainsString('All accounts', $index);
+    }
+
+    public function test_feed_search_matches_caption_handle_and_analysis(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $kept = TrackedAccount::factory()->for($user)->create([
+            'handle' => 'wearesocial',
+        ]);
+        $other = TrackedAccount::factory()->for($user)->create([
+            'handle' => 'later',
+        ]);
+        $matchCaption = Post::factory()->forAccount($kept)->create([
+            'caption' => 'Culture report drop for agencies',
+            'posted_at' => now()->subDay(),
+        ]);
+        $matchHandle = Post::factory()->forAccount($kept)->create([
+            'caption' => 'Unrelated still',
+            'posted_at' => now()->subHours(2),
+        ]);
+        $miss = Post::factory()->forAccount($other)->create([
+            'caption' => 'Scheduling tips only',
+            'posted_at' => now(),
+        ]);
+        PostAnalysis::factory()->for($matchHandle)->create([
+            'concept' => 'Agency process as entertainment',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('feed.index', ['q' => 'wearesocial']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('feed/Index')
+                ->where('filters.q', 'wearesocial')
+                ->missing('accounts')
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 2)
+                    ->where('posts.data', fn ($posts): bool => collect($posts)->pluck('id')->contains($matchCaption->id)
+                        && collect($posts)->pluck('id')->contains($matchHandle->id)
+                        && ! collect($posts)->pluck('id')->contains($miss->id))
+                )
+            );
+
+        $this->actingAs($user)
+            ->get(route('feed.index', ['q' => 'Culture report']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('feed/Index')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts.data', 1)
+                    ->where('posts.data.0.id', $matchCaption->id)
+                )
+            );
+    }
+
     public function test_feed_show_omits_unprocessed_analysis_copy(): void
     {
         $user = User::factory()->create();
