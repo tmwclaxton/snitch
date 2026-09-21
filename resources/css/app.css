@@ -1275,6 +1275,7 @@
         min-width: 0;
         padding: 0.7rem 0.6rem 0.75rem;
         color: var(--snitch-ink);
+        container-type: inline-size;
     }
 
     .snitch-contact-cell-body-link {
@@ -1299,43 +1300,62 @@
 
     .snitch-glance-metrics {
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.55rem 0.9rem;
+        flex-wrap: nowrap;
+        align-items: baseline;
+        gap: 0.55rem;
         margin: 0;
         padding: 0;
         list-style: none;
+        min-width: 0;
+        overflow: hidden;
         background: transparent;
         border: 0;
         box-shadow: none;
     }
 
     .snitch-glance-metric {
-        display: flex;
-        flex-direction: column;
-        gap: 0.15rem;
-        line-height: 1;
+        display: inline-flex;
+        flex: 0 0 auto;
+        flex-direction: row;
+        align-items: baseline;
+        gap: 0.22rem;
         min-width: 0;
+        line-height: 1;
+        white-space: nowrap;
+    }
+
+    .snitch-glance-metric + .snitch-glance-metric::before {
+        content: '·';
+        margin-right: 0.02rem;
+        color: color-mix(in oklab, var(--snitch-ink) 35%, transparent);
+        font-size: 0.7rem;
+        line-height: 1;
     }
 
     .snitch-glance-metric-value {
         font-family: var(--font-display);
-        font-size: 1.125rem;
+        font-size: 0.82rem;
         color: var(--snitch-ink);
         line-height: 1;
         letter-spacing: 0.01em;
         font-variant-numeric: tabular-nums;
-        overflow: hidden;
-        text-overflow: ellipsis;
         white-space: nowrap;
     }
 
     .snitch-glance-metric-label {
         font-size: 0.54rem;
         font-weight: 600;
-        letter-spacing: 0.14em;
-        line-height: 1.1;
+        letter-spacing: 0.08em;
+        line-height: 1;
         text-transform: uppercase;
         color: color-mix(in oklab, var(--snitch-ink) 55%, transparent);
+        white-space: nowrap;
+    }
+
+    @container (max-width: 11.5rem) {
+        .snitch-glance-metric-label {
+            display: none;
+        }
     }
 
     .snitch-glance-hook {

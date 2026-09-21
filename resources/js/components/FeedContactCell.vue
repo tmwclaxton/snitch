@@ -193,6 +193,7 @@ const winnerScore = computed(() => {
                     v-for="metric in metrics"
                     :key="metric.key"
                     class="snitch-glance-metric"
+                    :title="`${metric.value} ${metric.label}`"
                 >
                     <span class="snitch-glance-metric-value tabular-nums">{{ metric.value }}</span>
                     <span class="snitch-glance-metric-label">{{ metric.label }}</span>

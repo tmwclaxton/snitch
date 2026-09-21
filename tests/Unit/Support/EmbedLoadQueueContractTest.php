@@ -62,6 +62,8 @@ class EmbedLoadQueueContractTest extends TestCase
             'box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--snitch-ink) 16%, transparent)',
             $css,
         );
+        $this->assertStringContainsString('flex-wrap: nowrap', $css);
+        $this->assertStringContainsString('container-type: inline-size', $css);
     }
 
     #[Test]
