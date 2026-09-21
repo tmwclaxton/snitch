@@ -37,7 +37,7 @@ class StippleChartContractTest extends TestCase
 
         $this->assertStringContainsString('Hour posted', $timeOfDay);
         $this->assertStringContainsString("yAxisLabel = 'No. of Posts'", $timeOfDay);
-        $this->assertStringContainsString("props.compact ? hour % 4 === 0 : hour % 2 === 0", $timeOfDay);
+        $this->assertStringContainsString('props.compact ? hour % 4 === 0 : hour % 2 === 0', $timeOfDay);
 
         $dashboard = file_get_contents(base_path('resources/js/pages/Dashboard.vue'));
 
@@ -140,5 +140,25 @@ class StippleChartContractTest extends TestCase
         $this->assertStringContainsString('stepMs', $source);
         $this->assertStringContainsString('index < visibleCount', $source);
         $this->assertStringContainsString('@keyframes snitch-stipple-pop', $css);
+    }
+
+    #[Test]
+    public function heatmap_hover_does_not_create_a_scroll_container(): void
+    {
+        $css = file_get_contents(base_path('resources/css/app.css'));
+
+        $this->assertIsString($css);
+        $this->assertStringContainsString('.snitch-heatmap-grid .snitch-heatmap-cell:hover', $css);
+        $this->assertStringContainsString('transform: scale(1.45);', $css);
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-heatmap \{[^}]*overflow:\s*clip;/s',
+            $css,
+        );
+
+        $matched = preg_match('/\.snitch-heatmap-grid \{([^}]*)\}/s', $css, $grid);
+
+        $this->assertSame(1, $matched);
+        $this->assertStringNotContainsString('overflow', $grid[1]);
+        $this->assertStringContainsString('padding-inline: 3%', $grid[1]);
     }
 }

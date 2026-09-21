@@ -1988,6 +1988,7 @@
         position: relative;
         z-index: 1;
         min-width: 0;
+        overflow: clip;
     }
 
     .snitch-heatmap-months {
@@ -2029,7 +2030,9 @@
         grid-auto-flow: column;
         grid-auto-columns: minmax(0, 1fr);
         gap: 3px;
-        overflow-x: auto;
+        /* Inset so a hovered cell can scale without becoming a scrollbar. */
+        padding-block: 0.22rem;
+        padding-inline: 3%;
     }
 
     .snitch-heatmap-week {
