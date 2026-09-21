@@ -12,7 +12,7 @@ const props = defineProps<{
     hours: TimeOfDayBucket[];
 }>();
 
-const yAxisLabel = 'Posts';
+const yAxisLabel = 'No. of Posts';
 const xAxisLabel = 'Hour posted';
 
 const leftPad = 62;

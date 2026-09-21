@@ -25,7 +25,7 @@ const props = withDefaults(
         title: 'Weekly volume',
         subtitle: undefined,
         denseLabels: false,
-        yAxisLabel: 'Posts',
+        yAxisLabel: 'No. of Posts',
         xAxisLabel: undefined,
         periodGrain: undefined,
     },
