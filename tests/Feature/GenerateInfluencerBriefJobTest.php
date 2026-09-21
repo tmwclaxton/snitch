@@ -21,7 +21,7 @@ class GenerateInfluencerBriefJobTest extends TestCase
     use RefreshDatabase;
     use WithPlatformBilling;
 
-    public function test_onboarding_dispatches_influencer_brief_job(): void
+    public function test_onboarding_does_not_dispatch_influencer_brief_job(): void
     {
         Queue::fake();
 
@@ -36,9 +36,7 @@ class GenerateInfluencerBriefJobTest extends TestCase
             ])
             ->assertRedirect(route('competitors.index'));
 
-        Queue::assertPushed(GenerateInfluencerBriefJob::class, function (GenerateInfluencerBriefJob $job) use ($user): bool {
-            return $job->userId === $user->id;
-        });
+        Queue::assertNotPushed(GenerateInfluencerBriefJob::class);
     }
 
     public function test_job_persists_generated_brief_on_brand(): void

@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\WinnerInsight;
 use App\Services\Billing\PlanEntitlementService;
 use App\Services\Dashboard\DashboardActivityBuilder;
+use App\Services\Tracking\WatchingYouService;
 use App\Support\PlatformEmbed;
 use App\Support\PostAccountPresenter;
 use Illuminate\Http\Request;
@@ -24,6 +25,7 @@ class DashboardController extends Controller
         Request $request,
         DashboardActivityBuilder $activity,
         PlanEntitlementService $entitlements,
+        WatchingYouService $watching,
     ): Response {
         $user = $request->user();
 
@@ -45,6 +47,10 @@ class DashboardController extends Controller
                 ],
                 'recent_posts' => [],
                 'top_winners' => [],
+                'watching' => [
+                    'brand' => [],
+                    'check' => null,
+                ],
             ]);
         }
 
@@ -94,6 +100,10 @@ class DashboardController extends Controller
                 fn () => $this->topWinners($user, $socialIds),
                 'content',
             ),
+            'watching' => [
+                'brand' => $watching->forBrandHandles($user),
+                'check' => $request->session()->get('watching_check'),
+            ],
         ]);
     }
 

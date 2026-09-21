@@ -27,6 +27,7 @@ import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import SuggestCompetitorsModal from '@/components/SuggestCompetitorsModal.vue';
 import SyncAccountModal from '@/components/SyncAccountModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { formatFollowers } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import { lastSyncedLabel } from '@/lib/syncSchedule';
 import { useToastStore } from '@/stores/toastStore';
@@ -39,6 +40,7 @@ type Account = {
     display_name: string | null;
     avatar: string | null;
     url: string;
+    followers?: number | null;
     reels_count?: number;
     analysis_backlog_count?: number;
     winners_count?: number;
@@ -1034,6 +1036,9 @@ const syncSelectedTitle = computed(() => {
                                 <th class="min-w-0 px-1.5 py-2 sm:px-2">
                                     <span class="snitch-ink-label">Account</span>
                                 </th>
+                                <th class="hidden w-16 px-2 py-2 text-right sm:table-cell sm:text-left">
+                                    <span class="snitch-ink-label">Followers</span>
+                                </th>
                                 <th class="w-14 px-1.5 py-2 text-right sm:px-2 sm:text-left">
                                     <span class="snitch-ink-label">Reels</span>
                                 </th>
@@ -1148,6 +1153,9 @@ const syncSelectedTitle = computed(() => {
                                             </p>
                                         </div>
                                     </Link>
+                                </td>
+                                <td class="hidden px-2 py-2.5 align-middle text-right tabular-nums text-snitch-ink/70 sm:table-cell sm:text-left">
+                                    {{ formatFollowers(account.followers) }}
                                 </td>
                                 <td class="w-14 px-1.5 py-2.5 align-middle text-right tabular-nums text-snitch-ink/70 sm:px-2 sm:text-left">
                                     {{ account.reels_count ?? 0 }}

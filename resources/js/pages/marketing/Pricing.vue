@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { ArrowRight, Bot, Check } from '@lucide/vue';
+import { ArrowRight, Check } from '@lucide/vue';
 import { computed } from 'vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { formatPenceAsGbp } from '@/lib/money';
@@ -10,7 +10,7 @@ import {
     vendorIconSrc,
     vendorLabel,
 } from '@/lib/vendors';
-import { agents, login } from '@/routes';
+import { login } from '@/routes';
 import { edit as billing } from '@/routes/billing';
 
 defineOptions({
@@ -71,8 +71,8 @@ function formatAverage(pence: number): string {
                 </h1>
                 <p class="mt-4 max-w-2xl text-snitch-ink/80">
                     A simple monthly platform fee, then prepaid credits for Apify syncs, NanoGPT analysis, and
-                    Firecrawl discovery. Website signups start with a 7-day trial and £5 to spend. Agent
-                    accounts stay at £0 until claimed. No snitch seat caps - you pay for the work you run.
+                    Firecrawl discovery. Signups start with a 7-day trial and £5 to spend. No snitch seat
+                    caps - you pay for the work you run.
                 </p>
 
                 <div class="snitch-contact-reveal mt-12 grid gap-6 md:grid-cols-2">
@@ -89,7 +89,7 @@ function formatAverage(pence: number): string {
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                MCP + web app access
+                                Web app: Snitches, Feed, Explore, Winners
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
@@ -119,7 +119,7 @@ function formatAverage(pence: number): string {
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                7-day trial for website users (not unclaimed agent accounts)
+                                7-day trial when you sign up on the website
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
@@ -178,12 +178,6 @@ function formatAverage(pence: number): string {
                         <span class="relative z-10 inline-flex items-center gap-2">
                             <ArrowRight class="size-3.5 shrink-0" aria-hidden="true" />
                             {{ ctaLabel }}
-                        </span>
-                    </Link>
-                    <Link :href="agents()" class="snitch-btn">
-                        <span class="relative z-10 inline-flex items-center gap-2">
-                            <Bot class="size-3.5 shrink-0" aria-hidden="true" />
-                            Agents / MCP
                         </span>
                     </Link>
                 </div>

@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import {
-    ArrowRight,
-    Bot,
     Clapperboard,
     Hourglass,
     ListChecks,
@@ -11,10 +9,10 @@ import {
 } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Component } from 'vue';
-import { show as agents } from '@/actions/App/Http/Controllers/AgentsController';
 import { index as backlog } from '@/actions/App/Http/Controllers/BacklogController';
 import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feed, show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
+import WatchingYouController from '@/actions/App/Http/Controllers/WatchingYouController';
 import { index as winners } from '@/actions/App/Http/Controllers/WinnerController';
 import PlatformSplitChart from '@/components/dashboard/PlatformSplitChart.vue';
 import PostingHeatmap from '@/components/dashboard/PostingHeatmap.vue';
@@ -46,6 +44,18 @@ type RecentPost = {
         topics?: string[] | null;
     } | null;
     winner_insight?: { score: number } | null;
+};
+
+type WatchingRow = {
+    handle: string | null;
+    watched: boolean;
+    watcher_count: number;
+    platform?: string;
+};
+
+type WatchingPayload = {
+    brand: WatchingRow[];
+    check: WatchingRow | null;
 };
 
 type ActivityPayload = {
@@ -87,7 +97,31 @@ const props = defineProps<{
     activity?: ActivityPayload | null;
     recent_posts?: RecentPost[] | null;
     top_winners?: TopWinner[] | null;
+    watching?: WatchingPayload;
 }>();
+
+const watchingForm = useForm({
+    handle: '',
+});
+
+function submitWatchingCheck(): void {
+    watchingForm.post(WatchingYouController.url(), {
+        preserveScroll: true,
+        onSuccess: () => watchingForm.reset('handle'),
+    });
+}
+
+function watchingLabel(row: WatchingRow): string {
+    if (!row.handle) {
+        return 'Enter a username to check.';
+    }
+
+    if (row.watched) {
+        return `Yes - @${row.handle} is already on someone's snitch list.`;
+    }
+
+    return `No - @${row.handle} is not being tracked on Snitch yet.`;
+}
 
 defineOptions({
     layout: AppLayout,
@@ -173,24 +207,70 @@ function accountHref(post: RecentPost): string | null {
                         Counts, cadence, and winners - what rivals posted and what to remake.
                     </p>
                 </div>
-
-                <Link
-                    :href="agents()"
-                    class="snitch-scrap relative hidden max-w-[15.5rem] shrink-0 items-center gap-2 px-3 py-2.5 transition hover:-translate-y-0.5 md:flex"
-                >
-                    <Bot class="size-3.5 shrink-0 text-snitch-ink/50" aria-hidden="true" />
-                    <div class="min-w-0">
-                        <p class="snitch-ink-label leading-none">Agents</p>
-                        <p class="snitch-display mt-0.5 text-sm leading-tight text-snitch-ink">
-                            Connect your agent
-                        </p>
-                        <p class="mt-0.5 text-[0.65rem] leading-snug text-snitch-ink/55">
-                            Cursor, Claude, Codex, and more.
-                        </p>
-                    </div>
-                    <ArrowRight class="size-3.5 shrink-0 text-snitch-ink/40" aria-hidden="true" />
-                </Link>
             </header>
+
+            <section class="snitch-scrap relative mt-6 p-5 pt-6">
+                <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
+                <p class="snitch-ink-label">Am I being tracked?</p>
+                <h2 class="snitch-display mt-1 text-2xl text-snitch-ink">
+                    Watchers
+                </h2>
+                <p class="mt-2 max-w-2xl text-sm text-snitch-ink/70">
+                    Checks your brand handles against other Snitch users. We only say yes or no - never who.
+                </p>
+
+                <ul
+                    v-if="watching?.brand?.length"
+                    class="mt-4 space-y-2 text-sm"
+                >
+                    <li
+                        v-for="row in watching.brand"
+                        :key="`${row.platform}-${row.handle}`"
+                    >
+                        <span class="snitch-ink-label mr-2">{{ row.platform }}</span>
+                        {{ watchingLabel(row) }}
+                    </li>
+                </ul>
+                <p
+                    v-else
+                    class="mt-4 text-sm text-snitch-ink/60"
+                >
+                    Add your own handles on Brand to check automatically.
+                </p>
+
+                <p
+                    v-if="watching?.check"
+                    class="mt-4 text-sm font-medium text-snitch-ink"
+                    data-test="watching-check-result"
+                >
+                    {{ watchingLabel(watching.check) }}
+                </p>
+
+                <form
+                    class="mt-4 flex flex-wrap items-end gap-3"
+                    @submit.prevent="submitWatchingCheck"
+                >
+                    <label class="min-w-[12rem] flex-1">
+                        <span class="snitch-ink-label">Check a username</span>
+                        <input
+                            v-model="watchingForm.handle"
+                            type="text"
+                            name="handle"
+                            maxlength="80"
+                            autocomplete="off"
+                            class="mt-1 w-full border border-snitch-ink/15 bg-snitch-paper px-3 py-2 text-sm text-snitch-ink"
+                            placeholder="@yourbrand"
+                        />
+                    </label>
+                    <button
+                        type="submit"
+                        class="snitch-btn snitch-btn-ghost px-3 py-2 text-sm"
+                        :disabled="watchingForm.processing"
+                    >
+                        <span class="relative z-10">Check</span>
+                    </button>
+                </form>
+            </section>
 
             <div class="snitch-contact-reveal mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Link

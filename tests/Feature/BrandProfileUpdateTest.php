@@ -163,6 +163,10 @@ class BrandProfileUpdateTest extends TestCase
         $this->assertNotFalse($sidebar);
         $this->assertStringContainsString("title: 'Brand'", $sidebar);
         $this->assertStringContainsString('BrandProfileController', $sidebar);
+        $this->assertStringNotContainsString("title: 'MCP'", $sidebar);
+        $this->assertStringNotContainsString("title: 'Brand Deals'", $sidebar);
+        $this->assertStringNotContainsString('InfluencerController', $sidebar);
+        $this->assertStringNotContainsString('AgentsController', $sidebar);
     }
 
     public function test_settings_nav_does_not_include_brand_or_winners(): void

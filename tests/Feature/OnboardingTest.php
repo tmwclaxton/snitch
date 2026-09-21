@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Jobs\GenerateInfluencerBriefJob;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -53,6 +52,9 @@ class OnboardingTest extends TestCase
         $this->assertStringContainsString('Log out', $nav);
         $this->assertStringContainsString(':minimal="minimal"', $layout);
         $this->assertStringContainsString('PublicFooter v-if="!minimal"', $layout);
+        $this->assertStringNotContainsString("step === 'mcp'", $page);
+        $this->assertStringNotContainsString('Connect an agent', $page);
+        $this->assertStringContainsString('Tell Snitch about your brand', $page);
     }
 
     public function test_user_can_save_brand_profile(): void
@@ -75,9 +77,7 @@ class OnboardingTest extends TestCase
             'name' => 'Loaf Local',
         ]);
 
-        Queue::assertPushed(GenerateInfluencerBriefJob::class, function (GenerateInfluencerBriefJob $job) use ($user): bool {
-            return $job->userId === $user->id;
-        });
+        Queue::assertNothingPushed();
     }
 
     public function test_user_can_save_brand_profile_with_website_missing_scheme(): void

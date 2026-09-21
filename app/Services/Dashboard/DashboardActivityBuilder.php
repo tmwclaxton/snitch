@@ -22,7 +22,7 @@ class DashboardActivityBuilder
      *     by_time_of_day: list<array{hour: int, label: string, count: int}>
      * }
      */
-    public function forUser(User $user): array
+    public function forUser(User $user, ?int $socialAccountId = null): array
     {
         $today = CarbonImmutable::now()->startOfDay();
         $heatmapEnd = $today;
@@ -32,6 +32,10 @@ class DashboardActivityBuilder
         $posts = Post::query()
             ->forUser($user)
             ->reelLike()
+            ->when(
+                $socialAccountId !== null,
+                fn ($query) => $query->where('social_account_id', $socialAccountId),
+            )
             ->where('posted_at', '>=', $heatmapStart)
             ->whereNotNull('posted_at')
             ->get(['posted_at', 'platform', 'social_account_id']);

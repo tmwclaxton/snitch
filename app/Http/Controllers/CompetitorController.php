@@ -25,6 +25,7 @@ use App\Models\WinnerInsight;
 use App\Services\Billing\PlanEntitlementService;
 use App\Services\Billing\UsageBillingService;
 use App\Services\Billing\VendorUsageCharger;
+use App\Services\Competitors\CompetitorInsightsBuilder;
 use App\Services\Competitors\CompetitorSuggestionService;
 use App\Support\PlatformEmbed;
 use App\Support\PostAccountPresenter;
@@ -50,6 +51,7 @@ class CompetitorController extends Controller
         private UsageBillingService $billing,
         private CompetitorSuggestionService $suggestions,
         private VendorUsageCharger $charger,
+        private CompetitorInsightsBuilder $insights,
     ) {}
 
     public function index(Request $request): Response
@@ -114,6 +116,7 @@ class CompetitorController extends Controller
 
         return Inertia::render('competitors/Show', [
             'account' => $trackedAccount,
+            'insights' => Inertia::defer(fn () => $this->insights->forAccount($user, $trackedAccount), 'insights'),
             'posts' => Inertia::defer(fn () => $this->competitorPosts($trackedAccount, $user)),
             'winners' => Inertia::defer(fn () => $this->competitorWinners($trackedAccount, $user), 'winners'),
             'syncDefaults' => SyncOptions::inertiaDefaults(),

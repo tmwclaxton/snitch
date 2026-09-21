@@ -199,6 +199,8 @@ class PublicPagesTest extends TestCase
         $this->assertStringNotContainsString('seats', strtolower($pricing));
         $this->assertStringContainsString('usage credits every billing period', $pricing);
         $this->assertStringContainsString('Feed, Explore, Winners', $pricing);
+        $this->assertStringNotContainsString('MCP + web app access', $pricing);
+        $this->assertStringNotContainsString('Agents / MCP', $pricing);
         $this->assertStringContainsString('Live tool averages', $pricing);
         $this->assertStringContainsString('Mean charge per step', $pricing);
         $this->assertStringContainsString('avg / step', $pricing);
@@ -419,6 +421,30 @@ class PublicPagesTest extends TestCase
             $css,
             'Hero backdrop must stay blurred until layers are ready',
         );
+    }
+
+    public function test_marketer_chrome_hides_mcp_and_influencer_find(): void
+    {
+        $nav = file_get_contents(resource_path('js/components/marketing/PublicNav.vue'));
+        $footer = file_get_contents(resource_path('js/components/marketing/PublicFooter.vue'));
+        $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
+        $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
+
+        $this->assertNotFalse($nav);
+        $this->assertNotFalse($footer);
+        $this->assertNotFalse($welcome);
+        $this->assertNotFalse($sidebar);
+
+        foreach ([$nav, $footer] as $chrome) {
+            $this->assertStringNotContainsString("label: 'MCP'", $chrome);
+        }
+
+        $this->assertStringNotContainsString('Connect your agent', $welcome);
+        $this->assertStringNotContainsString('find influencers', $welcome);
+        $this->assertStringNotContainsString('Agents setup', $welcome);
+        $this->assertStringContainsString('Competitor social intel', $welcome);
+        $this->assertStringNotContainsString("title: 'MCP'", $sidebar);
+        $this->assertStringNotContainsString("title: 'Brand Deals'", $sidebar);
     }
 
     public function test_public_nav_links_to_github_repository(): void

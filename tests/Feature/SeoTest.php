@@ -115,7 +115,20 @@ class SeoTest extends TestCase
         $this->assertStringContainsString('Disallow: /brand', $contents);
         $this->assertStringContainsString('Disallow: /billing', $contents);
         $this->assertStringContainsString('Disallow: /dashboard', $contents);
+        $this->assertStringContainsString('Disallow: /agents', $contents);
+        $this->assertStringContainsString('Disallow: /influencers', $contents);
         $this->assertStringContainsString('Allow: /', $contents);
+    }
+
+    public function test_agents_page_is_noindex_and_omitted_from_sitemap(): void
+    {
+        $this->get(route('agents'))
+            ->assertOk()
+            ->assertSee('content="noindex, nofollow"', false);
+
+        $this->get(route('sitemap'))
+            ->assertOk()
+            ->assertDontSee(route('agents', absolute: true), false);
     }
 
     public function test_inertia_shares_seo_prop_on_home(): void

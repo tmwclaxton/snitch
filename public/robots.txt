@@ -2,6 +2,9 @@ User-agent: *
 Allow: /
 Disallow: /dashboard
 Disallow: /onboarding
+Disallow: /agents
+Disallow: /for-agents
+Disallow: /influencers
 Disallow: /snitches
 Disallow: /competitors
 Disallow: /feed

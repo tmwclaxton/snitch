@@ -5,7 +5,6 @@ import { computed } from 'vue';
 import SnitchBrand from '@/components/SnitchBrand.vue';
 import {
     about,
-    agents,
     analytics,
     contact,
     dashboard,
@@ -35,7 +34,6 @@ const overHero = computed(
 const links = [
     { label: 'How it works', href: howItWorks() },
     { label: 'Pricing', href: pricing() },
-    { label: 'MCP', href: agents() },
     { label: 'Blog', href: blog() },
     { label: 'Analytics', href: analytics() },
     { label: 'About', href: about() },

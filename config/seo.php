@@ -30,7 +30,7 @@ return [
 
         'home' => [
             'title' => 'Snitch social tracking',
-            'description' => 'Track snitch accounts on TikTok, Instagram, YouTube, Facebook, and LinkedIn. Snitch analyses hooks and craft, then surfaces winners worth remaking.',
+            'description' => 'See what competitors post on Instagram, TikTok, Facebook, and more. Snitch tracks cadence, hooks, and winners so social marketers know what to remake.',
             'json_ld' => 'website',
             'sitemap' => [
                 'changefreq' => 'weekly',
@@ -65,16 +65,6 @@ return [
             'sitemap' => [
                 'changefreq' => 'weekly',
                 'priority' => '0.9',
-            ],
-        ],
-
-        'agents' => [
-            'title' => 'Agents and MCP',
-            'description' => 'Connect Cursor, Claude, Codex, or any MCP client to Snitch. Create an agent account, claim it, and use tools for snitches, influencers, and winners.',
-            'json_ld' => 'webpage',
-            'sitemap' => [
-                'changefreq' => 'weekly',
-                'priority' => '0.85',
             ],
         ],
 

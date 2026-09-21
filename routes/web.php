@@ -18,6 +18,7 @@ use App\Http\Controllers\Marketing\ContactController;
 use App\Http\Controllers\Marketing\PricingController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\Settings\WinnerRuleController;
+use App\Http\Controllers\WatchingYouController;
 use App\Http\Controllers\WinnerController;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureBrandProfile;
@@ -98,6 +99,9 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
 
     Route::middleware([EnsureBrandProfile::class, EnsureProductAccess::class])->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
+        Route::post('dashboard/watching', WatchingYouController::class)
+            ->middleware('throttle:30,1')
+            ->name('dashboard.watching');
 
         Route::get('/snitches', [CompetitorController::class, 'index'])->name('competitors.index');
         Route::post('/snitches', [CompetitorController::class, 'store'])->name('competitors.store');

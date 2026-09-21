@@ -3,7 +3,6 @@ import { Link } from '@inertiajs/vue3';
 import SnitchBrand from '@/components/SnitchBrand.vue';
 import {
     about,
-    agents,
     analytics,
     contact,
     cookies,
@@ -23,7 +22,6 @@ const footerSections = [
         links: [
             { label: 'How it works', href: howItWorks() },
             { label: 'Pricing', href: pricing() },
-            { label: 'MCP', href: agents() },
             { label: 'Blog', href: blog() },
             { label: 'Analytics', href: analytics() },
         ],
@@ -63,8 +61,8 @@ const footerSections = [
                     <p
                         class="mt-3 text-sm leading-relaxed text-pretty text-snitch-ink/75"
                     >
-                        Track public snitch reels, learn why they work, and
-                        remake the&nbsp;winners.
+                        Your competitors' social media secrets: cadence, format,
+                        and the posts that actually work.
                     </p>
                     <p
                         class="snitch-annotation mt-5 text-lg text-snitch-ink/55"

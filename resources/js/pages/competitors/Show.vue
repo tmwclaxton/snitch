@@ -14,6 +14,9 @@ import {
     index as competitorsIndex,
 } from '@/actions/App/Http/Controllers/CompetitorController';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
+import PostingHeatmap from '@/components/dashboard/PostingHeatmap.vue';
+import TimeOfDayChart from '@/components/dashboard/TimeOfDayChart.vue';
+import WeeklyVolumeChart from '@/components/dashboard/WeeklyVolumeChart.vue';
 import FeedContactCell from '@/components/FeedContactCell.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
@@ -22,6 +25,7 @@ import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import SyncAccountModal from '@/components/SyncAccountModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { PostMetrics } from '@/lib/metrics';
+import { formatFollowers } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import type { SubscriptionSummary } from '@/types/global';
 
@@ -33,6 +37,7 @@ type Account = {
     avatar: string | null;
     url: string;
     posts_count?: number;
+    followers?: number | null;
     last_synced_at: string | null;
     last_sync_status?: string | null;
     last_sync_error?: string | null;
@@ -70,6 +75,25 @@ type Winner = {
     };
 };
 
+type Insights = {
+    activity: {
+        heatmap: Array<{ date: string; count: number }>;
+        weekly: Array<{ week_start: string; label: string; count: number }>;
+        by_time_of_day: Array<{ hour: number; label: string; count: number }>;
+    };
+    engagement: {
+        posts: number;
+        avg_views: number;
+        avg_likes: number;
+        avg_comments: number;
+        avg_shares: number;
+        avg_rate: number;
+    };
+    format_mix: Array<{ type: string; count: number }>;
+    hashtags: Array<{ term: string; count: number }>;
+    keywords: Array<{ term: string; count: number }>;
+};
+
 type SyncDefaults = {
     posts_limit: number;
     recency_days: number;
@@ -79,6 +103,7 @@ type SyncDefaults = {
 
 const props = defineProps<{
     account: Account;
+    insights?: Insights | null;
     posts?: Post[] | null;
     winners?: Winner[] | null;
     syncDefaults?: SyncDefaults;
@@ -88,6 +113,7 @@ const postsList = computed<Post[]>(() => props.posts ?? []);
 const winnersList = computed<Winner[]>(() => props.winners ?? []);
 const postsLoaded = computed(() => Array.isArray(props.posts));
 const winnersLoaded = computed(() => Array.isArray(props.winners));
+const insightsLoaded = computed(() => props.insights != null);
 
 defineOptions({
     layout: AppLayout,
@@ -153,7 +179,7 @@ function ensureSyncPoll(): void {
 
     syncPollTimer = setInterval(() => {
         router.reload({
-            only: ['account', 'posts', 'winners'],
+            only: ['account', 'insights', 'posts', 'winners'],
             onFinish: () => {
                 if (props.account.last_sync_status !== 'running') {
                     syncRequested.value = false;
@@ -296,6 +322,7 @@ function askRemove(): void {
                         </h1>
                         <p class="mt-1 text-sm text-snitch-ink/65 sm:text-base">
                             @{{ account.handle }}
+                            <span class="text-snitch-ink/45"> · {{ formatFollowers(account.followers) }} followers</span>
                         </p>
                     </div>
                 </div>
@@ -334,6 +361,105 @@ function askRemove(): void {
                     {{ syncErrorLabel }}
                 </p>
             </header>
+
+            <section class="mt-10">
+                <p class="snitch-ink-label">Cadence and mix</p>
+                <h2 class="snitch-display mt-1 text-2xl text-snitch-ink">
+                    How they post
+                </h2>
+
+                <div
+                    v-if="!insightsLoaded"
+                    class="mt-5 grid gap-4 lg:grid-cols-2"
+                    aria-live="polite"
+                    aria-label="Loading account insights"
+                >
+                    <SnitchSkeleton
+                        v-for="row in 4"
+                        :key="`insight-skel-${row}`"
+                        variant="scrap"
+                        height="8rem"
+                    />
+                </div>
+                <template v-else>
+                    <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <div class="snitch-scrap relative p-4 pt-5">
+                            <p class="snitch-ink-label">Avg views</p>
+                            <p class="snitch-display mt-1 text-2xl tabular-nums">
+                                {{ formatFollowers(insights?.engagement.avg_views ?? 0) }}
+                            </p>
+                        </div>
+                        <div class="snitch-scrap relative p-4 pt-5">
+                            <p class="snitch-ink-label">Avg likes</p>
+                            <p class="snitch-display mt-1 text-2xl tabular-nums">
+                                {{ formatFollowers(insights?.engagement.avg_likes ?? 0) }}
+                            </p>
+                        </div>
+                        <div class="snitch-scrap relative p-4 pt-5">
+                            <p class="snitch-ink-label">Engagement rate</p>
+                            <p class="snitch-display mt-1 text-2xl tabular-nums">
+                                {{ (insights?.engagement.avg_rate ?? 0).toFixed(2) }}%
+                            </p>
+                        </div>
+                        <div class="snitch-scrap relative p-4 pt-5">
+                            <p class="snitch-ink-label">Format mix</p>
+                            <p class="mt-1 text-sm text-snitch-ink/75">
+                                <span
+                                    v-for="row in insights?.format_mix ?? []"
+                                    :key="row.type"
+                                    class="mr-2"
+                                >
+                                    {{ row.type }} {{ row.count }}
+                                </span>
+                                <span v-if="!(insights?.format_mix ?? []).length">No posts yet</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 grid gap-4 lg:grid-cols-2">
+                        <div class="snitch-scrap relative p-5 pt-6">
+                            <p class="snitch-ink-label mb-3">Heat map</p>
+                            <PostingHeatmap :days="insights?.activity.heatmap ?? []" />
+                        </div>
+                        <div class="snitch-scrap relative p-5 pt-6">
+                            <TimeOfDayChart :hours="insights?.activity.by_time_of_day ?? []" />
+                        </div>
+                        <div class="snitch-scrap relative p-5 pt-6">
+                            <WeeklyVolumeChart :weeks="insights?.activity.weekly ?? []" />
+                        </div>
+                        <div class="snitch-scrap relative space-y-4 p-5 pt-6">
+                            <div>
+                                <p class="snitch-ink-label">Hashtags</p>
+                                <ul v-if="insights?.hashtags.length" class="mt-2 space-y-1 text-sm">
+                                    <li
+                                        v-for="row in insights.hashtags"
+                                        :key="row.term"
+                                        class="flex justify-between gap-3"
+                                    >
+                                        <span>#{{ row.term }}</span>
+                                        <span class="tabular-nums text-snitch-ink/55">{{ row.count }}</span>
+                                    </li>
+                                </ul>
+                                <p v-else class="mt-2 text-sm text-snitch-ink/60">No hashtags in recent captions.</p>
+                            </div>
+                            <div>
+                                <p class="snitch-ink-label">Keywords</p>
+                                <ul v-if="insights?.keywords.length" class="mt-2 space-y-1 text-sm">
+                                    <li
+                                        v-for="row in insights.keywords"
+                                        :key="row.term"
+                                        class="flex justify-between gap-3"
+                                    >
+                                        <span>{{ row.term }}</span>
+                                        <span class="tabular-nums text-snitch-ink/55">{{ row.count }}</span>
+                                    </li>
+                                </ul>
+                                <p v-else class="mt-2 text-sm text-snitch-ink/60">No caption keywords yet.</p>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </section>
 
             <section class="mt-10">
                 <div class="flex flex-wrap items-end justify-between gap-3">
