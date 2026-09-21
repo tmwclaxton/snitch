@@ -12,6 +12,7 @@ import {
     DialogDescription,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { csrfHeaders } from '@/lib/csrf';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import { useToastStore } from '@/stores/toastStore';
 
@@ -63,18 +64,12 @@ function setOpen(value: boolean): void {
     emit('update:open', value);
 }
 
-function csrfToken(): string {
-    return (
-        (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? ''
-    );
-}
-
 function jsonHeaders(): Record<string, string> {
     return {
         Accept: 'application/json',
         'Content-Type': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRF-TOKEN': csrfToken(),
+        ...csrfHeaders(),
     };
 }
 

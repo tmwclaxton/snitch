@@ -180,11 +180,27 @@ class BrandProfileUpdateTest extends TestCase
         $this->assertStringNotContainsString('BrandProfileController', $layout);
     }
 
+    public function test_brand_page_html_includes_csrf_token_for_autofill_fetch(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->get(route('brand.edit'))
+            ->assertOk()
+            ->assertSee('<meta name="csrf-token"', false);
+    }
+
     public function test_brand_form_component_keeps_website_first_with_autofill(): void
     {
         $form = file_get_contents(resource_path('js/components/BrandProfileForm.vue'));
+        $layout = file_get_contents(resource_path('views/app.blade.php'));
 
         $this->assertNotFalse($form);
+        $this->assertNotFalse($layout);
+        $this->assertStringContainsString('name="csrf-token"', $layout);
+        $this->assertStringContainsString("import { csrfHeaders } from '@/lib/csrf'", $form);
+        $this->assertStringContainsString('...csrfHeaders()', $form);
         $this->assertStringContainsString('Autofill from website', $form);
         $this->assertStringContainsString('snitch-field-prefix', $form);
         $this->assertStringContainsString('https://', $form);

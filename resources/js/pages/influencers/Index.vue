@@ -29,6 +29,7 @@ import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { csrfHeaders } from '@/lib/csrf';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import { useToastStore } from '@/stores/toastStore';
 
@@ -268,18 +269,12 @@ function formatFollowers(value: number | null | undefined): string {
     return String(value);
 }
 
-function csrfToken(): string {
-    return (
-        (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? ''
-    );
-}
-
 function jsonHeaders(): Record<string, string> {
     return {
         Accept: 'application/json',
         'Content-Type': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRF-TOKEN': csrfToken(),
+        ...csrfHeaders(),
     };
 }
 

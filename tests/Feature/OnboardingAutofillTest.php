@@ -202,6 +202,7 @@ class OnboardingAutofillTest extends TestCase
         $this->assertNotFalse($page);
         $this->assertNotFalse($form);
         $this->assertStringContainsString('BrandProfileForm', $page);
+        $this->assertStringContainsString("import { csrfHeaders } from '@/lib/csrf'", $form);
         $this->assertStringContainsString('Autofill from website', $form);
         $this->assertStringContainsString('snitch-field-prefix', $form);
         $this->assertStringContainsString('https://', $form);

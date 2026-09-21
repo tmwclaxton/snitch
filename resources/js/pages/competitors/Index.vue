@@ -27,6 +27,7 @@ import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import SuggestCompetitorsModal from '@/components/SuggestCompetitorsModal.vue';
 import SyncAccountModal from '@/components/SyncAccountModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { csrfHeaders } from '@/lib/csrf';
 import { formatFollowers } from '@/lib/metrics';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import { lastSyncedLabel } from '@/lib/syncSchedule';
@@ -401,10 +402,6 @@ onUnmounted(() => {
     clearSyncPoll();
 });
 
-function csrfToken(): string {
-    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
-}
-
 function applySuggestionRows(rows: Suggestion[] | null | undefined, selectNew = true): void {
     const next = withoutTracked(rows ?? []);
     const previousKeys = new Set(localSuggestions.value.map((item) => suggestionKey(item)));
@@ -528,8 +525,8 @@ async function requestSuggestions(filters: {
             headers: {
                 Accept: 'application/json',
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken(),
                 'X-Requested-With': 'XMLHttpRequest',
+                ...csrfHeaders(),
             },
             credentials: 'same-origin',
             body: JSON.stringify({
