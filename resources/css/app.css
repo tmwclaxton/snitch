@@ -1298,16 +1298,15 @@
     }
 
     .snitch-glance-metrics {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(3rem, 1fr));
-        gap: 0.45rem 0.65rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem 0.9rem;
         margin: 0;
-        padding: 0.6rem 0.65rem;
+        padding: 0;
         list-style: none;
-        background: color-mix(in oklab, var(--snitch-spot) 16%, var(--snitch-paper));
-        border-top: 1px solid color-mix(in oklab, var(--snitch-ink) 14%, transparent);
-        border-bottom: 1px solid color-mix(in oklab, var(--snitch-ink) 14%, transparent);
-        box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--snitch-spot) 22%, transparent);
+        background: transparent;
+        border: 0;
+        box-shadow: none;
     }
 
     .snitch-glance-metric {
@@ -1328,14 +1327,6 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-    }
-
-    .snitch-glance-metric:first-child .snitch-glance-metric-value {
-        display: inline-block;
-        width: fit-content;
-        max-width: 100%;
-        box-shadow: inset 0 -3px 0 0 var(--snitch-spot);
-        padding-bottom: 1px;
     }
 
     .snitch-glance-metric-label {
@@ -1399,24 +1390,13 @@
         gap: 0.2rem;
         overflow: hidden;
         padding: 0.1rem 0.35rem;
-        background: color-mix(in oklab, var(--snitch-spot) 72%, var(--snitch-paper));
-        color: var(--snitch-on-spot);
+        background: color-mix(in oklab, var(--snitch-paper) 82%, var(--snitch-lift));
+        color: var(--snitch-ink);
         font-size: 0.58rem;
         font-weight: 600;
         letter-spacing: 0.03em;
         text-transform: uppercase;
-        box-shadow: 1px 1px 0 color-mix(in oklab, var(--snitch-ink) 22%, transparent);
-    }
-
-    .snitch-glance-tag:nth-child(2) {
-        background: color-mix(in oklab, var(--snitch-paper) 82%, var(--snitch-lift));
-        color: var(--snitch-ink);
-        box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--snitch-ink) 20%, transparent);
-    }
-
-    .snitch-glance-tag:nth-child(3) {
-        background: color-mix(in oklab, var(--snitch-teal) 35%, var(--snitch-paper));
-        color: var(--snitch-ink);
+        box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--snitch-ink) 16%, transparent);
     }
 
     /*
@@ -1512,18 +1492,13 @@
         gap: 0.25rem;
         overflow: hidden;
         padding: 0.15rem 0.45rem;
-        background: color-mix(in oklab, var(--snitch-spot) 55%, var(--snitch-paper));
-        color: var(--snitch-on-spot);
+        background: color-mix(in oklab, var(--snitch-paper) 82%, var(--snitch-lift));
+        color: var(--snitch-ink);
         font-size: 0.68rem;
         font-weight: 600;
         letter-spacing: 0.03em;
         text-transform: uppercase;
-        box-shadow: 1px 1px 0 color-mix(in oklab, var(--snitch-press) 22%, transparent);
-    }
-
-    .snitch-topic-chip:nth-child(even) {
-        background: color-mix(in oklab, var(--snitch-paper) 90%, var(--snitch-lift));
-        color: var(--snitch-ink);
+        box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--snitch-ink) 16%, transparent);
     }
 
     /* Platform player inside paper / contact frames */

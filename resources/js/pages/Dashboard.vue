@@ -280,7 +280,7 @@ function accountHref(post: RecentPost): string | null {
                 </div>
             </section>
 
-            <div class="mt-10 grid gap-10 lg:grid-cols-2 lg:gap-8">
+            <div class="mt-10 space-y-10">
                 <section>
                     <div class="flex flex-wrap items-end justify-between gap-3">
                         <div>

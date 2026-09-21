@@ -46,17 +46,22 @@ class EmbedLoadQueueContractTest extends TestCase
     }
 
     #[Test]
-    public function glance_metric_views_underline_hugs_text_width(): void
+    public function glance_and_topic_tags_share_one_paper_treatment(): void
     {
         $css = file_get_contents(base_path('resources/css/app.css'));
 
         $this->assertIsString($css);
-        $this->assertStringContainsString(
+        $this->assertStringNotContainsString('.snitch-glance-tag:nth-child(2)', $css);
+        $this->assertStringNotContainsString('.snitch-glance-tag:nth-child(3)', $css);
+        $this->assertStringNotContainsString('.snitch-topic-chip:nth-child(even)', $css);
+        $this->assertStringNotContainsString(
             '.snitch-glance-metric:first-child .snitch-glance-metric-value',
             $css,
         );
-        $this->assertStringContainsString('width: fit-content', $css);
-        $this->assertStringContainsString('display: inline-block', $css);
+        $this->assertStringContainsString(
+            'box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--snitch-ink) 16%, transparent)',
+            $css,
+        );
     }
 
     #[Test]
