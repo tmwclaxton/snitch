@@ -188,7 +188,7 @@ onUnmounted(() => {
 
             <div
                 v-if="!postsLoaded"
-                class="snitch-contact-sheet mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                class="snitch-contact-sheet snitch-contact-sheet-proof mt-6 grid"
                 aria-label="Loading analyse queue"
             >
                 <div class="snitch-contact-sheet-rail col-span-full">
@@ -206,7 +206,7 @@ onUnmounted(() => {
 
             <div
                 v-else-if="postsData.length"
-                class="snitch-contact-sheet snitch-contact-reveal mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-reveal mt-6 grid"
             >
                 <div class="snitch-contact-sheet-rail col-span-full">
                     <p>Analyse queue</p>

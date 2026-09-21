@@ -1079,6 +1079,15 @@
         mix-blend-mode: var(--snitch-print-blend);
     }
 
+    /*
+     * Wide canvas must not stretch 3/4 stills into posters. Cap each
+     * proof frame and let extra columns fill as the sheet grows.
+     */
+    .snitch-contact-sheet-proof {
+        grid-template-columns: repeat(auto-fill, minmax(8.5rem, 10.75rem));
+        justify-content: start;
+    }
+
     .snitch-contact-sheet-rail {
         position: relative;
         z-index: 1;
@@ -1620,7 +1629,7 @@
     }
 
     .snitch-dashboard-winner-media {
-        width: 8.25rem;
+        width: 6.5rem;
         flex-shrink: 0;
     }
 
@@ -1666,13 +1675,13 @@
 
     @media (min-width: 640px) {
         .snitch-dashboard-winner-media {
-            width: 9.5rem;
+            width: 7.25rem;
         }
     }
 
     @media (min-width: 1024px) {
         .snitch-dashboard-winner-media {
-            width: 10.5rem;
+            width: 7.75rem;
         }
     }
 
@@ -1908,7 +1917,7 @@
     }
 
     .snitch-tear-row-media {
-        width: min(100%, 14rem);
+        width: min(100%, 10.5rem);
         margin-inline: auto;
     }
 
@@ -1918,7 +1927,7 @@
 
     @media (min-width: 640px) {
         .snitch-tear-row {
-            grid-template-columns: minmax(11rem, 13.5rem) minmax(0, 1fr);
+            grid-template-columns: minmax(8.5rem, 10.5rem) minmax(0, 1fr);
             gap: 1.25rem 1.5rem;
         }
 

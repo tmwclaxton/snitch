@@ -378,7 +378,7 @@ function openTranscript(): void {
             </header>
 
             <div class="mt-6 space-y-6">
-                <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] lg:gap-8">
+                <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,12rem)_minmax(0,1fr)] lg:gap-8">
                     <div>
                         <div
                             class="snitch-polaroid relative w-full"

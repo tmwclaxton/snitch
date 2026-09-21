@@ -473,7 +473,7 @@ function askRemove(): void {
 
                 <div
                     v-if="!postsLoaded"
-                    class="snitch-contact-sheet mt-5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                    class="snitch-contact-sheet snitch-contact-sheet-proof mt-5 grid"
                     aria-live="polite"
                     aria-label="Loading recent posts"
                 >
@@ -486,7 +486,7 @@ function askRemove(): void {
                 </div>
                 <div
                     v-else-if="postsList.length"
-                    class="snitch-contact-sheet snitch-contact-reveal mt-5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                    class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-reveal mt-5 grid"
                 >
                     <FeedContactCell
                         v-for="(post, index) in postsList"

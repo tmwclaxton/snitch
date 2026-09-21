@@ -107,14 +107,21 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertIsString($css);
         $this->assertStringContainsString('.snitch-dashboard-winner-media .snitch-polaroid-frame .snitch-platform-embed', $css);
         $this->assertStringContainsString('aspect-ratio: auto', $css);
-        $this->assertStringContainsString('width: 8.25rem', $css);
-        $this->assertStringContainsString('width: 10.5rem', $css);
+        $this->assertStringContainsString('width: 6.5rem', $css);
+        $this->assertStringContainsString('width: 7.75rem', $css);
+        $this->assertStringContainsString('.snitch-contact-sheet-proof', $css);
+        $this->assertStringContainsString(
+            'repeat(auto-fill, minmax(8.5rem, 10.75rem))',
+            $css,
+        );
         $this->assertStringNotContainsString('min-height: 14rem', $css);
 
         $dashboard = file_get_contents(base_path('resources/js/pages/Dashboard.vue'));
         $this->assertIsString($dashboard);
         $this->assertStringContainsString('px-2 py-6 sm:px-3 sm:py-8', $dashboard);
         $this->assertStringContainsString('snitch-app-canvas', $dashboard);
+        $this->assertStringContainsString('snitch-contact-sheet-proof', $dashboard);
+        $this->assertStringNotContainsString('xl:grid-cols-5', $dashboard);
         $this->assertStringNotContainsString('max-w-6xl', $dashboard);
         $this->assertStringNotContainsString('px-5 py-6 sm:px-8 sm:py-8', $dashboard);
 
@@ -122,5 +129,15 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertIsString($css);
         $this->assertStringContainsString('.snitch-app-canvas', $css);
         $this->assertStringContainsString('max-width: none', $css);
+
+        $feed = file_get_contents(base_path('resources/js/pages/feed/Index.vue'));
+        $this->assertIsString($feed);
+        $this->assertStringContainsString('snitch-contact-sheet-proof', $feed);
+        $this->assertStringNotContainsString('xl:grid-cols-5', $feed);
+
+        $show = file_get_contents(base_path('resources/js/pages/feed/Show.vue'));
+        $this->assertIsString($show);
+        $this->assertStringContainsString('minmax(0,12rem)', $show);
+        $this->assertStringNotContainsString('minmax(0,18rem)', $show);
     }
 }
