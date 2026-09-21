@@ -90,4 +90,28 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('acquireEmbedSlot', $source);
         $this->assertStringContainsString('IntersectionObserver', $source);
     }
+
+    #[Test]
+    public function platform_embed_applies_facebook_colorscheme_and_skips_compact_aspect(): void
+    {
+        $source = file_get_contents(base_path('resources/js/components/PlatformEmbed.vue'));
+
+        $this->assertIsString($source);
+        $this->assertStringContainsString('applyEmbedTheme', $source);
+        $this->assertStringContainsString("url.searchParams.set('colorscheme'", $source);
+        $this->assertStringContainsString("dark ? 'dark' : 'light'", $source);
+        $this->assertStringContainsString('colorScheme: isDark ? \'dark\' : \'light\'', $source);
+        $this->assertStringContainsString('props.compact || !props.embed', $source);
+    }
+
+    #[Test]
+    public function dashboard_winner_media_fills_the_polaroid_frame(): void
+    {
+        $css = file_get_contents(base_path('resources/css/app.css'));
+
+        $this->assertIsString($css);
+        $this->assertStringContainsString('.snitch-dashboard-winner-media .snitch-polaroid-frame .snitch-platform-embed', $css);
+        $this->assertStringContainsString('aspect-ratio: auto', $css);
+        $this->assertStringNotContainsString('min-height: 14rem', $css);
+    }
 }

@@ -41,8 +41,51 @@ let cancelled = false;
 let loadGeneration = 0;
 let slotTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
+const isDark = ref(false);
+let themeObserver: MutationObserver | null = null;
+
+function syncTheme(): void {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    isDark.value = document.documentElement.classList.contains('dark');
+}
+
+function applyEmbedTheme(src: string, provider: string, dark: boolean): string {
+    try {
+        const url = new URL(src);
+
+        if (provider === 'facebook') {
+            url.searchParams.set('colorscheme', dark ? 'dark' : 'light');
+        }
+
+        return url.toString();
+    } catch {
+        return src;
+    }
+}
+
+const themedSrc = computed(() => {
+    const src = props.embed?.src;
+
+    if (!src) {
+        return '';
+    }
+
+    return applyEmbedTheme(src, props.embed?.provider ?? '', isDark.value);
+});
+
+const frameAspect = computed(() => {
+    if (props.compact || !props.embed || embedFailed.value) {
+        return undefined;
+    }
+
+    return props.embed.aspect;
+});
+
 const canEmbed = computed(
-    () => Boolean(props.embed?.src) && shouldLoad.value && !embedFailed.value,
+    () => Boolean(themedSrc.value) && shouldLoad.value && !embedFailed.value,
 );
 
 const showFallback = computed(() => !canEmbed.value || !iframeReady.value);
@@ -177,6 +220,16 @@ watch(
 );
 
 onMounted(() => {
+    syncTheme();
+
+    if (typeof MutationObserver !== 'undefined') {
+        themeObserver = new MutationObserver(syncTheme);
+        themeObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class'],
+        });
+    }
+
     startObserving();
 });
 
@@ -184,6 +237,8 @@ onBeforeUnmount(() => {
     cancelled = true;
     observer?.disconnect();
     observer = null;
+    themeObserver?.disconnect();
+    themeObserver = null;
     releaseSlotIfHeld();
     clearSlotTimeout();
 });
@@ -211,7 +266,7 @@ watch(
         class="snitch-platform-embed"
         :class="compact ? 'snitch-platform-embed-compact' : 'snitch-platform-embed-detail'"
         :data-embed-provider="embed?.provider"
-        :style="embed && !embedFailed ? { aspectRatio: embed.aspect } : undefined"
+        :style="frameAspect ? { aspectRatio: frameAspect } : undefined"
     >
         <div
             v-if="showFallback"
@@ -251,10 +306,11 @@ watch(
 
         <iframe
             v-if="canEmbed"
-            :src="embed!.src"
+            :src="themedSrc"
             :title="embed!.title"
             class="snitch-platform-embed-frame"
             :class="{ 'snitch-platform-embed-frame-ready': iframeReady }"
+            :style="{ colorScheme: isDark ? 'dark' : 'light' }"
             loading="lazy"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowfullscreen

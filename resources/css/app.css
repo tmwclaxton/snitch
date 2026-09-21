@@ -1614,26 +1614,52 @@
     }
 
     .snitch-polaroid-frame .snitch-platform-embed {
-        min-height: 14rem;
-    }
-
-    @media (min-width: 640px) {
-        .snitch-polaroid-frame .snitch-platform-embed {
-            min-height: 17rem;
-        }
+        min-height: 0;
     }
 
     .snitch-dashboard-winner-media {
         width: 5.75rem;
+        flex-shrink: 0;
     }
 
     .snitch-dashboard-winner-media .snitch-polaroid-frame {
+        position: relative;
         aspect-ratio: 3 / 4;
+        overflow: hidden;
     }
 
-    .snitch-dashboard-winner-media .snitch-polaroid-frame .snitch-platform-embed {
-        min-height: 0;
+    .snitch-dashboard-winner-media .snitch-polaroid-frame .snitch-platform-embed,
+    .snitch-dashboard-winner-media .snitch-polaroid-frame .snitch-platform-embed-compact {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        width: 100%;
         height: 100%;
+        min-height: 0;
+        aspect-ratio: auto;
+    }
+
+    .snitch-dashboard-winner-media [data-embed-provider='instagram'] .snitch-platform-embed-frame {
+        width: 112%;
+        height: 128%;
+        top: -11%;
+        left: -6%;
+    }
+
+    .snitch-dashboard-winner-media [data-embed-provider='tiktok'] .snitch-platform-embed-frame {
+        width: 108%;
+        height: 118%;
+        top: -6%;
+        left: -4%;
+    }
+
+    .snitch-dashboard-winner-media [data-embed-provider='youtube'] .snitch-platform-embed-frame,
+    .snitch-dashboard-winner-media [data-embed-provider='facebook'] .snitch-platform-embed-frame,
+    .snitch-dashboard-winner-media [data-embed-provider='linkedin'] .snitch-platform-embed-frame {
+        width: 110%;
+        height: 118%;
+        top: -8%;
+        left: -5%;
     }
 
     @media (min-width: 640px) {
