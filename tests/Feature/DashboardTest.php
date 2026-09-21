@@ -54,7 +54,7 @@ class DashboardTest extends TestCase
                     ->where('activity.heatmap.0.count', 0)
                     ->where('activity.weekly.0.count', 0)
                     ->where('activity.by_time_of_day.0.hour', 0)
-                    ->where('activity.by_time_of_day.0.label', '12a')
+                    ->where('activity.by_time_of_day.0.label', '12am')
                     ->where('activity.by_time_of_day.0.count', 0)
                 )
                 ->loadDeferredProps('content', fn (Assert $page) => $page
@@ -194,8 +194,8 @@ class DashboardTest extends TestCase
                                 && ($byHour[11]['count'] ?? null) === 1
                                 && ($byHour[18]['count'] ?? null) === 1
                                 && ($byHour[0]['count'] ?? null) === 0
-                                && ($byHour[9]['label'] ?? null) === '9a'
-                                && ($byHour[18]['label'] ?? null) === '6p';
+                                && ($byHour[9]['label'] ?? null) === '9am'
+                                && ($byHour[18]['label'] ?? null) === '6pm';
                         })
                     )
                 );

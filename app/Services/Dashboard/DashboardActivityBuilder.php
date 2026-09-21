@@ -202,19 +202,14 @@ class DashboardActivityBuilder
 
     private function hourLabel(int $hour): string
     {
-        if ($hour === 0) {
-            return '12a';
+        $suffix = $hour < 12 ? 'am' : 'pm';
+        $clock = $hour % 12;
+
+        if ($clock === 0) {
+            $clock = 12;
         }
 
-        if ($hour < 12) {
-            return $hour.'a';
-        }
-
-        if ($hour === 12) {
-            return '12p';
-        }
-
-        return ($hour - 12).'p';
+        return $clock.$suffix;
     }
 
     private function sundayOnOrBefore(CarbonImmutable $day): CarbonImmutable

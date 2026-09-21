@@ -243,7 +243,7 @@ function accountHref(post: RecentPost): string | null {
                             <SnitchSkeleton
                                 v-else
                                 variant="scrap"
-                                height="8rem"
+                                height="12rem"
                                 label="Loading time of day chart"
                             />
                         </div>
@@ -259,7 +259,7 @@ function accountHref(post: RecentPost): string | null {
                             <SnitchSkeleton
                                 v-else
                                 variant="scrap"
-                                height="8rem"
+                                height="12rem"
                                 label="Loading weekly volume chart"
                             />
                         </div>

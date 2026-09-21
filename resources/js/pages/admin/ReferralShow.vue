@@ -369,6 +369,8 @@ function countBarY(count: number, max: number): number {
             <WeeklyVolumeChart
                 :weeks="signupsSeries"
                 title="Referred signups"
+                y-axis-label="Users"
+                :period-grain="grain"
                 :subtitle="`${signupsSeries.reduce((sum, row) => sum + row.count, 0)} · ${periodLabel}`"
                 :dense-labels="grain === 'month' || grain === 'week'"
             />

@@ -34,6 +34,12 @@ class StippleChartContractTest extends TestCase
             $this->assertStringContainsString('yTicks', $source);
             $this->assertStringNotContainsString('<rect', $source);
         }
+
+        $this->assertStringContainsString('Hour posted', $timeOfDay);
+        $this->assertStringContainsString("yAxisLabel = 'Posts'", $timeOfDay);
+        $this->assertStringContainsString('hour % 2 === 0', $timeOfDay);
+        $this->assertStringContainsString("yAxisLabel: 'Posts'", $weekly);
+        $this->assertStringContainsString('Week starting', $weekly);
     }
 
     #[Test]

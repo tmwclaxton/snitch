@@ -591,6 +591,8 @@ function formatGbpAxis(value: number): string {
             <WeeklyVolumeChart
                 :weeks="usersSeries"
                 title="New users"
+                y-axis-label="Users"
+                :period-grain="grain"
                 :subtitle="`${usersSeries.reduce((sum, row) => sum + row.count, 0)} · ${periodLabel}`"
                 :dense-labels="grain === 'month' || grain === 'week'"
             />
