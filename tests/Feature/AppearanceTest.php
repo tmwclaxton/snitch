@@ -71,4 +71,23 @@ class AppearanceTest extends TestCase
         $this->assertStringContainsString('var(--snitch-lift)', $css);
         $this->assertStringContainsString('var(--snitch-print-blend)', $css);
     }
+
+    public function test_yellow_button_hover_uses_charcoal_on_spot_type(): void
+    {
+        $css = file_get_contents(resource_path('css/app.css'));
+
+        $this->assertNotFalse($css);
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-btn:hover\s*\{[^}]*color:\s*var\(--snitch-on-spot\)/s',
+            $css,
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-btn-ghost:hover,\s*\n\s*\.snitch-btn-ghost-light:hover\s*\{[^}]*color:\s*var\(--snitch-on-spot\)/s',
+            $css,
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-platform-embed-open:hover\s*\{[^}]*background:\s*var\(--snitch-spot\);[^}]*color:\s*var\(--snitch-on-spot\)/s',
+            $css,
+        );
+    }
 }

@@ -1632,6 +1632,7 @@
 
     .snitch-platform-embed-open:hover {
         background: var(--snitch-spot);
+        color: var(--snitch-on-spot);
     }
 
     .snitch-polaroid-frame .snitch-platform-embed,
@@ -2595,7 +2596,18 @@
     }
 
     .snitch-hero-copy .snitch-btn:hover {
-        filter: drop-shadow(3px 3px 0 var(--snitch-spot)) brightness(1.04);
+        color: var(--snitch-on-spot);
+        filter: drop-shadow(3px 3px 0 var(--snitch-press)) brightness(1.03);
+    }
+
+    .snitch-hero-copy .snitch-btn:hover::before {
+        content: '';
+        position: absolute;
+        inset: var(--snitch-ticket-stroke);
+        z-index: 0;
+        background: var(--snitch-spot);
+        clip-path: var(--snitch-hero-ticket);
+        pointer-events: none;
     }
 
     .snitch-hero-copy .snitch-btn.snitch-btn-spot {
@@ -2713,7 +2725,19 @@
 
     .snitch-btn:hover {
         transform: translate(-1px, -1px);
-        filter: drop-shadow(3px 3px 0 var(--snitch-spot)) brightness(1.05);
+        color: var(--snitch-on-spot);
+        filter: drop-shadow(3px 3px 0 var(--snitch-press)) brightness(1.03);
+    }
+
+    /* Yellow hover face; charcoal type. Cream/--snitch-ink on mustard does not read. */
+    .snitch-btn:hover::before {
+        content: '';
+        position: absolute;
+        inset: var(--snitch-ticket-stroke);
+        z-index: -1;
+        background: var(--snitch-spot);
+        clip-path: var(--snitch-ticket-clip);
+        pointer-events: none;
     }
 
     .snitch-btn:disabled {
@@ -2744,12 +2768,13 @@
     .snitch-btn-ghost:hover,
     .snitch-btn-ghost-light:hover {
         background: var(--snitch-press);
-        filter: drop-shadow(3px 3px 0 var(--snitch-spot)) brightness(1.02);
+        color: var(--snitch-on-spot);
+        filter: drop-shadow(3px 3px 0 var(--snitch-press)) brightness(1.02);
     }
 
     .snitch-btn-ghost:hover::before,
     .snitch-btn-ghost-light:hover::before {
-        background: color-mix(in oklab, var(--snitch-lift) 55%, var(--snitch-paper));
+        background: var(--snitch-spot);
     }
 
     .snitch-btn-light {
@@ -2758,7 +2783,8 @@
     }
 
     .snitch-btn-light:hover {
-        filter: drop-shadow(3px 3px 0 var(--snitch-spot)) brightness(1.03);
+        color: var(--snitch-on-spot);
+        filter: drop-shadow(3px 3px 0 var(--snitch-press)) brightness(1.03);
     }
 
     /* Compound selector beats .snitch-btn::before { content: none } */
