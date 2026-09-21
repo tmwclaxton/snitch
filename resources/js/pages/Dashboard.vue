@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import {
     ArrowRight,
     Clapperboard,
@@ -8,13 +8,11 @@ import {
     Trophy,
     Users,
 } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { Component } from 'vue';
 import { index as backlog } from '@/actions/App/Http/Controllers/BacklogController';
-import { edit as brand } from '@/actions/App/Http/Controllers/BrandProfileController';
 import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feed, show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
-import WatchingYouController from '@/actions/App/Http/Controllers/WatchingYouController';
 import { index as winners } from '@/actions/App/Http/Controllers/WinnerController';
 import PlatformSplitChart from '@/components/dashboard/PlatformSplitChart.vue';
 import PostingHeatmap from '@/components/dashboard/PostingHeatmap.vue';
@@ -24,6 +22,8 @@ import FeedContactCell from '@/components/FeedContactCell.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
+import WatchingYouModal from '@/components/WatchingYouModal.vue';
+import type { WatchingPayload } from '@/components/WatchingYouModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { winnerStatPills } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
@@ -46,18 +46,6 @@ type RecentPost = {
         topics?: string[] | null;
     } | null;
     winner_insight?: { score: number } | null;
-};
-
-type WatchingRow = {
-    handle: string | null;
-    watched: boolean;
-    watcher_count: number;
-    platform?: string;
-};
-
-type WatchingPayload = {
-    brand: WatchingRow[];
-    check: WatchingRow | null;
 };
 
 type ActivityPayload = {
@@ -102,24 +90,16 @@ const props = defineProps<{
     watching?: WatchingPayload;
 }>();
 
-const watchingForm = useForm({
-    handle: '',
-});
+const watchingOpen = ref(Boolean(props.watching?.check?.handle));
 
-function submitWatchingCheck(): void {
-    watchingForm.post(WatchingYouController.url(), {
-        preserveScroll: true,
-        onSuccess: () => watchingForm.reset('handle'),
-    });
-}
-
-const watchingOpen = computed(() => {
-    if (props.watching?.check) {
-        return true;
-    }
-
-    return (props.watching?.brand ?? []).some((row) => row.watched);
-});
+watch(
+    () => props.watching?.check?.handle,
+    (handle) => {
+        if (handle) {
+            watchingOpen.value = true;
+        }
+    },
+);
 
 defineOptions({
     layout: AppLayout,
@@ -522,70 +502,17 @@ function accountHref(post: RecentPost): string | null {
                 </Link>
             </section>
 
-            <details
-                class="snitch-doc mt-16 border-t border-snitch-ink/10 pt-5"
-                :open="watchingOpen"
-            >
-                <summary class="snitch-ink-label cursor-pointer select-none text-snitch-ink/55">
-                    Am I being tracked?
-                </summary>
+            <div class="mt-16 flex justify-start">
+                <button
+                    type="button"
+                    class="snitch-btn snitch-btn-ghost px-3 py-2 text-sm"
+                    @click="watchingOpen = true"
+                >
+                    <span class="relative z-10">Am I being tracked?</span>
+                </button>
+            </div>
 
-                <div class="mt-4 max-w-xl space-y-4 text-sm text-snitch-ink/80">
-                    <ul
-                        v-if="watching?.brand?.length"
-                        class="divide-y divide-snitch-ink/10"
-                    >
-                        <li
-                            v-for="row in watching.brand"
-                            :key="`${row.platform}-${row.handle}`"
-                            class="flex items-baseline justify-between gap-4 py-1.5"
-                        >
-                            <span>
-                                <span class="text-snitch-ink/45">{{ platformLabel(row.platform ?? '') }}</span>
-                                <span class="ml-2">@{{ row.handle }}</span>
-                            </span>
-                            <span class="tabular-nums text-snitch-ink">{{ row.watched ? 'Yes' : 'No' }}</span>
-                        </li>
-                    </ul>
-                    <p v-else class="text-snitch-ink/55">
-                        <Link :href="brand.url()" class="underline decoration-snitch-ink/25 underline-offset-2">
-                            Add your handles
-                        </Link>
-                    </p>
-
-                    <p
-                        v-if="watching?.check?.handle"
-                        class="flex items-baseline justify-between gap-4"
-                        data-test="watching-check-result"
-                    >
-                        <span>@{{ watching.check.handle }}</span>
-                        <span class="tabular-nums text-snitch-ink">{{ watching.check.watched ? 'Yes' : 'No' }}</span>
-                    </p>
-
-                    <form
-                        class="flex flex-wrap items-center gap-2"
-                        @submit.prevent="submitWatchingCheck"
-                    >
-                        <input
-                            v-model="watchingForm.handle"
-                            type="text"
-                            name="handle"
-                            maxlength="80"
-                            autocomplete="off"
-                            aria-label="Username"
-                            class="min-w-[10rem] flex-1 border-0 border-b border-snitch-ink/20 bg-transparent px-0 py-1 text-sm text-snitch-ink placeholder:text-snitch-ink/35"
-                            placeholder="@handle"
-                        />
-                        <button
-                            type="submit"
-                            class="text-sm text-snitch-ink/60 underline decoration-snitch-ink/25 underline-offset-2 disabled:opacity-50"
-                            :disabled="watchingForm.processing"
-                        >
-                            Check
-                        </button>
-                    </form>
-                </div>
-            </details>
+            <WatchingYouModal v-model:open="watchingOpen" :watching="watching" />
         </div>
     </div>
 </template>
