@@ -138,7 +138,7 @@ class LedgerChargePresenterTest extends TestCase
     public function test_discovery_actions_link_to_index_pages(): void
     {
         $this->assertSame(
-            ['type' => 'competitors', 'label' => 'Snitches'],
+            ['type' => 'competitors', 'label' => 'Tracking'],
             $this->presenter->link('competitors.suggest', ['suggest_id' => 's1']),
         );
 

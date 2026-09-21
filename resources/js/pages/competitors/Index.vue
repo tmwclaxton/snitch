@@ -377,7 +377,7 @@ onMounted(() => {
     if (localSuggestions.value.length > 0 && Object.keys(selected.value).length === 0) {
         selectAllSuggestions();
         suggestMessage.value =
-            suggestMessage.value || `Found ${localSuggestions.value.length} snitches.`;
+            suggestMessage.value || `Found ${localSuggestions.value.length} accounts.`;
     }
 
     const run = props.suggestRun;
@@ -455,14 +455,14 @@ async function pollSuggestions(id: string, attempt = 0): Promise<void> {
         suggesting.value = false;
         suggestMessage.value =
             localSuggestions.value.length > 0
-                ? `Found ${localSuggestions.value.length} snitches.`
-                : 'No verified snitches found.';
+                ? `Found ${localSuggestions.value.length} accounts.`
+                : 'No verified accounts found.';
 
         if (localSuggestions.value.length === 0) {
-            toast.error('No verified snitch accounts found. Try again later.');
+            toast.error('No verified accounts found. Try again later.');
         } else {
             selectAllSuggestions();
-            toast.success('Snitch picks ready.');
+            toast.success('Picks ready.');
         }
 
         return;
@@ -475,7 +475,7 @@ async function pollSuggestions(id: string, attempt = 0): Promise<void> {
             localSuggestions.value.length > 0
                 ? `${payload.error || 'Suggestion stopped.'} Showing ${localSuggestions.value.length} found.`
                 : payload.error || 'Suggestion failed.';
-        toast.error(payload.error || 'Could not suggest snitches.');
+        toast.error(payload.error || 'Could not suggest accounts.');
 
         if (localSuggestions.value.length > 0) {
             selectAllSuggestions();
@@ -545,7 +545,7 @@ async function requestSuggestions(filters: {
                 : undefined;
 
             throw new Error(
-                firstError || errorBody?.message || 'Could not start snitch suggestions.',
+                firstError || errorBody?.message || 'Could not start suggestions.',
             );
         }
 
@@ -748,14 +748,14 @@ const syncSelectedTitle = computed(() => {
         class="snitch-app-shell relative min-h-full min-w-0 px-2 py-6 sm:px-3 sm:py-8"
         :class="showAnyActionBar ? 'pb-28 sm:pb-32' : ''"
     >
-        <Head title="Snitches" />
+        <Head title="Tracking" />
         <div class="snitch-grain" aria-hidden="true" />
 
         <div class="snitch-app-canvas min-w-0">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div class="min-w-0">
                     <h1 class="snitch-display text-3xl text-snitch-ink sm:text-4xl">
-                        Snitches
+                        Tracking
                     </h1>
                     <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
                         Rivals or accounts whose style you want to copy - across Instagram, TikTok, YouTube Shorts, Facebook, and LinkedIn.
@@ -785,7 +785,7 @@ const syncSelectedTitle = computed(() => {
                             aria-hidden="true"
                         />
                         <span class="relative z-10">
-                            {{ suggesting ? 'Finding…' : 'Suggest snitches' }}
+                            {{ suggesting ? 'Finding…' : 'Suggest accounts' }}
                         </span>
                     </button>
                     <p
@@ -880,10 +880,10 @@ const syncSelectedTitle = computed(() => {
                 </div>
             </form>
 
-            <section v-if="localSuggestions.length" class="mt-10" aria-labelledby="suggested-snitches-heading">
+            <section v-if="localSuggestions.length" class="mt-10" aria-labelledby="suggested-accounts-heading">
                 <div>
-                    <h2 id="suggested-snitches-heading" class="snitch-display text-2xl text-snitch-ink">
-                        Suggested snitches
+                    <h2 id="suggested-accounts-heading" class="snitch-display text-2xl text-snitch-ink">
+                        Suggested accounts
                     </h2>
                     <p class="mt-1.5 text-sm text-snitch-ink/65">
                         Pending suggestions (including from an agent) are not tracked yet. Select rows to confirm or dismiss. Reload keeps this table until you clear it or re-run.
@@ -901,7 +901,7 @@ const syncSelectedTitle = computed(() => {
                                             type="checkbox"
                                             class="size-4 accent-[var(--snitch-spot)]"
                                             :checked="allSuggestionsSelected"
-                                            :aria-label="allSuggestionsSelected ? 'Clear suggested selection' : 'Select all suggested snitches'"
+                                            :aria-label="allSuggestionsSelected ? 'Clear suggested selection' : 'Select all suggested accounts'"
                                             @change="toggleSelectAllSuggestions"
                                         />
                                     </th>
@@ -997,7 +997,7 @@ const syncSelectedTitle = computed(() => {
                 v-if="!accountsLoaded"
                 class="snitch-scrap relative mt-8 space-y-3 p-3 pt-5 pb-6 sm:p-4 sm:pt-6 sm:pb-7"
                 aria-live="polite"
-                aria-label="Loading tracked snitches"
+                aria-label="Loading tracked accounts"
             >
                 <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
                 <div class="relative z-10 space-y-2.5">
@@ -1024,7 +1024,7 @@ const syncSelectedTitle = computed(() => {
                                         type="checkbox"
                                         class="size-4 accent-[var(--snitch-spot)]"
                                         :checked="allAccountsSelected"
-                                        :aria-label="allAccountsSelected ? 'Clear tracked selection' : 'Select all tracked snitches'"
+                                        :aria-label="allAccountsSelected ? 'Clear tracked selection' : 'Select all tracked accounts'"
                                         @change="toggleSelectAllAccounts"
                                     />
                                 </th>
@@ -1229,7 +1229,7 @@ const syncSelectedTitle = computed(() => {
             >
                 <span class="snitch-tape left-8 -top-2" aria-hidden="true" />
                 <Users class="mx-auto size-8 text-snitch-ink/35" aria-hidden="true" />
-                <p class="snitch-display mt-3 text-2xl">No snitches yet</p>
+                <p class="snitch-display mt-3 text-2xl">Nothing tracked yet</p>
                 <p class="mt-2 text-sm text-snitch-ink/65">
                     Add a handle above, or ask Snitch to suggest accounts to track.
                 </p>
@@ -1243,8 +1243,8 @@ const syncSelectedTitle = computed(() => {
             <BulkActionBar
                 v-if="showSuggestActionBar"
                 :count="selectedSuggestions.length"
-                :label="selectedSuggestions.length === 1 ? 'suggested snitch' : 'suggested snitches'"
-                aria-label="Suggested snitches actions"
+                :label="selectedSuggestions.length === 1 ? 'suggested account' : 'suggested accounts'"
+                aria-label="Suggested accounts actions"
             >
                 <button
                     type="button"
@@ -1287,8 +1287,8 @@ const syncSelectedTitle = computed(() => {
             <BulkActionBar
                 v-if="showAccountActionBar"
                 :count="selectedAccounts.length"
-                :label="selectedAccounts.length === 1 ? 'tracked snitch' : 'tracked snitches'"
-                aria-label="Tracked snitches actions"
+                :label="selectedAccounts.length === 1 ? 'tracked account' : 'tracked accounts'"
+                aria-label="Tracked accounts actions"
             >
                 <button
                     type="button"

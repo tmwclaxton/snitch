@@ -89,7 +89,7 @@ class LedgerChargePresenter
         return match ($action) {
             'competitors.suggest', 'competitor.brief' => [
                 'type' => 'competitors',
-                'label' => 'Snitches',
+                'label' => 'Tracking',
             ],
             'influencers.find', 'influencer.brief' => [
                 'type' => 'influencers',

@@ -694,7 +694,7 @@ class CompetitorsSuggestTest extends TestCase
         $page = file_get_contents(resource_path('js/pages/competitors/Index.vue'));
 
         $this->assertNotFalse($page);
-        $this->assertStringContainsString('Suggest snitches', $page);
+        $this->assertStringContainsString('Suggest accounts', $page);
         $this->assertStringContainsString('Finding…', $page);
         $this->assertStringContainsString('SuggestCompetitorsModal', $page);
         $this->assertStringContainsString('openSuggestModal', $page);
@@ -715,14 +715,13 @@ class CompetitorsSuggestTest extends TestCase
         $this->assertStringContainsString('RemoveCompetitorModal', $page);
         $this->assertStringContainsString('Sync status', $page);
         $this->assertStringContainsString('accountSyncStatusLabel', $page);
-        $this->assertStringContainsString('>Reels<', $page);
+        $this->assertStringContainsString('>Posts<', $page);
         $this->assertStringContainsString('>Backlog<', $page);
         $this->assertStringContainsString('>Winners<', $page);
         $this->assertStringContainsString('reels_count', $page);
         $this->assertStringContainsString('analysis_backlog_count', $page);
         $this->assertStringContainsString('winners_count', $page);
         $this->assertStringNotContainsString('Auto sync', $page);
-        $this->assertStringNotContainsString('>Posts<', $page);
         $this->assertStringContainsString('<table', $page);
         $this->assertStringContainsString('min-w-0 overflow-x-auto', $page);
         $this->assertStringContainsString('sm:table-cell', $page);
@@ -734,7 +733,7 @@ class CompetitorsSuggestTest extends TestCase
         $this->assertStringNotContainsString('snitch-polaroid', $page);
         $this->assertStringNotContainsString('Sync now', $page);
         $this->assertStringNotContainsString('Profile', $page);
-        $this->assertStringContainsString('Suggested snitches', $page);
+        $this->assertStringContainsString('Suggested accounts', $page);
         $this->assertStringContainsString('Select all', $page);
         $this->assertStringContainsString('dismissSuggestions', $page);
         $this->assertStringContainsString('withoutTracked', $page);

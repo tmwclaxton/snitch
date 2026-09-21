@@ -192,7 +192,7 @@ function onKickOff(): void {
                     <div>
                         <DialogTitle class="snitch-display flex items-center gap-2 text-2xl text-snitch-ink">
                             <Sparkles class="size-5 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                            Suggest snitches
+                            Suggest accounts
                         </DialogTitle>
                         <DialogDescription class="mt-1.5 text-sm text-snitch-ink/65">
                             Steer niche and platforms before we scrape the web for accounts worth tracking.

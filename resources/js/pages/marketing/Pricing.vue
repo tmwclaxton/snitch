@@ -89,7 +89,7 @@ function formatAverage(pence: number): string {
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                Web app: Snitches, Feed, Explore, Winners
+                                Web app: Tracking, Feed, Explore, Winners
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />

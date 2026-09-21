@@ -275,7 +275,7 @@ class BillingChargesTest extends TestCase
                 ->loadDeferredProps('default', fn (Assert $page) => $page
                     ->where('charges.data.0.description', 'Suggested snitches')
                     ->where('charges.data.0.link.type', 'competitors')
-                    ->where('charges.data.0.link.label', 'Snitches')
+                    ->where('charges.data.0.link.label', 'Tracking')
                     ->where('charges.data.1.description', 'Synced Instagram competitor @rival')
                     ->where('charges.data.1.link.type', 'tracked_account')
                     ->where('charges.data.1.link.id', 7)

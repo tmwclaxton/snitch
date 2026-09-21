@@ -22,22 +22,30 @@ class CompetitorsTest extends TestCase
     use RefreshDatabase;
     use WithPlatformBilling;
 
-    public function test_snitches_urls_and_legacy_competitors_redirect(): void
+    public function test_tracking_urls_and_legacy_paths_redirect(): void
     {
-        $this->assertSame(url('/snitches'), route('competitors.index'));
+        $this->assertSame(url('/tracking'), route('competitors.index'));
 
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
 
         $this->actingAs($user)
+            ->get('/snitches')
+            ->assertRedirect('/tracking');
+
+        $this->actingAs($user)
             ->get('/competitors')
-            ->assertRedirect('/snitches');
+            ->assertRedirect('/tracking');
 
         $account = TrackedAccount::factory()->for($user)->create(['handle' => 'legacyredirect']);
 
         $this->actingAs($user)
+            ->get('/snitches/'.$account->id)
+            ->assertRedirect('/tracking/'.$account->id);
+
+        $this->actingAs($user)
             ->get('/competitors/'.$account->id)
-            ->assertRedirect('/snitches/'.$account->id);
+            ->assertRedirect('/tracking/'.$account->id);
     }
 
     public function test_owner_can_list_and_create_competitors(): void
@@ -290,7 +298,7 @@ class CompetitorsTest extends TestCase
         $this->assertStringContainsString('isAccountSyncing', $indexVue);
         $this->assertStringContainsString('Sync in progress', $indexVue);
         $this->assertStringContainsString('emptyImportHint', $indexVue);
-        $this->assertStringContainsString('No recent reels found', $indexVue);
+        $this->assertStringContainsString('No recent posts found', $indexVue);
         $this->assertStringContainsString('RemoveCompetitorModal', $indexVue);
         $this->assertStringContainsString('SyncAccountModal', $indexVue);
         $this->assertStringContainsString('askRemove', $indexVue);

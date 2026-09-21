@@ -237,7 +237,7 @@ Loop: **Track → Analyze → Win** (plus Brand Deals and MCP when you need them
 |--------|---------|--------------|
 | **Onboarding** | Brand profile | Name, description, niche, own handles |
 | **Onboarding** | Website autofill | Firecrawl scrape + NanoGPT field extraction |
-| **Snitches** | Tracked accounts | Add, sync, remove rivals at `/snitches` (legacy `/competitors` redirects) |
+| **Tracking** | Tracked accounts | Add, sync, remove rivals at `/tracking` (legacy `/snitches` and `/competitors` redirect) |
 | **Snitches** | AI suggestions | Niche-led search → NanoGPT candidates → profile resolve; suggest modal with platforms + brief |
 | **Snitches** | Confirm / dismiss | Confirm only when suggest is complete (unless `allow_partial`); weak generic handles rejected |
 | **Brand Deals** | Influencer find | Search creators, keep / discard (and batch), sync kept accounts, follower counts |

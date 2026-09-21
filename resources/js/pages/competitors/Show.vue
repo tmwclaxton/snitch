@@ -267,7 +267,7 @@ function askRemove(): void {
                     class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
                 >
                     <ArrowLeft class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
-                    <span class="relative z-10">Back to snitches</span>
+                    <span class="relative z-10">Back to tracking</span>
                 </Link>
                 <div class="flex flex-wrap gap-2">
                     <a

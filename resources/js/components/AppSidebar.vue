@@ -45,7 +45,7 @@ const mainNavItems: NavItem[] = [
         icon: Store,
     },
     {
-        title: 'Snitches',
+        title: 'Tracking',
         href: competitors(),
         icon: Users,
     },

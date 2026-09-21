@@ -121,7 +121,7 @@ class ConfirmCompetitorSuggestionsTool extends Tool
                 ? 'All selected handles were rejected as weak or junk. Pick stronger handles from suggest_competitors_status.'
                 : 'No matches. Pass handles exactly as returned by suggest_competitors_status (case-insensitive).';
         } elseif ($remaining !== []) {
-            $nextStep = 'Confirmed handles are tracked. Remaining suggestions still show on /snitches - call dismiss_competitor_suggestions or re-confirm (dismiss_remainder defaults true; pass false only when you want to keep remainder).';
+            $nextStep = 'Confirmed handles are tracked. Remaining suggestions still show on /tracking - call dismiss_competitor_suggestions or re-confirm (dismiss_remainder defaults true; pass false only when you want to keep remainder).';
         }
 
         return Response::json([
