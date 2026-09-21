@@ -31,7 +31,6 @@ class DashboardActivityBuilder
 
         $posts = Post::query()
             ->forUser($user)
-            ->reelLike()
             ->when(
                 $socialAccountId !== null,
                 fn ($query) => $query->where('social_account_id', $socialAccountId),

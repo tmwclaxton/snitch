@@ -41,6 +41,7 @@ type Account = {
     avatar: string | null;
     url: string;
     followers?: number | null;
+    posts_count?: number;
     reels_count?: number;
     analysis_backlog_count?: number;
     winners_count?: number;
@@ -705,7 +706,7 @@ function isAccountSyncing(account: Account): boolean {
 }
 
 function emptyImportHint(account: Account): string | null {
-    if ((account.reels_count ?? 0) > 0) {
+    if ((account.posts_count ?? account.reels_count ?? 0) > 0) {
         return null;
     }
 
@@ -714,7 +715,7 @@ function emptyImportHint(account: Account): string | null {
     }
 
     if (account.last_sync_status === 'empty' || account.last_sync_status === 'success') {
-        return 'No recent reels found';
+        return 'No recent posts found';
     }
 
     return null;
@@ -1040,7 +1041,7 @@ const syncSelectedTitle = computed(() => {
                                     <span class="snitch-ink-label">Followers</span>
                                 </th>
                                 <th class="w-14 px-1.5 py-2 text-right sm:px-2 sm:text-left">
-                                    <span class="snitch-ink-label">Reels</span>
+                                    <span class="snitch-ink-label">Posts</span>
                                 </th>
                                 <th class="hidden w-16 px-2 py-2 text-right sm:table-cell sm:text-left">
                                     <span class="snitch-ink-label">Backlog</span>
@@ -1158,7 +1159,7 @@ const syncSelectedTitle = computed(() => {
                                     {{ formatFollowers(account.followers) }}
                                 </td>
                                 <td class="w-14 px-1.5 py-2.5 align-middle text-right tabular-nums text-snitch-ink/70 sm:px-2 sm:text-left">
-                                    {{ account.reels_count ?? 0 }}
+                                    {{ account.posts_count ?? account.reels_count ?? 0 }}
                                 </td>
                                 <td class="hidden px-2 py-2.5 align-middle text-right tabular-nums text-snitch-ink/70 sm:table-cell sm:text-left">
                                     {{ account.analysis_backlog_count ?? 0 }}

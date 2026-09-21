@@ -149,7 +149,7 @@ class SyncTrackedAccountJob implements ShouldQueue
                 }
 
                 $type = (string) ($payload['type'] ?? '');
-                if (! in_array($type, PostType::analyzableValues(), true)) {
+                if (! in_array($type, self::importableTypes(), true)) {
                     continue;
                 }
 
@@ -273,6 +273,18 @@ class SyncTrackedAccountJob implements ShouldQueue
             'last_sync_status' => 'failed',
             'last_sync_error' => SafeExceptionMessage::forUsers($e, 'Sync failed.'),
         ])->save();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function importableTypes(): array
+    {
+        return [
+            ...PostType::analyzableValues(),
+            PostType::Image->value,
+            PostType::Carousel->value,
+        ];
     }
 
     private function shouldResolveProfile(TrackedAccount $account): bool

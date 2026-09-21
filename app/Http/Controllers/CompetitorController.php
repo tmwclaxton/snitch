@@ -109,9 +109,7 @@ class CompetitorController extends Controller
             return redirect()->route('competitors.index');
         }
 
-        $trackedAccount->loadCount([
-            'posts' => fn ($query) => $query->reelLike(),
-        ]);
+        $trackedAccount->loadCount('posts');
         $trackedAccount->setAttribute('in_quota', true);
 
         return Inertia::render('competitors/Show', [
@@ -472,6 +470,7 @@ class CompetitorController extends Controller
             ->trackedAccounts()
             ->competitors()
             ->withCount([
+                'posts as posts_count',
                 'posts as reels_count' => fn ($query) => $query->reelLike(),
                 'posts as analysis_backlog_count' => fn ($query) => $query->reelLike()->analysisBacklog(),
                 'posts as winners_count' => fn ($query) => $query->whereHas('winnerInsight'),
@@ -560,7 +559,6 @@ class CompetitorController extends Controller
     {
         return Post::query()
             ->where('social_account_id', $trackedAccount->social_account_id)
-            ->reelLike()
             ->with([
                 'socialAccount',
                 'analysis',

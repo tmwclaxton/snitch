@@ -18,8 +18,8 @@ Snitches Index/Show show Sync status only: Manual, last synced date, or Syncing.
 ## Suggest runs share one active cache pointer
 Web and MCP must call `SuggestCompetitorsJob::beginRun()` before dispatch so `competitor-suggest-active:{userId}` is set. Snitches Index reads that pointer as `suggestRun` and polls until terminal. Do not seed only `latest` / status `queued` - the UI will miss in-progress agent jobs.
 
-## Index table is reel-focused scan columns
-Snitches Index counts reel-like posts only (`reels_count`), plus cheap `analysis_backlog_count` and `winners_count`. Do not show a separate Posts column or invent follower metrics not stored on TrackedAccount.
+## Index table counts all importable posts
+Snitches Index shows `posts_count` (reels, videos, images, carousels). Keep `reels_count` for analysis backlog. Analysis still reel/video only. Do not invent follower growth not stored on TrackedAccount.
 
 ## Bulk select floating bar
 Suggested snitches and tracked snitches use independent checkbox selection. Shared `BulkActionBar` scrap floats with Confirm/Dismiss (suggestions) or Sync/Remove (tracked). Batch routes: `competitors.batch-sync`, `competitors.batch-destroy`. Prefer the shared component over a second inline scrap bar.

@@ -54,7 +54,6 @@ class CompetitorInsightsBuilder
 
         $posts = Post::query()
             ->where('social_account_id', $socialAccountId)
-            ->reelLike()
             ->whereNotNull('posted_at')
             ->get(['caption', 'type', 'metrics']);
 

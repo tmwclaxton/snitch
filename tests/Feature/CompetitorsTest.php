@@ -355,9 +355,9 @@ class CompetitorsTest extends TestCase
                 ->missing('accounts')
                 ->loadDeferredProps('default', fn (Assert $page) => $page
                     ->where('accounts.0.reels_count', 2)
+                    ->where('accounts.0.posts_count', 3)
                     ->where('accounts.0.analysis_backlog_count', 1)
                     ->where('accounts.0.winners_count', 1)
-                    ->missing('accounts.0.posts_count')
                 )
             );
     }

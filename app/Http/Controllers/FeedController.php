@@ -43,7 +43,7 @@ class FeedController extends Controller
             'account' => $request->integer('account') ?: null,
         ];
         $platforms = collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values();
-        $types = collect(PostType::analyzable())->map(fn (PostType $t) => $t->value)->values();
+        $types = collect(PostType::cases())->map(fn (PostType $t) => $t->value)->values();
 
         if ($this->productAccessBlocked($user)) {
             return Inertia::render('feed/Index', [
@@ -77,7 +77,6 @@ class FeedController extends Controller
     {
         $query = Post::query()
             ->forUser($user)
-            ->reelLike()
             ->with([
                 'socialAccount',
                 'analysis.terms',
@@ -91,7 +90,7 @@ class FeedController extends Controller
 
         if ($request->filled('type')) {
             $type = $request->string('type')->toString();
-            if (in_array($type, PostType::analyzableValues(), true)) {
+            if (in_array($type, array_column(PostType::cases(), 'value'), true)) {
                 $query->where('type', $type);
             }
         }

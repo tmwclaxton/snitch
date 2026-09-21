@@ -64,7 +64,7 @@ class DashboardController extends Controller
 
         $postsBase = fn () => Post::query()->forUser($user)->reelLike();
 
-        $postsCount = $postsBase()->count();
+        $postsCount = Post::query()->forUser($user)->count();
 
         $winnersCount = WinnerInsight::query()
             ->where('user_id', $user->id)
@@ -114,7 +114,6 @@ class DashboardController extends Controller
     {
         $recentPosts = Post::query()
             ->forUser($user)
-            ->reelLike()
             ->with([
                 'socialAccount',
                 'analysis',

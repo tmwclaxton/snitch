@@ -326,7 +326,47 @@ abstract class AbstractPlatformAdapter implements PlatformAdapter
     }
 
     /**
-     * Snitch only tracks reel-like video. Skip images, carousels, and text.
+     * Prefer a still cover or photo URL for image and carousel posts.
+     *
+     * @param  list<mixed>  $candidates
+     */
+    protected function firstStillUrl(mixed ...$candidates): ?string
+    {
+        foreach ($candidates as $candidate) {
+            if (is_array($candidate)) {
+                foreach ($candidate as $nested) {
+                    $resolved = $this->firstStillUrl($nested);
+
+                    if ($resolved !== null) {
+                        return $resolved;
+                    }
+                }
+
+                continue;
+            }
+
+            if (! is_string($candidate) || trim($candidate) === '') {
+                continue;
+            }
+
+            $url = trim($candidate);
+
+            if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
+                continue;
+            }
+
+            if (preg_match('/\.(mp4|webm|mov|m4v|m3u8)(\?|$)/i', $url) === 1) {
+                continue;
+            }
+
+            return $url;
+        }
+
+        return null;
+    }
+
+    /**
+     * Reel-like rows still need a video file. Stills use firstStillUrl instead.
      */
     protected function isImportableReelType(string $type, ?string $mediaUrl): bool
     {

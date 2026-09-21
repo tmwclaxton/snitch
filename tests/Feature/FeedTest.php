@@ -242,7 +242,7 @@ class FeedTest extends TestCase
             );
     }
 
-    public function test_feed_hides_image_posts_and_exposes_failed_vs_unavailable(): void
+    public function test_feed_includes_image_posts_and_exposes_failed_vs_unavailable(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -277,10 +277,10 @@ class FeedTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('feed/Index')
-                ->where('types', ['reel', 'video'])
+                ->where('types', ['reel', 'video', 'carousel', 'image', 'text'])
                 ->missing('posts')
                 ->loadDeferredProps('default', fn (Assert $page) => $page
-                    ->has('posts.data', 2)
+                    ->has('posts.data', 3)
                 )
             );
 

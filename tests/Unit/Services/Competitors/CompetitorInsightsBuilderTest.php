@@ -34,7 +34,7 @@ class CompetitorInsightsBuilderTest extends TestCase
             ],
         ]);
         Post::factory()->forAccount($account)->create([
-            'type' => PostType::Reel,
+            'type' => PostType::Image,
             'posted_at' => now()->subHours(6),
             'caption' => 'More #sourdough proofing overnight',
             'metrics' => [
@@ -62,8 +62,10 @@ class CompetitorInsightsBuilderTest extends TestCase
         $this->assertSame(1000.0, $insights['engagement']['avg_views']);
         $this->assertSame(75.0, $insights['engagement']['avg_likes']);
         $this->assertSame(9.0, $insights['engagement']['avg_rate']);
-        $this->assertSame('reel', $insights['format_mix'][0]['type']);
-        $this->assertSame(2, $insights['format_mix'][0]['count']);
+        $this->assertEqualsCanonicalizing(
+            ['image', 'reel'],
+            array_column($insights['format_mix'], 'type'),
+        );
         $this->assertSame('sourdough', $insights['hashtags'][0]['term']);
         $this->assertSame(2, $insights['hashtags'][0]['count']);
         $this->assertNotEmpty($insights['keywords']);

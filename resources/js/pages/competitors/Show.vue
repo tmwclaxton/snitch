@@ -343,14 +343,14 @@ function askRemove(): void {
                                 Sync in progress
                             </p>
                             <p class="mt-0.5 text-xs text-snitch-ink/65">
-                                Pulling recent reels. This page updates when the run finishes.
+                                Pulling recent posts. This page updates when the run finishes.
                             </p>
                         </div>
                     </div>
                 </div>
 
                 <div class="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-sm text-snitch-ink/60">
-                    <p>{{ account.posts_count ?? postsList.length }} reels tracked</p>
+                    <p>{{ account.posts_count ?? postsList.length }} posts tracked</p>
                     <p v-if="isSyncing">Last synced: in progress</p>
                     <p v-else-if="lastSyncedLabel">{{ lastSyncedLabel }}</p>
                 </div>
@@ -513,8 +513,8 @@ function askRemove(): void {
                     <p class="snitch-display mt-3 text-xl">
                         {{
                             isSyncing
-                                ? 'Syncing reels…'
-                                : 'No reels yet'
+                                ? 'Syncing posts…'
+                                : 'No posts yet'
                         }}
                     </p>
                     <p class="mt-2 text-sm text-snitch-ink/65">

@@ -174,21 +174,23 @@ class InstagramAdapter extends AbstractPlatformAdapter
             $url = 'https://www.instagram.com/reel/'.$url.'/';
         }
 
-        $mediaUrl = $this->firstVideoUrl(
+        $videoUrl = $this->firstVideoUrl(
             $item['videoUrl'] ?? null,
             $item['video']['url'] ?? null,
         );
-
-        if ($mediaUrl === null) {
-            return null;
-        }
+        $stillUrl = $this->firstStillUrl(
+            $item['displayUrl'] ?? null,
+            $item['display_url'] ?? null,
+            $item['image'] ?? null,
+            $item['images'][0] ?? null,
+        );
 
         $hint = (string) ($item['type'] ?? $item['productType'] ?? '');
         if (str_contains(strtolower($url), '/reel')) {
             $hint = 'reel';
         }
 
-        $type = $this->inferPostType($hint, $mediaUrl);
+        $type = $this->inferPostType($hint, $videoUrl ?? $stillUrl);
 
         if ($type === PostType::Video->value && (
             str_contains(strtolower($hint), 'clips')
@@ -197,7 +199,11 @@ class InstagramAdapter extends AbstractPlatformAdapter
             $type = PostType::Reel->value;
         }
 
-        if (! $this->isImportableReelType($type, $mediaUrl)) {
+        $mediaUrl = in_array($type, PostType::analyzableValues(), true)
+            ? $videoUrl
+            : ($stillUrl ?? $videoUrl);
+
+        if ($mediaUrl === null) {
             return null;
         }
 
