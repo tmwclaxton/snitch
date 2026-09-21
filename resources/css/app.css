@@ -840,7 +840,7 @@
 
     @media (min-width: 1280px) {
         .snitch-dash-rail {
-            grid-template-columns: repeat(9, minmax(0, 1fr));
+            grid-template-columns: repeat(8, minmax(0, 1fr));
         }
     }
 

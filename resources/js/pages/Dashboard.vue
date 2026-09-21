@@ -2,13 +2,11 @@
 import { Head, Link } from '@inertiajs/vue3';
 import {
     Clapperboard,
-    Hourglass,
     Trophy,
     Users,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Component } from 'vue';
-import { index as backlog } from '@/actions/App/Http/Controllers/BacklogController';
 import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feed, show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import { index as winners } from '@/actions/App/Http/Controllers/WinnerController';
@@ -204,21 +202,6 @@ const statCards = computed(() => [
         href: winners.url(),
         hint: 'Cleared your rules',
         icon: Trophy as Component,
-    },
-    {
-        label: 'Backlog',
-        value: props.stats.analysis_backlog,
-        href:
-            props.stats.analysis_backlog > 0
-                ? backlog.url()
-                : props.stats.analysis_failed > 0
-                  ? backlog.url({ query: { filter: 'failed' } })
-                  : backlog.url(),
-        hint:
-            props.stats.analysis_failed > 0
-                ? `${props.stats.analysis_failed} failed`
-                : 'Awaiting analysis',
-        icon: Hourglass as Component,
     },
 ]);
 
