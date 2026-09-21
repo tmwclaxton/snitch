@@ -14,6 +14,8 @@ class CompetitorInsightsBuilder
     public const TERM_LIMIT = 12;
 
     /**
+     * Function words and caption filler. Keywords should be topic nouns, not glue.
+     *
      * @var list<string>
      */
     private const STOPWORDS = [
@@ -22,7 +24,27 @@ class CompetitorInsightsBuilder
         'like', 'get', 'got', 'can', 'will', 'all', 'new', 'now', 'how', 'why',
         'what', 'when', 'who', 'its', 'it', 'they', 'them', 'their', 'about',
         'into', 'over', 'after', 'more', 'also', 'than', 'then', 'too', 'via',
-        'http', 'https', 'www', 'com',
+        'http', 'https', 'www', 'com', 'these', 'those', 'there', 'here', 'should',
+        'would', 'could', 'shall', 'might', 'must', 'dont', 'donot', 'does', 'doesnt',
+        'did', 'didnt', 'cant', 'wont', 'isnt', 'arent', 'wasnt', 'werent', 'youre',
+        'theyre', 'weve', 'ive', 'ill', 'theyll', 'lets', 'been', 'being', 'some',
+        'any', 'each', 'every', 'very', 'really', 'only', 'even', 'still', 'back',
+        'make', 'made', 'take', 'took', 'come', 'came', 'going', 'wanna', 'gonna',
+        'yeah', 'yes', 'nope', 'okay', 'ok', 'hey', 'hi', 'hello', 'please', 'thank',
+        'thanks', 'much', 'many', 'most', 'such', 'into', 'onto', 'off', 'down',
+        'up', 'out', 'own', 'same', 'other', 'another', 'because', 'while', 'where',
+        'which', 'whom', 'whose', 'than', 'then', 'once', 'again', 'ever', 'never',
+        'always', 'today', 'tonight', 'tomorrow', 'yesterday', 'week', 'month',
+        'year', 'day', 'time', 'thing', 'things', 'stuff', 'someone', 'something',
+        'everyone', 'everything', 'anyone', 'anything', 'nothing', 'start', 'started',
+        'starts', 'say', 'says', 'said', 'tell', 'told', 'talk', 'talking', 'know',
+        'knows', 'think', 'thinks', 'look', 'looks', 'see', 'seen', 'want', 'wants',
+        'need', 'needs', 'use', 'used', 'using', 'try', 'keep', 'let', 'put', 'give',
+        'gave', 'got', 'getting', 'one', 'two', 'first', 'last', 'next', 'best',
+        'good', 'great', 'really', 'literally', 'actually', 'basically', 'words',
+        'word', 'caption', 'link', 'bio', 'swipe', 'comment', 'comments', 'like',
+        'likes', 'share', 'shares', 'follow', 'follows', 'video', 'reel', 'reels',
+        'post', 'posts',
     ];
 
     public function __construct(private DashboardActivityBuilder $activity) {}
@@ -199,12 +221,12 @@ class CompetitorInsightsBuilder
             $stripped = preg_replace('/#([\p{L}\p{N}_]+)/u', ' ', $stripped) ?? $stripped;
             $stripped = preg_replace('/@[\p{L}\p{N}_.]+/u', ' ', $stripped) ?? $stripped;
 
-            if (preg_match_all('/[\p{L}\p{N}]{3,}/u', mb_strtolower($stripped), $matches) === 0) {
+            if (preg_match_all('/[\p{L}\p{N}]{4,}/u', mb_strtolower($stripped), $matches) === 0) {
                 continue;
             }
 
             foreach ($matches[0] as $word) {
-                if (in_array($word, self::STOPWORDS, true) || is_numeric($word)) {
+                if ($this->isNoiseKeyword($word)) {
                     continue;
                 }
 
@@ -213,6 +235,15 @@ class CompetitorInsightsBuilder
         }
 
         return $this->sortedTerms($counts);
+    }
+
+    private function isNoiseKeyword(string $word): bool
+    {
+        if (is_numeric($word) || mb_strlen($word) < 4) {
+            return true;
+        }
+
+        return in_array($word, self::STOPWORDS, true);
     }
 
     /**

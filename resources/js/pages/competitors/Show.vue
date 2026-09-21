@@ -427,36 +427,49 @@ function askRemove(): void {
                         <div class="snitch-scrap relative p-5 pt-6">
                             <WeeklyVolumeChart :weeks="insights?.activity.weekly ?? []" />
                         </div>
-                        <div class="snitch-scrap relative space-y-4 p-5 pt-6">
-                            <div>
-                                <p class="snitch-ink-label">Hashtags</p>
-                                <ul v-if="insights?.hashtags.length" class="mt-2 space-y-1 text-sm">
-                                    <li
-                                        v-for="row in insights.hashtags"
-                                        :key="row.term"
-                                        class="flex justify-between gap-3"
-                                    >
-                                        <span>#{{ row.term }}</span>
-                                        <span class="tabular-nums text-snitch-ink/55">{{ row.count }}</span>
-                                    </li>
-                                </ul>
-                                <p v-else class="mt-2 text-sm text-snitch-ink/60">No hashtags in recent captions.</p>
-                            </div>
-                            <div>
-                                <p class="snitch-ink-label">Keywords</p>
-                                <ul v-if="insights?.keywords.length" class="mt-2 space-y-1 text-sm">
-                                    <li
-                                        v-for="row in insights.keywords"
-                                        :key="row.term"
-                                        class="flex justify-between gap-3"
-                                    >
-                                        <span>{{ row.term }}</span>
-                                        <span class="tabular-nums text-snitch-ink/55">{{ row.count }}</span>
-                                    </li>
-                                </ul>
-                                <p v-else class="mt-2 text-sm text-snitch-ink/60">No caption keywords yet.</p>
-                            </div>
+                    </div>
+
+                    <div class="snitch-scrap relative mt-4 p-4 pt-5">
+                        <p class="snitch-ink-label">Hashtags</p>
+                        <div
+                            v-if="insights?.hashtags.length"
+                            class="mt-2 flex flex-wrap gap-1.5"
+                        >
+                            <span
+                                v-for="row in insights.hashtags"
+                                :key="`hash-${row.term}`"
+                                class="snitch-glance-tag"
+                            >
+                                #{{ row.term }}
+                                <span class="tabular-nums text-snitch-ink/50">{{ row.count }}</span>
+                            </span>
                         </div>
+                        <p
+                            v-else
+                            class="mt-2 text-sm text-snitch-ink/60"
+                        >
+                            No hashtags in recent captions.
+                        </p>
+                        <p class="snitch-ink-label mt-4">Keywords</p>
+                        <div
+                            v-if="insights?.keywords.length"
+                            class="mt-2 flex flex-wrap gap-1.5"
+                        >
+                            <span
+                                v-for="row in insights.keywords"
+                                :key="`key-${row.term}`"
+                                class="snitch-glance-tag"
+                            >
+                                {{ row.term }}
+                                <span class="tabular-nums text-snitch-ink/50">{{ row.count }}</span>
+                            </span>
+                        </div>
+                        <p
+                            v-else
+                            class="mt-2 text-sm text-snitch-ink/60"
+                        >
+                            No caption keywords yet.
+                        </p>
                     </div>
                 </template>
             </section>

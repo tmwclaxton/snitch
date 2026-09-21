@@ -36,7 +36,7 @@ class CompetitorInsightsBuilderTest extends TestCase
         Post::factory()->forAccount($account)->create([
             'type' => PostType::Image,
             'posted_at' => now()->subHours(6),
-            'caption' => 'More #sourdough proofing overnight',
+            'caption' => 'These should start today and say more #sourdough proofing overnight',
             'metrics' => [
                 'views' => 1000,
                 'likes' => 50,
@@ -70,7 +70,13 @@ class CompetitorInsightsBuilderTest extends TestCase
         $this->assertSame(2, $insights['hashtags'][0]['count']);
         $this->assertNotEmpty($insights['keywords']);
         $this->assertContains('crusty', array_column($insights['keywords'], 'term'));
+        $this->assertContains('proofing', array_column($insights['keywords'], 'term'));
         $this->assertNotContains('bakery', array_column($insights['keywords'], 'term'));
+        $this->assertNotContains('should', array_column($insights['keywords'], 'term'));
+        $this->assertNotContains('these', array_column($insights['keywords'], 'term'));
+        $this->assertNotContains('today', array_column($insights['keywords'], 'term'));
+        $this->assertNotContains('start', array_column($insights['keywords'], 'term'));
+        $this->assertNotContains('say', array_column($insights['keywords'], 'term'));
         $this->assertCount(DashboardActivityBuilder::HEATMAP_WEEKS * 7, $insights['activity']['heatmap']);
     }
 }

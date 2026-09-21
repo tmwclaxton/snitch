@@ -53,6 +53,8 @@ class CompetitorInsightsTest extends TestCase
         $this->assertIsString($showVue);
         $this->assertIsString($indexVue);
         $this->assertStringContainsString('How they post', $showVue);
+        $this->assertStringContainsString('snitch-glance-tag', $showVue);
+        $this->assertStringNotContainsString('space-y-1 text-sm', $showVue);
         $this->assertStringContainsString('formatFollowers(account.followers)', $showVue);
         $this->assertStringContainsString('Followers', $indexVue);
     }
