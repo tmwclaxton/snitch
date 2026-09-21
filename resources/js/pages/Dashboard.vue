@@ -313,9 +313,8 @@ function accountHref(post: RecentPost): string | null {
             <section class="mt-5">
                 <div class="flex flex-wrap items-end justify-between gap-3">
                     <div>
-                        <p class="snitch-ink-label">Cadence</p>
-                        <h2 class="snitch-display mt-1 text-2xl text-snitch-ink">
-                            Snitch posting
+                        <h2 class="snitch-display text-2xl text-snitch-ink">
+                            Competitor Content Cadence
                         </h2>
                     </div>
                     <p class="text-xs text-snitch-ink/55">
