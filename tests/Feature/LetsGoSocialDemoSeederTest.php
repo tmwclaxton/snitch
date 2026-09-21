@@ -2,21 +2,24 @@
 
 namespace Tests\Feature;
 
-use App\Enums\PostType;
+use App\Jobs\SyncTrackedAccountJob;
 use App\Models\BrandProfile;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use Database\Seeders\LetsGoSocialDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class LetsGoSocialDemoSeederTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_it_resets_the_owner_brand_and_seeds_mixed_post_types(): void
+    public function test_it_resets_the_owner_brand_and_queues_real_instagram_syncs(): void
     {
+        Queue::fake([SyncTrackedAccountJob::class]);
+
         $user = User::factory()->create([
             'email' => LetsGoSocialDemoSeeder::OWNER_EMAIL,
         ]);
@@ -35,18 +38,12 @@ class LetsGoSocialDemoSeederTest extends TestCase
         $this->assertSame('@letsgosocialuk', $user->brandProfile?->own_handles['instagram'] ?? null);
         $this->assertSame(3, $user->trackedAccounts()->count());
         $this->assertFalse($user->trackedAccounts()->where('handle', 'brex')->exists());
+        $this->assertSame(0, Post::query()->where('external_id', 'like', 'demo-%')->count());
 
-        $types = Post::query()
-            ->whereIn('social_account_id', $user->trackedAccounts()->select('social_account_id'))
-            ->pluck('type')
-            ->map(fn ($type) => $type instanceof PostType ? $type->value : (string) $type)
-            ->unique()
-            ->sort()
-            ->values()
-            ->all();
-
-        $this->assertContains(PostType::Reel->value, $types);
-        $this->assertContains(PostType::Image->value, $types);
-        $this->assertContains(PostType::Carousel->value, $types);
+        Queue::assertPushed(SyncTrackedAccountJob::class, 3);
+        Queue::assertPushed(
+            SyncTrackedAccountJob::class,
+            fn (SyncTrackedAccountJob $job): bool => $job->force === true,
+        );
     }
 }

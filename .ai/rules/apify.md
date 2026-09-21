@@ -21,6 +21,9 @@ Apify's first finished-run payload often has `usageTotalUsd: 0` before costs set
 ## Empty Apify sync falls back to TikHub
 `SyncTrackedAccountJob` retries `listRecentPosts` via TikHub when Apify returns `[]` and a TikHub adapter exists for that platform. Apify can finish with an empty dataset and `$0` usage without tripping the monthly cap - without this fallback, sync marks success and advances `last_synced_at` while backlog stays empty. Manual/`force` sync always uses the full `recency_days` window (not incremental `last_synced_at - 1 day`) so a prior empty scrape cannot hide real posts.
 
+## TikHub scrape failure or empty list falls back to Apify
+When the gate routes Instagram (or another TikHub platform) to TikHub and resolve/list throws or returns `[]`, retry with the Apify adapter. Cap `0` must not leave sync empty or failed when TikHub cannot actually serve that handle. Charge whichever client ran.
+
 ## Product scope is reel and short-video only
 Skip images, carousels, text-only, and items without a resolvable video media_url on sync. Prefer PostType::Reel for short video. YouTube imports Shorts only (skip long-form). Feed/analysis/winners operate on reel-like types only.
 

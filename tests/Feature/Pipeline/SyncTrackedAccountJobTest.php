@@ -412,6 +412,80 @@ class SyncTrackedAccountJobTest extends TestCase
         Queue::assertNotPushed(AnalyzePostJob::class);
     }
 
+    public function test_tikhub_failure_falls_back_to_apify_for_instagram(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        config([
+            'snitch.apify.monthly_cap_usd' => 0,
+            'snitch.tikhub.api_key' => 'tikhub-key',
+            'snitch.tikhub.base_url' => 'https://api.tikhub.test',
+            'snitch.sync.recency_days' => 30,
+            'snitch.sync.posts_limit' => 3,
+        ]);
+
+        $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'socialchain',
+            'url' => 'https://instagram.com/socialchain',
+            'display_name' => 'Social Chain',
+        ]);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
+        $client->shouldReceive('runActor')->andReturnUsing(function (string $actorId, array $input): array {
+            unset($actorId);
+
+            if (($input['resultsType'] ?? '') === 'details') {
+                return [[
+                    'username' => 'socialchain',
+                    'id' => 'ig_socialchain',
+                    'fullName' => 'Social Chain',
+                    'profilePicUrl' => 'https://cdn.example.com/avatar.jpg',
+                    'followersCount' => 186400,
+                ]];
+            }
+
+            return [[
+                'id' => 'APIFY1',
+                'shortCode' => 'APIFY1',
+                'url' => 'https://www.instagram.com/reel/APIFY1/',
+                'timestamp' => now()->subDay()->toIso8601String(),
+                'type' => 'reel',
+                'caption' => 'From Apify',
+                'videoUrl' => 'https://cdn.example.com/apify.mp4',
+                'likesCount' => 12,
+                'commentsCount' => 2,
+                'videoViewCount' => 90,
+            ]];
+        });
+        $this->app->instance(ApifyClient::class, $client);
+
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.tikhub.test/*' => Http::response(['detail' => ['code' => 400, 'message' => 'Request failed.']], 400),
+        ]);
+
+        (new SyncTrackedAccountJob($account->id, force: true))->handle(
+            app(PlatformAdapterManager::class),
+            app(SnitchAnalyticsService::class),
+            app(VendorUsageCharger::class),
+        );
+
+        $account->refresh();
+        $this->assertSame('success', $account->last_sync_status);
+        $this->assertSame(1, Post::query()->count());
+        $this->assertSame('APIFY1', Post::query()->value('external_id'));
+        Queue::assertPushed(AnalyzePostJob::class);
+
+        config([
+            'snitch.apify.monthly_cap_usd' => 49,
+            'snitch.tikhub.api_key' => null,
+        ]);
+    }
+
     public function test_empty_apify_result_falls_back_to_tikhub_for_instagram(): void
     {
         Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);

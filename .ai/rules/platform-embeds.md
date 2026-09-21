@@ -15,4 +15,4 @@ Official Instagram/TikTok/Facebook iframes fight the print frames and rate-limit
 - Instagram sync imports stills and carousels as well as reels. Feed and Snitch Show list every imported type. AnalyzePostJob stays reel/video only.
 - Proof sheets use `.snitch-contact-sheet-proof` (`auto-fill` 8.5-10.75rem cards). Do not stretch feed / snitch frames with `grid-cols-*` / `1fr` on the wide canvas.
 - Dashboard Latest frames and Explore use `.snitch-contact-sheet-proof-fill` (`auto-fit` + `1fr`, min 12rem) so the board spans the canvas instead of a left-aligned strip. Keep 3/4 frames.
-- `FeedContactCell` uses a stretched hit `Link` to the post show page. Only `Open on {platform}` and the `@handle` profile `Link` sit above it. Do not wrap the card in a second `<a>`.
+- `FeedContactCell` and Winners tear rows use a stretched hit `Link` to the post show page. Only `Open on {platform}` and the `@handle` profile `Link` sit above it. Do not wrap remake markdown (or the polaroid) in a second `<a>`.

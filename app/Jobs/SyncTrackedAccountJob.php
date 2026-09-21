@@ -9,6 +9,7 @@ use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Models\Post;
 use App\Models\TrackedAccount;
+use App\Services\Apify\Contracts\PlatformAdapter;
 use App\Services\Apify\PlatformAdapterManager;
 use App\Services\Billing\VendorUsageCharger;
 use App\Services\SnitchAnalyticsService;
@@ -97,25 +98,43 @@ class SyncTrackedAccountJob implements ShouldQueue
         try {
             $adapter = $adapters->for($account->platform);
 
-            if ($this->shouldResolveProfile($account)) {
-                $profile = $adapter->resolveProfile($account->handle);
-                $followers = $this->followersFromProfile($profile);
-
-                $account->fill([
-                    'url' => $profile['url'] ?: $account->url,
-                    'external_id' => $profile['external_id'] ?? $account->external_id,
-                    'avatar' => $profile['avatar'] ?? $account->avatar,
-                    'display_name' => $profile['display_name'] ?? $account->display_name,
-                    ...($followers !== null ? ['followers' => $followers] : []),
-                ]);
-            }
-
             // Manual / force sync uses the full recency window. Incremental since
             // would skip real posts after an earlier empty scrape advanced last_synced_at.
             $since = $this->force
                 ? CarbonImmutable::now()->subDays($recencyDays)
                 : $this->syncSince($account, $recencyDays);
-            $posts = $adapter->listRecentPosts($account->handle, $limit, $since);
+
+            try {
+                $this->applyResolvedProfile($adapter, $account);
+                $posts = $adapter->listRecentPosts($account->handle, $limit, $since);
+            } catch (Throwable $scrapeFailure) {
+                if ($scrapeDriver !== 'tikhub') {
+                    throw $scrapeFailure;
+                }
+
+                Log::info('SyncTrackedAccountJob falling back to Apify after TikHub failure', [
+                    'tracked_account_id' => $this->trackedAccountId,
+                    'platform' => $account->platform->value,
+                    'error' => SafeExceptionMessage::forUsers($scrapeFailure, 'TikHub scrape failed.'),
+                ]);
+
+                $adapter = $adapters->apifyAdapter($account->platform);
+                $scrapeDriver = 'apify';
+                $this->applyResolvedProfile($adapter, $account);
+                $posts = $adapter->listRecentPosts($account->handle, $limit, $since);
+            }
+
+            if ($posts === [] && $scrapeDriver === 'tikhub') {
+                Log::info('SyncTrackedAccountJob falling back to Apify after empty TikHub result', [
+                    'tracked_account_id' => $this->trackedAccountId,
+                    'platform' => $account->platform->value,
+                ]);
+
+                $adapter = $adapters->apifyAdapter($account->platform);
+                $scrapeDriver = 'apify';
+                $this->applyResolvedProfile($adapter, $account);
+                $posts = $adapter->listRecentPosts($account->handle, $limit, $since);
+            }
 
             // Apify sometimes finishes with an empty dataset (and $0 usage) while
             // TikHub still has reels. Fall back so sync does not "succeed" with nothing.
@@ -285,6 +304,24 @@ class SyncTrackedAccountJob implements ShouldQueue
             PostType::Image->value,
             PostType::Carousel->value,
         ];
+    }
+
+    private function applyResolvedProfile(PlatformAdapter $adapter, TrackedAccount $account): void
+    {
+        if (! $this->shouldResolveProfile($account)) {
+            return;
+        }
+
+        $profile = $adapter->resolveProfile($account->handle);
+        $followers = $this->followersFromProfile($profile);
+
+        $account->fill([
+            'url' => $profile['url'] ?: $account->url,
+            'external_id' => $profile['external_id'] ?? $account->external_id,
+            'avatar' => $profile['avatar'] ?? $account->avatar,
+            'display_name' => $profile['display_name'] ?? $account->display_name,
+            ...($followers !== null ? ['followers' => $followers] : []),
+        ]);
     }
 
     private function shouldResolveProfile(TrackedAccount $account): bool

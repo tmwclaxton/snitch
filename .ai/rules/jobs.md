@@ -26,6 +26,9 @@ Firecrawl + Apify verify can exceed a short worker window, and deploys can SIGTE
 ## SyncTrackedAccountJob respects weekly min interval for ops/force gates
 Unless force=true, the job no-ops when TrackedAccount::isDueForSync() is false (successful sync within snitch.sync.min_interval_days). Manual UI and MCP sync always dispatch with force=true. Do not register snitch:sync-accounts on the scheduler - agents/users kick sync intentionally. The artisan command remains for ops only and still filters by isDueForSync(). Product UI shows Sync status (Manual / last synced date / Syncing), never a next-auto-sync countdown.
 
+## TikHub failure or empty list falls back to Apify
+If `driverFor` is tikhub and resolveProfile / listRecentPosts throws or returns `[]`, SyncTrackedAccountJob retries those calls on `apifyAdapter`. Empty Apify `[]` still falls back to TikHub.
+
 ## Sync is resolve-sparing and new-posts-only
 Skip resolveProfile unless force or profile fields are incomplete. Import only new external_ids; soft-retry Failed analysis for known posts without re-scraping. TikTok hydrateMediaUrls (paid download) runs only for new candidates.
 

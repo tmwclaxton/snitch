@@ -1939,9 +1939,25 @@
     }
 
     .snitch-tear-row {
+        position: relative;
         display: grid;
         gap: 1rem;
         align-items: start;
+    }
+
+    .snitch-tear-row-hit {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+    }
+
+    .snitch-tear-row .snitch-platform-embed-open,
+    .snitch-tear-row .snitch-glance-account-link:not(.snitch-glance-account-link--static) {
+        z-index: 3;
+    }
+
+    .snitch-tear-row .snitch-glance-account-link:not(.snitch-glance-account-link--static) {
+        position: relative;
     }
 
     .snitch-tear-row-media {

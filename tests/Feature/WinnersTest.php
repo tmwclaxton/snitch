@@ -25,6 +25,19 @@ class WinnersTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_winners_tear_rows_use_a_feed_hit_link(): void
+    {
+        $source = file_get_contents(resource_path('js/pages/winners/Index.vue'));
+
+        $this->assertIsString($source);
+        $this->assertStringContainsString('snitch-tear-row-hit', $source);
+        $this->assertStringContainsString('feedShow.url(winner.post.id)', $source);
+        $this->assertStringNotContainsString(
+            'class="snitch-tear-row-body relative z-10 block space-y-2.5"',
+            $source,
+        );
+    }
+
     public function test_winners_page_only_shows_matching_posts(): void
     {
         config([

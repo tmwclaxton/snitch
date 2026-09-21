@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { LoaderCircle, RefreshCw, SlidersHorizontal, Trophy } from '@lucide/vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import {
     rescore,
@@ -49,7 +50,7 @@ type Winner = {
         platform: string;
         metrics?: PostMetrics | null;
         embed?: EmbedConfig | null;
-        tracked_account?: { handle: string };
+        tracked_account?: { id?: number; handle: string };
         analysis?: {
             hook: string | null;
             concept?: string | null;
@@ -294,8 +295,14 @@ onUnmounted(() => {
                     <article
                         v-for="(winner, index) in winnersList"
                         :key="winner.id"
-                        class="snitch-tear-row relative border-b border-dashed border-snitch-ink/15 pb-5 last:border-b-0 last:pb-0 sm:pb-6"
+                        class="snitch-tear-row border-b border-dashed border-snitch-ink/15 pb-5 last:border-b-0 last:pb-0 sm:pb-6"
                     >
+                        <Link
+                            :href="feedShow.url(winner.post.id)"
+                            class="snitch-tear-row-hit"
+                        >
+                            <span class="sr-only">Open winner on Feed</span>
+                        </Link>
                         <div class="snitch-tear-row-media">
                             <div
                                 class="snitch-polaroid relative w-full"
@@ -321,13 +328,19 @@ onUnmounted(() => {
                             </div>
                         </div>
 
-                        <Link
-                            :href="feedShow.url(winner.post.id)"
-                            class="snitch-tear-row-body relative z-10 block space-y-2.5"
-                        >
+                        <div class="snitch-tear-row-body space-y-2.5">
                             <p class="text-xs uppercase tracking-wide text-snitch-ink/50">
-                                @{{ winner.post.tracked_account?.handle }} ·
-                                {{ platformLabel(winner.post.platform) }}
+                                <Link
+                                    v-if="winner.post.tracked_account?.id"
+                                    :href="competitorShow.url(winner.post.tracked_account.id)"
+                                    class="snitch-glance-account-link"
+                                >
+                                    @{{ winner.post.tracked_account.handle }}
+                                </Link>
+                                <span v-else-if="winner.post.tracked_account">
+                                    @{{ winner.post.tracked_account.handle }}
+                                </span>
+                                <span> · {{ platformLabel(winner.post.platform) }}</span>
                             </p>
                             <div class="snitch-topic-row">
                                 <span
@@ -369,7 +382,7 @@ onUnmounted(() => {
                                     :source="winner.how_to_copy"
                                 />
                             </div>
-                        </Link>
+                        </div>
                     </article>
                 </div>
 
