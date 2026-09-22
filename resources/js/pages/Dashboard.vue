@@ -373,7 +373,7 @@ function onFramesResize(): void {
                         />
                     </span>
                     <span class="snitch-display text-2xl tabular-nums">{{ card.value }}</span>
-                    <span class="text-[11px] leading-snug text-snitch-ink/55">{{ card.hint }}</span>
+                    <span class="snitch-dash-rail-hint">{{ card.hint }}</span>
                 </Link>
                 <div
                     v-if="insights"
@@ -404,7 +404,7 @@ function onFramesResize(): void {
                     <span class="snitch-display text-2xl tabular-nums">{{ formatFollowers(insights.growth.followers) }}</span>
                     <span
                         v-if="insights.growth.week_delta != null"
-                        class="text-[11px] leading-snug text-snitch-ink/55"
+                        class="snitch-dash-rail-hint"
                     >
                         <span class="tabular-nums">{{ formatDelta(insights.growth.week_delta) }}</span>
                         this week
@@ -417,14 +417,14 @@ function onFramesResize(): void {
                     </span>
                     <span
                         v-else-if="insights.growth.since_first_delta != null"
-                        class="text-[11px] leading-snug text-snitch-ink/55"
+                        class="snitch-dash-rail-hint"
                     >
                         <span class="tabular-nums">{{ formatDelta(insights.growth.since_first_delta) }}</span>
                         since first reading
                     </span>
                     <span
                         v-else
-                        class="text-[11px] leading-snug text-snitch-ink/55"
+                        class="snitch-dash-rail-hint"
                     >No earlier count yet</span>
                 </div>
                 <div
@@ -437,10 +437,12 @@ function onFramesResize(): void {
                         <span class="text-base text-snitch-ink/45">/</span>
                         {{ insights.paid_vs_organic.organic }}
                     </span>
-                    <span class="text-[11px] leading-snug text-snitch-ink/55">
-                        Sponsored / organic
+                    <span class="snitch-dash-rail-hint">
                         <template v-if="insights.paid_vs_organic.running_ads > 0">
-                            · {{ insights.paid_vs_organic.running_ads }} library ads
+                            {{ insights.paid_vs_organic.running_ads }} library ads
+                        </template>
+                        <template v-else>
+                            Sponsored / organic
                         </template>
                     </span>
                 </div>
@@ -450,7 +452,7 @@ function onFramesResize(): void {
                 >
                     <span class="snitch-ink-label">Posts with an ask</span>
                     <span class="snitch-display text-2xl tabular-nums">{{ insights.cta_clicks.posts_with_cta }}</span>
-                    <span class="text-[11px] leading-snug text-snitch-ink/55">In the caption</span>
+                    <span class="snitch-dash-rail-hint">In the caption</span>
                 </div>
             </div>
 

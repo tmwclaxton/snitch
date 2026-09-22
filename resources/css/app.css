@@ -815,7 +815,8 @@
 
     .snitch-dash-rail {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        /* 3 cols so 3 / 6 / 9 cells always fill complete rows. */
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         overflow: hidden;
         border: 1px solid color-mix(in oklab, var(--snitch-ink) 14%, transparent);
         background: color-mix(in oklab, var(--snitch-lift) 42%, var(--snitch-paper));
@@ -834,19 +835,30 @@
         transition: background 160ms ease;
     }
 
+    .snitch-dash-rail-hint {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.6875rem;
+        line-height: 1.25;
+        color: color-mix(in oklab, var(--snitch-ink) 55%, transparent);
+    }
+
     a.snitch-dash-rail-item:hover,
     a.snitch-dash-rail-item:focus-visible {
         background: color-mix(in oklab, var(--snitch-spot) 28%, var(--snitch-paper));
     }
 
-    @media (min-width: 640px) {
-        .snitch-dash-rail {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-    }
-
+    /*
+     * Full dashboard rail is 9 cells. Prefer one filled row at xl - never
+     * 8+1 with an orphan "Posts with an ask" on the second line.
+     */
     @media (min-width: 1280px) {
-        .snitch-dash-rail {
+        .snitch-dash-rail:has(> :nth-child(9)) {
+            grid-template-columns: repeat(9, minmax(0, 1fr));
+        }
+
+        .snitch-dash-rail:has(> :nth-child(8)):not(:has(> :nth-child(9))) {
             grid-template-columns: repeat(8, minmax(0, 1fr));
         }
     }

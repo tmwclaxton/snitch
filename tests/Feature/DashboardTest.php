@@ -257,6 +257,22 @@ class DashboardTest extends TestCase
             $css,
             'Face pile must not wrap on hover or expand/collapse flickers under the cursor',
         );
+        $this->assertStringContainsString('snitch-dash-rail-hint', $dashboard);
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-dash-rail\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s',
+            $css,
+            'Dash rail base must use 3 columns so rows fill evenly',
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/@media\s*\(min-width:\s*1280px\)\s*\{\s*\.snitch-dash-rail\s*\{[^}]*repeat\(8,/s',
+            $css,
+            'Dash rail must not force 8 columns (orphans the 9th cell)',
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-dash-rail:has\(>\s*:nth-child\(9\)\)\s*\{[^}]*repeat\(9,/s',
+            $css,
+            'Full 9-cell dash rail must use one 9-column row at xl',
+        );
     }
 
     public function test_dashboard_frames_query_returns_a_full_set_of_recent_posts(): void
