@@ -111,11 +111,14 @@ class CompetitorController extends Controller
 
         $trackedAccount->loadCount('posts');
         $trackedAccount->setAttribute('in_quota', true);
+        $postsLimit = $this->recentPostsLimit($request);
 
         return Inertia::render('competitors/Show', [
             'account' => $trackedAccount,
             'insights' => Inertia::defer(fn () => $this->insights->forAccount($user, $trackedAccount), 'insights'),
-            'posts' => Inertia::defer(fn () => $this->competitorPosts($trackedAccount, $user)),
+            'posts' => Inertia::defer(fn () => $this->competitorPosts($trackedAccount, $user, $postsLimit)),
+            'posts_limit' => $postsLimit,
+            'posts_has_more' => $this->competitorPostsHasMore($trackedAccount, $postsLimit),
             'winners' => Inertia::defer(fn () => $this->competitorWinners($trackedAccount, $user), 'winners'),
             'syncDefaults' => SyncOptions::inertiaDefaults(),
         ]);
@@ -553,9 +556,17 @@ class CompetitorController extends Controller
     }
 
     /**
+     * How many recent posts to show on the account page. Load more bumps this.
+     */
+    private function recentPostsLimit(Request $request): int
+    {
+        return min(96, max(12, $request->integer('posts_limit', 12)));
+    }
+
+    /**
      * @return Collection<int, Post>
      */
-    private function competitorPosts(TrackedAccount $trackedAccount, User $user): Collection
+    private function competitorPosts(TrackedAccount $trackedAccount, User $user, int $limit): Collection
     {
         return Post::query()
             ->where('social_account_id', $trackedAccount->social_account_id)
@@ -565,7 +576,7 @@ class CompetitorController extends Controller
                 'winnerInsight' => fn ($q) => $q->where('user_id', $user->id),
             ])
             ->latest('posted_at')
-            ->limit(24)
+            ->limit($limit)
             ->get()
             ->map(function (Post $post) use ($user): Post {
                 PostAccountPresenter::attachForUser([$post], $user);
@@ -576,6 +587,17 @@ class CompetitorController extends Controller
 
                 return $post;
             });
+    }
+
+    private function competitorPostsHasMore(TrackedAccount $trackedAccount, int $limit): bool
+    {
+        if ($trackedAccount->social_account_id === null) {
+            return false;
+        }
+
+        return Post::query()
+            ->where('social_account_id', $trackedAccount->social_account_id)
+            ->count() > $limit;
     }
 
     /**

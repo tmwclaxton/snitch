@@ -13,6 +13,7 @@ import { computed, onUnmounted, ref, watch } from 'vue';
 import { index as adsIndex } from '@/actions/App/Http/Controllers/AdsController';
 import {
     index as competitorsIndex,
+    show as competitorShow,
 } from '@/actions/App/Http/Controllers/CompetitorController';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import CtaLanguage from '@/components/CtaLanguage.vue';
@@ -137,6 +138,8 @@ const props = defineProps<{
     account: Account;
     insights?: Insights | null;
     posts?: Post[] | null;
+    posts_limit: number;
+    posts_has_more: boolean;
     winners?: Winner[] | null;
     syncDefaults?: SyncDefaults;
 }>();
@@ -144,6 +147,9 @@ const props = defineProps<{
 const postsList = computed<Post[]>(() => props.posts ?? []);
 const winnersList = computed<Winner[]>(() => props.winners ?? []);
 const postsLoaded = computed(() => Array.isArray(props.posts));
+const loadingMorePosts = ref(false);
+const POSTS_PAGE_SIZE = 12;
+const POSTS_LIMIT_MAX = 96;
 const recentSheetColumns = computed(() => {
     const count = postsLoaded.value ? postsList.value.length : 6;
 
@@ -223,7 +229,7 @@ function ensureSyncPoll(): void {
 
     syncPollTimer = setInterval(() => {
         router.reload({
-            only: ['account', 'insights', 'posts', 'winners'],
+            only: ['account', 'insights', 'posts', 'posts_has_more', 'posts_limit', 'winners'],
             onFinish: () => {
                 if (props.account.last_sync_status !== 'running') {
                     syncRequested.value = false;
@@ -241,6 +247,34 @@ watch(isSyncing, () => {
 onUnmounted(() => {
     clearSyncPoll();
 });
+
+function loadMorePosts(): void {
+    if (loadingMorePosts.value || !props.posts_has_more) {
+        return;
+    }
+
+    const nextLimit = Math.min(POSTS_LIMIT_MAX, props.posts_limit + POSTS_PAGE_SIZE);
+
+    if (nextLimit <= props.posts_limit) {
+        return;
+    }
+
+    loadingMorePosts.value = true;
+
+    router.get(
+        competitorShow.url(props.account.id),
+        { posts_limit: nextLimit },
+        {
+            only: ['posts', 'posts_limit', 'posts_has_more'],
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+            onFinish: () => {
+                loadingMorePosts.value = false;
+            },
+        },
+    );
+}
 
 const page = usePage();
 const canRunBillable = computed(
@@ -677,6 +711,27 @@ function askRemove(): void {
                                 : 'Sync this account to pull recent short-form posts.'
                         }}
                     </p>
+                </div>
+                <div
+                    v-if="postsLoaded && posts_has_more"
+                    class="mt-4 flex justify-center"
+                >
+                    <button
+                        type="button"
+                        class="snitch-btn snitch-btn-ghost px-4 py-2 text-sm"
+                        :disabled="loadingMorePosts"
+                        :aria-busy="loadingMorePosts"
+                        @click="loadMorePosts"
+                    >
+                        <LoaderCircle
+                            v-if="loadingMorePosts"
+                            class="relative z-10 size-3.5 shrink-0 animate-spin"
+                            aria-hidden="true"
+                        />
+                        <span class="relative z-10">
+                            {{ loadingMorePosts ? 'Loading…' : 'Load more posts' }}
+                        </span>
+                    </button>
                 </div>
             </section>
 

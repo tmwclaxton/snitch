@@ -47,6 +47,8 @@ class CompetitorShowTest extends TestCase
                 ->where('account.id', $account->id)
                 ->where('account.handle', 'rivalbakery')
                 ->where('account.last_sync_status', 'success')
+                ->where('posts_limit', 12)
+                ->where('posts_has_more', false)
                 ->missing('posts')
                 ->missing('winners')
                 ->loadDeferredProps('default', fn (Assert $page) => $page
@@ -69,9 +71,52 @@ class CompetitorShowTest extends TestCase
         $this->assertStringContainsString('askRemove', $showVue);
         $this->assertStringContainsString('isSyncing', $showVue);
         $this->assertStringContainsString('Sync in progress', $showVue);
+        $this->assertStringContainsString('Load more posts', $showVue);
+        $this->assertStringContainsString('loadMorePosts', $showVue);
         $this->assertStringNotContainsString('confirm(`Remove', $showVue);
         $this->assertStringNotContainsString('Sync ok', $showVue);
         $this->assertStringNotContainsString('Not synced yet', $showVue);
+    }
+
+    public function test_recent_posts_can_load_more_via_posts_limit(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+
+        $ids = [];
+        for ($i = 0; $i < 15; $i++) {
+            $ids[] = Post::factory()->forAccount($account)->create([
+                'posted_at' => now()->subHours(15 - $i),
+            ])->id;
+        }
+
+        $newestFirst = array_reverse($ids);
+
+        $this->actingAs($user)
+            ->get(route('competitors.show', $account))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('posts_limit', 12)
+                ->where('posts_has_more', true)
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts', 12)
+                    ->where('posts.0.id', $newestFirst[0])
+                )
+            );
+
+        $this->actingAs($user)
+            ->get(route('competitors.show', ['trackedAccount' => $account, 'posts_limit' => 24]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('posts_limit', 24)
+                ->where('posts_has_more', false)
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->has('posts', 15)
+                    ->where('posts.0.id', $newestFirst[0])
+                    ->where('posts.14.id', $newestFirst[14])
+                )
+            );
     }
 
     public function test_profile_exposes_running_sync_status(): void
