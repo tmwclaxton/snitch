@@ -395,6 +395,15 @@ class PublicPagesTest extends TestCase
             $css,
             'Poster mascot must scale up on desktop',
         );
+        $this->assertMatchesRegularExpression(
+            '/max-w-6xl[\s\S]{0,80}snitch-hero-mobile-copy/',
+            $welcome,
+            'Hero copy must sit in the same max-w-6xl column as PublicNav logo',
+        );
+        $this->assertStringContainsString(
+            'mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-5 sm:px-8',
+            file_get_contents(resource_path('js/components/marketing/PublicNav.vue')) ?: '',
+        );
     }
 
     public function test_beta_hero_backdrop_waits_for_decode_before_reveal(): void

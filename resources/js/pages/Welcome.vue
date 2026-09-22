@@ -175,54 +175,56 @@ const steps = [
                 </div>
             </div>
 
-            <div class="snitch-hero-mobile-copy relative z-10 px-5 sm:px-8">
-                <p
-                    class="snitch-display snitch-hero-mobile-wordmark relative text-[clamp(3.2rem,15vw,4.75rem)] leading-[0.8] tracking-[-0.04em] text-snitch-ink md:text-[clamp(4.5rem,9vw,7rem)]"
-                >
-                    <span
-                        class="snitch-hero-wordmark-misreg pointer-events-none absolute inset-0 select-none"
-                        aria-hidden="true"
-                    >Snitch</span>
-                    <span class="relative">Snitch</span>
-                </p>
-                <h1
-                    class="snitch-display mt-3 max-w-[16rem] text-[1.15rem] leading-[1.25] tracking-[-0.012em] text-pretty text-snitch-ink md:mt-4 md:max-w-md md:text-[1.45rem] md:leading-[1.22]"
-                >
-                    See what competitors post. Remake what wins.
-                </h1>
-                <div
-                    class="snitch-hero-mobile-cta mt-5 flex flex-col items-stretch gap-2.5"
-                >
-                    <Link
-                        v-if="isAuthenticated"
-                        :href="dashboard()"
-                        class="snitch-btn snitch-btn-spot w-full justify-center"
+            <div class="relative z-10 mx-auto w-full max-w-6xl px-5 sm:px-8">
+                <div class="snitch-hero-mobile-copy">
+                    <p
+                        class="snitch-display snitch-hero-mobile-wordmark relative text-[clamp(3.2rem,15vw,4.75rem)] leading-[0.8] tracking-[-0.04em] text-snitch-ink md:text-[clamp(4.5rem,9vw,7rem)]"
                     >
-                        <span class="relative z-10 inline-flex items-center gap-2">
-                            <LayoutGrid class="size-3.5 shrink-0" aria-hidden="true" />
-                            Open dashboard
-                        </span>
-                    </Link>
-                    <template v-else>
+                        <span
+                            class="snitch-hero-wordmark-misreg pointer-events-none absolute inset-0 select-none"
+                            aria-hidden="true"
+                        >Snitch</span>
+                        <span class="relative">Snitch</span>
+                    </p>
+                    <h1
+                        class="snitch-display mt-3 max-w-[16rem] text-[1.15rem] leading-[1.25] tracking-[-0.012em] text-pretty text-snitch-ink md:mt-4 md:max-w-md md:text-[1.45rem] md:leading-[1.22]"
+                    >
+                        See what competitors post. Remake what wins.
+                    </h1>
+                    <div
+                        class="snitch-hero-mobile-cta mt-5 flex flex-col items-stretch gap-2.5"
+                    >
                         <Link
-                            :href="login()"
+                            v-if="isAuthenticated"
+                            :href="dashboard()"
                             class="snitch-btn snitch-btn-spot w-full justify-center"
                         >
                             <span class="relative z-10 inline-flex items-center gap-2">
-                                <UserPlus class="size-3.5 shrink-0" aria-hidden="true" />
-                                Get started
+                                <LayoutGrid class="size-3.5 shrink-0" aria-hidden="true" />
+                                Open dashboard
                             </span>
                         </Link>
-                        <Link
-                            :href="login()"
-                            class="snitch-btn w-full justify-center"
-                        >
-                            <span class="relative z-10 inline-flex items-center gap-2">
-                                <LogIn class="size-3.5 shrink-0" aria-hidden="true" />
-                                Log in
-                            </span>
-                        </Link>
-                    </template>
+                        <template v-else>
+                            <Link
+                                :href="login()"
+                                class="snitch-btn snitch-btn-spot w-full justify-center"
+                            >
+                                <span class="relative z-10 inline-flex items-center gap-2">
+                                    <UserPlus class="size-3.5 shrink-0" aria-hidden="true" />
+                                    Get started
+                                </span>
+                            </Link>
+                            <Link
+                                :href="login()"
+                                class="snitch-btn w-full justify-center"
+                            >
+                                <span class="relative z-10 inline-flex items-center gap-2">
+                                    <LogIn class="size-3.5 shrink-0" aria-hidden="true" />
+                                    Log in
+                                </span>
+                            </Link>
+                        </template>
+                    </div>
                 </div>
             </div>
         </section>
