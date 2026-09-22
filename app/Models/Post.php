@@ -52,8 +52,8 @@ class Post extends Model
     protected function coverUrl(): Attribute
     {
         return Attribute::get(function (?string $value): ?string {
-            if (is_string($value) && trim($value) !== '') {
-                return trim($value);
+            if (PostCover::isDisplayableStill($value)) {
+                return trim((string) $value);
             }
 
             return PostCover::resolve($this);

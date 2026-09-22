@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\Tracking\PostCoverHydrator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -188,6 +189,60 @@ class PostCoverHydratorTest extends TestCase
 
         $this->assertSame('/storage/post-covers/'.$post->id.'.jpg', $url);
         Storage::disk('public')->assertExists('post-covers/'.$post->id.'.jpg');
+    }
+
+    public function test_persist_replaces_a_linkedin_stream_cover_with_a_video_frame(): void
+    {
+        $ffmpeg = Process::timeout(10)->run(['ffmpeg', '-version']);
+
+        if (! $ffmpeg->successful()) {
+            $this->markTestSkipped('ffmpeg is not installed');
+        }
+
+        Storage::fake('public');
+
+        $source = Storage::disk('public')->path('linkedin-media/clip.mp4');
+
+        if (! is_dir(dirname($source))) {
+            mkdir(dirname($source), 0777, true);
+        }
+
+        $made = Process::timeout(20)->run([
+            'ffmpeg',
+            '-y',
+            '-f',
+            'lavfi',
+            '-i',
+            'color=c=red:s=64x64:d=1',
+            $source,
+        ]);
+
+        $this->assertTrue($made->successful(), $made->errorOutput());
+        $this->assertTrue(is_file($source));
+        Storage::disk('public')->put('linkedin-media/clip.mp4', (string) file_get_contents($source));
+
+        $account = TrackedAccount::factory()->for(User::factory())->create([
+            'platform' => Platform::LinkedIn,
+        ]);
+        $stream = 'https://dms.licdn.com/playlist/vid/v2/clip/file';
+        $post = Post::factory()->forAccount($account)->create([
+            'platform' => Platform::LinkedIn,
+            'url' => 'https://www.linkedin.com/feed/update/urn:li:activity:1',
+            'media_url' => '/storage/linkedin-media/clip.mp4',
+            'cover_url' => $stream,
+            'raw_payload' => [
+                'video' => [
+                    'stream_url' => $stream,
+                ],
+            ],
+        ]);
+
+        $url = app(PostCoverHydrator::class)->persist($post);
+
+        $this->assertSame('/storage/post-covers/'.$post->id.'.jpg', $url);
+        $bytes = Storage::disk('public')->get('post-covers/'.$post->id.'.jpg');
+        $this->assertIsString($bytes);
+        $this->assertStringStartsWith("\xFF\xD8", $bytes);
     }
 
     private function instagramPost(string $displayUrl): Post

@@ -61,7 +61,32 @@ class PostCover
         return self::fromPayload($payload)
             ?? self::fromYoutube($post->url)
             ?? self::fromYoutube($post->media_url)
-            ?? self::imageUrl($post->media_url);
+            ?? self::imageMediaUrl($post->media_url);
+    }
+
+    /**
+     * Stored covers and grid stills must be images. Extensionless video
+     * streams (LinkedIn dms.licdn.com) are not stills.
+     */
+    public static function isDisplayableStill(?string $url): bool
+    {
+        if (! is_string($url) || trim($url) === '') {
+            return false;
+        }
+
+        $url = trim($url);
+        $path = parse_url($url, PHP_URL_PATH);
+
+        if (is_string($path) && str_starts_with($path, '/storage/post-covers/')) {
+            return true;
+        }
+
+        if (self::imageUrl($url) === null) {
+            return false;
+        }
+
+        return preg_match('/\.(jpe?g|png|webp|gif)(\?|$)/i', $url) === 1
+            || str_contains($url, 'ytimg.com');
     }
 
     /**
@@ -188,5 +213,20 @@ class PostCover
         }
 
         return $url;
+    }
+
+    /**
+     * media_url is a still only when it is an image file. Extensionless
+     * video CDNs must not become the cover.
+     */
+    private static function imageMediaUrl(?string $url): ?string
+    {
+        $image = self::imageUrl($url);
+
+        if ($image === null || ! self::isDisplayableStill($image)) {
+            return null;
+        }
+
+        return $image;
     }
 }

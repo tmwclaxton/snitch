@@ -109,6 +109,27 @@ class PostCoverTest extends TestCase
         $this->assertSame('https://cdn.example.com/fb-thumb.jpg', PostCover::resolve($post));
     }
 
+    public function test_does_not_treat_an_extensionless_video_stream_as_a_cover(): void
+    {
+        $stream = 'https://dms.licdn.com/playlist/vid/v2/clip/mp4-720p/file';
+        $post = new Post([
+            'platform' => Platform::LinkedIn,
+            'url' => 'https://www.linkedin.com/feed/update/urn:li:activity:1',
+            'media_url' => $stream,
+            'raw_payload' => [
+                'poster' => [
+                    'image_url' => 'https://media.licdn.com/avatar.jpg',
+                ],
+                'video' => [
+                    'stream_url' => $stream,
+                ],
+            ],
+        ]);
+
+        $this->assertNull(PostCover::resolve($post));
+        $this->assertFalse(PostCover::isDisplayableStill($stream));
+    }
+
     public function test_uses_image_media_url_when_payload_has_no_cover(): void
     {
         $post = new Post([

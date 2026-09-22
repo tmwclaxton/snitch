@@ -5,7 +5,10 @@ namespace App\Services\Tracking;
 use App\Enums\Platform;
 use App\Models\Post;
 use App\Support\PostCover;
+use App\Support\PublicDiskMedia;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class PostCoverHydrator
@@ -65,7 +68,92 @@ class PostCoverHydrator
             return $this->save($post, $remote);
         }
 
+        $poster = $this->posterFromMedia($post);
+
+        if ($poster !== null) {
+            return $this->save($post, $poster);
+        }
+
+        if (is_string($stored) && ! PostCover::isDisplayableStill($stored)) {
+            $post->forceFill(['cover_url' => null])->save();
+
+            return null;
+        }
+
         return $stored;
+    }
+
+    /**
+     * LinkedIn streams have no thumbnail and no file extension, so the
+     * video URL was stored as the cover and grids showed an empty frame.
+     * Grab one JPEG from the media file instead.
+     */
+    private function posterFromMedia(Post $post): ?string
+    {
+        if ($post->id === null) {
+            return null;
+        }
+
+        $media = trim((string) $post->media_url);
+
+        if ($media === '') {
+            return null;
+        }
+
+        $relative = PublicDiskMedia::relativePathFromUrl($media);
+
+        if ($relative !== null) {
+            if (! Storage::disk('public')->exists($relative)) {
+                return null;
+            }
+
+            $input = Storage::disk('public')->path($relative);
+        } elseif (str_starts_with($media, 'http://') || str_starts_with($media, 'https://')) {
+            $input = $media;
+        } else {
+            return null;
+        }
+
+        $temp = tempnam(sys_get_temp_dir(), 'snitch-poster-');
+
+        if ($temp === false) {
+            return null;
+        }
+
+        $jpg = $temp.'.jpg';
+        @unlink($temp);
+
+        $ffmpeg = (string) config('snitch.video_analysis.ffmpeg_binary', 'ffmpeg');
+        $command = [$ffmpeg, '-y', '-ss', '0.4', '-i', $input, '-frames:v', '1', '-q:v', '3', $jpg];
+
+        if (str_starts_with($input, 'http://') || str_starts_with($input, 'https://')) {
+            array_splice($command, 2, 0, ['-user_agent', 'Mozilla/5.0']);
+        }
+
+        try {
+            $result = Process::timeout(25)->run($command);
+        } catch (Throwable) {
+            @unlink($jpg);
+
+            return null;
+        }
+
+        if (! $result->successful() || ! is_file($jpg)) {
+            @unlink($jpg);
+
+            return null;
+        }
+
+        $bytes = file_get_contents($jpg);
+        @unlink($jpg);
+
+        if (! is_string($bytes) || ! str_starts_with($bytes, "\xFF\xD8")) {
+            return null;
+        }
+
+        Storage::disk('public')->put('post-covers/'.$post->id.'.jpg', $bytes);
+
+        return '/storage/post-covers/'.$post->id.'.jpg';
     }
 
     public function fetchRemote(Post $post): ?string
