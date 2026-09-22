@@ -342,8 +342,8 @@ function onFramesResize(): void {
                         <span
                             class="pointer-events-none absolute inset-0 translate-x-[2px] translate-y-[1px] text-snitch-spot opacity-55 mix-blend-multiply select-none dark:mix-blend-plus-lighter dark:opacity-70"
                             aria-hidden="true"
-                        >Snitch</span>
-                        <span class="relative">Snitch</span>
+                        >Competitor Analytics</span>
+                        <span class="relative">Competitor Analytics</span>
                     </h1>
                     <p class="mt-1.5 max-w-xl text-sm text-snitch-ink/65">
                         {{ playbookLine ?? 'Cadence, mix, captions, and winners - what rivals posted and what to remake.' }}

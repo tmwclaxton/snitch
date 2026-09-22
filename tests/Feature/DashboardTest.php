@@ -230,6 +230,8 @@ class DashboardTest extends TestCase
         $this->assertIsString($pile);
         $this->assertStringContainsString('SnitchFacePile', $dashboard);
         $this->assertStringNotContainsString('SnitchChipPile', $dashboard);
+        $this->assertSame(2, substr_count($dashboard, 'Competitor Analytics'));
+        $this->assertStringNotContainsString('>Snitch</span>', $dashboard);
         $this->assertStringContainsString('snitch-face-pile', $pile);
     }
 
