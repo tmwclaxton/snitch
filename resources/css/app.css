@@ -2562,8 +2562,8 @@
         .snitch-hero-mobile-mascot {
             width: min(38vw, 28rem);
             margin-bottom: 5.5rem;
-            /* Nudge right of center so the figure reads against the open stage. */
-            transform: translateX(1.5rem);
+            /* Sit toward the right edge of the stage, not dead center. */
+            transform: translateX(min(18vw, 7rem));
         }
 
         .snitch-hero-mobile-cta {
@@ -2588,7 +2588,7 @@
         .snitch-hero-mobile-mascot {
             width: min(34vw, 32rem);
             margin-bottom: 6rem;
-            transform: translateX(2.25rem);
+            transform: translateX(min(22vw, 10rem));
         }
     }
 
