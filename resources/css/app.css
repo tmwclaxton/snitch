@@ -1815,78 +1815,45 @@
     }
 
     @media (min-width: 1024px) {
-        .snitch-post-fit {
-            display: flex;
-            height: calc(100svh - 4rem);
-            max-height: calc(100svh - 4rem);
-            min-height: 0;
-            flex-direction: column;
-            overflow: hidden;
-            padding-block: 0.75rem;
-        }
-
-        .snitch-post-fit .snitch-app-canvas {
-            display: flex;
-            min-height: 0;
-            flex: 1;
-            flex-direction: column;
-        }
-
         .snitch-post-stage {
             display: grid;
-            min-height: 0;
-            flex: 1;
-            align-items: stretch;
+            align-items: start;
             gap: 0.75rem;
             grid-template-columns: auto minmax(0, 1fr);
-            container-type: size;
         }
 
         .snitch-post-media {
             display: flex;
-            width: min(26rem, calc((100cqh - 4.5rem) * 4 / 5));
-            height: 100%;
-            min-height: 0;
+            width: min(26rem, 40vw);
             flex-direction: column;
             gap: 0.5rem;
         }
 
         .snitch-post-fit .snitch-post-player {
-            flex: 1 1 auto;
             width: 100%;
-            min-height: 0;
             height: auto;
-            max-height: min(calc(100cqh - 4.5rem), 32.5rem);
+            max-height: min(70svh, 32.5rem);
             aspect-ratio: auto;
-        }
-
-        .snitch-post-fit .snitch-post-caption {
-            flex: 0 1 auto;
-            min-height: 0;
-            max-height: 9rem;
-            overflow: auto;
         }
 
         .snitch-post-fit .snitch-post-media:has([data-embed-provider='tiktok']),
         .snitch-post-fit .snitch-post-media:has([data-embed-provider='youtube']),
         .snitch-post-fit .snitch-post-media:has([data-embed-provider='facebook']) {
-            width: calc((100cqh - 4.5rem) * 9 / 16);
+            width: min(22rem, calc(70svh * 9 / 16));
         }
 
         .snitch-post-fit .snitch-post-player:has([data-embed-provider='tiktok']),
         .snitch-post-fit .snitch-post-player:has([data-embed-provider='youtube']),
         .snitch-post-fit .snitch-post-player:has([data-embed-provider='facebook']) {
-            max-height: calc(100cqh - 4.5rem);
-            height: auto;
+            max-height: min(70svh, 40rem);
         }
 
         .snitch-post-fit .snitch-post-media:has([data-embed-provider='linkedin']) {
-            width: min(36rem, calc((100cqh - 4.5rem) * 16 / 9));
+            width: min(36rem, calc(70svh * 16 / 9));
         }
 
         .snitch-post-fit .snitch-post-player:has([data-embed-provider='linkedin']) {
-            max-height: calc(100cqh - 4.5rem);
-            height: auto;
+            max-height: min(70svh, 32.5rem);
         }
 
         .snitch-post-fit .snitch-post-player .snitch-platform-embed,
@@ -1894,11 +1861,6 @@
         .snitch-post-fit .snitch-post-player .snitch-platform-embed-frame {
             height: 100%;
             aspect-ratio: auto;
-        }
-
-        .snitch-post-notes {
-            min-height: 0;
-            overflow: auto;
         }
     }
 

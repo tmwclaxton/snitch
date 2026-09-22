@@ -179,4 +179,21 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertLessThan($caption, $player);
         $this->assertLessThan($notes, $caption);
     }
+
+    #[Test]
+    public function post_page_does_not_scroll_caption_or_notes_in_a_locked_viewport(): void
+    {
+        $css = file_get_contents(base_path('resources/css/app.css'));
+        $this->assertIsString($css);
+
+        $this->assertStringNotContainsString('height: calc(100svh - 4rem)', $css);
+        $this->assertDoesNotMatchRegularExpression(
+            '/\.snitch-post-fit\s+\.snitch-post-caption\s*\{[^}]*overflow:\s*auto/s',
+            $css,
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/\.snitch-post-notes\s*\{[^}]*overflow:\s*auto/s',
+            $css,
+        );
+    }
 }
