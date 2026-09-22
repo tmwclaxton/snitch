@@ -101,10 +101,44 @@ class CompetitorGrowthAndAdsTest extends TestCase
             $this->assertArrayNotHasKey('clicks', $insights['cta_clicks']);
             $this->assertSame('Book a table', $insights['ctas'][0]['term']);
             $this->assertSame('Book a table', $insights['ctas'][0]['lines'][0]['text']);
+            $this->assertSame($post->id, $insights['ctas'][0]['lines'][0]['post_id']);
             $this->assertSame('Autumn set menu', $insights['ads'][0]['title']);
         } finally {
             CarbonImmutable::setTestNow();
         }
+    }
+
+    public function test_cta_line_links_to_the_newest_post_with_that_ask(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+
+        $older = Post::factory()->forAccount($account)->create([
+            'posted_at' => now()->subDays(3),
+        ]);
+        PostAnalysis::factory()->for($older)->create([
+            'status' => AnalysisStatus::Completed,
+            'cta' => 'Save this sequence',
+        ]);
+
+        $newer = Post::factory()->forAccount($account)->create([
+            'posted_at' => now()->subDay(),
+        ]);
+        PostAnalysis::factory()->for($newer)->create([
+            'status' => AnalysisStatus::Completed,
+            'cta' => 'Save this sequence',
+        ]);
+
+        $insights = app(CompetitorInsightsBuilder::class)->forUser($user);
+        $line = $insights['ctas'][0]['lines'][0];
+
+        $this->assertSame($newer->id, $line['post_id']);
+        $this->assertSame(2, $line['count']);
+
+        $component = file_get_contents(resource_path('js/components/CtaLanguage.vue'));
+        $this->assertIsString($component);
+        $this->assertStringContainsString('feedShow.url(line.post_id)', $component);
     }
 
     public function test_snapshot_recorder_writes_one_row_per_day(): void

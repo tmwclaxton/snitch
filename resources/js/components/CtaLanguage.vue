@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
+import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 
 type CtaLine = {
     text: string;
     count: number;
+    post_id?: number | null;
 };
 
 type CtaGroup = {
@@ -79,7 +82,16 @@ function toggle(row: CtaGroup): void {
                 :key="`${active.term}-${line.text}`"
                 class="text-sm leading-snug text-snitch-ink"
             >
-                {{ line.text }}
+                <Link
+                    v-if="line.post_id"
+                    :href="feedShow.url(line.post_id)"
+                    class="underline decoration-snitch-ink/20 underline-offset-4 transition hover:decoration-snitch-spot"
+                >
+                    {{ line.text }}
+                </Link>
+                <template v-else>
+                    {{ line.text }}
+                </template>
                 <span class="tabular-nums text-snitch-ink/50">{{ line.count }}</span>
             </li>
         </ul>

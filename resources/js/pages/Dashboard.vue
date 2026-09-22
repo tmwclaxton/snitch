@@ -71,7 +71,7 @@ type InsightsPayload = {
     format_mix: Array<{ type: string; count: number }>;
     hashtags: Array<{ term: string; count: number }>;
     keywords: Array<{ term: string; count: number }>;
-    ctas: Array<{ term: string; count: number; lines?: Array<{ text: string; count: number }> }>;
+    ctas: Array<{ term: string; count: number; lines?: Array<{ text: string; count: number; post_id?: number | null }> }>;
     cta_clicks: {
         posts_with_cta: number;
         posts: number;

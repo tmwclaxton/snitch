@@ -86,7 +86,7 @@ class CompetitorInsightsBuilder
             ->where('social_account_id', $socialAccountId)
             ->whereNotNull('posted_at')
             ->with('analysis')
-            ->get(['id', 'social_account_id', 'caption', 'type', 'metrics', 'raw_payload']);
+            ->get(['id', 'social_account_id', 'caption', 'type', 'metrics', 'posted_at', 'raw_payload']);
 
         return [
             'activity' => $this->activity->forUser($user, $socialAccountId),
@@ -105,7 +105,7 @@ class CompetitorInsightsBuilder
      *     format_mix: list<array{type: string, count: int}>,
      *     hashtags: list<array{term: string, count: int}>,
      *     keywords: list<array{term: string, count: int}>,
-     *     ctas: list<array{term: string, count: int, lines: list<array{text: string, count: int}>}>,
+     *     ctas: list<array{term: string, count: int, lines: list<array{text: string, count: int, post_id: int|null}>}>,
      *     playbook: array{peak_hour_label: string|null, top_format: string|null, top_hashtag: string|null}
      * }
      */
@@ -144,7 +144,7 @@ class CompetitorInsightsBuilder
      *     format_mix: list<array{type: string, count: int}>,
      *     hashtags: list<array{term: string, count: int}>,
      *     keywords: list<array{term: string, count: int}>,
-     *     ctas: list<array{term: string, count: int, lines: list<array{text: string, count: int}>}>
+     *     ctas: list<array{term: string, count: int, lines: list<array{text: string, count: int, post_id: int|null}>}>
      * }
      */
     private function summarise(Collection $posts): array
@@ -310,13 +310,14 @@ class CompetitorInsightsBuilder
 
     /**
      * @param  Collection<int, Post>  $posts
-     * @return list<array{term: string, count: int, lines: list<array{text: string, count: int}>}>
+     * @return list<array{term: string, count: int, lines: list<array{text: string, count: int, post_id: int|null}>}>
      */
     private function topCtas(Collection $posts): array
     {
         $counts = [];
+        $postIds = [];
 
-        foreach ($posts as $post) {
+        foreach ($posts->sortByDesc(fn (Post $post) => $post->posted_at?->getTimestamp() ?? 0) as $post) {
             $cta = trim((string) ($post->analysis?->cta ?? ''));
 
             if ($cta === '' || strcasecmp($cta, 'No explicit CTA') === 0) {
@@ -330,9 +331,19 @@ class CompetitorInsightsBuilder
             }
 
             $counts[$term] = ($counts[$term] ?? 0) + 1;
+            $postIds[$term] ??= $post->id;
         }
 
-        return $this->ctaEssence->group($counts);
+        $grouped = $this->ctaEssence->group($counts);
+
+        foreach ($grouped as $index => $row) {
+            foreach ($row['lines'] as $lineIndex => $line) {
+                $key = mb_strtolower($line['text']);
+                $grouped[$index]['lines'][$lineIndex]['post_id'] = $postIds[$key] ?? null;
+            }
+        }
+
+        return $grouped;
     }
 
     /**
