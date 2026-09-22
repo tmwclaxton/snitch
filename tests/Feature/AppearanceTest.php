@@ -61,13 +61,19 @@ class AppearanceTest extends TestCase
     {
         $layout = file_get_contents(resource_path('js/layouts/app/AppSidebarLayout.vue'));
         $settings = file_get_contents(resource_path('js/layouts/settings/Layout.vue'));
+        $css = file_get_contents(resource_path('css/app.css'));
 
         $this->assertIsString($layout);
         $this->assertIsString($settings);
+        $this->assertNotFalse($css);
         $this->assertStringContainsString('min-h-[calc(100svh-4rem)]', $layout);
         $this->assertStringNotContainsString('min-h-[50vh]', $layout);
         $this->assertStringContainsString('snitch-app-shell', $settings);
         $this->assertStringContainsString('snitch-grain', $settings);
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-app-shell\s*\{[^}]*min-height:\s*calc\(100svh\s*-\s*4rem\)/s',
+            $css,
+        );
     }
 
     public function test_dark_mode_defines_warm_snitch_paper_tokens(): void

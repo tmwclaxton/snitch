@@ -308,7 +308,8 @@
         position: relative;
         isolation: isolate;
         overflow: clip;
-        min-height: 100%;
+        /* Fill under the h-16 app header; % min-height does not resolve against a parent's min-height. */
+        min-height: calc(100svh - 4rem);
         background-color: var(--snitch-paper);
         color: var(--snitch-ink);
         background-image:
