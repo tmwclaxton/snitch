@@ -22,7 +22,7 @@ withDefaults(defineProps<Props>(), {
         <AppSidebar />
         <AppContent variant="sidebar" class="relative min-w-0 overflow-x-clip">
             <AppSidebarHeader :breadcrumbs="breadcrumbs" />
-            <div class="relative min-h-[50vh]">
+            <div class="relative min-h-[calc(100svh-4rem)]">
                 <slot />
                 <BillingPaywall />
             </div>

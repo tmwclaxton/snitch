@@ -57,6 +57,19 @@ class AppearanceTest extends TestCase
             );
     }
 
+    public function test_app_shell_fills_the_viewport_so_halftone_reaches_the_bottom(): void
+    {
+        $layout = file_get_contents(resource_path('js/layouts/app/AppSidebarLayout.vue'));
+        $settings = file_get_contents(resource_path('js/layouts/settings/Layout.vue'));
+
+        $this->assertIsString($layout);
+        $this->assertIsString($settings);
+        $this->assertStringContainsString('min-h-[calc(100svh-4rem)]', $layout);
+        $this->assertStringNotContainsString('min-h-[50vh]', $layout);
+        $this->assertStringContainsString('snitch-app-shell', $settings);
+        $this->assertStringContainsString('snitch-grain', $settings);
+    }
+
     public function test_dark_mode_defines_warm_snitch_paper_tokens(): void
     {
         $css = file_get_contents(resource_path('css/app.css'));
