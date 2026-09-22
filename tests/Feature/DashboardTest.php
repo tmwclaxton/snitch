@@ -233,6 +233,7 @@ class DashboardTest extends TestCase
         $this->assertSame(2, substr_count($dashboard, 'Competitor Analytics'));
         $this->assertStringNotContainsString('>Snitch</span>', $dashboard);
         $this->assertStringNotContainsString('last 16 weeks', $dashboard);
+        $this->assertStringNotContainsString('Competitor Content Cadence', $dashboard);
         $this->assertStringContainsString('snitch-face-pile', $pile);
     }
 

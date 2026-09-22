@@ -420,11 +420,7 @@ function onFramesResize(): void {
             </div>
 
             <section class="mt-3">
-                <h2 class="snitch-display text-2xl text-snitch-ink">
-                    Competitor Content Cadence
-                </h2>
-
-                <div class="mt-3 grid items-stretch gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.8fr)]">
+                <div class="grid items-stretch gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.8fr)]">
                     <div class="snitch-scrap relative flex h-full flex-col p-3 pt-4">
                         <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
                         <p class="snitch-ink-label mb-2">Heat map</p>
