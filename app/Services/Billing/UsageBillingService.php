@@ -110,7 +110,6 @@ class UsageBillingService
             return;
         }
 
-        $this->creditClaimBonus($user);
         $this->ensureWebTrialStarted($user);
     }
 
