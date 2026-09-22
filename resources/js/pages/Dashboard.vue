@@ -11,6 +11,7 @@ import { index as competitors, show as competitorShow } from '@/actions/App/Http
 import DashboardController from '@/actions/App/Http/Controllers/DashboardController';
 import { index as feed, show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import { index as winners } from '@/actions/App/Http/Controllers/WinnerController';
+import CtaLanguage from '@/components/CtaLanguage.vue';
 import FormatMixChart from '@/components/dashboard/FormatMixChart.vue';
 import PlatformSplitChart from '@/components/dashboard/PlatformSplitChart.vue';
 import PostingHeatmap from '@/components/dashboard/PostingHeatmap.vue';
@@ -70,7 +71,7 @@ type InsightsPayload = {
     format_mix: Array<{ type: string; count: number }>;
     hashtags: Array<{ term: string; count: number }>;
     keywords: Array<{ term: string; count: number }>;
-    ctas: Array<{ term: string; count: number }>;
+    ctas: Array<{ term: string; count: number; lines?: Array<{ text: string; count: number }> }>;
     cta_clicks: {
         clicks: number;
         posts_with_cta: number;
@@ -612,28 +613,10 @@ function onFramesResize(): void {
                         </p>
                     </div>
                     </div>
-                    <div class="snitch-dash-cta min-w-0">
-                        <p class="snitch-ink-label mb-2">CTA language</p>
-                        <div
-                            v-if="insights.ctas.length"
-                            class="flex flex-wrap gap-1.5"
-                        >
-                            <span
-                                v-for="row in insights.ctas"
-                                :key="`cta-${row.term}`"
-                                class="snitch-glance-tag snitch-dash-cta-tag"
-                            >
-                                <span class="min-w-0 truncate">{{ row.term }}</span>
-                                <span class="shrink-0 tabular-nums text-snitch-ink/50">{{ row.count }}</span>
-                            </span>
-                        </div>
-                        <p
-                            v-else
-                            class="text-sm text-snitch-ink/60"
-                        >
-                            No analysed CTAs yet.
-                        </p>
-                    </div>
+                    <CtaLanguage
+                        class="snitch-dash-cta"
+                        :ctas="insights.ctas"
+                    />
                 </div>
             </section>
 

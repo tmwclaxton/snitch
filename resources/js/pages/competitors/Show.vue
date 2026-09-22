@@ -14,6 +14,7 @@ import {
     index as competitorsIndex,
 } from '@/actions/App/Http/Controllers/CompetitorController';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
+import CtaLanguage from '@/components/CtaLanguage.vue';
 import FollowerHistoryChart from '@/components/dashboard/FollowerHistoryChart.vue';
 import type { FollowerPoint } from '@/components/dashboard/FollowerHistoryChart.vue';
 import FormatMixChart from '@/components/dashboard/FormatMixChart.vue';
@@ -95,7 +96,7 @@ type Insights = {
     format_mix: Array<{ type: string; count: number }>;
     hashtags: Array<{ term: string; count: number }>;
     keywords: Array<{ term: string; count: number }>;
-    ctas?: Array<{ term: string; count: number }>;
+    ctas?: Array<{ term: string; count: number; lines?: Array<{ text: string; count: number }> }>;
     cta_clicks?: {
         clicks: number;
         posts_with_cta: number;
@@ -548,26 +549,10 @@ function askRemove(): void {
                         >
                             No library ads found yet.
                         </p>
-                        <p class="snitch-ink-label mt-4">CTA language</p>
-                        <div
-                            v-if="(insights?.ctas ?? []).length"
-                            class="mt-2 flex flex-wrap gap-1.5"
-                        >
-                            <span
-                                v-for="row in insights?.ctas ?? []"
-                                :key="`cta-${row.term}`"
-                                class="snitch-glance-tag"
-                            >
-                                {{ row.term }}
-                                <span class="tabular-nums text-snitch-ink/50">{{ row.count }}</span>
-                            </span>
-                        </div>
-                        <p
-                            v-else
-                            class="mt-2 text-sm text-snitch-ink/60"
-                        >
-                            No analysed CTAs yet.
-                        </p>
+                        <CtaLanguage
+                            class="mt-4"
+                            :ctas="insights?.ctas ?? []"
+                        />
                     </div>
                 </template>
             </section>

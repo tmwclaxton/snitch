@@ -95,6 +95,8 @@ class CompetitorGrowthAndAdsTest extends TestCase
             $this->assertSame(2000, $insights['growth']['month_delta']);
             $this->assertSame(40, $insights['cta_clicks']['clicks']);
             $this->assertSame(1, $insights['cta_clicks']['posts_with_cta']);
+            $this->assertSame('Book a table', $insights['ctas'][0]['term']);
+            $this->assertSame('Book a table', $insights['ctas'][0]['lines'][0]['text']);
             $this->assertSame('Autumn set menu', $insights['ads'][0]['title']);
         } finally {
             CarbonImmutable::setTestNow();

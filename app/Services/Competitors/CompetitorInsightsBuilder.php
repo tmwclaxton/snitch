@@ -52,7 +52,10 @@ class CompetitorInsightsBuilder
         'post', 'posts',
     ];
 
-    public function __construct(private DashboardActivityBuilder $activity) {}
+    public function __construct(
+        private DashboardActivityBuilder $activity,
+        private CtaEssenceGrouper $ctaEssence,
+    ) {}
 
     /**
      * @return array{
@@ -102,7 +105,7 @@ class CompetitorInsightsBuilder
      *     format_mix: list<array{type: string, count: int}>,
      *     hashtags: list<array{term: string, count: int}>,
      *     keywords: list<array{term: string, count: int}>,
-     *     ctas: list<array{term: string, count: int}>,
+     *     ctas: list<array{term: string, count: int, lines: list<array{text: string, count: int}>}>,
      *     playbook: array{peak_hour_label: string|null, top_format: string|null, top_hashtag: string|null}
      * }
      */
@@ -141,7 +144,7 @@ class CompetitorInsightsBuilder
      *     format_mix: list<array{type: string, count: int}>,
      *     hashtags: list<array{term: string, count: int}>,
      *     keywords: list<array{term: string, count: int}>,
-     *     ctas: list<array{term: string, count: int}>
+     *     ctas: list<array{term: string, count: int, lines: list<array{text: string, count: int}>}>
      * }
      */
     private function summarise(Collection $posts): array
@@ -307,7 +310,7 @@ class CompetitorInsightsBuilder
 
     /**
      * @param  Collection<int, Post>  $posts
-     * @return list<array{term: string, count: int}>
+     * @return list<array{term: string, count: int, lines: list<array{text: string, count: int}>}>
      */
     private function topCtas(Collection $posts): array
     {
@@ -322,14 +325,14 @@ class CompetitorInsightsBuilder
 
             $term = mb_strtolower($cta);
 
-            if (mb_strlen($term) > 80) {
-                $term = mb_substr($term, 0, 77).'...';
+            if (mb_strlen($term) > 280) {
+                $term = mb_substr($term, 0, 277).'...';
             }
 
             $counts[$term] = ($counts[$term] ?? 0) + 1;
         }
 
-        return $this->sortedTerms($counts);
+        return $this->ctaEssence->group($counts);
     }
 
     /**

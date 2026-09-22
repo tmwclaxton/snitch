@@ -24,7 +24,7 @@ class NanoGptClient
             $payload['response_format'] = $options['response_format'];
         }
 
-        $response = $this->http()->post('/chat/completions', $payload);
+        $response = $this->http($options)->post('/chat/completions', $payload);
 
         if (! $response->successful()) {
             throw new RuntimeException('NanoGPT request failed: '.$response->body());
@@ -169,7 +169,10 @@ class NanoGptClient
         return $vectors;
     }
 
-    protected function http(): PendingRequest
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    protected function http(array $options = []): PendingRequest
     {
         $apiKey = (string) config('snitch.nanogpt.api_key');
 
@@ -177,10 +180,14 @@ class NanoGptClient
             throw new RuntimeException('NANOGPT_API_KEY is not configured.');
         }
 
+        $timeout = isset($options['timeout'])
+            ? (int) $options['timeout']
+            : (int) config('snitch.nanogpt.timeout', 180);
+
         return Http::baseUrl((string) config('snitch.nanogpt.base_url'))
             ->withToken($apiKey)
             ->acceptJson()
-            ->timeout((int) config('snitch.nanogpt.timeout', 180))
+            ->timeout($timeout)
             ->retry(2, 1000, fn (mixed $exception): bool => $exception instanceof ConnectionException);
     }
 }

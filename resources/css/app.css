@@ -1580,15 +1580,21 @@
         box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--snitch-ink) 16%, transparent);
     }
 
-    .snitch-dash-cta-tag {
-        width: auto;
-        max-width: min(100%, 18rem);
+    .snitch-glance-tag-open {
+        box-shadow: inset 0 0 0 1.5px var(--snitch-spot);
     }
 
-    .snitch-dash-cta-tag > span:first-child {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+    button.snitch-glance-tag {
+        border: 0;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+    .snitch-cta-type {
+        padding: 0.2rem 0.45rem;
+        font-size: 0.8rem;
+        letter-spacing: 0.01em;
+        text-transform: none;
     }
 
     /*

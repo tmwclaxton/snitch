@@ -31,6 +31,15 @@ return [
     ],
 
     /*
+    | Dashboard CTA chips. A cheap chat model names the ask; the original
+    | analysed lines stay attached to that type. force is for tests only.
+    */
+    'cta_essence' => [
+        'model' => env('SNITCH_CTA_ESSENCE_MODEL', 'deepseek/deepseek-v4-flash'),
+        'force' => false,
+    ],
+
+    /*
     | Reel analysis embeddings (NanoGPT /embeddings) power Explore semantic
     | search for custom_tag clicks and free-text q. Catalogue slug filters stay exact.
     */
