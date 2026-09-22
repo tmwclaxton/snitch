@@ -1580,6 +1580,17 @@
         box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--snitch-ink) 16%, transparent);
     }
 
+    .snitch-dash-cta-tag {
+        width: auto;
+        max-width: min(100%, 18rem);
+    }
+
+    .snitch-dash-cta-tag > span:first-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     /*
      * Hug short labels; cap long concept chips at the frame width and
      * ellipsize - never stretch the first chip to a full-width bar.

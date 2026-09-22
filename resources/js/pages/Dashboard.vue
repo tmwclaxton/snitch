@@ -324,12 +324,12 @@ function accountHref(post: RecentPost): string | null {
 
                 <div
                     v-if="insights == null"
-                    class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+                    class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
                     aria-live="polite"
                     aria-label="Loading mix and captions"
                 >
                     <SnitchSkeleton
-                        v-for="row in 4"
+                        v-for="row in 3"
                         :key="`insight-skel-${row}`"
                         variant="scrap"
                         height="6rem"
@@ -337,8 +337,9 @@ function accountHref(post: RecentPost): string | null {
                 </div>
                 <div
                     v-else
-                    class="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+                    class="mt-3 space-y-4"
                 >
+                    <div class="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     <div class="min-w-0">
                         <p class="snitch-ink-label mb-2">Hashtags</p>
                         <div
@@ -384,28 +385,6 @@ function accountHref(post: RecentPost): string | null {
                         </p>
                     </div>
                     <div class="min-w-0">
-                        <p class="snitch-ink-label mb-2">CTA language</p>
-                        <div
-                            v-if="insights.ctas.length"
-                            class="flex flex-wrap gap-1.5"
-                        >
-                            <span
-                                v-for="row in insights.ctas"
-                                :key="`cta-${row.term}`"
-                                class="snitch-glance-tag"
-                            >
-                                {{ row.term }}
-                                <span class="tabular-nums text-snitch-ink/50">{{ row.count }}</span>
-                            </span>
-                        </div>
-                        <p
-                            v-else
-                            class="text-sm text-snitch-ink/60"
-                        >
-                            No analysed CTAs yet.
-                        </p>
-                    </div>
-                    <div class="min-w-0">
                         <p class="snitch-ink-label mb-2">Active ads</p>
                         <div
                             v-if="insights.ads.length"
@@ -429,6 +408,29 @@ function accountHref(post: RecentPost): string | null {
                             No library ads yet.
                         </p>
                     </div>
+                    </div>
+                    <div class="snitch-dash-cta min-w-0">
+                        <p class="snitch-ink-label mb-2">CTA language</p>
+                        <div
+                            v-if="insights.ctas.length"
+                            class="flex flex-wrap gap-1.5"
+                        >
+                            <span
+                                v-for="row in insights.ctas"
+                                :key="`cta-${row.term}`"
+                                class="snitch-glance-tag snitch-dash-cta-tag"
+                            >
+                                <span class="min-w-0 truncate">{{ row.term }}</span>
+                                <span class="shrink-0 tabular-nums text-snitch-ink/50">{{ row.count }}</span>
+                            </span>
+                        </div>
+                        <p
+                            v-else
+                            class="text-sm text-snitch-ink/60"
+                        >
+                            No analysed CTAs yet.
+                        </p>
+                    </div>
                 </div>
             </section>
 
@@ -444,79 +446,76 @@ function accountHref(post: RecentPost): string | null {
                     </p>
                 </div>
 
-                <div class="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(15rem,0.75fr)]">
-                    <div class="grid gap-3">
-                        <div class="snitch-scrap relative p-3 pt-4">
-                            <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
-                            <p class="snitch-ink-label mb-3">Heat map</p>
-                            <PostingHeatmap
-                                v-if="activity"
-                                :days="activity.heatmap"
-                            />
-                            <SnitchSkeleton
-                                v-else
-                                variant="scrap"
-                                height="7rem"
-                                label="Loading heat map"
-                            />
-                        </div>
-                        <div class="snitch-scrap relative p-3 pt-4">
-                            <span class="snitch-tape right-6 -top-2" aria-hidden="true" />
-                            <FormatMixChart
-                                v-if="insights"
-                                :formats="insights.format_mix"
-                            />
-                            <SnitchSkeleton
-                                v-else
-                                variant="scrap"
-                                height="12rem"
-                                label="Loading format mix chart"
-                            />
-                        </div>
+                <div class="mt-3 grid items-start gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.8fr)]">
+                    <div class="snitch-scrap relative p-3 pt-4">
+                        <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
+                        <p class="snitch-ink-label mb-3">Heat map</p>
+                        <PostingHeatmap
+                            v-if="activity"
+                            :days="activity.heatmap"
+                        />
+                        <SnitchSkeleton
+                            v-else
+                            variant="scrap"
+                            height="7rem"
+                            label="Loading heat map"
+                        />
                     </div>
-
-                    <div class="grid gap-3 self-start">
-                        <div class="snitch-scrap relative p-3 pt-4">
-                            <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
-                            <PlatformSplitChart
-                                v-if="activity"
-                                :platforms="activity.by_platform"
-                            />
-                            <SnitchSkeleton
-                                v-else
-                                variant="scrap"
-                                height="8rem"
-                                label="Loading platform split chart"
-                            />
-                        </div>
-                        <div class="snitch-scrap relative p-4 pt-5">
-                            <span class="snitch-tape right-4 -top-2" aria-hidden="true" />
-                            <TimeOfDayChart
-                                v-if="activity"
-                                compact
-                                :hours="activity.by_time_of_day"
-                            />
-                            <SnitchSkeleton
-                                v-else
-                                variant="scrap"
-                                height="8rem"
-                                label="Loading time of day chart"
-                            />
-                        </div>
-                        <div class="snitch-scrap relative p-4 pt-5">
-                            <span class="snitch-tape left-4 -top-2" aria-hidden="true" />
-                            <WeeklyVolumeChart
-                                v-if="activity"
-                                compact
-                                :weeks="activity.weekly"
-                            />
-                            <SnitchSkeleton
-                                v-else
-                                variant="scrap"
-                                height="8rem"
-                                label="Loading weekly volume chart"
-                            />
-                        </div>
+                    <div class="snitch-scrap relative p-3 pt-4">
+                        <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
+                        <PlatformSplitChart
+                            v-if="activity"
+                            :platforms="activity.by_platform"
+                        />
+                        <SnitchSkeleton
+                            v-else
+                            variant="scrap"
+                            height="8rem"
+                            label="Loading platform split chart"
+                        />
+                    </div>
+                </div>
+                <div class="mt-3 grid items-start gap-3 lg:grid-cols-3">
+                    <div class="snitch-scrap relative p-3 pt-4">
+                        <span class="snitch-tape right-6 -top-2" aria-hidden="true" />
+                        <FormatMixChart
+                            v-if="insights"
+                            :formats="insights.format_mix"
+                        />
+                        <SnitchSkeleton
+                            v-else
+                            variant="scrap"
+                            height="8rem"
+                            label="Loading format mix chart"
+                        />
+                    </div>
+                    <div class="snitch-scrap relative p-3 pt-4">
+                        <span class="snitch-tape right-4 -top-2" aria-hidden="true" />
+                        <TimeOfDayChart
+                            v-if="activity"
+                            compact
+                            :hours="activity.by_time_of_day"
+                        />
+                        <SnitchSkeleton
+                            v-else
+                            variant="scrap"
+                            height="8rem"
+                            label="Loading time of day chart"
+                        />
+                    </div>
+                    <div class="snitch-scrap relative p-3 pt-4">
+                        <span class="snitch-tape left-4 -top-2" aria-hidden="true" />
+                        <WeeklyVolumeChart
+                            v-if="activity"
+                            compact
+                            :weeks="activity.weekly"
+                        />
+                        <SnitchSkeleton
+                            v-else
+                            variant="scrap"
+                            height="8rem"
+                            label="Loading weekly volume chart"
+                        />
                     </div>
                 </div>
             </section>
@@ -558,7 +557,8 @@ function accountHref(post: RecentPost): string | null {
                     </div>
                     <div
                         v-else-if="recent_posts.length"
-                        class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill snitch-contact-reveal mt-5 grid"
+                        class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill snitch-contact-sheet-rows snitch-contact-reveal mt-5 grid"
+                        style="--snitch-sheet-cols: 3"
                     >
                         <FeedContactCell
                             v-for="(post, index) in recent_posts"
