@@ -102,6 +102,20 @@ class Post extends Model
     }
 
     /**
+     * Reels plus carousels, images, and text posts that analysis can read.
+     *
+     * @param  Builder<Post>  $query
+     * @return Builder<Post>
+     */
+    public function scopeAnalysisCandidates(Builder $query): Builder
+    {
+        return $query->whereIn('type', [
+            ...PostType::analyzableValues(),
+            ...PostType::stillValues(),
+        ]);
+    }
+
+    /**
      * @param  Builder<Post>  $query
      * @return Builder<Post>
      */
@@ -131,7 +145,7 @@ class Post extends Model
     }
 
     /**
-     * Reels queued for analysis (synced, not yet completed).
+     * Posts queued for analysis (synced, not yet completed).
      *
      * @param  Builder<Post>  $query
      * @return Builder<Post>
@@ -191,7 +205,7 @@ class Post extends Model
     }
 
     /**
-     * Reels still waiting on a completed analysis (queue + failed).
+     * Posts still waiting on a completed analysis (queue + failed).
      *
      * @param  Builder<Post>  $query
      * @return Builder<Post>
@@ -233,10 +247,19 @@ class Post extends Model
 
     public function isAnalyzable(): bool
     {
-        return $this->type instanceof PostType
-            && $this->type->isReelLike()
-            && filled($this->media_url)
-            && $this->media_availability !== MediaAvailability::Unavailable;
+        if (! $this->type instanceof PostType || $this->media_availability === MediaAvailability::Unavailable) {
+            return false;
+        }
+
+        if ($this->type->isReelLike()) {
+            return filled($this->media_url);
+        }
+
+        if (! $this->type->isStill()) {
+            return false;
+        }
+
+        return filled($this->media_url) || filled($this->caption) || filled($this->getRawOriginal('cover_url'));
     }
 
     /**

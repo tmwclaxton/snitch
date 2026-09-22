@@ -8,6 +8,9 @@ paths:
 
 # Analysis
 
+## Stills use the same checklist as reels
+Carousels, image posts, and text posts are analyzable. `VideoAnalysisService` sends up to four slides as `image_url` parts (local cover first, then payload `displayUrl` / `childPosts`) plus the caption. Text posts send the caption only. Transcript and SFX stay empty. Explore stays reel-like. The backlog and sync dispatch include these types via `Post::isAnalyzable()` / `analysisCandidates()`.
+
 ## Analysis is concept-first not transcript dump
 Persist concept, topics, how_to_copy, hook, idea, visual, music/SFX, and CTA as its own field. Evaluator rejects caption echo, vague filler, and Faker/Lorem Latin. Feed show strips those fields via `UsableAnalysisCopy` - if a field was not processed, do not render it. The feed index and `list_feed` omit Failed / Unavailable analyses entirely (`Post::visibleOnFeed`); retry them from `/backlog`. Caption-echo is near-verbatim field dumps or high caption coverage *and* high analysis-token reuse - not merely subject nouns from a short topic-dense caption appearing in a craft writeup. Prompts forbid long script regurgitation and invented SFX. `how_to_copy` must be a Markdown numbered list with a newline per step (never inline "1. … 2. …"); `SafeMarkdown` / client markdown also normalize inline numbered/bullet runs so existing rows still render as real list items. Feed show renders CTA as its own sticker, not under How to remake.
 

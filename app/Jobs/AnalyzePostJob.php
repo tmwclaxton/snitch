@@ -16,6 +16,7 @@ use App\Services\Billing\UsageBillingService;
 use App\Services\Billing\VendorUsageCharger;
 use App\Services\Scraping\YoutubeMediaHydrator;
 use App\Services\Winners\WinnerScorer;
+use App\Support\PostCover;
 use App\Support\PublicDiskMedia;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -75,7 +76,13 @@ class AnalyzePostJob implements ShouldQueue
             return;
         }
 
-        if ($this->mediaLooksGone($post)) {
+        if ($post->type instanceof PostType && $post->type->isStill()) {
+            if (! $this->stillHasReadableSource($post)) {
+                $this->markUnavailable($post, 'No image or caption left to analyze.');
+
+                return;
+            }
+        } elseif ($this->mediaLooksGone($post)) {
             $this->markUnavailable($post, 'Media URL returned 403/404 or empty response.');
 
             return;
@@ -195,6 +202,23 @@ class AnalyzePostJob implements ShouldQueue
             ->value('user_id');
 
         return $trackerId !== null ? User::query()->find($trackerId) : null;
+    }
+
+    private function stillHasReadableSource(Post $post): bool
+    {
+        if (filled($post->caption)) {
+            return true;
+        }
+
+        $cover = $post->getRawOriginal('cover_url');
+
+        if (is_string($cover) && PostCover::isDisplayableStill($cover) && (
+            ! str_contains($cover, '/storage/') || PublicDiskMedia::existsOnPublicDisk($cover)
+        )) {
+            return true;
+        }
+
+        return filled($post->media_url);
     }
 
     private function mediaLooksGone(Post $post): bool

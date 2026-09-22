@@ -5,6 +5,9 @@ paths:
 
 # Jobs
 
+## Still posts are analyzed from images and the caption
+`Post::isAnalyzable()` includes carousels, images, and text posts as well as reels. `AnalyzePostJob` does not mark a still unavailable when a signed CDN image 403s if a local cover or caption remains. Do not send those posts to NanoGPT as `video_url`.
+
 ## Queue worker required for async sync and analyze
 QUEUE_CONNECTION=database. SyncTrackedAccountJob, AnalyzePostJob, and GenerateInfluencerBriefJob are ShouldQueue; ConfirmSuggestions / UI sync / onboarding brief need a running queue worker. Live probes may dispatchSync. Never assume sync/analyze/brief finished because the HTTP request returned.
 

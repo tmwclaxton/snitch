@@ -329,7 +329,7 @@ class CompetitorsTest extends TestCase
             );
     }
 
-    public function test_index_exposes_reel_backlog_and_winner_counts(): void
+    public function test_index_counts_reel_and_still_analysis_backlog(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -364,7 +364,7 @@ class CompetitorsTest extends TestCase
                 ->loadDeferredProps('default', fn (Assert $page) => $page
                     ->where('accounts.0.reels_count', 2)
                     ->where('accounts.0.posts_count', 3)
-                    ->where('accounts.0.analysis_backlog_count', 1)
+                    ->where('accounts.0.analysis_backlog_count', 2)
                     ->where('accounts.0.winners_count', 1)
                 )
             );

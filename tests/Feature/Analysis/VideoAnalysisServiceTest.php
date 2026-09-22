@@ -81,6 +81,79 @@ class VideoAnalysisServiceTest extends TestCase
         });
     }
 
+    public function test_analyze_post_sends_carousel_slides_as_images(): void
+    {
+        $this->seed(AnalysisTermSeeder::class);
+
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+        ]);
+
+        Http::fake([
+            'https://cdn.example.com/slide.jpg' => Http::response("\xFF\xD8\xFF\xD9", 200, ['Content-Type' => 'image/jpeg']),
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'content' => json_encode([
+                            'concept' => 'Slide deck that reveals the offer last',
+                            'hook' => 'First slide is the unanswered question',
+                            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+                            'visual_summary' => str_repeat('Four still frames, type on cream paper, last card is the ask. ', 2),
+                            'idea' => 'Withhold the product until the sequence earns it',
+                            'topics' => ['carousel reveal'],
+                            'hook_type_slugs' => ['silent_visual_hook'],
+                            'topic_slugs' => ['content_strategy'],
+                            'visual_craft_slugs' => ['broll_overlay'],
+                            'custom_tags' => [],
+                            'cta' => 'Save this sequence',
+                            'how_to_copy' => "1. Open on the question\n2. Prove it across two slides\n3. End on the ask",
+                            'transcript' => '',
+                            'sfx' => [],
+                            'music_title' => null,
+                            'music_artist' => null,
+                            'is_original_audio' => false,
+                        ]),
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Carousel,
+            'media_url' => 'https://cdn.example.com/slide.jpg',
+            'caption' => 'Four frames of a campaign.',
+            'raw_payload' => [
+                'displayUrl' => 'https://cdn.example.com/slide.jpg',
+                'childPosts' => [
+                    ['displayUrl' => 'https://cdn.example.com/slide.jpg'],
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($post->isAnalyzable());
+
+        $outcome = app(VideoAnalysisService::class)->analyzePost($post);
+
+        $this->assertSame(AnalysisStatus::Completed, $outcome['analysis']->status);
+        $this->assertSame('Slide deck that reveals the offer last', $outcome['analysis']->concept);
+
+        Http::assertSent(function ($request): bool {
+            if (! str_contains($request->url(), 'chat/completions')) {
+                return false;
+            }
+
+            $encoded = json_encode($request->data());
+
+            return is_string($encoded)
+                && str_contains($encoded, 'image_url')
+                && str_contains($encoded, 'carousel')
+                && ! str_contains($encoded, 'video_url');
+        });
+    }
+
     public function test_analyze_post_persists_completed_analysis(): void
     {
         $this->seed(AnalysisTermSeeder::class);

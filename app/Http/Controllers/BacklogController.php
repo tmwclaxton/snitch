@@ -52,15 +52,15 @@ class BacklogController extends Controller
     /**
      * Shared query builder for the analyse backlog page.
      *
-     * Eager-loads the relations the queue cards render and scopes to the user's posts,
-     * limited to reel-like content. Called from the deferred posts resolver and both
-     * queue/failed count queries so those never diverge.
+     * Eager-loads the relations the queue cards render and scopes to the user's posts
+     * that analysis can read (reels, carousels, images, and text). Called from the
+     * deferred posts resolver and both queue/failed count queries so those never diverge.
      */
     private function baseQuery(User $user): Builder
     {
         return Post::query()
             ->forUser($user)
-            ->reelLike()
+            ->analysisCandidates()
             ->with([
                 'socialAccount',
                 'analysis',

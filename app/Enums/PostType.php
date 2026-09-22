@@ -33,4 +33,23 @@ enum PostType: string
     {
         return in_array($this, self::analyzable(), true);
     }
+
+    /**
+     * Carousels, single images, and text posts. Explored separately from reels.
+     *
+     * @return list<string>
+     */
+    public static function stillValues(): array
+    {
+        return [
+            self::Carousel->value,
+            self::Image->value,
+            self::Text->value,
+        ];
+    }
+
+    public function isStill(): bool
+    {
+        return in_array($this->value, self::stillValues(), true);
+    }
 }

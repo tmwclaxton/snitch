@@ -10,8 +10,11 @@ use App\Models\Post;
 use App\Models\PostAnalysis;
 use App\Services\Music\MusicRecognitionService;
 use App\Services\SnitchAnalyticsService;
+use App\Support\PostCover;
 use App\Support\PublicDiskMedia;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Throwable;
 
@@ -41,10 +44,13 @@ class VideoAnalysisService
         $prompt = $this->buildPrompt($mediaKind, $caption, $platformMusic);
 
         [$payload, $promptTokens, $completionTokens, $finishReason] = $this->requestAnalysisPayload(
-            mediaUrl: $mediaUrl,
             prompt: $prompt,
             model: $model,
             maxTokens: $maxTokens,
+            mediaParts: [[
+                'type' => 'video_url',
+                'video_url' => ['url' => $mediaUrl],
+            ]],
         );
 
         $outputTruncated = $finishReason === 'length';
@@ -105,25 +111,34 @@ class VideoAnalysisService
         $analysis->save();
 
         try {
-            $mediaUrl = (string) $post->media_url;
-
-            if ($mediaUrl === '') {
-                throw new RuntimeException('Post has no media_url to analyze.');
+            if (! $post->type instanceof PostType) {
+                throw new RuntimeException('Post type is missing; analysis skipped.');
             }
 
-            if (! $post->type instanceof PostType || ! $post->type->isReelLike()) {
-                throw new RuntimeException('Post type is not reel/video; analysis skipped.');
+            if ($post->type->isStill()) {
+                $recognizedMusic = $this->musicExtractor->fromPost($post);
+                $result = $this->analyzeStill($post, $recognizedMusic);
+            } else {
+                $mediaUrl = (string) $post->media_url;
+
+                if ($mediaUrl === '') {
+                    throw new RuntimeException('Post has no media_url to analyze.');
+                }
+
+                if (! $post->type->isReelLike()) {
+                    throw new RuntimeException('Post type is not reel/video; analysis skipped.');
+                }
+
+                $recognizedMusic = $this->resolveAuthoritativeMusic($post);
+
+                // Local APP_URL storage links are not fetchable by NanoGPT; inline bytes.
+                $result = $this->analyzeUrl(
+                    PublicDiskMedia::analyzableUrl($mediaUrl),
+                    'video',
+                    $post->caption,
+                    $recognizedMusic,
+                );
             }
-
-            $recognizedMusic = $this->resolveAuthoritativeMusic($post);
-
-            // Local APP_URL storage links are not fetchable by NanoGPT; inline bytes.
-            $result = $this->analyzeUrl(
-                PublicDiskMedia::analyzableUrl($mediaUrl),
-                'video',
-                $post->caption,
-                $recognizedMusic,
-            );
             $evaluation = $this->evaluator->evaluate($result, $post->caption);
 
             if (! $evaluation['passed']) {
@@ -308,13 +323,224 @@ PROMPT;
     }
 
     /**
+     * Carousels and image posts have no video file. Send the slides (and the
+     * caption) as images so the same craft checklist can still run.
+     *
+     * @param  array<string, mixed>|null  $platformMusic
+     */
+    private function analyzeStill(Post $post, ?array $platformMusic): VideoAnalysisResult
+    {
+        $mediaParts = $this->stillImageParts($post);
+        $caption = trim((string) $post->caption);
+
+        if ($mediaParts === [] && $caption === '') {
+            throw new RuntimeException('Post has no images or caption to analyze.');
+        }
+
+        $mediaKind = match ($post->type) {
+            PostType::Carousel => 'carousel',
+            PostType::Image => 'image',
+            default => 'text',
+        };
+        $model = (string) config('snitch.video_analysis.model');
+        $maxTokens = (int) config('snitch.video_analysis.max_tokens', 32768);
+        $prompt = $this->buildPrompt($mediaKind, $caption === '' ? null : $caption, $platformMusic);
+        $prompt .= "\nThis is a still ".$mediaKind.' post, not a video. transcript must be "". sfx must be []. Describe the attached images in order inside visual_summary. Do not invent cuts, camera moves, or sound.';
+
+        [$payload, $promptTokens, $completionTokens, $finishReason] = $this->requestAnalysisPayload(
+            prompt: $prompt,
+            model: $model,
+            maxTokens: $maxTokens,
+            mediaParts: $mediaParts,
+        );
+
+        return VideoAnalysisResult::fromModelPayload(
+            $payload,
+            $model,
+            (float) config('snitch.video_analysis.success.min_hook_window_end_seconds'),
+            $promptTokens,
+            $completionTokens,
+            outputTruncated: $finishReason === 'length',
+            transcriptIncomplete: false,
+        );
+    }
+
+    /**
+     * @return list<array{type: string, image_url: array{url: string}}>
+     */
+    private function stillImageParts(Post $post): array
+    {
+        $parts = [];
+        $budget = 3_500_000;
+
+        foreach ($this->stillSourceUrls($post) as $url) {
+            $inline = $this->inlineImage($url);
+
+            if ($inline === null) {
+                continue;
+            }
+
+            $budget -= strlen($inline);
+
+            if ($budget < 0) {
+                break;
+            }
+
+            $parts[] = [
+                'type' => 'image_url',
+                'image_url' => ['url' => $inline],
+            ];
+
+            if (count($parts) >= 4) {
+                break;
+            }
+        }
+
+        return $parts;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function stillSourceUrls(Post $post): array
+    {
+        $urls = [];
+        $storedCover = $post->getRawOriginal('cover_url');
+
+        if (is_string($storedCover) && PostCover::isDisplayableStill($storedCover)) {
+            $urls[] = $storedCover;
+        }
+
+        $media = trim((string) $post->media_url);
+
+        if ($media !== '' && ! preg_match('/\.(mp4|webm|mov|m4v|m3u8)(\?|$)/i', $media)) {
+            $urls[] = $media;
+        }
+
+        $payload = is_array($post->raw_payload) ? $post->raw_payload : [];
+        $urls = array_merge($urls, $this->imageUrlsFromNode($payload));
+
+        foreach (is_array($payload['childPosts'] ?? null) ? $payload['childPosts'] : [] as $child) {
+            if (is_array($child)) {
+                $urls = array_merge($urls, $this->imageUrlsFromNode($child));
+            }
+        }
+
+        $unique = [];
+
+        foreach ($urls as $url) {
+            if (! is_string($url) || trim($url) === '' || isset($unique[$url])) {
+                continue;
+            }
+
+            $unique[$url] = trim($url);
+        }
+
+        return array_values($unique);
+    }
+
+    /**
+     * @param  array<string, mixed>  $node
+     * @return list<string>
+     */
+    private function imageUrlsFromNode(array $node): array
+    {
+        $urls = [];
+
+        foreach (['displayUrl', 'display_url', 'thumbnailUrl', 'thumbnail_url'] as $key) {
+            if (is_string($node[$key] ?? null) && str_starts_with($node[$key], 'http')) {
+                $urls[] = $node[$key];
+            }
+        }
+
+        $images = $node['images'] ?? null;
+
+        if (! is_array($images)) {
+            return $urls;
+        }
+
+        foreach ($images as $image) {
+            if (is_string($image) && str_starts_with($image, 'http')) {
+                $urls[] = $image;
+            } elseif (is_array($image)) {
+                $candidate = $image['url'] ?? $image['src'] ?? null;
+
+                if (is_string($candidate) && str_starts_with($candidate, 'http')) {
+                    $urls[] = $candidate;
+                }
+            }
+        }
+
+        return $urls;
+    }
+
+    private function inlineImage(string $url): ?string
+    {
+        $relative = PublicDiskMedia::relativePathFromUrl($url);
+
+        if ($relative !== null) {
+            if (! Storage::disk('public')->exists($relative)) {
+                return null;
+            }
+
+            $bytes = Storage::disk('public')->get($relative);
+
+            if (! is_string($bytes) || $bytes === '' || strlen($bytes) > 1_500_000) {
+                return null;
+            }
+
+            $extension = strtolower(pathinfo($relative, PATHINFO_EXTENSION));
+            $mime = match ($extension) {
+                'png' => 'image/png',
+                'webp' => 'image/webp',
+                'gif' => 'image/gif',
+                default => 'image/jpeg',
+            };
+
+            return 'data:'.$mime.';base64,'.base64_encode($bytes);
+        }
+
+        if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->connectTimeout(5)
+                ->withHeaders(['User-Agent' => 'Mozilla/5.0', 'Accept' => 'image/*'])
+                ->get($url);
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $type = strtolower(trim(strtok((string) $response->header('Content-Type'), ';') ?: ''));
+
+        if (! str_starts_with($type, 'image/')) {
+            return null;
+        }
+
+        $bytes = $response->body();
+
+        if ($bytes === '' || strlen($bytes) > 1_500_000) {
+            return null;
+        }
+
+        return 'data:'.$type.';base64,'.base64_encode($bytes);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $mediaParts
      * @return array{0: array<string, mixed>, 1: int|null, 2: int|null, 3: string|null}
      */
     private function requestAnalysisPayload(
-        string $mediaUrl,
         string $prompt,
         string $model,
         int $maxTokens,
+        array $mediaParts,
     ): array {
         $response = $this->client->chat(
             messages: [
@@ -324,13 +550,10 @@ PROMPT;
                 ],
                 [
                     'role' => 'user',
-                    'content' => [
-                        ['type' => 'text', 'text' => $prompt],
-                        [
-                            'type' => 'video_url',
-                            'video_url' => ['url' => $mediaUrl],
-                        ],
-                    ],
+                    'content' => array_merge(
+                        [['type' => 'text', 'text' => $prompt]],
+                        $mediaParts,
+                    ),
                 ],
             ],
             model: $model,

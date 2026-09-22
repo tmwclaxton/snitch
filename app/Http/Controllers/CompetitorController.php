@@ -472,7 +472,7 @@ class CompetitorController extends Controller
             ->withCount([
                 'posts as posts_count',
                 'posts as reels_count' => fn ($query) => $query->reelLike(),
-                'posts as analysis_backlog_count' => fn ($query) => $query->reelLike()->analysisBacklog(),
+                'posts as analysis_backlog_count' => fn ($query) => $query->analysisCandidates()->analysisBacklog(),
                 'posts as winners_count' => fn ($query) => $query->whereHas('winnerInsight'),
             ])
             ->orderBy('id')

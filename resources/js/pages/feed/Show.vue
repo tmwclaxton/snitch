@@ -666,7 +666,7 @@ function openTranscript(): void {
                                 Analysis failed
                             </p>
                             <p class="mt-2 text-sm text-snitch-ink/70">
-                                {{ post.analysis?.error_message || 'We could not finish analysing this reel.' }}
+                                {{ post.analysis?.error_message || 'We could not finish analysing this post.' }}
                             </p>
                         </div>
 

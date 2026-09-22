@@ -125,7 +125,7 @@ class DashboardController extends Controller
      */
     private function stats(User $user, array $inQuotaIds, array $socialIds): array
     {
-        $postsBase = fn () => Post::query()->forUser($user)->reelLike();
+        $postsBase = fn () => Post::query()->forUser($user)->analysisCandidates();
 
         return [
             'tracked_accounts' => $user->trackedAccounts()->count(),
