@@ -331,13 +331,13 @@ function askRemove(): void {
                 </div>
             </div>
 
-            <header class="mt-5 border-b border-snitch-ink/10 pb-6">
-                <div class="flex min-w-0 items-center gap-4 sm:gap-5">
+            <header class="mt-3 border-b border-snitch-ink/10 pb-3">
+                <div class="flex min-w-0 items-center gap-3">
                     <SnitchAvatar
                         :src="account.avatar"
                         :name="account.display_name"
                         :handle="account.handle"
-                        size="xl"
+                        size="lg"
                         loading="eager"
                         :alt="account.display_name || account.handle"
                     />
@@ -354,7 +354,7 @@ function askRemove(): void {
                                 {{ platformLabel(account.platform) }}
                             </p>
                         </div>
-                        <h1 class="snitch-display mt-1.5 truncate text-3xl text-snitch-ink sm:text-4xl">
+                        <h1 class="snitch-display mt-1 truncate text-3xl text-snitch-ink">
                             {{ account.display_name || account.handle }}
                         </h1>
                         <p class="mt-1 text-sm text-snitch-ink/65 sm:text-base">
@@ -386,7 +386,7 @@ function askRemove(): void {
                     </div>
                 </div>
 
-                <div class="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-sm text-snitch-ink/60">
+                <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-snitch-ink/60">
                     <p>{{ account.posts_count ?? postsList.length }} posts tracked</p>
                     <p v-if="isSyncing">Last synced: in progress</p>
                     <p v-else-if="lastSyncedLabel">{{ lastSyncedLabel }}</p>
@@ -399,15 +399,14 @@ function askRemove(): void {
                 </p>
             </header>
 
-            <section class="mt-10">
-                <p class="snitch-ink-label">Cadence and mix</p>
-                <h2 class="snitch-display mt-1 text-2xl text-snitch-ink">
+            <section class="mt-3">
+                <h2 class="snitch-display text-2xl text-snitch-ink">
                     How they post
                 </h2>
 
                 <div
                     v-if="!insightsLoaded"
-                    class="mt-5 grid gap-4 lg:grid-cols-2"
+                    class="mt-3 grid gap-3 lg:grid-cols-2"
                     aria-live="polite"
                     aria-label="Loading account insights"
                 >
@@ -419,157 +418,174 @@ function askRemove(): void {
                     />
                 </div>
                 <template v-else>
-                    <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                        <div class="snitch-scrap relative p-4 pt-5">
+                    <div class="snitch-account-rail mt-3">
+                        <div class="snitch-dash-rail-item">
                             <p class="snitch-ink-label">Avg views</p>
-                            <p class="snitch-display mt-1 text-2xl tabular-nums">
+                            <p class="snitch-display text-2xl tabular-nums">
                                 {{ formatFollowers(insights?.engagement.avg_views ?? 0) }}
                             </p>
                         </div>
-                        <div class="snitch-scrap relative p-4 pt-5">
+                        <div class="snitch-dash-rail-item">
                             <p class="snitch-ink-label">Avg likes</p>
-                            <p class="snitch-display mt-1 text-2xl tabular-nums">
+                            <p class="snitch-display text-2xl tabular-nums">
                                 {{ formatFollowers(insights?.engagement.avg_likes ?? 0) }}
                             </p>
                         </div>
-                        <div class="snitch-scrap relative p-4 pt-5">
+                        <div class="snitch-dash-rail-item">
                             <p class="snitch-ink-label">Engagement rate</p>
-                            <p class="snitch-display mt-1 text-2xl tabular-nums">
+                            <p class="snitch-display text-2xl tabular-nums">
                                 {{ (insights?.engagement.avg_rate ?? 0).toFixed(2) }}%
                             </p>
                         </div>
-                        <div class="snitch-scrap relative p-4 pt-5">
+                        <div class="snitch-dash-rail-item">
                             <p class="snitch-ink-label">Growth</p>
-                            <p class="snitch-display mt-1 text-2xl tabular-nums">
+                            <p class="snitch-display text-2xl tabular-nums">
                                 {{ formatFollowers(insights?.growth?.followers ?? account.followers ?? 0) }}
                             </p>
                             <p
                                 v-if="insights?.growth?.week_delta != null"
-                                class="mt-1 text-sm text-snitch-ink/65"
+                                class="text-[11px] leading-snug text-snitch-ink/55"
                             >
                                 {{ insights.growth.week_delta > 0 ? '+' : '' }}{{ insights.growth.week_delta }}
                                 this week
                             </p>
-                            <p v-else class="mt-1 text-sm text-snitch-ink/65">
+                            <p v-else class="text-[11px] leading-snug text-snitch-ink/55">
                                 No earlier count yet
                             </p>
                         </div>
-                        <div class="snitch-scrap relative p-4 pt-5">
+                        <div class="snitch-dash-rail-item">
                             <p class="snitch-ink-label">CTA clicks</p>
-                            <p class="snitch-display mt-1 text-2xl tabular-nums">
+                            <p class="snitch-display text-2xl tabular-nums">
                                 {{ formatFollowers(insights?.cta_clicks?.clicks ?? 0) }}
                             </p>
-                            <p class="mt-1 text-sm text-snitch-ink/65">
+                            <p class="text-[11px] leading-snug text-snitch-ink/55">
                                 {{ insights?.cta_clicks?.posts_with_cta ?? 0 }}
                                 with an ask
                             </p>
                         </div>
                     </div>
 
-                    <div class="mt-4 grid gap-4 lg:grid-cols-2">
-                        <div class="snitch-scrap relative p-5 pt-6">
-                            <p class="snitch-ink-label mb-3">Heat map</p>
+                    <div class="mt-3 grid items-stretch gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.8fr)]">
+                        <div class="snitch-scrap relative flex h-full flex-col p-3 pt-4">
+                            <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
+                            <p class="snitch-ink-label mb-2">Heat map</p>
                             <PostingHeatmap :days="insights?.activity.heatmap ?? []" />
                         </div>
-                        <div class="snitch-scrap relative p-5 pt-6">
-                            <TimeOfDayChart :hours="insights?.activity.by_time_of_day ?? []" />
+                        <div class="snitch-scrap relative flex h-full flex-col p-3 pt-4">
+                            <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
+                            <FollowerHistoryChart :points="insights?.follower_series ?? []" />
                         </div>
-                        <div class="snitch-scrap relative p-5 pt-6">
-                            <WeeklyVolumeChart :weeks="insights?.activity.weekly ?? []" />
-                        </div>
-                        <div class="snitch-scrap relative p-5 pt-6">
+                    </div>
+
+                    <div class="mt-3 grid items-stretch gap-3 lg:grid-cols-3">
+                        <div class="snitch-scrap relative flex h-full flex-col p-3 pt-4">
+                            <span class="snitch-tape right-6 -top-2" aria-hidden="true" />
                             <FormatMixChart :formats="insights?.format_mix ?? []" />
                         </div>
+                        <div class="snitch-scrap relative flex h-full flex-col p-3 pt-4">
+                            <span class="snitch-tape right-4 -top-2" aria-hidden="true" />
+                            <TimeOfDayChart
+                                compact
+                                :hours="insights?.activity.by_time_of_day ?? []"
+                            />
+                        </div>
+                        <div class="snitch-scrap relative flex h-full flex-col p-3 pt-4">
+                            <span class="snitch-tape left-4 -top-2" aria-hidden="true" />
+                            <WeeklyVolumeChart
+                                compact
+                                :weeks="insights?.activity.weekly ?? []"
+                            />
+                        </div>
                     </div>
 
-                    <div class="snitch-scrap relative mt-4 p-5 pt-6">
-                        <FollowerHistoryChart :points="insights?.follower_series ?? []" />
-                    </div>
-
-                    <div class="snitch-scrap relative mt-4 p-4 pt-5">
-                        <p class="snitch-ink-label">Hashtags</p>
-                        <div
-                            v-if="insights?.hashtags.length"
-                            class="mt-2 flex flex-wrap gap-1.5"
-                        >
-                            <span
-                                v-for="row in insights.hashtags"
-                                :key="`hash-${row.term}`"
-                                class="snitch-glance-tag"
-                            >
-                                #{{ row.term }}
-                                <span class="tabular-nums text-snitch-ink/50">{{ row.count }}</span>
-                            </span>
+                    <div class="mt-2 space-y-2">
+                        <div class="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                            <div class="min-w-0">
+                                <p class="snitch-ink-label mb-2">Hashtags</p>
+                                <div
+                                    v-if="insights?.hashtags.length"
+                                    class="flex flex-wrap gap-1.5"
+                                >
+                                    <span
+                                        v-for="row in insights.hashtags"
+                                        :key="`hash-${row.term}`"
+                                        class="snitch-glance-tag"
+                                    >
+                                        #{{ row.term }}
+                                        <span class="tabular-nums text-snitch-ink/50">{{ row.count }}</span>
+                                    </span>
+                                </div>
+                                <p
+                                    v-else
+                                    class="text-sm text-snitch-ink/60"
+                                >
+                                    No hashtags in recent captions.
+                                </p>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="snitch-ink-label mb-2">Keywords</p>
+                                <div
+                                    v-if="insights?.keywords.length"
+                                    class="flex flex-wrap gap-1.5"
+                                >
+                                    <span
+                                        v-for="row in insights.keywords"
+                                        :key="`key-${row.term}`"
+                                        class="snitch-glance-tag"
+                                    >
+                                        {{ row.term }}
+                                        <span class="tabular-nums text-snitch-ink/50">{{ row.count }}</span>
+                                    </span>
+                                </div>
+                                <p
+                                    v-else
+                                    class="text-sm text-snitch-ink/60"
+                                >
+                                    No caption keywords yet.
+                                </p>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="snitch-ink-label mb-2">Active ads</p>
+                                <div
+                                    v-if="(insights?.ads ?? []).length"
+                                    class="space-y-1.5"
+                                >
+                                    <a
+                                        v-for="ad in insights?.ads ?? []"
+                                        :key="ad.id"
+                                        :href="ad.url"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="block text-sm text-snitch-ink underline decoration-snitch-ink/20 underline-offset-4"
+                                    >
+                                        {{ ad.title }}
+                                    </a>
+                                </div>
+                                <p
+                                    v-else
+                                    class="text-sm text-snitch-ink/60"
+                                >
+                                    No library ads found yet.
+                                </p>
+                            </div>
                         </div>
-                        <p
-                            v-else
-                            class="mt-2 text-sm text-snitch-ink/60"
-                        >
-                            No hashtags in recent captions.
-                        </p>
-                        <p class="snitch-ink-label mt-4">Keywords</p>
-                        <div
-                            v-if="insights?.keywords.length"
-                            class="mt-2 flex flex-wrap gap-1.5"
-                        >
-                            <span
-                                v-for="row in insights.keywords"
-                                :key="`key-${row.term}`"
-                                class="snitch-glance-tag"
-                            >
-                                {{ row.term }}
-                                <span class="tabular-nums text-snitch-ink/50">{{ row.count }}</span>
-                            </span>
-                        </div>
-                        <p
-                            v-else
-                            class="mt-2 text-sm text-snitch-ink/60"
-                        >
-                            No caption keywords yet.
-                        </p>
-                        <p class="snitch-ink-label mt-4">Active ads</p>
-                        <div
-                            v-if="(insights?.ads ?? []).length"
-                            class="mt-2 space-y-2"
-                        >
-                            <a
-                                v-for="ad in insights?.ads ?? []"
-                                :key="ad.id"
-                                :href="ad.url"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="block text-sm text-snitch-ink underline decoration-snitch-ink/20 underline-offset-4"
-                            >
-                                {{ ad.title }}
-                            </a>
-                        </div>
-                        <p
-                            v-else
-                            class="mt-2 text-sm text-snitch-ink/60"
-                        >
-                            No library ads found yet.
-                        </p>
                         <CtaLanguage
-                            class="mt-4"
+                            class="snitch-dash-cta"
                             :ctas="insights?.ctas ?? []"
                         />
                     </div>
                 </template>
             </section>
 
-            <section class="mt-10">
-                <div class="flex flex-wrap items-end justify-between gap-3">
-                    <div>
-                        <p class="snitch-ink-label">Contact sheet</p>
-                        <h2 class="snitch-display mt-1 text-2xl text-snitch-ink">
-                            Recent posts
-                        </h2>
-                    </div>
-                </div>
+            <div class="mt-3 grid items-start gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.7fr)]">
+            <section>
+                <h2 class="snitch-display text-2xl text-snitch-ink">
+                    Recent posts
+                </h2>
 
                 <div
                     v-if="!postsLoaded"
-                    class="snitch-contact-sheet snitch-contact-sheet-rows mt-5 grid"
+                    class="snitch-contact-sheet snitch-contact-sheet-rows snitch-contact-sheet-dash mt-3 grid"
                     :style="recentSheetStyle"
                     aria-live="polite"
                     aria-label="Loading recent posts"
@@ -583,7 +599,7 @@ function askRemove(): void {
                 </div>
                 <div
                     v-else-if="postsList.length"
-                    class="snitch-contact-sheet snitch-contact-sheet-rows snitch-contact-reveal mt-5 grid"
+                    class="snitch-contact-sheet snitch-contact-sheet-rows snitch-contact-sheet-dash snitch-contact-reveal mt-3 grid"
                     :style="recentSheetStyle"
                 >
                     <FeedContactCell
@@ -591,11 +607,12 @@ function askRemove(): void {
                         :key="post.id"
                         :post="post"
                         :index="index"
+                        compact
                     />
                 </div>
                 <div
                     v-else
-                    class="snitch-scrap relative mt-5 max-w-md p-6 text-center"
+                    class="snitch-scrap relative mt-3 max-w-md p-6 text-center"
                 >
                     <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
                     <LoaderCircle
@@ -625,15 +642,14 @@ function askRemove(): void {
                 </div>
             </section>
 
-            <section class="mt-10">
-                <p class="snitch-ink-label">From this account</p>
-                <h2 class="snitch-display mt-1 text-2xl text-snitch-ink">
+            <section>
+                <h2 class="snitch-display text-2xl text-snitch-ink">
                     Winners
                 </h2>
 
                 <div
                     v-if="!winnersLoaded"
-                    class="snitch-tear-board mt-5 grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3"
+                    class="snitch-tear-board mt-3 grid gap-3 p-3"
                     aria-live="polite"
                     aria-label="Loading winners"
                 >
@@ -646,7 +662,7 @@ function askRemove(): void {
                 </div>
                 <div
                     v-else-if="winnersList.length"
-                    class="snitch-tear-board mt-5 grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3"
+                    class="snitch-tear-board mt-3 grid gap-3 p-3"
                 >
                     <Link
                         v-for="(winner, index) in winnersList"
@@ -687,7 +703,7 @@ function askRemove(): void {
                 </div>
                 <div
                     v-else
-                    class="snitch-scrap relative mt-5 max-w-md p-6"
+                    class="snitch-scrap relative mt-3 p-6"
                 >
                     <span class="snitch-tape right-5 -top-2" aria-hidden="true" />
                     <Trophy class="size-8 text-snitch-ink/35" aria-hidden="true" />
@@ -697,6 +713,7 @@ function askRemove(): void {
                     </p>
                 </div>
             </section>
+            </div>
         </div>
 
         <RemoveCompetitorModal

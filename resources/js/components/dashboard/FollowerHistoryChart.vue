@@ -71,19 +71,19 @@ const yTicks = computed(() => {
 </script>
 
 <template>
-    <div>
+    <div class="flex h-full flex-col">
         <div class="flex items-baseline justify-between gap-3">
             <p class="snitch-ink-label">Followers</p>
             <p class="text-xs text-snitch-ink/55">
                 {{ points.length === 1 ? 'First recorded count' : `${points.length} counts` }}
             </p>
         </div>
-        <p class="mt-1 text-sm text-snitch-ink/60">
-            Recorded while someone tracks this account. Older counts are not available from the platform.
+        <p class="mt-1 text-xs text-snitch-ink/55">
+            Recorded while this account is tracked.
         </p>
         <svg
             v-if="points.length"
-            class="mt-3 w-full overflow-visible"
+            class="mt-2 w-full overflow-visible"
             :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
             role="img"
             :aria-label="`Follower counts, ${points.length} points`"

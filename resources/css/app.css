@@ -844,6 +844,20 @@
         }
     }
 
+    .snitch-account-rail {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 14%, transparent);
+        background: color-mix(in oklab, var(--snitch-lift) 42%, var(--snitch-paper));
+    }
+
+    @media (min-width: 1024px) {
+        .snitch-account-rail {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+    }
+
     .snitch-heatmap-cell {
         transition: transform 160ms ease;
     }
