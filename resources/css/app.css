@@ -355,10 +355,6 @@
         animation: none;
     }
 
-    .snitch-app-shell .snitch-tape {
-        animation: none;
-    }
-
     .snitch-display {
         font-family: var(--font-display);
         font-weight: 400;
@@ -851,6 +847,39 @@
         font-size: 0.6875rem;
         line-height: 1.25;
         color: color-mix(in oklab, var(--snitch-ink) 55%, transparent);
+    }
+
+    .snitch-dash-rail-skel {
+        display: block;
+        border-radius: 0;
+        background: color-mix(in oklab, var(--snitch-ink) 8%, var(--snitch-paper));
+        animation: snitch-dash-skel-pulse 2.6s ease-in-out infinite;
+    }
+
+    .snitch-dash-rail-skel-label {
+        width: 4.5rem;
+        height: 0.55rem;
+        margin-top: 0.15rem;
+    }
+
+    .snitch-dash-rail-skel-value {
+        width: 3rem;
+        height: 1.35rem;
+        margin-top: 0.35rem;
+    }
+
+    .snitch-dash-soft-in {
+        animation: snitch-dash-soft-in 280ms ease both;
+    }
+
+    .snitch-dash-chart-slot {
+        min-height: 11rem;
+    }
+
+    /* Soft fade only on the dash sheet - keep transform stagger off so rows do not jump. */
+    .snitch-contact-sheet-dash.snitch-contact-reveal > * {
+        animation-name: snitch-dash-soft-in;
+        animation-duration: 320ms;
     }
 
     a.snitch-dash-rail-item:hover,
@@ -3298,6 +3327,25 @@
     }
 }
 
+@keyframes snitch-dash-soft-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes snitch-dash-skel-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.72;
+    }
+}
+
 @keyframes snitch-stipple-pop {
     from {
         opacity: 0;
@@ -3383,6 +3431,7 @@
     .snitch-grain,
     .snitch-tape,
     .snitch-contact-reveal > *,
+    .snitch-dash-soft-in,
     .snitch-polaroid,
     .snitch-btn,
     .snitch-hero-marquee-track,

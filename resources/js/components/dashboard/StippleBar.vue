@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed } from 'vue';
 import { buildStippleMarks } from '@/lib/stipple';
 import type { StippleMark, StippleVariant } from '@/lib/stipple';
 
@@ -17,7 +17,7 @@ const props = withDefaults(
         radius?: number;
         seed?: number;
         title?: string;
-        /** Reveal marks one at a time from the bar origin on mount. */
+        /** Reveal marks with a CSS stagger from the bar origin on mount. */
         animate?: boolean;
         growFrom?: StippleGrowFrom;
         /** Extra ms before the first mark appears (bar stagger). */
@@ -29,16 +29,12 @@ const props = withDefaults(
         variant: 'dots',
         fillClass: 'fill-snitch-ink/70',
         seed: 0,
-        // Instant by default - staggered mark timers jank when several charts mount at once.
-        animate: false,
+        animate: true,
         growFrom: 'bottom',
         delayOffset: 0,
         stepMs: 20,
     },
 );
-
-const visibleCount = ref(0);
-const timers: number[] = [];
 
 const prefersReducedMotion = (): boolean => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
@@ -47,6 +43,10 @@ const prefersReducedMotion = (): boolean => {
 
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 };
+
+const shouldAnimate = computed(
+    () => props.animate && !prefersReducedMotion(),
+);
 
 const marks = computed(() => {
     const built = buildStippleMarks({
@@ -60,7 +60,7 @@ const marks = computed(() => {
         seed: props.seed,
     });
 
-    if (!props.animate || built.length <= 1) {
+    if (!shouldAnimate.value || built.length <= 1) {
         return built;
     }
 
@@ -98,66 +98,15 @@ function markAnchor(mark: StippleMark): { x: number; y: number } {
     };
 }
 
-function clearTimers(): void {
-    while (timers.length > 0) {
-        const id = timers.pop();
-
-        if (id !== undefined) {
-            window.clearTimeout(id);
-        }
+function delayStyle(index: number): Record<string, string> | undefined {
+    if (!shouldAnimate.value) {
+        return undefined;
     }
+
+    return {
+        animationDelay: `${props.delayOffset + index * props.stepMs}ms`,
+    };
 }
-
-function startReveal(): void {
-    clearTimers();
-
-    const total = marks.value.length;
-
-    if (!props.animate || total === 0 || prefersReducedMotion()) {
-        visibleCount.value = total;
-
-        return;
-    }
-
-    visibleCount.value = 0;
-
-    for (let index = 0; index < total; index += 1) {
-        const delay = props.delayOffset + index * props.stepMs;
-        const id = window.setTimeout(() => {
-            visibleCount.value = index + 1;
-        }, delay);
-
-        timers.push(id);
-    }
-}
-
-onMounted(() => {
-    startReveal();
-});
-
-watch(
-    () =>
-        [
-            props.x,
-            props.y,
-            props.width,
-            props.height,
-            props.seed,
-            props.step,
-            props.radius,
-            props.variant,
-            props.delayOffset,
-            props.stepMs,
-            marks.value.length,
-        ] as const,
-    () => {
-        startReveal();
-    },
-);
-
-onBeforeUnmount(() => {
-    clearTimers();
-});
 </script>
 
 <template>
@@ -165,17 +114,19 @@ onBeforeUnmount(() => {
         <title v-if="title">{{ title }}</title>
         <template v-for="(mark, index) in marks" :key="index">
             <circle
-                v-if="mark.kind === 'circle' && index < visibleCount"
+                v-if="mark.kind === 'circle'"
                 class="snitch-stipple-mark"
-                :class="{ 'is-popping': animate }"
+                :class="{ 'is-popping': shouldAnimate }"
+                :style="delayStyle(index)"
                 :cx="mark.cx"
                 :cy="mark.cy"
                 :r="mark.r"
             />
             <polygon
-                v-else-if="mark.kind === 'hex' && index < visibleCount"
+                v-else-if="mark.kind === 'hex'"
                 class="snitch-stipple-mark"
-                :class="{ 'is-popping': animate }"
+                :class="{ 'is-popping': shouldAnimate }"
+                :style="delayStyle(index)"
                 :points="mark.points"
             />
         </template>

@@ -129,18 +129,19 @@ class StippleChartContractTest extends TestCase
     }
 
     #[Test]
-    public function stipple_bar_reveals_marks_one_by_one_when_animate_is_on(): void
+    public function stipple_bar_reveals_marks_with_css_stagger(): void
     {
         $source = file_get_contents(base_path('resources/js/components/dashboard/StippleBar.vue'));
         $css = file_get_contents(base_path('resources/css/app.css'));
 
         $this->assertIsString($source);
         $this->assertIsString($css);
-        $this->assertStringContainsString('visibleCount', $source);
+        $this->assertStringContainsString('animationDelay', $source);
         $this->assertStringContainsString('stepMs', $source);
-        $this->assertStringContainsString('index < visibleCount', $source);
-        $this->assertMatchesRegularExpression('/animate:\s*false/', $source);
-        $this->assertStringContainsString("'is-popping': animate", $source);
+        $this->assertStringContainsString("'is-popping': shouldAnimate", $source);
+        $this->assertStringNotContainsString('setTimeout', $source);
+        $this->assertStringNotContainsString('visibleCount', $source);
+        $this->assertMatchesRegularExpression('/animate:\s*true/', $source);
         $this->assertStringContainsString('@keyframes snitch-stipple-pop', $css);
     }
 

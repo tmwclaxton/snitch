@@ -239,9 +239,13 @@ class DashboardTest extends TestCase
         $this->assertIsString($pile);
         $this->assertStringContainsString('SnitchFacePile', $dashboard);
         $this->assertStringNotContainsString('SnitchChipPile', $dashboard);
-        $this->assertStringNotContainsString('snitch-contact-reveal', $dashboard);
+        $this->assertStringContainsString('snitch-contact-reveal', $dashboard);
         $this->assertStringContainsString('snitch-dash-charts', $dashboard);
+        $this->assertStringContainsString('snitch-dash-rail-item-pending', $dashboard);
+        $this->assertStringContainsString('snitch-dash-soft-in', $dashboard);
+        $this->assertStringContainsString('snitch-dash-chart-slot', $dashboard);
         $this->assertSame(2, substr_count($dashboard, 'Competitor Analytics'));
+        $this->assertStringNotContainsString('playbookLine', $dashboard);
         $this->assertStringNotContainsString('>Snitch</span>', $dashboard);
         $this->assertStringNotContainsString('last 16 weeks', $dashboard);
         $this->assertStringNotContainsString('Competitor Content Cadence', $dashboard);
