@@ -2588,7 +2588,7 @@
         }
 
         .snitch-hero-mobile-mascot {
-            width: min(38vw, 28rem);
+            width: min(28vw, 20rem);
             margin-bottom: 5.5rem;
             /* Sit toward the right edge of the stage, not dead center. */
             transform: translateX(min(18vw, 7rem));
@@ -2614,7 +2614,7 @@
         }
 
         .snitch-hero-mobile-mascot {
-            width: min(34vw, 32rem);
+            width: min(24vw, 22rem);
             margin-bottom: 6rem;
             transform: translateX(min(22vw, 10rem));
         }
