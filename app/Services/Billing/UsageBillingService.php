@@ -60,6 +60,17 @@ class UsageBillingService
         $row->forceFill(['starter_allowance_exhausted' => true])->save();
     }
 
+    public function clearStarterAllowanceExhausted(User $user): void
+    {
+        $row = $this->balanceRow($user);
+
+        if (! $row->starter_allowance_exhausted) {
+            return;
+        }
+
+        $row->forceFill(['starter_allowance_exhausted' => false])->save();
+    }
+
     /**
      * Claimed website users (and claimed agent accounts) get a generic no-card
      * trial. Unclaimed MCP create_account users never do.
@@ -97,6 +108,7 @@ class UsageBillingService
                 if ($days > 0) {
                     // Fresh trial: legacy rows sometimes had an expired Cashier
                     // trial_ends_at without ever being claimed or credited.
+                    $this->clearStarterAllowanceExhausted($user);
                     $user->forceFill([
                         'trial_ends_at' => now()->addDays($days),
                     ])->save();

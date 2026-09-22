@@ -418,6 +418,26 @@ class BillingPaywallTest extends TestCase
         $this->assertTrue($user->onGenericTrial());
         $this->assertTrue($this->billing->isOnWebTrial($user));
         $this->assertTrue($user->trial_ends_at?->isSameDay(now()->addDays(7)));
+        $this->assertFalse($this->billing->starterAllowanceExhausted($user));
+    }
+
+    public function test_legacy_heal_clears_stale_starter_exhausted_flag(): void
+    {
+        $user = User::factory()->withoutStarterCredit()->create([
+            'created_via' => 'web',
+            'workos_id' => 'workos_legacy_exhausted',
+            'claimed_at' => null,
+            'claim_token' => null,
+            'trial_ends_at' => now()->subDays(30),
+        ]);
+        $this->billing->markStarterAllowanceExhausted($user);
+
+        $state = $this->billing->paywallState($user->fresh());
+
+        $this->assertFalse($state['blocked']);
+        $this->assertFalse($state['starter_allowance_exhausted']);
+        $this->assertFalse($this->billing->starterAllowanceExhausted($user->fresh()));
+        $this->assertSame(500.0, $this->billing->balancePence($user->fresh()));
     }
 
     public function test_unclaimed_agent_paywall_message_points_at_website_sign_in(): void
