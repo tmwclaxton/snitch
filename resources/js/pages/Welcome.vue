@@ -324,8 +324,7 @@ const steps = [
                     The posts that earn a remake.
                 </h2>
                 <p class="relative z-10 mt-3 max-w-3xl text-snitch-ink/80">
-                    You set the bar. We score what cleared it, why it won, and
-                    how to steal the craft.
+                    You set the bar. We score what cleared it, why it won.
                 </p>
             </div>
         </section>
