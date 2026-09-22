@@ -410,10 +410,12 @@ class CompetitorInsightsBuilder
         $monthThen = 0;
         $monthMatched = false;
 
+        $asOf = $this->followersAsOf($ids, [$today, $week, $month]);
+
         foreach ($ids as $id) {
-            $now = $this->latestFollowersOnOrBefore($id, $today);
-            $weekAgo = $this->latestFollowersOnOrBefore($id, $week);
-            $monthAgo = $this->latestFollowersOnOrBefore($id, $month);
+            $now = $asOf[$id][$today] ?? null;
+            $weekAgo = $asOf[$id][$week] ?? null;
+            $monthAgo = $asOf[$id][$month] ?? null;
 
             if ($now !== null) {
                 $current += $now;
@@ -497,15 +499,43 @@ class CompetitorInsightsBuilder
         }
     }
 
-    private function latestFollowersOnOrBefore(int $socialAccountId, string $date): ?int
+    /**
+     * @param  list<int>  $socialAccountIds
+     * @param  list<string>  $dates
+     * @return array<int, array<string, int>>
+     */
+    private function followersAsOf(array $socialAccountIds, array $dates): array
     {
-        $followers = FollowerSnapshot::query()
-            ->where('social_account_id', $socialAccountId)
-            ->whereDate('captured_on', '<=', $date)
-            ->orderByDesc('captured_on')
-            ->value('followers');
+        if ($socialAccountIds === [] || $dates === []) {
+            return [];
+        }
 
-        return $followers === null ? null : (int) $followers;
+        $rows = FollowerSnapshot::query()
+            ->whereIn('social_account_id', $socialAccountIds)
+            ->whereDate('captured_on', '<=', max($dates))
+            ->orderByDesc('captured_on')
+            ->get(['social_account_id', 'captured_on', 'followers']);
+
+        $found = [];
+
+        foreach ($rows as $row) {
+            $id = (int) $row->social_account_id;
+            $day = $row->captured_on?->toDateString();
+
+            if ($day === null) {
+                continue;
+            }
+
+            foreach ($dates as $date) {
+                if (isset($found[$id][$date]) || $day > $date) {
+                    continue;
+                }
+
+                $found[$id][$date] = (int) $row->followers;
+            }
+        }
+
+        return $found;
     }
 
     private function pct(int $current, int $previous): ?float

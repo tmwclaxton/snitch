@@ -94,61 +94,61 @@ class DashboardController extends Controller
 
         $inQuotaIds = $entitlements->inQuotaTrackedAccountIds($user);
         $socialIds = $this->socialIdsForTrackedAccounts($inQuotaIds);
-
-        $trackedCount = $user->trackedAccounts()->count();
-        $lastSyncedAt = $inQuotaIds === []
-            ? null
-            : $user->trackedAccounts()->whereIn('id', $inQuotaIds)->max('last_synced_at');
-
-        $postsBase = fn () => Post::query()->forUser($user)->reelLike();
-
-        $postsCount = Post::query()->forUser($user)->count();
-
-        $winnersCount = WinnerInsight::query()
-            ->where('user_id', $user->id)
-            ->when(
-                $socialIds === [],
-                fn ($query) => $query->whereRaw('0 = 1'),
-                fn ($query) => $query->whereHas(
-                    'post',
-                    fn ($post) => $post->whereIn('social_account_id', $socialIds),
-                ),
-            )
-            ->count();
-
-        $analysisBacklog = $postsBase()->analysisQueue()->count();
-
-        $analysisFailed = $postsBase()->analysisFailed()->count();
-
         $frames = $this->frameLimit($request);
 
         return Inertia::render('Dashboard', [
-            'stats' => [
-                'tracked_accounts' => $trackedCount,
-                'posts' => $postsCount,
-                'winners' => $winnersCount,
-                'analysis_backlog' => $analysisBacklog,
-                'analysis_failed' => $analysisFailed,
-                'last_synced_at' => $lastSyncedAt,
-                'followers' => (int) $user->trackedAccounts()->sum('followers'),
-            ],
-            'activity' => Inertia::defer(fn () => $activity->forUser($user), 'activity'),
-            'insights' => Inertia::defer(fn () => $insights->forUser($user), 'activity'),
-            'recent_posts' => Inertia::defer(
-                fn () => $this->recentPosts($user, $frames),
-                'content',
-            ),
-            'top_winners' => Inertia::defer(
-                fn () => $this->topWinners($user, $socialIds),
-                'content',
-            ),
-            'watching' => [
+            'stats' => fn (): array => $this->stats($user, $inQuotaIds, $socialIds),
+            'activity' => fn (): array => $activity->forUser($user),
+            'insights' => Inertia::defer(fn (): array => $insights->forUser($user), 'insights'),
+            'recent_posts' => fn (): Collection => $this->recentPosts($user, $frames),
+            'top_winners' => fn (): Collection => $this->topWinners($user, $socialIds),
+            'watching' => fn (): array => [
                 'brand' => $watching->forBrandHandles($user),
                 'check' => $request->session()->get('watching_check'),
             ],
-            'snitches' => $this->snitchFaces($user),
+            'snitches' => fn (): array => $this->snitchFaces($user),
             'frames' => $frames,
         ]);
+    }
+
+    /**
+     * @param  list<int>  $inQuotaIds
+     * @param  list<int>  $socialIds
+     * @return array{
+     *     tracked_accounts: int,
+     *     posts: int,
+     *     winners: int,
+     *     analysis_backlog: int,
+     *     analysis_failed: int,
+     *     last_synced_at: mixed,
+     *     followers: int
+     * }
+     */
+    private function stats(User $user, array $inQuotaIds, array $socialIds): array
+    {
+        $postsBase = fn () => Post::query()->forUser($user)->reelLike();
+
+        return [
+            'tracked_accounts' => $user->trackedAccounts()->count(),
+            'posts' => Post::query()->forUser($user)->count(),
+            'winners' => WinnerInsight::query()
+                ->where('user_id', $user->id)
+                ->when(
+                    $socialIds === [],
+                    fn ($query) => $query->whereRaw('0 = 1'),
+                    fn ($query) => $query->whereHas(
+                        'post',
+                        fn ($post) => $post->whereIn('social_account_id', $socialIds),
+                    ),
+                )
+                ->count(),
+            'analysis_backlog' => $postsBase()->analysisQueue()->count(),
+            'analysis_failed' => $postsBase()->analysisFailed()->count(),
+            'last_synced_at' => $inQuotaIds === []
+                ? null
+                : $user->trackedAccounts()->whereIn('id', $inQuotaIds)->max('last_synced_at'),
+            'followers' => (int) $user->trackedAccounts()->sum('followers'),
+        ];
     }
 
     /**
@@ -156,7 +156,20 @@ class DashboardController extends Controller
      */
     private function frameLimit(Request $request): int
     {
-        return min(24, max(1, $request->integer('frames', 6)));
+        if ($request->query->has('frames')) {
+            $frames = min(24, max(1, $request->integer('frames', 6)));
+            $request->session()->put('dashboard_frames', $frames);
+
+            return $frames;
+        }
+
+        $remembered = $request->session()->get('dashboard_frames');
+
+        if (is_numeric($remembered)) {
+            return min(24, max(1, (int) $remembered));
+        }
+
+        return 6;
     }
 
     /**

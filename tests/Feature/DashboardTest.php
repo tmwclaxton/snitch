@@ -44,12 +44,19 @@ class DashboardTest extends TestCase
                 ->where('stats.winners', 0)
                 ->where('stats.analysis_backlog', 0)
                 ->has('snitches', 0)
-                ->missing('recent_posts')
-                ->missing('top_winners')
-                ->missing('activity')
+                ->has('recent_posts', 0)
+                ->has('top_winners', 0)
+                ->has('activity.heatmap', DashboardActivityBuilder::HEATMAP_WEEKS * 7)
+                ->has('activity.weekly', DashboardActivityBuilder::WEEKLY_WEEKS)
+                ->has('activity.by_platform', 0)
+                ->has('activity.by_time_of_day', 24)
+                ->where('activity.heatmap.0.count', 0)
+                ->where('activity.weekly.0.count', 0)
+                ->where('activity.by_time_of_day.0.hour', 0)
+                ->where('activity.by_time_of_day.0.label', '12am')
+                ->where('activity.by_time_of_day.0.count', 0)
                 ->missing('insights')
-                ->loadDeferredProps('activity', fn (Assert $page) => $page
-                    ->has('activity.heatmap', DashboardActivityBuilder::HEATMAP_WEEKS * 7)
+                ->loadDeferredProps('insights', fn (Assert $page) => $page
                     ->has('insights.format_mix', 0)
                     ->has('insights.hashtags', 0)
                     ->has('insights.keywords', 0)
@@ -58,18 +65,6 @@ class DashboardTest extends TestCase
                     ->where('insights.cta_clicks.clicks', 0)
                     ->where('insights.growth.followers', 0)
                     ->where('insights.playbook.peak_hour_label', null)
-                    ->has('activity.weekly', DashboardActivityBuilder::WEEKLY_WEEKS)
-                    ->has('activity.by_platform', 0)
-                    ->has('activity.by_time_of_day', 24)
-                    ->where('activity.heatmap.0.count', 0)
-                    ->where('activity.weekly.0.count', 0)
-                    ->where('activity.by_time_of_day.0.hour', 0)
-                    ->where('activity.by_time_of_day.0.label', '12am')
-                    ->where('activity.by_time_of_day.0.count', 0)
-                )
-                ->loadDeferredProps('content', fn (Assert $page) => $page
-                    ->has('recent_posts', 0)
-                    ->has('top_winners', 0)
                 )
             );
     }
@@ -122,26 +117,19 @@ class DashboardTest extends TestCase
                 ->where('stats.posts', 3)
                 ->where('stats.winners', 1)
                 ->where('stats.analysis_backlog', 2)
-                ->missing('recent_posts')
-                ->missing('top_winners')
-                ->missing('activity')
+                ->has('recent_posts', 3)
+                ->has('top_winners', 1)
+                ->where('top_winners.0.post.id', $ready->id)
+                ->where('top_winners.0.score', 77)
+                ->where('top_winners.0.post.metrics.views', 12500)
+                ->where('top_winners.0.post.metrics.likes', 840)
+                ->where('top_winners.0.post.analysis.hook', 'Starts on the total')
+                ->where('top_winners.0.post.analysis.concept', 'Receipt cold open')
+                ->has('top_winners.0.post.embed')
+                ->where('top_winners.0.post.cover_url', 'https://cdn.example.com/ig1.jpg')
+                ->has('activity.heatmap')
+                ->has('activity.weekly', DashboardActivityBuilder::WEEKLY_WEEKS)
                 ->missing('insights')
-                ->loadDeferredProps('content', fn (Assert $page) => $page
-                    ->has('recent_posts', 3)
-                    ->has('top_winners', 1)
-                    ->where('top_winners.0.post.id', $ready->id)
-                    ->where('top_winners.0.score', 77)
-                    ->where('top_winners.0.post.metrics.views', 12500)
-                    ->where('top_winners.0.post.metrics.likes', 840)
-                    ->where('top_winners.0.post.analysis.hook', 'Starts on the total')
-                    ->where('top_winners.0.post.analysis.concept', 'Receipt cold open')
-                    ->has('top_winners.0.post.embed')
-                    ->where('top_winners.0.post.cover_url', 'https://cdn.example.com/ig1.jpg')
-                )
-                ->loadDeferredProps('activity', fn (Assert $page) => $page
-                    ->has('activity.heatmap')
-                    ->has('activity.weekly', DashboardActivityBuilder::WEEKLY_WEEKS)
-                )
             );
     }
 
@@ -177,42 +165,41 @@ class DashboardTest extends TestCase
                 ->assertOk()
                 ->assertInertia(fn (Assert $page) => $page
                     ->component('Dashboard')
-                    ->missing('activity')
+                    ->has('activity.heatmap', DashboardActivityBuilder::HEATMAP_WEEKS * 7)
+                    ->where('activity.heatmap.0.date', '2026-04-19')
+                    ->where('activity.weekly.0.week_start', '2026-05-17')
+                    ->where('activity.by_platform', [
+                        ['platform' => 'instagram', 'count' => 2],
+                        ['platform' => 'tiktok', 'count' => 1],
+                    ])
+                    ->has('activity.by_time_of_day', 24)
+                    ->where('activity.heatmap', function ($heatmap): bool {
+                        $byDate = collect($heatmap)->keyBy('date');
+
+                        return ($byDate['2026-08-05']['count'] ?? null) === 2
+                            && ($byDate['2026-07-27']['count'] ?? null) === 1
+                            && ($byDate['2026-04-01']['count'] ?? null) === null;
+                    })
+                    ->where('activity.weekly', function ($weekly): bool {
+                        $byWeek = collect($weekly)->keyBy('week_start');
+
+                        return ($byWeek['2026-08-02']['count'] ?? null) === 2
+                            && ($byWeek['2026-07-26']['count'] ?? null) === 1;
+                    })
+                    ->where('activity.by_time_of_day', function ($hours): bool {
+                        $byHour = collect($hours)->keyBy('hour');
+
+                        return ($byHour[9]['count'] ?? null) === 1
+                            && ($byHour[11]['count'] ?? null) === 1
+                            && ($byHour[18]['count'] ?? null) === 1
+                            && ($byHour[0]['count'] ?? null) === 0
+                            && ($byHour[9]['label'] ?? null) === '9am'
+                            && ($byHour[18]['label'] ?? null) === '6pm';
+                    })
                     ->missing('insights')
-                    ->loadDeferredProps('activity', fn (Assert $page) => $page
+                    ->loadDeferredProps('insights', fn (Assert $page) => $page
                         ->has('insights.format_mix')
                         ->has('insights.playbook')
-                        ->has('activity.heatmap', DashboardActivityBuilder::HEATMAP_WEEKS * 7)
-                        ->where('activity.heatmap.0.date', '2026-04-19')
-                        ->where('activity.weekly.0.week_start', '2026-05-17')
-                        ->where('activity.by_platform', [
-                            ['platform' => 'instagram', 'count' => 2],
-                            ['platform' => 'tiktok', 'count' => 1],
-                        ])
-                        ->has('activity.by_time_of_day', 24)
-                        ->where('activity.heatmap', function ($heatmap): bool {
-                            $byDate = collect($heatmap)->keyBy('date');
-
-                            return ($byDate['2026-08-05']['count'] ?? null) === 2
-                                && ($byDate['2026-07-27']['count'] ?? null) === 1
-                                && ($byDate['2026-04-01']['count'] ?? null) === null;
-                        })
-                        ->where('activity.weekly', function ($weekly): bool {
-                            $byWeek = collect($weekly)->keyBy('week_start');
-
-                            return ($byWeek['2026-08-02']['count'] ?? null) === 2
-                                && ($byWeek['2026-07-26']['count'] ?? null) === 1;
-                        })
-                        ->where('activity.by_time_of_day', function ($hours): bool {
-                            $byHour = collect($hours)->keyBy('hour');
-
-                            return ($byHour[9]['count'] ?? null) === 1
-                                && ($byHour[11]['count'] ?? null) === 1
-                                && ($byHour[18]['count'] ?? null) === 1
-                                && ($byHour[0]['count'] ?? null) === 0
-                                && ($byHour[9]['label'] ?? null) === '9am'
-                                && ($byHour[18]['label'] ?? null) === '6pm';
-                        })
                     )
                 );
         } finally {
@@ -232,7 +219,7 @@ class DashboardTest extends TestCase
         $page = json_decode(json_encode($response->viewData('page')), true);
 
         $this->assertSame(
-            ['activity' => ['activity', 'insights'], 'content' => ['recent_posts', 'top_winners']],
+            ['insights' => ['insights']],
             $page['deferredProps'] ?? null,
         );
 
@@ -263,16 +250,22 @@ class DashboardTest extends TestCase
         $newestFirst = array_reverse($ids);
 
         $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('frames', 6)
+                ->has('recent_posts', 6)
+                ->where('recent_posts.0.id', $newestFirst[0])
+            );
+
+        $this->actingAs($user)
             ->get(route('dashboard', ['frames' => 4]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('frames', 4)
-                ->missing('recent_posts')
-                ->loadDeferredProps('content', fn (Assert $page) => $page
-                    ->has('recent_posts', 4)
-                    ->where('recent_posts.0.id', $newestFirst[0])
-                    ->where('recent_posts.3.id', $newestFirst[3])
-                )
+                ->has('recent_posts', 4)
+                ->where('recent_posts.0.id', $newestFirst[0])
+                ->where('recent_posts.3.id', $newestFirst[3])
             );
 
         $this->actingAs($user)
@@ -280,20 +273,17 @@ class DashboardTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('frames', 24)
-                ->loadDeferredProps('content', fn (Assert $page) => $page
-                    ->has('recent_posts', 8)
-                )
+                ->has('recent_posts', 8)
             );
 
         $this->actingAs($user)
+            ->withSession(['dashboard_frames' => 4])
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('frames', 6)
-                ->loadDeferredProps('content', fn (Assert $page) => $page
-                    ->has('recent_posts', 6)
-                    ->where('recent_posts.0.id', $newestFirst[0])
-                )
+                ->where('frames', 4)
+                ->has('recent_posts', 4)
+                ->where('recent_posts.0.id', $newestFirst[0])
             );
     }
 
