@@ -246,6 +246,57 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('snitch-face-pile', $pile);
     }
 
+    public function test_dashboard_frames_query_returns_a_full_set_of_recent_posts(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+        $ids = [];
+
+        for ($i = 0; $i < 8; $i++) {
+            $post = Post::factory()->forAccount($account)->create([
+                'posted_at' => now()->subHours(8 - $i),
+            ]);
+            $ids[] = $post->id;
+        }
+
+        $newestFirst = array_reverse($ids);
+
+        $this->actingAs($user)
+            ->get(route('dashboard', ['frames' => 4]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('frames', 4)
+                ->missing('recent_posts')
+                ->loadDeferredProps('content', fn (Assert $page) => $page
+                    ->has('recent_posts', 4)
+                    ->where('recent_posts.0.id', $newestFirst[0])
+                    ->where('recent_posts.3.id', $newestFirst[3])
+                )
+            );
+
+        $this->actingAs($user)
+            ->get(route('dashboard', ['frames' => 80]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('frames', 24)
+                ->loadDeferredProps('content', fn (Assert $page) => $page
+                    ->has('recent_posts', 8)
+                )
+            );
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('frames', 6)
+                ->loadDeferredProps('content', fn (Assert $page) => $page
+                    ->has('recent_posts', 6)
+                    ->where('recent_posts.0.id', $newestFirst[0])
+                )
+            );
+    }
+
     public function test_authenticated_users_without_brand_are_sent_to_onboarding(): void
     {
         $user = User::factory()->create();

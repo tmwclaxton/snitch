@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import {
     Clapperboard,
     Trophy,
     Users,
 } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { Component } from 'vue';
 import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
+import DashboardController from '@/actions/App/Http/Controllers/DashboardController';
 import { index as feed, show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import { index as winners } from '@/actions/App/Http/Controllers/WinnerController';
 import FormatMixChart from '@/components/dashboard/FormatMixChart.vue';
@@ -126,6 +127,7 @@ const props = defineProps<{
     activity?: ActivityPayload | null;
     insights?: InsightsPayload | null;
     recent_posts?: RecentPost[] | null;
+    frames: number;
     top_winners?: TopWinner[] | null;
     snitches: SnitchFace[];
 }>();
@@ -209,6 +211,121 @@ function accountHref(post: RecentPost): string | null {
     const id = post.tracked_account?.id;
 
     return id != null ? competitorShow.url(id) : null;
+}
+
+const framesSheetRef = ref<HTMLElement | null>(null);
+const FRAME_ROWS = 2;
+const FRAME_LIMIT = 24;
+let frameTimer: ReturnType<typeof setTimeout> | null = null;
+let requestedFrames: number | null = null;
+let framePasses = 0;
+
+function frameColumns(sheet: HTMLElement): number {
+    const tracks = getComputedStyle(sheet).gridTemplateColumns;
+
+    if (tracks === '' || tracks === 'none') {
+        return 1;
+    }
+
+    return Math.max(1, tracks.split(' ').filter((track) => track.trim() !== '').length);
+}
+
+function fittedFrames(sheet: HTMLElement): number {
+    const columns = frameColumns(sheet);
+
+    return Math.min(FRAME_LIMIT, Math.max(columns, columns * FRAME_ROWS));
+}
+
+function applyFittedFrames(): void {
+    const sheet = framesSheetRef.value;
+
+    if (sheet == null) {
+        return;
+    }
+
+    const fitted = fittedFrames(sheet);
+
+    if (fitted === props.frames || fitted === requestedFrames || framePasses >= 2) {
+        if (fitted === props.frames) {
+            requestedFrames = null;
+            framePasses = 0;
+        }
+
+        return;
+    }
+
+    requestedFrames = fitted;
+    framePasses += 1;
+
+    router.get(
+        DashboardController.url(),
+        { frames: fitted },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ['recent_posts', 'frames'],
+            onFinish: () => {
+                if (props.frames === requestedFrames) {
+                    requestedFrames = null;
+                }
+
+                scheduleFrames();
+            },
+        },
+    );
+}
+
+function scheduleFrames(): void {
+    if (frameTimer != null) {
+        clearTimeout(frameTimer);
+    }
+
+    frameTimer = setTimeout(() => {
+        frameTimer = null;
+        applyFittedFrames();
+    }, 150);
+}
+
+watch(framesSheetRef, (sheet, _previous, onCleanup) => {
+    scheduleFrames();
+
+    if (sheet == null) {
+        return;
+    }
+
+    const observer = new ResizeObserver(() => {
+        scheduleFrames();
+    });
+    observer.observe(sheet);
+    onCleanup(() => observer.disconnect());
+});
+
+watch(
+    () => props.recent_posts?.length,
+    () => {
+        void nextTick(() => {
+            scheduleFrames();
+        });
+    },
+);
+
+onMounted(() => {
+    scheduleFrames();
+    window.addEventListener('resize', onFramesResize);
+});
+
+onUnmounted(() => {
+    if (frameTimer != null) {
+        clearTimeout(frameTimer);
+    }
+
+    window.removeEventListener('resize', onFramesResize);
+});
+
+function onFramesResize(): void {
+    framePasses = 0;
+    scheduleFrames();
 }
 </script>
 
@@ -540,11 +657,12 @@ function accountHref(post: RecentPost): string | null {
 
                     <div
                         v-if="recent_posts === undefined || recent_posts === null"
+                        ref="framesSheetRef"
                         class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill mt-5 grid"
                         aria-live="polite"
                     >
                         <div
-                            v-for="index in 6"
+                            v-for="index in frames"
                             :key="`recent-skel-${index}`"
                             class="p-2"
                         >
@@ -557,8 +675,8 @@ function accountHref(post: RecentPost): string | null {
                     </div>
                     <div
                         v-else-if="recent_posts.length"
-                        class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill snitch-contact-sheet-rows snitch-contact-reveal mt-5 grid"
-                        style="--snitch-sheet-cols: 3"
+                        ref="framesSheetRef"
+                        class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill snitch-contact-reveal mt-5 grid"
                     >
                         <FeedContactCell
                             v-for="(post, index) in recent_posts"

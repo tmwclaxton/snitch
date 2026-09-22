@@ -82,6 +82,7 @@ class DashboardController extends Controller
                     ],
                 ],
                 'recent_posts' => [],
+                'frames' => $this->frameLimit($request),
                 'top_winners' => [],
                 'watching' => [
                     'brand' => [],
@@ -119,6 +120,8 @@ class DashboardController extends Controller
 
         $analysisFailed = $postsBase()->analysisFailed()->count();
 
+        $frames = $this->frameLimit($request);
+
         return Inertia::render('Dashboard', [
             'stats' => [
                 'tracked_accounts' => $trackedCount,
@@ -132,7 +135,7 @@ class DashboardController extends Controller
             'activity' => Inertia::defer(fn () => $activity->forUser($user), 'activity'),
             'insights' => Inertia::defer(fn () => $insights->forUser($user), 'activity'),
             'recent_posts' => Inertia::defer(
-                fn () => $this->recentPosts($user),
+                fn () => $this->recentPosts($user, $frames),
                 'content',
             ),
             'top_winners' => Inertia::defer(
@@ -144,13 +147,22 @@ class DashboardController extends Controller
                 'check' => $request->session()->get('watching_check'),
             ],
             'snitches' => $this->snitchFaces($user),
+            'frames' => $frames,
         ]);
+    }
+
+    /**
+     * How many Latest frames to load. The client sets this from the live column count.
+     */
+    private function frameLimit(Request $request): int
+    {
+        return min(24, max(1, $request->integer('frames', 6)));
     }
 
     /**
      * @return Collection<int, Post>
      */
-    private function recentPosts(User $user): Collection
+    private function recentPosts(User $user, int $limit): Collection
     {
         $recentPosts = Post::query()
             ->forUser($user)
@@ -160,7 +172,7 @@ class DashboardController extends Controller
                 'winnerInsight' => fn ($q) => $q->where('user_id', $user->id),
             ])
             ->latest('posted_at')
-            ->limit(6)
+            ->limit($limit)
             ->get();
         PostAccountPresenter::attachForUser($recentPosts, $user);
         $recentPosts->transform(function (Post $post): Post {
