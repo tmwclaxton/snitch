@@ -2379,7 +2379,7 @@
     }
 
     /*
-     * Mobile landing poster (md:hidden): one locked frame. Copy sits under the
+     * Landing poster (all breakpoints): one locked frame. Copy sits under the
      * absolute nav; mascot + mustard floor are pinned to the bottom. Height is
      * JS-measured (--snitch-mobile-hero-height) because mobile browser chrome
      * makes 100dvh alone unreliable; dvh remains the pre-JS fallback.
@@ -2500,6 +2500,46 @@
     .snitch-hero-mobile .snitch-hero-mascot-binos {
         width: 62%;
         top: 28%;
+    }
+
+    @media (min-width: 768px) {
+        .snitch-hero-mobile-copy {
+            padding-top: 10rem;
+            max-width: 28rem;
+        }
+
+        .snitch-hero-mobile-stage {
+            height: min(58%, 34rem);
+        }
+
+        .snitch-hero-mobile-mascot {
+            width: min(38vw, 28rem);
+            margin-bottom: 5.5rem;
+        }
+
+        .snitch-hero-mobile-cta {
+            max-width: 22rem;
+        }
+
+        .snitch-hero-mobile-cta .snitch-btn {
+            min-height: 3rem;
+            font-size: 1rem;
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .snitch-hero-mobile-copy {
+            max-width: 32rem;
+        }
+
+        .snitch-hero-mobile-stage {
+            height: min(62%, 38rem);
+        }
+
+        .snitch-hero-mobile-mascot {
+            width: min(34vw, 32rem);
+            margin-bottom: 6rem;
+        }
     }
 
     @media (max-height: 700px) {

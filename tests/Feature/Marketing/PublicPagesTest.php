@@ -290,7 +290,7 @@ class PublicPagesTest extends TestCase
         );
     }
 
-    public function test_hero_title_card_ctas_use_spot_and_ink_buttons(): void
+    public function test_landing_poster_hero_ctas_use_spot_then_ink_buttons(): void
     {
         $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
         $css = file_get_contents(resource_path('css/app.css'));
@@ -299,41 +299,29 @@ class PublicPagesTest extends TestCase
         $this->assertNotFalse($css, 'Missing app.css source');
 
         $this->assertMatchesRegularExpression(
-            '/class="snitch-hero-cta[^"]*"[\s\S]*?class="snitch-btn">[\s\S]*?relative z-10[^"]*">[\s\S]*?Log in[\s\S]*?class="snitch-btn snitch-btn-spot"[\s\S]*?relative z-10[^"]*">[\s\S]*?Sign up/',
+            '/snitch-hero-mobile-cta[\s\S]*?snitch-btn snitch-btn-spot[\s\S]*?Get started[\s\S]*?class="snitch-btn[\s\S]*?Log in/',
             $welcome,
-            'Hero title card must use charcoal snitch-btn for Log in then spot yellow for Sign up, with visible z-10 labels',
+            'Poster hero must lead with Get started (spot) then Log in (ink)',
         );
         $this->assertMatchesRegularExpression(
-            '/class="snitch-hero-cta[^"]*"[\s\S]*?v-if="isAuthenticated"[\s\S]*?class="snitch-btn snitch-btn-spot"[\s\S]*?relative z-10[^"]*">[\s\S]*?Dashboard/',
+            '/snitch-hero-mobile-cta[\s\S]*?v-if="isAuthenticated"[\s\S]*?snitch-btn snitch-btn-spot[\s\S]*?Open dashboard/',
             $welcome,
-            'Authenticated hero CTA must be yellow spot ticket Dashboard with visible label',
+            'Authenticated poster CTA must be yellow spot Open dashboard',
         );
         $this->assertMatchesRegularExpression(
-            '/class="snitch-hero-cta[^"]*"[\s\S]*?:href="login\(\)"[\s\S]*?:href="login\(\)"/',
+            '/snitch-hero-mobile-cta[\s\S]*?:href="login\(\)"[\s\S]*?:href="login\(\)"/',
             $welcome,
-            'Hero title card Log in and Sign up must both use login() like PublicNav',
+            'Poster Get started and Log in must both use login()',
         );
         $this->assertDoesNotMatchRegularExpression(
-            '/class="snitch-hero-cta[^"]*"[\s\S]*?snitch-btn-ghost/',
+            '/snitch-hero-mobile-cta[\s\S]*?snitch-btn-ghost/',
             $welcome,
-            'Hero title card CTAs must not use ghost / paper fill',
+            'Poster CTAs must not use ghost / paper fill',
         );
-        $this->assertStringContainsString('.snitch-hero-copy .snitch-btn.snitch-btn-spot', $css);
-        $this->assertStringContainsString('.snitch-hero-copy .snitch-btn.snitch-btn-spot::before', $css);
-        $this->assertStringNotContainsString('.snitch-hero-copy .snitch-btn-ghost', $css);
-        $this->assertDoesNotMatchRegularExpression(
-            '/\.snitch-hero-copy\s+\.snitch-btn\s*\{[^}]*container-type\s*:/s',
-            $css,
-            'Hero buttons must not use container-type (inline-size containment collapses label width)',
-        );
-        $this->assertMatchesRegularExpression(
-            '/\.snitch-hero-copy\s+\.snitch-btn\.snitch-btn-spot::before\s*\{[^}]*inset:\s*var\(--snitch-ticket-stroke\)/s',
-            $css,
-            'Hero spot face must use the same inset charcoal rim as closing Open dashboard',
-        );
+        $this->assertStringContainsString('.snitch-hero-mobile-cta .snitch-btn', $css);
     }
 
-    public function test_hero_background_is_static_on_mobile(): void
+    public function test_beta_hero_background_is_static_on_mobile(): void
     {
         $css = file_get_contents(resource_path('css/app.css'));
 
@@ -341,16 +329,16 @@ class PublicPagesTest extends TestCase
         $this->assertMatchesRegularExpression(
             '/@media\s*\(max-width:\s*767px\)\s*\{[^}]*\.snitch-hero-bg-img\s*\{[^}]*height:\s*100%/s',
             $css,
-            'Mobile hero wall image must fill the hero box instead of the tall desktop crop',
+            'Beta hero wall image must fill the hero box instead of the tall desktop crop',
         );
         $this->assertMatchesRegularExpression(
             '/@media\s*\(max-width:\s*767px\)\s*\{[\s\S]*?\.snitch-hero-marquee-track\s*\{[^}]*animation:\s*none/s',
             $css,
-            'Mobile hero must freeze parallax marquee tracks',
+            'Beta hero must freeze parallax marquee tracks on mobile',
         );
     }
 
-    public function test_home_has_mobile_poster_hero_separate_from_desktop(): void
+    public function test_home_uses_poster_hero_at_every_breakpoint(): void
     {
         $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
         $css = file_get_contents(resource_path('css/app.css'));
@@ -359,21 +347,24 @@ class PublicPagesTest extends TestCase
         $this->assertNotFalse($css, 'Missing app.css source');
 
         $this->assertStringContainsString('snitch-hero-mobile', $welcome);
-        $this->assertStringContainsString('md:hidden', $welcome);
-        $this->assertStringContainsString('mobileHeroEl', $welcome);
+        $this->assertStringNotContainsString('md:hidden', $welcome);
+        $this->assertStringNotContainsString('md:block', $welcome);
+        $this->assertStringNotContainsString('desktopHeroArt', $welcome);
+        $this->assertStringNotContainsString('platforms-front.png', $welcome);
+        $this->assertStringNotContainsString(
+            'class="snitch-hero relative hidden h-dvh w-full overflow-hidden md:block"',
+            $welcome,
+            'Desktop wall hero must be removed in favour of the poster',
+        );
+        $this->assertStringContainsString('heroEl', $welcome);
         $this->assertStringContainsString('measureVisibleViewportHeight', $welcome);
         $this->assertStringContainsString('--snitch-mobile-hero-height', $welcome);
-        $this->assertStringContainsString('lockedMobileHeroHeight', $welcome);
+        $this->assertStringContainsString('lockedHeroHeight', $welcome);
         $this->assertStringContainsString('orientationchange', $welcome);
         $this->assertStringNotContainsString(
             "visualViewport?.addEventListener('resize'",
             $welcome,
             'Do not remeasure on visualViewport resize - URL bar show/hide would resize the hero while scrolling',
-        );
-        $this->assertStringContainsString(
-            'class="snitch-hero relative hidden h-dvh w-full overflow-hidden md:block"',
-            $welcome,
-            'Desktop wall hero must stay hidden below md',
         );
         $this->assertStringContainsString('snitch-hero-mobile-mascot', $welcome);
         $this->assertStringContainsString('snitch-hero-mobile-floor', $welcome);
@@ -381,12 +372,12 @@ class PublicPagesTest extends TestCase
         $this->assertDoesNotMatchRegularExpression(
             '/snitch-hero-mobile[\s\S]{0,400}pt-44/',
             $welcome,
-            'Mobile poster must not use the oversized pt-44 gap under the nav',
+            'Poster must not use the oversized pt-44 gap under the nav',
         );
         $this->assertMatchesRegularExpression(
             '/snitch-hero-mobile-cta[\s\S]*?Get started[\s\S]*?Log in/',
             $welcome,
-            'Mobile poster must lead with Get started then Log in',
+            'Poster must lead with Get started then Log in',
         );
         $this->assertStringContainsString('.snitch-hero-mobile-wash', $css);
         $this->assertStringContainsString('.snitch-hero-mobile-floor', $css);
@@ -399,22 +390,27 @@ class PublicPagesTest extends TestCase
             'max-height: var(--snitch-mobile-hero-height, 100dvh)',
             $css,
         );
+        $this->assertMatchesRegularExpression(
+            '/@media\s*\(min-width:\s*768px\)\s*\{[\s\S]*?\.snitch-hero-mobile-mascot/s',
+            $css,
+            'Poster mascot must scale up on desktop',
+        );
     }
 
-    public function test_hero_backdrop_waits_for_decode_before_reveal(): void
+    public function test_beta_hero_backdrop_waits_for_decode_before_reveal(): void
     {
-        $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
+        $beta = file_get_contents(resource_path('js/pages/marketing/Beta.vue'));
         $css = file_get_contents(resource_path('css/app.css'));
 
-        $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
+        $this->assertNotFalse($beta, 'Missing Beta.vue source');
         $this->assertNotFalse($css, 'Missing app.css source');
-        $this->assertStringContainsString('heroBackdropReady', $welcome);
-        $this->assertStringContainsString('preloadHeroImage', $welcome);
-        $this->assertStringContainsString("matchMedia('(min-width: 768px)')", $welcome);
-        $this->assertStringContainsString('snitch-hero-backdrop-placeholder', $welcome);
-        $this->assertStringContainsString('class="snitch-hero-backdrop"', $welcome);
-        $this->assertStringContainsString('v-if="desktopHeroArt"', $welcome);
-        $this->assertStringContainsString("'is-ready': heroBackdropReady", $welcome);
+        $this->assertStringContainsString('heroBackdropReady', $beta);
+        $this->assertStringContainsString('preloadHeroImage', $beta);
+        $this->assertStringContainsString("matchMedia('(min-width: 768px)')", $beta);
+        $this->assertStringContainsString('snitch-hero-backdrop-placeholder', $beta);
+        $this->assertStringContainsString('class="snitch-hero-backdrop"', $beta);
+        $this->assertStringContainsString('v-if="desktopHeroArt"', $beta);
+        $this->assertStringContainsString("'is-ready': heroBackdropReady", $beta);
         $this->assertStringContainsString('.snitch-hero-backdrop.is-ready', $css);
         $this->assertMatchesRegularExpression(
             '/\.snitch-hero-backdrop\s*\{[^}]*filter:\s*blur\(/s',
