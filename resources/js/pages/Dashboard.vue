@@ -73,7 +73,6 @@ type InsightsPayload = {
     keywords: Array<{ term: string; count: number }>;
     ctas: Array<{ term: string; count: number; lines?: Array<{ text: string; count: number }> }>;
     cta_clicks: {
-        clicks: number;
         posts_with_cta: number;
         posts: number;
     };
@@ -414,13 +413,9 @@ function onFramesResize(): void {
                     v-if="insights"
                     class="snitch-dash-rail-item"
                 >
-                    <span class="snitch-ink-label">CTA clicks</span>
-                    <span class="snitch-display text-2xl tabular-nums">{{ formatFollowers(insights.cta_clicks.clicks) }}</span>
-                    <span class="text-[11px] leading-snug text-snitch-ink/55">
-                        {{ insights.cta_clicks.posts_with_cta }}
-                        {{ insights.cta_clicks.posts_with_cta === 1 ? 'post' : 'posts' }}
-                        with an ask
-                    </span>
+                    <span class="snitch-ink-label">Posts with an ask</span>
+                    <span class="snitch-display text-2xl tabular-nums">{{ insights.cta_clicks.posts_with_cta }}</span>
+                    <span class="text-[11px] leading-snug text-snitch-ink/55">In the caption</span>
                 </div>
             </div>
 

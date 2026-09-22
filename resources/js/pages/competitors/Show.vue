@@ -98,7 +98,6 @@ type Insights = {
     keywords: Array<{ term: string; count: number }>;
     ctas?: Array<{ term: string; count: number; lines?: Array<{ text: string; count: number }> }>;
     cta_clicks?: {
-        clicks: number;
         posts_with_cta: number;
         posts: number;
     };
@@ -454,13 +453,12 @@ function askRemove(): void {
                             </p>
                         </div>
                         <div class="snitch-dash-rail-item">
-                            <p class="snitch-ink-label">CTA clicks</p>
+                            <p class="snitch-ink-label">Posts with an ask</p>
                             <p class="snitch-display text-2xl tabular-nums">
-                                {{ formatFollowers(insights?.cta_clicks?.clicks ?? 0) }}
+                                {{ insights?.cta_clicks?.posts_with_cta ?? 0 }}
                             </p>
                             <p class="text-[11px] leading-snug text-snitch-ink/55">
-                                {{ insights?.cta_clicks?.posts_with_cta ?? 0 }}
-                                with an ask
+                                In the caption
                             </p>
                         </div>
                     </div>

@@ -62,7 +62,7 @@ class DashboardTest extends TestCase
                     ->has('insights.keywords', 0)
                     ->has('insights.ctas', 0)
                     ->has('insights.ads', 0)
-                    ->where('insights.cta_clicks.clicks', 0)
+                    ->where('insights.cta_clicks.posts_with_cta', 0)
                     ->where('insights.growth.followers', 0)
                     ->where('insights.playbook.peak_hour_label', null)
                 )

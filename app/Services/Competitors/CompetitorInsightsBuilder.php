@@ -337,16 +337,13 @@ class CompetitorInsightsBuilder
 
     /**
      * @param  Collection<int, Post>  $posts
-     * @return array{clicks: int, posts_with_cta: int, posts: int}
+     * @return array{posts_with_cta: int, posts: int}
      */
     private function ctaClicks(Collection $posts): array
     {
-        $clicks = 0;
         $withCta = 0;
 
         foreach ($posts as $post) {
-            $clicks += $this->clicksFromPost($post);
-
             $cta = trim((string) ($post->analysis?->cta ?? ''));
 
             if ($cta !== '' && strcasecmp($cta, 'No explicit CTA') !== 0) {
@@ -355,29 +352,9 @@ class CompetitorInsightsBuilder
         }
 
         return [
-            'clicks' => $clicks,
             'posts_with_cta' => $withCta,
             'posts' => $posts->count(),
         ];
-    }
-
-    private function clicksFromPost(Post $post): int
-    {
-        $metrics = is_array($post->metrics) ? $post->metrics : [];
-
-        if (isset($metrics['clicks']) && is_numeric($metrics['clicks'])) {
-            return max(0, (int) $metrics['clicks']);
-        }
-
-        $raw = is_array($post->raw_payload) ? $post->raw_payload : [];
-
-        foreach (['clicks', 'linkClicks', 'link_clicks', 'clicksCount', 'ctaClicks', 'cta_clicks'] as $key) {
-            if (isset($raw[$key]) && is_numeric($raw[$key])) {
-                return max(0, (int) $raw[$key]);
-            }
-        }
-
-        return 0;
     }
 
     /**

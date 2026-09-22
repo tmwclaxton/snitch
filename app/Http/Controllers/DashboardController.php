@@ -63,7 +63,6 @@ class DashboardController extends Controller
                     'keywords' => [],
                     'ctas' => [],
                     'cta_clicks' => [
-                        'clicks' => 0,
                         'posts_with_cta' => 0,
                         'posts' => 0,
                     ],

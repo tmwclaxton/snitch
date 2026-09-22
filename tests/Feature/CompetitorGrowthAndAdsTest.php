@@ -33,7 +33,11 @@ class CompetitorGrowthAndAdsTest extends TestCase
         $this->assertStringNotContainsString('not in this build', $dashboard);
         $this->assertStringNotContainsString('Not click-through', $dashboard);
         $this->assertStringNotContainsString('Not conversion', $show);
-        $this->assertStringContainsString('CTA clicks', $dashboard);
+        $this->assertStringContainsString('Posts with an ask', $dashboard);
+        $this->assertStringContainsString('In the caption', $dashboard);
+        $this->assertStringContainsString('Posts with an ask', $show);
+        $this->assertStringNotContainsString('CTA clicks', $dashboard);
+        $this->assertStringNotContainsString('CTA clicks', $show);
         $this->assertStringContainsString('Growth', $dashboard);
         $this->assertStringContainsString('Active ads', $dashboard);
     }
@@ -93,8 +97,8 @@ class CompetitorGrowthAndAdsTest extends TestCase
             $this->assertSame(1000, $insights['growth']['week_delta']);
             $this->assertSame(9.1, $insights['growth']['week_pct']);
             $this->assertSame(2000, $insights['growth']['month_delta']);
-            $this->assertSame(40, $insights['cta_clicks']['clicks']);
             $this->assertSame(1, $insights['cta_clicks']['posts_with_cta']);
+            $this->assertArrayNotHasKey('clicks', $insights['cta_clicks']);
             $this->assertSame('Book a table', $insights['ctas'][0]['term']);
             $this->assertSame('Book a table', $insights['ctas'][0]['lines'][0]['text']);
             $this->assertSame('Autumn set menu', $insights['ads'][0]['title']);
