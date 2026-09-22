@@ -162,4 +162,21 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringNotContainsString('!aspect-auto', $show);
         $this->assertStringNotContainsString('compact', $show);
     }
+
+    #[Test]
+    public function post_page_puts_the_caption_under_the_player(): void
+    {
+        $show = file_get_contents(base_path('resources/js/pages/feed/Show.vue'));
+        $this->assertIsString($show);
+
+        $player = strpos($show, 'snitch-post-player');
+        $caption = strpos($show, 'snitch-post-caption');
+        $notes = strpos($show, 'snitch-post-notes');
+
+        $this->assertNotFalse($player);
+        $this->assertNotFalse($caption);
+        $this->assertNotFalse($notes);
+        $this->assertLessThan($caption, $player);
+        $this->assertLessThan($notes, $caption);
+    }
 }

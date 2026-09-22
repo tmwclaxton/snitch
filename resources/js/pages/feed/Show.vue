@@ -432,18 +432,18 @@ function openTranscript(): void {
                             </div>
                         </div>
 
-                    </div>
-
-                    <div class="snitch-post-notes space-y-2">
                         <div
                             v-if="post.caption"
-                            class="snitch-scrap relative p-3"
+                            class="snitch-post-caption snitch-scrap relative p-3"
                         >
                             <p class="snitch-ink-label">Caption</p>
                             <p class="relative z-10 mt-1.5 whitespace-pre-wrap text-sm leading-snug text-snitch-ink/80">
                                 {{ post.caption }}
                             </p>
                         </div>
+                    </div>
+
+                    <div class="snitch-post-notes space-y-2">
                         <template v-if="analysisDone && post.analysis">
                             <div
                                 v-if="post.analysis.concept"
