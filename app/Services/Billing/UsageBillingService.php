@@ -241,7 +241,11 @@ class UsageBillingService
             ];
         }
 
-        if ($onTrial && ! $starterExhausted && $hasBalance) {
+        if ($onTrial && $hasBalance) {
+            if ($starterExhausted) {
+                $this->clearStarterAllowanceExhausted($user);
+            }
+
             return [
                 'blocked' => false,
                 'reason' => null,
@@ -301,7 +305,11 @@ class UsageBillingService
 
             $onTrial = $this->isOnWebTrial($user);
 
-            if ($onTrial && ! $this->starterAllowanceExhausted($user) && $hasBalance) {
+            if ($onTrial && $hasBalance) {
+                if ($this->starterAllowanceExhausted($user)) {
+                    $this->clearStarterAllowanceExhausted($user);
+                }
+
                 return;
             }
 
