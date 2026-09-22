@@ -2505,9 +2505,8 @@
         background:
             linear-gradient(
                 180deg,
-                transparent 0%,
-                color-mix(in oklab, var(--snitch-spot) 70%, transparent) 35%,
-                var(--snitch-spot) 50%,
+                color-mix(in oklab, var(--snitch-spot) 88%, transparent) 0%,
+                var(--snitch-spot) 22%,
                 var(--snitch-spot) 100%
             );
         clip-path: polygon(
