@@ -40,6 +40,7 @@ Route::inertia('/cookies', 'marketing/Cookies')->name('cookies');
 // Standalone special landing page - deliberately no nav/footer links into the app.
 Route::inertia('/beta', 'marketing/Beta')->name('beta');
 Route::view('/pitch', 'pitch')->name('pitch');
+Route::permanentRedirect('/ads', '/ad-library');
 
 Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
 Route::get('/analytics.json', [AnalyticsController::class, 'json'])->name('analytics.json');
@@ -103,7 +104,7 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::post('dashboard/watching', WatchingYouController::class)
             ->middleware('throttle:30,1')
             ->name('dashboard.watching');
-        Route::get('/ads', [AdsController::class, 'index'])->name('ads.index');
+        Route::get('/ad-library', [AdsController::class, 'index'])->name('ads.index');
 
         Route::get('/tracking', [CompetitorController::class, 'index'])->name('competitors.index');
         Route::post('/tracking', [CompetitorController::class, 'store'])->name('competitors.store');

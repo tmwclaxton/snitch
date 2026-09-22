@@ -58,6 +58,13 @@ class AdsPageTest extends TestCase
             );
     }
 
+    public function test_ads_page_avoids_adblock_sensitive_path(): void
+    {
+        $this->assertSame('/ad-library', parse_url(route('ads.index'), PHP_URL_PATH));
+
+        $this->get('/ads')->assertRedirect('/ad-library');
+    }
+
     public function test_dashboard_ads_overview_links_to_ads_page(): void
     {
         $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
