@@ -2589,7 +2589,8 @@
 
         .snitch-hero-mobile-mascot {
             width: min(28vw, 20rem);
-            margin-bottom: 5.5rem;
+            /* Lift after the size shrink so feet still tuck into the floor. */
+            margin-bottom: 7rem;
             /* Sit toward the right edge of the stage, not dead center. */
             transform: translateX(min(18vw, 7rem));
         }
@@ -2615,7 +2616,7 @@
 
         .snitch-hero-mobile-mascot {
             width: min(24vw, 22rem);
-            margin-bottom: 6rem;
+            margin-bottom: 8rem;
             transform: translateX(min(22vw, 10rem));
         }
     }
