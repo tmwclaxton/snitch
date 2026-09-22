@@ -107,8 +107,15 @@ type Insights = {
         week_pct: number | null;
         month_delta: number | null;
         month_pct: number | null;
+        since_first_delta?: number | null;
+        since_first_pct?: number | null;
     };
     follower_series?: FollowerPoint[];
+    paid_vs_organic?: {
+        organic: number;
+        sponsored: number;
+        running_ads: number;
+    };
     ads?: Array<{
         id: number;
         title: string;
@@ -448,8 +455,26 @@ function askRemove(): void {
                                 {{ insights.growth.week_delta > 0 ? '+' : '' }}{{ insights.growth.week_delta }}
                                 this week
                             </p>
+                            <p
+                                v-else-if="insights?.growth?.since_first_delta != null"
+                                class="text-[11px] leading-snug text-snitch-ink/55"
+                            >
+                                {{ insights.growth.since_first_delta > 0 ? '+' : '' }}{{ insights.growth.since_first_delta }}
+                                since first reading
+                            </p>
                             <p v-else class="text-[11px] leading-snug text-snitch-ink/55">
                                 No earlier count yet
+                            </p>
+                        </div>
+                        <div class="snitch-dash-rail-item">
+                            <p class="snitch-ink-label">Paid vs organic</p>
+                            <p class="snitch-display text-2xl tabular-nums">
+                                {{ insights?.paid_vs_organic?.sponsored ?? 0 }}
+                                <span class="text-base text-snitch-ink/45">/</span>
+                                {{ insights?.paid_vs_organic?.organic ?? 0 }}
+                            </p>
+                            <p class="text-[11px] leading-snug text-snitch-ink/55">
+                                Sponsored / organic
                             </p>
                         </div>
                         <div class="snitch-dash-rail-item">

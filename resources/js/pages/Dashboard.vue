@@ -12,6 +12,8 @@ import DashboardController from '@/actions/App/Http/Controllers/DashboardControl
 import { index as feed, show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import { index as winners } from '@/actions/App/Http/Controllers/WinnerController';
 import CtaLanguage from '@/components/CtaLanguage.vue';
+import FollowerHistoryChart from '@/components/dashboard/FollowerHistoryChart.vue';
+import type { FollowerPoint } from '@/components/dashboard/FollowerHistoryChart.vue';
 import FormatMixChart from '@/components/dashboard/FormatMixChart.vue';
 import PlatformSplitChart from '@/components/dashboard/PlatformSplitChart.vue';
 import PostingHeatmap from '@/components/dashboard/PostingHeatmap.vue';
@@ -82,6 +84,14 @@ type InsightsPayload = {
         week_pct: number | null;
         month_delta: number | null;
         month_pct: number | null;
+        since_first_delta?: number | null;
+        since_first_pct?: number | null;
+    };
+    follower_series?: FollowerPoint[];
+    paid_vs_organic?: {
+        organic: number;
+        sponsored: number;
+        running_ads: number;
     };
     ads: Array<{
         id: number;
@@ -405,9 +415,33 @@ function onFramesResize(): void {
                         </span>
                     </span>
                     <span
+                        v-else-if="insights.growth.since_first_delta != null"
+                        class="text-[11px] leading-snug text-snitch-ink/55"
+                    >
+                        <span class="tabular-nums">{{ formatDelta(insights.growth.since_first_delta) }}</span>
+                        since first reading
+                    </span>
+                    <span
                         v-else
                         class="text-[11px] leading-snug text-snitch-ink/55"
                     >No earlier count yet</span>
+                </div>
+                <div
+                    v-if="insights?.paid_vs_organic"
+                    class="snitch-dash-rail-item"
+                >
+                    <span class="snitch-ink-label">Paid vs organic</span>
+                    <span class="snitch-display text-2xl tabular-nums">
+                        {{ insights.paid_vs_organic.sponsored }}
+                        <span class="text-base text-snitch-ink/45">/</span>
+                        {{ insights.paid_vs_organic.organic }}
+                    </span>
+                    <span class="text-[11px] leading-snug text-snitch-ink/55">
+                        Sponsored / organic
+                        <template v-if="insights.paid_vs_organic.running_ads > 0">
+                            · {{ insights.paid_vs_organic.running_ads }} library ads
+                        </template>
+                    </span>
                 </div>
                 <div
                     v-if="insights"
@@ -437,6 +471,22 @@ function onFramesResize(): void {
                     </div>
                     <div class="snitch-scrap relative flex h-full flex-col p-3 pt-4">
                         <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
+                        <FollowerHistoryChart
+                            v-if="insights"
+                            scope="corpus"
+                            :points="insights.follower_series ?? []"
+                        />
+                        <SnitchSkeleton
+                            v-else
+                            variant="scrap"
+                            height="8rem"
+                            label="Loading follower history"
+                        />
+                    </div>
+                </div>
+                <div class="mt-3 grid items-start gap-3 lg:grid-cols-4">
+                    <div class="snitch-scrap relative p-3 pt-4">
+                        <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
                         <PlatformSplitChart
                             v-if="activity"
                             :platforms="activity.by_platform"
@@ -448,8 +498,6 @@ function onFramesResize(): void {
                             label="Loading platform split chart"
                         />
                     </div>
-                </div>
-                <div class="mt-3 grid items-start gap-3 lg:grid-cols-3">
                     <div class="snitch-scrap relative p-3 pt-4">
                         <span class="snitch-tape right-6 -top-2" aria-hidden="true" />
                         <FormatMixChart

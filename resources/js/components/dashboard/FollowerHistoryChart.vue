@@ -10,7 +10,14 @@ export type FollowerPoint = {
 
 const props = defineProps<{
     points: FollowerPoint[];
+    scope?: 'account' | 'corpus';
 }>();
+
+const scopeLabel = computed(() =>
+    props.scope === 'corpus'
+        ? 'Across your tracked accounts.'
+        : 'Recorded while this account is tracked.',
+);
 
 const leftPad = 54;
 const rightPad = 12;
@@ -79,7 +86,7 @@ const yTicks = computed(() => {
             </p>
         </div>
         <p class="mt-1 text-xs text-snitch-ink/55">
-            Recorded while this account is tracked.
+            {{ scopeLabel }}
         </p>
         <svg
             v-if="points.length"

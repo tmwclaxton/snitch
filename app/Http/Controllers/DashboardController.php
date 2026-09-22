@@ -68,10 +68,18 @@ class DashboardController extends Controller
                     ],
                     'growth' => [
                         'followers' => 0,
-                        'week_delta' => 0,
+                        'week_delta' => null,
                         'week_pct' => null,
-                        'month_delta' => 0,
+                        'month_delta' => null,
                         'month_pct' => null,
+                        'since_first_delta' => null,
+                        'since_first_pct' => null,
+                    ],
+                    'follower_series' => [],
+                    'paid_vs_organic' => [
+                        'organic' => 0,
+                        'sponsored' => 0,
+                        'running_ads' => 0,
                     ],
                     'ads' => [],
                     'playbook' => [

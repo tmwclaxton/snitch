@@ -40,6 +40,9 @@ class CompetitorGrowthAndAdsTest extends TestCase
         $this->assertStringNotContainsString('CTA clicks', $show);
         $this->assertStringContainsString('Growth', $dashboard);
         $this->assertStringContainsString('Active ads', $dashboard);
+        $this->assertStringContainsString('FollowerHistoryChart', $dashboard);
+        $this->assertStringContainsString('Paid vs organic', $dashboard);
+        $this->assertStringContainsString('Paid vs organic', $show);
     }
 
     public function test_insights_include_growth_ads_and_cta_clicks(): void
@@ -103,6 +106,11 @@ class CompetitorGrowthAndAdsTest extends TestCase
             $this->assertSame('Book a table', $insights['ctas'][0]['lines'][0]['text']);
             $this->assertSame($post->id, $insights['ctas'][0]['lines'][0]['post_id']);
             $this->assertSame('Autumn set menu', $insights['ads'][0]['title']);
+            $this->assertArrayHasKey('follower_series', $insights);
+            $this->assertGreaterThanOrEqual(1, count($insights['follower_series']));
+            $this->assertSame(0, $insights['paid_vs_organic']['sponsored']);
+            $this->assertSame(1, $insights['paid_vs_organic']['organic']);
+            $this->assertSame(1, $insights['paid_vs_organic']['running_ads']);
         } finally {
             CarbonImmutable::setTestNow();
         }
@@ -152,8 +160,48 @@ class CompetitorGrowthAndAdsTest extends TestCase
         $account->followers = 520;
         $recorder->recordFromAccount($account);
 
-        $this->assertSame(1, FollowerSnapshot::query()->count());
-        $this->assertSame(520, FollowerSnapshot::query()->first()?->followers);
+        $this->assertSame(3, FollowerSnapshot::query()->count());
+        $this->assertSame(
+            520,
+            FollowerSnapshot::query()->whereDate('captured_on', now()->toDateString())->value('followers'),
+        );
+    }
+
+    public function test_first_snapshot_plants_week_and_month_baselines(): void
+    {
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-22 12:00:00'));
+
+        try {
+            $user = User::factory()->create();
+            BrandProfile::factory()->for($user)->create();
+            $account = TrackedAccount::factory()->for($user)->create([
+                'followers' => 1000,
+            ]);
+            app(FollowerSnapshotRecorder::class)->recordFromAccount($account);
+
+            $this->assertSame(3, FollowerSnapshot::query()->count());
+            $this->assertTrue(
+                FollowerSnapshot::query()
+                    ->where('social_account_id', $account->social_account_id)
+                    ->whereDate('captured_on', '2026-09-15')
+                    ->where('followers', 1000)
+                    ->exists(),
+            );
+            $this->assertTrue(
+                FollowerSnapshot::query()
+                    ->where('social_account_id', $account->social_account_id)
+                    ->whereDate('captured_on', '2026-08-23')
+                    ->where('followers', 1000)
+                    ->exists(),
+            );
+
+            $insights = app(CompetitorInsightsBuilder::class)->forUser($user);
+            $this->assertSame(0, $insights['growth']['week_delta']);
+            $this->assertSame(0, $insights['growth']['month_delta']);
+            $this->assertGreaterThanOrEqual(2, count($insights['follower_series']));
+        } finally {
+            CarbonImmutable::setTestNow();
+        }
     }
 
     public function test_ads_finder_persists_library_hits(): void
@@ -165,8 +213,8 @@ class CompetitorGrowthAndAdsTest extends TestCase
                 'data' => [
                     [
                         'url' => 'https://www.facebook.com/ads/library/?id=123',
-                        'title' => 'Live from the bar',
-                        'description' => 'Book tonight',
+                        'title' => "Let's Go Social - Ad Library",
+                        'description' => "Live from the bar with Let's Go Social",
                     ],
                     [
                         'url' => 'https://example.com/not-ads',
@@ -187,7 +235,7 @@ class CompetitorGrowthAndAdsTest extends TestCase
 
         $this->assertDatabaseHas('social_ads', [
             'social_account_id' => $account->social_account_id,
-            'title' => 'Live from the bar',
+            'title' => "Let's Go Social - Ad Library",
             'url' => 'https://www.facebook.com/ads/library/?id=123',
         ]);
         $this->assertSame(1, SocialAd::query()->count());

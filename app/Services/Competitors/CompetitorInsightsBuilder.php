@@ -11,6 +11,7 @@ use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Dashboard\DashboardActivityBuilder;
 use App\Services\Tracking\FollowerSnapshotRecorder;
+use App\Support\SponsoredPostDetector;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -55,6 +56,7 @@ class CompetitorInsightsBuilder
     public function __construct(
         private DashboardActivityBuilder $activity,
         private CtaEssenceGrouper $ctaEssence,
+        private SponsoredPostDetector $sponsored,
     ) {}
 
     /**
@@ -85,7 +87,7 @@ class CompetitorInsightsBuilder
         $posts = Post::query()
             ->where('social_account_id', $socialAccountId)
             ->whereNotNull('posted_at')
-            ->with('analysis')
+            ->with(['analysis.terms'])
             ->get(['id', 'social_account_id', 'caption', 'type', 'metrics', 'posted_at', 'raw_payload']);
 
         return [
@@ -93,6 +95,7 @@ class CompetitorInsightsBuilder
             ...$this->summarise($posts),
             'growth' => $this->growth($user, $socialAccountId),
             'follower_series' => $this->followerSeries($socialAccountId),
+            'paid_vs_organic' => $this->paidVsOrganic($posts, [$socialAccountId]),
             'ads' => $this->ads([$socialAccountId]),
         ];
     }
@@ -114,7 +117,7 @@ class CompetitorInsightsBuilder
         $posts = Post::query()
             ->forUser($user)
             ->whereNotNull('posted_at')
-            ->with('analysis')
+            ->with(['analysis.terms'])
             ->get(['id', 'social_account_id', 'caption', 'type', 'metrics', 'posted_at', 'raw_payload']);
 
         $summary = $this->summarise($posts);
@@ -133,6 +136,8 @@ class CompetitorInsightsBuilder
             ...$summary,
             'playbook' => $this->playbook($activity['by_time_of_day'] ?? [], $summary['format_mix'], $summary['hashtags']),
             'growth' => $this->growth($user),
+            'follower_series' => $this->followerSeriesForUser($socialIds),
+            'paid_vs_organic' => $this->paidVsOrganic($posts, $socialIds),
             'ads' => $this->ads($socialIds),
         ];
     }
@@ -369,7 +374,15 @@ class CompetitorInsightsBuilder
     }
 
     /**
-     * @return array{followers: int, week_delta: int|null, week_pct: float|null, month_delta: int|null, month_pct: float|null}
+     * @return array{
+     *     followers: int,
+     *     week_delta: int|null,
+     *     week_pct: float|null,
+     *     month_delta: int|null,
+     *     month_pct: float|null,
+     *     since_first_delta: int|null,
+     *     since_first_pct: float|null
+     * }
      */
     private function growth(User $user, ?int $socialAccountId = null): array
     {
@@ -422,13 +435,54 @@ class CompetitorInsightsBuilder
             }
         }
 
+        [$sinceFirstDelta, $sinceFirstPct] = $this->sinceFirstGrowth($ids, $today, $current);
+
         return [
             'followers' => $current,
             'week_delta' => $weekMatched ? $weekNow - $weekThen : null,
             'week_pct' => $weekMatched ? $this->pct($weekNow, $weekThen) : null,
             'month_delta' => $monthMatched ? $monthNow - $monthThen : null,
             'month_pct' => $monthMatched ? $this->pct($monthNow, $monthThen) : null,
+            'since_first_delta' => $sinceFirstDelta,
+            'since_first_pct' => $sinceFirstPct,
         ];
+    }
+
+    /**
+     * @param  list<int>  $socialAccountIds
+     * @return array{0: int|null, 1: float|null}
+     */
+    private function sinceFirstGrowth(array $socialAccountIds, string $today, int $current): array
+    {
+        if ($socialAccountIds === [] || $current <= 0) {
+            return [null, null];
+        }
+
+        $firstDay = FollowerSnapshot::query()
+            ->whereIn('social_account_id', $socialAccountIds)
+            ->min('captured_on');
+
+        if (! is_string($firstDay) || $firstDay === '' || $firstDay >= $today) {
+            return [null, null];
+        }
+
+        $firstDay = CarbonImmutable::parse($firstDay)->toDateString();
+        $asOf = $this->followersAsOf($socialAccountIds, [$firstDay]);
+        $then = 0;
+        $matched = false;
+
+        foreach ($socialAccountIds as $id) {
+            if (isset($asOf[$id][$firstDay])) {
+                $then += $asOf[$id][$firstDay];
+                $matched = true;
+            }
+        }
+
+        if (! $matched) {
+            return [null, null];
+        }
+
+        return [$current - $then, $this->pct($current, $then)];
     }
 
     /**
@@ -440,17 +494,101 @@ class CompetitorInsightsBuilder
             return [];
         }
 
-        return FollowerSnapshot::query()
-            ->where('social_account_id', $socialAccountId)
+        return $this->followerSeriesForUser([$socialAccountId]);
+    }
+
+    /**
+     * @param  list<int>  $socialAccountIds
+     * @return list<array{captured_on: string, label: string, followers: int}>
+     */
+    private function followerSeriesForUser(array $socialAccountIds): array
+    {
+        if ($socialAccountIds === []) {
+            return [];
+        }
+
+        $dates = FollowerSnapshot::query()
+            ->whereIn('social_account_id', $socialAccountIds)
             ->orderBy('captured_on')
-            ->limit(104)
-            ->get(['captured_on', 'followers'])
-            ->map(fn (FollowerSnapshot $snapshot): array => [
-                'captured_on' => $snapshot->captured_on->toDateString(),
-                'label' => $snapshot->captured_on->format('j M'),
-                'followers' => (int) $snapshot->followers,
-            ])
+            ->pluck('captured_on')
+            ->map(fn (mixed $day): string => CarbonImmutable::parse((string) $day)->toDateString())
+            ->unique()
+            ->values()
             ->all();
+
+        if ($dates === []) {
+            return [];
+        }
+
+        if (count($dates) > 104) {
+            $dates = array_slice($dates, -104);
+        }
+
+        $asOf = $this->followersAsOf($socialAccountIds, $dates);
+        $points = [];
+
+        foreach ($dates as $date) {
+            $sum = 0;
+            $any = false;
+
+            foreach ($socialAccountIds as $id) {
+                if (! isset($asOf[$id][$date])) {
+                    continue;
+                }
+
+                $sum += $asOf[$id][$date];
+                $any = true;
+            }
+
+            if (! $any) {
+                continue;
+            }
+
+            $points[] = [
+                'captured_on' => $date,
+                'label' => CarbonImmutable::parse($date)->format('j M'),
+                'followers' => $sum,
+            ];
+        }
+
+        return $points;
+    }
+
+    /**
+     * @param  Collection<int, Post>  $posts
+     * @param  list<int|null>  $socialAccountIds
+     * @return array{organic: int, sponsored: int, running_ads: int}
+     */
+    private function paidVsOrganic(Collection $posts, array $socialAccountIds): array
+    {
+        $sponsored = 0;
+        $organic = 0;
+
+        foreach ($posts as $post) {
+            if ($this->sponsored->looksSponsored($post)) {
+                $sponsored++;
+            } else {
+                $organic++;
+            }
+        }
+
+        $ids = array_values(array_filter(
+            array_map(static fn (mixed $id): int => (int) $id, $socialAccountIds),
+            static fn (int $id): bool => $id > 0,
+        ));
+
+        $runningAds = $ids === []
+            ? 0
+            : SocialAd::query()
+                ->whereIn('social_account_id', $ids)
+                ->where('is_active', true)
+                ->count();
+
+        return [
+            'organic' => $organic,
+            'sponsored' => $sponsored,
+            'running_ads' => $runningAds,
+        ];
     }
 
     /**
@@ -478,12 +616,13 @@ class CompetitorInsightsBuilder
 
         foreach ($accounts as $account) {
             $id = (int) $account->social_account_id;
+            $followers = (int) $account->followers;
 
-            if (in_array($id, $have, true)) {
-                continue;
+            if (! in_array($id, $have, true)) {
+                $recorder->record($id, $followers);
+            } else {
+                $recorder->ensureBaselines($id, $followers);
             }
-
-            $recorder->record($id, (int) $account->followers);
         }
     }
 
