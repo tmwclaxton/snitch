@@ -2535,8 +2535,7 @@
     }
 
     .snitch-hero-mobile-mascot-bob {
-        animation: snitch-hero-mobile-mascot-bob 5.5s ease-in-out infinite;
-        will-change: transform;
+        animation: none;
     }
 
     .snitch-hero-mobile-mascot-frame {
