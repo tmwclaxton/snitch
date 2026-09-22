@@ -46,7 +46,7 @@ class AdsPageTest extends TestCase
             ->get(route('ads.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('ads/Index')
+                ->component('ad-library/Index')
                 ->where('total', 1)
                 ->missing('ads')
                 ->loadDeferredProps('ads', fn (Assert $page) => $page
@@ -63,6 +63,9 @@ class AdsPageTest extends TestCase
         $this->assertSame('/ad-library', parse_url(route('ads.index'), PHP_URL_PATH));
 
         $this->get('/ads')->assertRedirect('/ad-library');
+
+        $this->assertFileExists(resource_path('js/pages/ad-library/Index.vue'));
+        $this->assertFileDoesNotExist(resource_path('js/pages/ads/Index.vue'));
     }
 
     public function test_dashboard_ads_overview_links_to_ads_page(): void

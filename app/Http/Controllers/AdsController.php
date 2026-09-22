@@ -23,7 +23,7 @@ class AdsController extends Controller
         $user = $request->user();
 
         if ($this->productAccessBlocked($user)) {
-            return Inertia::render('ads/Index', [
+            return Inertia::render('ad-library/Index', [
                 'ads' => [],
                 'total' => 0,
             ]);
@@ -31,7 +31,7 @@ class AdsController extends Controller
 
         $socialIds = $this->socialIdsForUser($user);
 
-        return Inertia::render('ads/Index', [
+        return Inertia::render('ad-library/Index', [
             'ads' => Inertia::defer(
                 fn (): array => $insights->adsCatalogue($user, $socialIds),
                 'ads',
