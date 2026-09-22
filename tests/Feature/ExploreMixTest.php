@@ -155,6 +155,61 @@ class ExploreMixTest extends TestCase
     }
 
     #[Test]
+    public function explore_per_page_keeps_the_next_page_on_the_same_seeded_order(): void
+    {
+        $this->seed(AnalysisTermSeeder::class);
+
+        config([
+            'snitch.explore.mix_enabled' => true,
+            'snitch.explore.min_quality_ratio' => 0.2,
+            'snitch.explore.jitter' => 0.8,
+            'snitch.explore.weight_exponent' => 1.2,
+            'snitch.explore.max_candidates' => 500,
+        ]);
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+
+        for ($i = 0; $i < 30; $i++) {
+            $post = $this->completedPost($account, now()->subHours($i + 1));
+            WinnerInsight::factory()->forPost($post)->create(['score' => 70 + ($i % 10)]);
+        }
+
+        $seed = 918273;
+        $defaultOrder = $this->orderForSeed($user, $seed);
+        $pageOne = $this->orderForSeed($user, $seed, 10);
+        $pageTwo = $this->orderForSeed($user, $seed, 10, 2);
+
+        $this->assertSame(array_slice($defaultOrder, 0, 10), $pageOne);
+        $this->assertSame(array_slice($defaultOrder, 10, 10), $pageTwo);
+        $this->assertEmpty(array_intersect($pageOne, $pageTwo));
+
+        $this->actingAs($user)
+            ->get(route('explore.index', ['explore_seed' => $seed, 'per_page' => 500]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.per_page', 96)
+                ->missing('posts')
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->where('posts.per_page', 96)
+                    ->has('posts.data', 30)
+                )
+            );
+
+        $this->actingAs($user)
+            ->get(route('explore.index', ['explore_seed' => $seed, 'per_page' => 0]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.per_page', 1)
+                ->loadDeferredProps('default', fn (Assert $page) => $page
+                    ->where('posts.per_page', 1)
+                    ->has('posts.data', 1)
+                )
+            );
+    }
+
+    #[Test]
     public function explore_different_seeds_change_order_among_strong_peers(): void
     {
         $this->seed(AnalysisTermSeeder::class);
@@ -248,12 +303,21 @@ class ExploreMixTest extends TestCase
     /**
      * @return list<int>
      */
-    private function orderForSeed(User $user, int $seed): array
+    private function orderForSeed(User $user, int $seed, ?int $perPage = null, int $page = 1): array
     {
         $ids = [];
+        $query = ['explore_seed' => $seed];
+
+        if ($perPage !== null) {
+            $query['per_page'] = $perPage;
+        }
+
+        if ($page > 1) {
+            $query['page'] = $page;
+        }
 
         $this->actingAs($user)
-            ->get(route('explore.index', ['explore_seed' => $seed]))
+            ->get(route('explore.index', $query))
             ->assertOk()
             ->assertInertia(function (Assert $page) use ($seed, &$ids) {
                 $page

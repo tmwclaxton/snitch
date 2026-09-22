@@ -61,6 +61,7 @@ class ExploreController extends Controller
                     'visual_crafts' => $visualCrafts,
                     'platform' => $platform,
                     'explore_seed' => null,
+                    'per_page' => $this->explorePerPage($request),
                 ],
                 'terms' => [
                     'hook_type' => [],
@@ -111,6 +112,7 @@ class ExploreController extends Controller
             'visual_crafts' => $visualCrafts,
             'platform' => $platform,
             'explore_seed' => $mixSeed,
+            'per_page' => $this->explorePerPage($request),
         ];
 
         return Inertia::render('explore/Index', [
@@ -278,7 +280,7 @@ class ExploreController extends Controller
         $rankedIds = $this->exploreMix->mix($scored, $mixSeed);
 
         if ($rankedIds === []) {
-            return $query->paginate(24)->appends(
+            return $query->paginate($this->explorePerPage($request))->appends(
                 array_merge($request->query(), ['explore_seed' => $mixSeed]),
             );
         }
@@ -391,9 +393,11 @@ class ExploreController extends Controller
      */
     private function paginateByIds(Request $request, array $rankedIds, int $mixSeed): LengthAwarePaginator
     {
-        $perPage = 24;
+        $perPage = $this->explorePerPage($request);
         $page = max(1, (int) $request->integer('page', 1));
         $total = count($rankedIds);
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = min($page, $lastPage);
         $slice = array_slice($rankedIds, ($page - 1) * $perPage, $perPage);
 
         $posts = $slice === []
@@ -405,7 +409,10 @@ class ExploreController extends Controller
                 ->sortBy(fn (Post $post): int => (int) array_search($post->id, $slice, true))
                 ->values();
 
-        $query = array_merge($request->query(), ['explore_seed' => $mixSeed]);
+        $query = array_merge($request->query(), [
+            'explore_seed' => $mixSeed,
+            'per_page' => $perPage,
+        ]);
 
         return (new LengthAwarePaginator(
             $posts,
@@ -417,6 +424,14 @@ class ExploreController extends Controller
                 'query' => $query,
             ],
         ))->appends($query);
+    }
+
+    /**
+     * Page length for the Explore sheet. The client sets this from the live column count.
+     */
+    private function explorePerPage(Request $request): int
+    {
+        return min(96, max(1, $request->integer('per_page', 24)));
     }
 
     /**

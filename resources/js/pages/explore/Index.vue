@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Compass, FilterX, Search, X } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { Component } from 'vue';
 import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as exploreIndex } from '@/actions/App/Http/Controllers/ExploreController';
@@ -53,6 +53,9 @@ const props = defineProps<{
     posts?: {
         data: Post[];
         links: Array<{ url: string | null; label: string; active: boolean }>;
+        current_page: number;
+        per_page: number;
+        total: number;
     } | null;
     filters: {
         q: string | null;
@@ -62,6 +65,7 @@ const props = defineProps<{
         visual_crafts: string[];
         platform: string | null;
         explore_seed: number;
+        per_page: number;
     };
     terms?: {
         hook_type: AnalysisTermOption[];
@@ -79,6 +83,12 @@ const searchDraft = ref(props.filters.q ?? '');
 const hookPickerOpen = ref(false);
 const topicPickerOpen = ref(false);
 const craftPickerOpen = ref(false);
+const sheetRef = ref<HTMLElement | null>(null);
+const paginationRef = ref<HTMLElement | null>(null);
+const PER_PAGE_MAX = 96;
+let fitTimer: ReturnType<typeof setTimeout> | null = null;
+let requestedPerPage: number | null = null;
+let fitPasses = 0;
 
 watch(
     () => props.filters.q,
@@ -259,23 +269,62 @@ function visitFilters(next: {
     visual_crafts: string[];
     platform: string | null;
     explore_seed: number;
-}): void {
+    per_page: number;
+}, page = 1): void {
     router.get(
         exploreIndex.url(),
-        {
-            q: next.q,
-            custom_tag: next.custom_tag,
-            hook_types: next.hook_types.length > 0 ? next.hook_types : undefined,
-            topics: next.topics.length > 0 ? next.topics : undefined,
-            visual_crafts: next.visual_crafts.length > 0 ? next.visual_crafts : undefined,
-            platform: next.platform,
-            explore_seed: next.explore_seed,
-        },
+        exploreQuery(next, page),
         {
             preserveState: true,
             preserveScroll: true,
         },
     );
+}
+
+function exploreQuery(next: {
+    q: string | null;
+    custom_tag: string | null;
+    hook_types: string[];
+    topics: string[];
+    visual_crafts: string[];
+    platform: string | null;
+    explore_seed: number;
+    per_page: number;
+}, page = 1): Record<string, string | number | string[] | null | undefined> {
+    const query: Record<string, string | number | string[]> = {
+        explore_seed: next.explore_seed,
+        per_page: next.per_page,
+    };
+
+    if (next.q) {
+        query.q = next.q;
+    }
+
+    if (next.custom_tag) {
+        query.custom_tag = next.custom_tag;
+    }
+
+    if (next.hook_types.length > 0) {
+        query.hook_types = next.hook_types;
+    }
+
+    if (next.topics.length > 0) {
+        query.topics = next.topics;
+    }
+
+    if (next.visual_crafts.length > 0) {
+        query.visual_crafts = next.visual_crafts;
+    }
+
+    if (next.platform) {
+        query.platform = next.platform;
+    }
+
+    if (page > 1) {
+        query.page = page;
+    }
+
+    return query;
 }
 
 function currentFilters(overrides: Partial<{
@@ -286,6 +335,7 @@ function currentFilters(overrides: Partial<{
     visual_crafts: string[];
     platform: string | null;
     explore_seed: number;
+    per_page: number;
 }> = {}) {
     return {
         q: props.filters.q,
@@ -295,6 +345,7 @@ function currentFilters(overrides: Partial<{
         visual_crafts: props.filters.visual_crafts,
         platform: props.filters.platform,
         explore_seed: props.filters.explore_seed,
+        per_page: props.filters.per_page,
         ...overrides,
     };
 }
@@ -330,6 +381,7 @@ function clearFilters(): void {
         visual_crafts: [],
         platform: null,
         explore_seed: props.filters.explore_seed,
+        per_page: props.filters.per_page,
     });
 }
 
@@ -341,6 +393,162 @@ function accountHref(post: Post): string | null {
     }
 
     return competitorShow.url(id);
+}
+
+function columnCount(sheet: HTMLElement): number {
+    const tracks = getComputedStyle(sheet).gridTemplateColumns;
+
+    if (tracks === '' || tracks === 'none') {
+        return 1;
+    }
+
+    return Math.max(1, tracks.split(' ').filter((track) => track.trim() !== '').length);
+}
+
+function fittedPerPage(sheet: HTMLElement): number | null {
+    const columns = columnCount(sheet);
+    const style = getComputedStyle(sheet);
+    const rowGap = Number.parseFloat(style.rowGap) || 0;
+    const sample = [...sheet.children].find(
+        (child): child is HTMLElement => child instanceof HTMLElement && !child.classList.contains('snitch-contact-sheet-rail'),
+    );
+
+    if (sample == null) {
+        return null;
+    }
+
+    const rowHeight = sample.getBoundingClientRect().height;
+
+    if (rowHeight < 80) {
+        return null;
+    }
+
+    const rail = sheet.querySelector('.snitch-contact-sheet-rail');
+    const railHeight = rail instanceof HTMLElement ? rail.getBoundingClientRect().height + rowGap : 0;
+    const sheetTop = sheet.getBoundingClientRect().top + window.scrollY;
+    const paginationHeight = (paginationRef.value?.offsetHeight ?? 56) + 32;
+    const available = window.innerHeight - sheetTop - railHeight - paginationHeight;
+    const stride = rowHeight + rowGap;
+    const rawRows = available > 0 ? available / stride : 0;
+    let rows = Math.max(4, Math.floor(rawRows));
+
+    if (rawRows - Math.floor(rawRows) >= 0.55) {
+        rows = Math.max(rows, Math.floor(rawRows) + 1);
+    }
+
+    rows = Math.min(8, rows);
+
+    return Math.min(PER_PAGE_MAX, columns * rows);
+}
+
+function currentPageNumber(): number {
+    if (props.posts?.current_page) {
+        return props.posts.current_page;
+    }
+
+    const raw = new URLSearchParams(window.location.search).get('page');
+    const parsed = raw ? Number.parseInt(raw, 10) : 1;
+
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function applyFittedPageSize(): void {
+    const sheet = sheetRef.value;
+
+    if (!postsLoaded.value || (props.posts?.data.length ?? 0) === 0 || sheet == null) {
+        return;
+    }
+
+    const fitted = fittedPerPage(sheet);
+
+    if (fitted == null || fitted === props.filters.per_page || fitted === requestedPerPage || fitPasses >= 2) {
+        if (fitted === props.filters.per_page) {
+            requestedPerPage = null;
+            fitPasses = 0;
+        }
+
+        return;
+    }
+
+    const firstIndex = (currentPageNumber() - 1) * props.filters.per_page;
+    let page = Math.floor(firstIndex / fitted) + 1;
+    const total = props.posts?.total;
+
+    if (typeof total === 'number') {
+        page = Math.min(page, Math.max(1, Math.ceil(total / fitted)));
+    }
+
+    requestedPerPage = fitted;
+    fitPasses += 1;
+
+    router.get(
+        exploreIndex.url(),
+        exploreQuery(currentFilters({ per_page: fitted }), page),
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            onFinish: () => {
+                if (props.filters.per_page === requestedPerPage) {
+                    requestedPerPage = null;
+                }
+
+                scheduleFit();
+            },
+        },
+    );
+}
+
+function scheduleFit(): void {
+    if (fitTimer != null) {
+        clearTimeout(fitTimer);
+    }
+
+    fitTimer = setTimeout(() => {
+        fitTimer = null;
+        applyFittedPageSize();
+    }, 150);
+}
+
+watch(sheetRef, (sheet, _previous, onCleanup) => {
+    scheduleFit();
+
+    if (sheet == null) {
+        return;
+    }
+
+    const observer = new ResizeObserver(() => {
+        scheduleFit();
+    });
+    observer.observe(sheet);
+    onCleanup(() => observer.disconnect());
+});
+
+watch(
+    () => props.posts?.data.length,
+    () => {
+        void nextTick(() => {
+            scheduleFit();
+        });
+    },
+);
+
+onMounted(() => {
+    scheduleFit();
+    window.addEventListener('resize', onViewportResize);
+});
+
+onUnmounted(() => {
+    if (fitTimer != null) {
+        clearTimeout(fitTimer);
+    }
+
+    window.removeEventListener('resize', onViewportResize);
+});
+
+function onViewportResize(): void {
+    fitPasses = 0;
+    scheduleFit();
 }
 
 function paginationLabel(label: string): string {
@@ -585,6 +793,7 @@ function paginationLabel(label: string): string {
             <div
                 v-else-if="posts && posts.data.length"
                 class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill snitch-contact-reveal mt-6 grid"
+                ref="sheetRef"
             >
                 <div class="snitch-contact-sheet-rail col-span-full">
                     <p>Explore sheet</p>
@@ -650,6 +859,7 @@ function paginationLabel(label: string): string {
 
             <nav
                 v-if="posts && posts.links.length > 3"
+                ref="paginationRef"
                 class="mt-8 flex flex-wrap justify-center gap-2"
                 aria-label="Pagination"
             >
