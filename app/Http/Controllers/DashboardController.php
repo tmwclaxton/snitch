@@ -151,7 +151,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * How many Latest frames to load. The client sets this from the live column count.
+     * How many Latest posts to load. The client sets this from the live column count.
      */
     private function frameLimit(Request $request): int
     {

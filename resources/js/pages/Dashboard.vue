@@ -606,7 +606,7 @@ function onFramesResize(): void {
                         <div>
                             <p class="snitch-ink-label">Recent</p>
                             <h2 class="snitch-display mt-1 text-2xl text-snitch-ink">
-                                Latest frames
+                                Latest posts
                             </h2>
                         </div>
                         <Link
