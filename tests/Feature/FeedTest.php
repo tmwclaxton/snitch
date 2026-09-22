@@ -11,9 +11,11 @@ use App\Models\AnalysisTerm;
 use App\Models\BrandProfile;
 use App\Models\Post;
 use App\Models\PostAnalysis;
+use App\Models\SocialAccount;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Models\WinnerInsight;
+use App\Services\Billing\UsageBillingService;
 use Database\Seeders\AnalysisTermSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -278,10 +280,37 @@ class FeedTest extends TestCase
                 )
                 ->where('post.analysis.topics.1', 'proof')
                 ->where('post.tracked_account.id', $account->id)
+                ->where('post.tracked_account.url', $account->url)
                 ->where(
                     'post.winner_insight.how_to_copy_html',
                     "<p><strong>1. Hook with the void.</strong>\nOpen on <em>speaker</em>.</p>",
                 )
+            );
+    }
+
+    public function test_post_detail_links_untracked_creator_handle_to_their_profile(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        app(UsageBillingService::class)->creditFromTopUp($user, 1000, 'topup:creator-profile');
+
+        $social = SocialAccount::factory()->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'thesamparr',
+            'url' => 'https://instagram.com/thesamparr',
+        ]);
+        $post = Post::factory()->forSocialAccount($social)->create([
+            'type' => PostType::Reel,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('feed.show', $post))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('feed/Show')
+                ->missing('post.tracked_account.id')
+                ->where('post.tracked_account.handle', 'thesamparr')
+                ->where('post.tracked_account.url', 'https://instagram.com/thesamparr')
             );
     }
 

@@ -71,6 +71,7 @@ const props = defineProps<{
             id?: number;
             handle: string;
             display_name: string | null;
+            url?: string | null;
         };
         analysis?: Analysis | null;
         winner_insight?: {
@@ -204,10 +205,20 @@ const postedLabel = computed(() => {
 });
 
 const profileHref = computed(() => {
-    const id = props.post.tracked_account?.id;
+    const account = props.post.tracked_account;
 
-    return id != null ? competitorShow.url(id) : null;
+    if (account?.id != null) {
+        return competitorShow.url(account.id);
+    }
+
+    const url = account?.url?.trim();
+
+    return url ? url : null;
 });
+
+const profileIsExternal = computed(
+    () => props.post.tracked_account?.id == null && profileHref.value != null,
+);
 
 const completedHook = computed(() =>
     analysisDone.value ? props.post.analysis?.hook?.trim() || null : null,
@@ -345,12 +356,21 @@ function openTranscript(): void {
                 </h1>
                 <p class="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-snitch-ink/65">
                     <Link
-                        v-if="profileHref && post.tracked_account"
+                        v-if="profileHref && !profileIsExternal && post.tracked_account"
                         :href="profileHref"
                         class="font-medium text-snitch-ink underline decoration-snitch-ink/20 underline-offset-4 transition hover:decoration-snitch-spot"
                     >
                         @{{ post.tracked_account.handle }}
                     </Link>
+                    <a
+                        v-else-if="profileHref && post.tracked_account"
+                        :href="profileHref"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="font-medium text-snitch-ink underline decoration-snitch-ink/20 underline-offset-4 transition hover:decoration-snitch-spot"
+                    >
+                        @{{ post.tracked_account.handle }}
+                    </a>
                     <span v-else-if="post.tracked_account">
                         @{{ post.tracked_account.handle }}
                     </span>

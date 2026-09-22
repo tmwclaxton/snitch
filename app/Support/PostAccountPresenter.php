@@ -45,6 +45,7 @@ class PostAccountPresenter
                     'display_name' => $membership->display_name,
                     'platform' => $membership->platform?->value ?? (string) $membership->platform,
                     'avatar' => $membership->avatar,
+                    'url' => $membership->url,
                 ]);
 
                 continue;
@@ -56,6 +57,7 @@ class PostAccountPresenter
                 'display_name' => $social->display_name,
                 'platform' => $social->platform?->value ?? (string) $social->platform,
                 'avatar' => $social->avatar,
+                'url' => $social->url,
             ]);
         }
     }
