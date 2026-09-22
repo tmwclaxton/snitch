@@ -234,7 +234,7 @@ const steps = [
                 <h2
                     class="snitch-display max-w-5xl text-pretty text-3xl text-snitch-ink sm:text-4xl"
                 >
-                    Competitor social intel for people who run the accounts.
+                    Competitor social intel
                 </h2>
                 <p class="mt-4 max-w-3xl text-base leading-relaxed text-snitch-ink/80">
                     Built for social marketers who need to know what rivals post, when they post, and what lands.
