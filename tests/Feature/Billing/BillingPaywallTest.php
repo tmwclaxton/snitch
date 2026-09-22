@@ -395,6 +395,44 @@ class BillingPaywallTest extends TestCase
         $this->assertFalse($this->billing->paywallState($user)['blocked']);
     }
 
+    public function test_legacy_workos_user_without_claimed_at_is_healed_on_paywall_check(): void
+    {
+        $user = User::factory()->withoutStarterCredit()->create([
+            'created_via' => 'web',
+            'workos_id' => 'workos_legacy_heal',
+            'claimed_at' => null,
+            'claim_token' => null,
+            'trial_ends_at' => now()->subDays(30),
+        ]);
+
+        $this->assertFalse($user->isClaimed());
+        $this->assertSame(0.0, $this->billing->balancePence($user));
+
+        $state = $this->billing->paywallState($user->fresh());
+        $user->refresh();
+
+        $this->assertFalse($state['blocked']);
+        $this->assertNotNull($user->claimed_at);
+        $this->assertTrue($user->isClaimed());
+        $this->assertSame(500.0, $this->billing->balancePence($user));
+        $this->assertTrue($user->onGenericTrial());
+        $this->assertTrue($this->billing->isOnWebTrial($user));
+        $this->assertTrue($user->trial_ends_at?->isSameDay(now()->addDays(7)));
+    }
+
+    public function test_unclaimed_agent_paywall_message_points_at_website_sign_in(): void
+    {
+        $user = User::factory()->unclaimedAgent()->create();
+
+        $state = $this->billing->paywallState($user);
+
+        $this->assertTrue($state['blocked']);
+        $this->assertSame('subscribe', $state['reason']);
+        $this->assertStringContainsString('website', (string) $state['message']);
+        $this->assertStringContainsString('£5', (string) $state['message']);
+        $this->assertStringNotContainsString('Agent accounts start at', (string) $state['message']);
+    }
+
     public function test_trial_end_blocks_access_even_with_remaining_starter(): void
     {
         $user = User::factory()->create();

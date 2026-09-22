@@ -36,7 +36,9 @@ Route::middleware(['guest'])->group(function () {
                 $byWorkOs = $userModel::query()->where('workos_id', $workOsUser->id)->first();
 
                 if ($byWorkOs !== null) {
-                    return $byWorkOs;
+                    app(UsageBillingService::class)->ensureClaimedEntitlements($byWorkOs);
+
+                    return $byWorkOs->fresh() ?? $byWorkOs;
                 }
 
                 $claimToken = session('snitch_claim_token');

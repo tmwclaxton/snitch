@@ -74,6 +74,46 @@ class UsageBillingService
         return max(0, (int) config('subscriptions.trial_days', 7));
     }
 
+    /**
+     * Browser WorkOS users are human accounts. Older signups sometimes linked
+     * workos_id without claimed_at / starter credit - heal that before paywall.
+     */
+    public function ensureClaimedEntitlements(User $user): void
+    {
+        if (filled($user->workos_id) && $user->claimed_at === null) {
+            $hadClaimBonus = $this->hasReceivedClaimBonus($user);
+
+            $user->forceFill([
+                'claimed_at' => now(),
+                'claim_token' => null,
+                'created_via' => filled($user->created_via) ? $user->created_via : 'web',
+            ])->save();
+
+            $this->creditClaimBonus($user);
+
+            if (! $hadClaimBonus && ! $this->hasPlatformSubscription($user)) {
+                $days = $this->trialDays();
+
+                if ($days > 0) {
+                    // Fresh trial: legacy rows sometimes had an expired Cashier
+                    // trial_ends_at without ever being claimed or credited.
+                    $user->forceFill([
+                        'trial_ends_at' => now()->addDays($days),
+                    ])->save();
+                }
+
+                return;
+            }
+        }
+
+        if ($user->claimed_at === null) {
+            return;
+        }
+
+        $this->creditClaimBonus($user);
+        $this->ensureWebTrialStarted($user);
+    }
+
     public function ensureWebTrialStarted(User $user): void
     {
         if ($user->claimed_at === null) {
@@ -100,6 +140,15 @@ class UsageBillingService
         $user->forceFill([
             'trial_ends_at' => now()->addDays($days),
         ])->save();
+    }
+
+    public function hasReceivedClaimBonus(User $user): bool
+    {
+        return CreditLedgerEntry::query()
+            ->where('user_id', $user->id)
+            ->where('action', 'claim_bonus')
+            ->where('amount_pence', '>', 0)
+            ->exists();
     }
 
     /**
@@ -142,7 +191,7 @@ class UsageBillingService
      */
     public function paywallState(User $user): array
     {
-        $this->ensureWebTrialStarted($user);
+        $this->ensureClaimedEntitlements($user);
 
         $subscribed = $this->hasPlatformSubscription($user);
         $starterExhausted = $this->starterAllowanceExhausted($user);
@@ -225,7 +274,7 @@ class UsageBillingService
 
     public function assertCanAccessProduct(User $user, float $estimatedPence = 1): void
     {
-        $this->ensureWebTrialStarted($user);
+        $this->ensureClaimedEntitlements($user);
 
         $subscribed = $this->hasPlatformSubscription($user);
         $accessible = $this->accessibleBalancePence($user);
@@ -270,7 +319,7 @@ class UsageBillingService
     {
         $days = $this->trialDays();
 
-        return "Agent accounts start at £0. Claim this account in the browser for a {$days}-day trial and £5 usage, or subscribe.";
+        return "Sign in through the website to unlock a {$days}-day trial and £5 usage, or subscribe.";
     }
 
     private function starterExhaustedPaywallMessage(): string

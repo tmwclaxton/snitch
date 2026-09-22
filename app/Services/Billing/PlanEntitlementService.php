@@ -226,7 +226,7 @@ class PlanEntitlementService
 
     public function ensureTrialStarted(User $user): void
     {
-        $this->usage->ensureWebTrialStarted($user);
+        $this->usage->ensureClaimedEntitlements($user);
     }
 
     public function platformStripePriceId(): ?string
