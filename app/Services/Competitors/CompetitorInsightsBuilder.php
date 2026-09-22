@@ -96,7 +96,7 @@ class CompetitorInsightsBuilder
             'growth' => $this->growth($user, $socialAccountId),
             'follower_series' => $this->followerSeries($socialAccountId),
             'paid_vs_organic' => $this->paidVsOrganic($posts, [$socialAccountId]),
-            'ads' => $this->ads([$socialAccountId]),
+            'ads' => $this->ads([$socialAccountId], 2),
         ];
     }
 

@@ -10,6 +10,7 @@ import {
     Trophy,
 } from '@lucide/vue';
 import { computed, onUnmounted, ref, watch } from 'vue';
+import { index as adsIndex } from '@/actions/App/Http/Controllers/AdsController';
 import {
     index as competitorsIndex,
 } from '@/actions/App/Http/Controllers/CompetitorController';
@@ -568,7 +569,21 @@ function askRemove(): void {
                                 </p>
                             </div>
                             <div class="min-w-0">
-                                <p class="snitch-ink-label mb-2">Active ads</p>
+                                <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                                    <p class="snitch-ink-label">Active ads</p>
+                                    <Link
+                                        :href="adsIndex.url()"
+                                        class="text-xs font-medium text-snitch-ink/55 underline decoration-snitch-ink/20 underline-offset-4 transition hover:text-snitch-ink"
+                                    >
+                                        View all
+                                    </Link>
+                                </div>
+                                <p
+                                    v-if="(insights?.paid_vs_organic?.running_ads ?? 0) > 0"
+                                    class="mb-1.5 text-sm tabular-nums text-snitch-ink/70"
+                                >
+                                    {{ insights?.paid_vs_organic?.running_ads }} running
+                                </p>
                                 <div
                                     v-if="(insights?.ads ?? []).length"
                                     class="space-y-1.5"
@@ -579,7 +594,7 @@ function askRemove(): void {
                                         :href="ad.url"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        class="block text-sm text-snitch-ink underline decoration-snitch-ink/20 underline-offset-4"
+                                        class="block truncate text-sm text-snitch-ink underline decoration-snitch-ink/20 underline-offset-4"
                                     >
                                         {{ ad.title }}
                                     </a>
@@ -588,7 +603,7 @@ function askRemove(): void {
                                     v-else
                                     class="text-sm text-snitch-ink/60"
                                 >
-                                    No library ads found yet.
+                                    No library ads yet.
                                 </p>
                             </div>
                         </div>

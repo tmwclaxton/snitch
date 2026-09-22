@@ -44,6 +44,9 @@ class CompetitorGrowthAndAdsTest extends TestCase
         $this->assertStringContainsString('FollowerHistoryChart', $dashboard);
         $this->assertStringContainsString('Paid vs organic', $dashboard);
         $this->assertStringContainsString('Paid vs organic', $show);
+        $this->assertStringContainsString('adsIndex.url()', $show);
+        $this->assertStringContainsString('running', $show);
+        $this->assertStringNotContainsString('No library ads found yet.', $show);
     }
 
     public function test_insights_include_growth_ads_and_cta_clicks(): void
