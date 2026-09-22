@@ -545,12 +545,14 @@ function onFramesResize(): void {
 
             <section class="mt-3">
                 <div class="flex flex-wrap items-end justify-between gap-3">
-                    <div>
-                        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-                            <h2 class="snitch-display text-2xl text-snitch-ink">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-x-4">
+                            <h2 class="snitch-display shrink-0 text-2xl text-snitch-ink">
                                 Your tracked accounts
                             </h2>
-                            <SnitchFacePile :snitches="snitches" />
+                            <div class="min-w-0 max-w-full">
+                                <SnitchFacePile :snitches="snitches" />
+                            </div>
                         </div>
                     </div>
                 </div>

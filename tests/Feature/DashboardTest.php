@@ -249,6 +249,14 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('snitch-face-pile', $pile);
         $this->assertStringContainsString('adsIndex.url()', $dashboard);
         $this->assertStringContainsString('View all', $dashboard);
+
+        $css = file_get_contents(resource_path('css/app.css'));
+        $this->assertNotFalse($css);
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-face-pile\s*\{[^}]*flex-wrap:\s*nowrap/s',
+            $css,
+            'Face pile must not wrap on hover or expand/collapse flickers under the cursor',
+        );
     }
 
     public function test_dashboard_frames_query_returns_a_full_set_of_recent_posts(): void

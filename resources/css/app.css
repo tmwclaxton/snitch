@@ -742,13 +742,19 @@
 
     /*
      * Stacked snitch faces. Hover (or keyboard focus) gives each face
-     * its own slot and reveals the name.
+     * its own slot and reveals the name. Keep nowrap - wrapping under the
+     * cursor drops :hover and the pile flickers expand/collapse.
      */
     .snitch-face-pile {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         align-items: center;
+        min-width: 0;
+        max-width: 100%;
         min-height: 2.25rem;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: thin;
     }
 
     .snitch-face-pile-item {
