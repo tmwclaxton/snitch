@@ -40,6 +40,7 @@ class CompetitorGrowthAndAdsTest extends TestCase
         $this->assertStringNotContainsString('CTA clicks', $show);
         $this->assertStringContainsString('Growth', $dashboard);
         $this->assertStringContainsString('Active ads', $dashboard);
+        $this->assertStringContainsString('View all', $dashboard);
         $this->assertStringContainsString('FollowerHistoryChart', $dashboard);
         $this->assertStringContainsString('Paid vs organic', $dashboard);
         $this->assertStringContainsString('Paid vs organic', $show);

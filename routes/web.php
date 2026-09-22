@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminActivityController;
 use App\Http\Controllers\Admin\AdminOverviewController;
 use App\Http\Controllers\Admin\AdminReferralController;
 use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\AdsController;
 use App\Http\Controllers\AgentsController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\BacklogController;
@@ -102,6 +103,7 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::post('dashboard/watching', WatchingYouController::class)
             ->middleware('throttle:30,1')
             ->name('dashboard.watching');
+        Route::get('/ads', [AdsController::class, 'index'])->name('ads.index');
 
         Route::get('/tracking', [CompetitorController::class, 'index'])->name('competitors.index');
         Route::post('/tracking', [CompetitorController::class, 'store'])->name('competitors.store');

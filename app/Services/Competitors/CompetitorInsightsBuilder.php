@@ -138,7 +138,7 @@ class CompetitorInsightsBuilder
             'growth' => $this->growth($user),
             'follower_series' => $this->followerSeriesForUser($socialIds),
             'paid_vs_organic' => $this->paidVsOrganic($posts, $socialIds),
-            'ads' => $this->ads($socialIds),
+            'ads' => $this->ads($socialIds, 2),
         ];
     }
 
@@ -678,9 +678,9 @@ class CompetitorInsightsBuilder
      * @param  list<int>  $socialAccountIds
      * @return list<array{id: int, title: string, body: string|null, url: string, platform: string}>
      */
-    private function ads(array $socialAccountIds): array
+    private function ads(array $socialAccountIds, int $limit = 8): array
     {
-        if ($socialAccountIds === []) {
+        if ($socialAccountIds === [] || $limit < 1) {
             return [];
         }
 
@@ -688,7 +688,7 @@ class CompetitorInsightsBuilder
             ->whereIn('social_account_id', $socialAccountIds)
             ->where('is_active', true)
             ->latest('last_seen_at')
-            ->limit(8)
+            ->limit($limit)
             ->get()
             ->map(fn (SocialAd $ad): array => [
                 'id' => $ad->id,
@@ -699,6 +699,61 @@ class CompetitorInsightsBuilder
                     ? $ad->platform->value
                     : (string) $ad->platform,
             ])
+            ->all();
+    }
+
+    /**
+     * Full Ad Library catalogue for the Ads page (dashboard only shows a preview).
+     *
+     * @param  list<int>  $socialAccountIds
+     * @return list<array{
+     *     id: int,
+     *     title: string,
+     *     body: string|null,
+     *     url: string,
+     *     platform: string,
+     *     last_seen_at: string|null,
+     *     tracked_account: array{id: int|null, handle: string}|null
+     * }>
+     */
+    public function adsCatalogue(User $user, array $socialAccountIds, int $limit = 48): array
+    {
+        if ($socialAccountIds === [] || $limit < 1) {
+            return [];
+        }
+
+        $handles = TrackedAccount::query()
+            ->where('user_id', $user->id)
+            ->whereIn('social_account_id', $socialAccountIds)
+            ->get(['id', 'social_account_id', 'handle'])
+            ->keyBy(fn (TrackedAccount $account): int => (int) $account->social_account_id);
+
+        return SocialAd::query()
+            ->whereIn('social_account_id', $socialAccountIds)
+            ->where('is_active', true)
+            ->latest('last_seen_at')
+            ->limit($limit)
+            ->get()
+            ->map(function (SocialAd $ad) use ($handles): array {
+                $tracked = $handles->get((int) $ad->social_account_id);
+
+                return [
+                    'id' => $ad->id,
+                    'title' => $ad->title,
+                    'body' => $ad->body,
+                    'url' => $ad->url,
+                    'platform' => $ad->platform instanceof Platform
+                        ? $ad->platform->value
+                        : (string) $ad->platform,
+                    'last_seen_at' => $ad->last_seen_at?->toIso8601String(),
+                    'tracked_account' => $tracked === null
+                        ? null
+                        : [
+                            'id' => $tracked->id,
+                            'handle' => $tracked->handle,
+                        ],
+                ];
+            })
             ->all();
     }
 

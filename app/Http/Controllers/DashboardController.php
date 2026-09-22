@@ -105,10 +105,10 @@ class DashboardController extends Controller
 
         return Inertia::render('Dashboard', [
             'stats' => fn (): array => $this->stats($user, $inQuotaIds, $socialIds),
-            'activity' => fn (): array => $activity->forUser($user),
-            'insights' => Inertia::defer(fn (): array => $insights->forUser($user), 'insights'),
-            'recent_posts' => fn (): Collection => $this->recentPosts($user, $frames),
-            'top_winners' => fn (): Collection => $this->topWinners($user, $socialIds),
+            'activity' => Inertia::defer(fn (): array => $activity->forUser($user), 'board'),
+            'insights' => Inertia::defer(fn (): array => $insights->forUser($user), 'board'),
+            'recent_posts' => Inertia::defer(fn (): Collection => $this->recentPosts($user, $frames), 'feed'),
+            'top_winners' => Inertia::defer(fn (): Collection => $this->topWinners($user, $socialIds), 'feed'),
             'watching' => fn (): array => [
                 'brand' => $watching->forBrandHandles($user),
                 'check' => $request->session()->get('watching_check'),
