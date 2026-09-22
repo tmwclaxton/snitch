@@ -1212,6 +1212,19 @@
         justify-content: stretch;
     }
 
+    .snitch-contact-sheet-dash {
+        gap: 0.4rem;
+    }
+
+    .snitch-contact-sheet-dash .snitch-contact-cell-header {
+        padding: 0.35rem 0.5rem 0.3rem;
+    }
+
+    .snitch-contact-sheet-dash .snitch-contact-cell-body {
+        gap: 0.3rem;
+        padding: 0.4rem 0.5rem 0.45rem;
+    }
+
     /*
      * Account recent posts: about two rows, stretched so the sheet
      * is not a short strip of capped tiles with an empty gutter.
@@ -2093,7 +2106,7 @@
         align-items: center;
         justify-content: flex-end;
         gap: 0.3rem;
-        margin-top: 0.75rem;
+        margin-top: 0.4rem;
     }
 
     .snitch-heatmap-legend .snitch-heatmap-cell {

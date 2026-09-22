@@ -428,7 +428,7 @@ function onFramesResize(): void {
                 </div>
             </div>
 
-            <section class="mt-5">
+            <section class="mt-3">
                 <div class="flex flex-wrap items-end justify-between gap-3">
                     <div>
                         <h2 class="snitch-display text-2xl text-snitch-ink">
@@ -440,10 +440,10 @@ function onFramesResize(): void {
                     </p>
                 </div>
 
-                <div class="mt-3 grid items-start gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.8fr)]">
-                    <div class="snitch-scrap relative p-3 pt-4">
+                <div class="mt-3 grid items-stretch gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.8fr)]">
+                    <div class="snitch-scrap relative flex h-full flex-col p-3 pt-4">
                         <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
-                        <p class="snitch-ink-label mb-3">Heat map</p>
+                        <p class="snitch-ink-label mb-2">Heat map</p>
                         <PostingHeatmap
                             v-if="activity"
                             :days="activity.heatmap"
@@ -455,7 +455,7 @@ function onFramesResize(): void {
                             label="Loading heat map"
                         />
                     </div>
-                    <div class="snitch-scrap relative p-3 pt-4">
+                    <div class="snitch-scrap relative flex h-full flex-col p-3 pt-4">
                         <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
                         <PlatformSplitChart
                             v-if="activity"
@@ -514,7 +514,7 @@ function onFramesResize(): void {
                 </div>
             </section>
 
-            <section class="mt-5">
+            <section class="mt-3">
                 <div class="flex flex-wrap items-end justify-between gap-3">
                     <div>
                         <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -541,7 +541,7 @@ function onFramesResize(): void {
                 </div>
                 <div
                     v-else
-                    class="mt-3 space-y-4"
+                    class="mt-2 space-y-2"
                 >
                     <div class="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     <div class="min-w-0">
@@ -620,7 +620,7 @@ function onFramesResize(): void {
                 </div>
             </section>
 
-            <div class="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.7fr)]">
+            <div class="mt-3 grid items-start gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.7fr)]">
                 <section>
                     <div class="flex flex-wrap items-end justify-between gap-3">
                         <div>
@@ -641,7 +641,7 @@ function onFramesResize(): void {
                     <div
                         v-if="recent_posts === undefined || recent_posts === null"
                         ref="framesSheetRef"
-                        class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill mt-5 grid"
+                        class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill snitch-contact-sheet-dash mt-3 grid"
                         aria-live="polite"
                     >
                         <div
@@ -659,7 +659,7 @@ function onFramesResize(): void {
                     <div
                         v-else-if="recent_posts.length"
                         ref="framesSheetRef"
-                        class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill snitch-contact-reveal mt-5 grid"
+                        class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill snitch-contact-sheet-dash snitch-contact-reveal mt-3 grid"
                     >
                         <FeedContactCell
                             v-for="(post, index) in recent_posts"
@@ -667,6 +667,7 @@ function onFramesResize(): void {
                             :post="post"
                             :index="index"
                             :account-href="accountHref(post)"
+                            compact
                         />
                     </div>
                     <div

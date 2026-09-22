@@ -44,7 +44,7 @@ const peakIndex = computed(() => {
 </script>
 
 <template>
-    <div class="snitch-platform-split">
+    <div class="snitch-platform-split flex h-full min-h-0 flex-1 flex-col">
         <div class="flex items-baseline justify-between gap-3">
             <p class="snitch-ink-label">By platform</p>
             <p class="tabular-nums text-xs text-snitch-ink/55">
@@ -52,7 +52,7 @@ const peakIndex = computed(() => {
             </p>
         </div>
 
-        <ul v-if="platforms.length" class="mt-3 space-y-2.5">
+        <ul v-if="platforms.length" class="mt-3 flex flex-1 flex-col justify-between gap-2">
             <li
                 v-for="(row, index) in platforms"
                 :key="row.platform"

@@ -48,6 +48,7 @@ const props = defineProps<{
     };
     index: number;
     accountHref?: string | null;
+    compact?: boolean;
 }>();
 
 const frameIndex = computed(() => String(props.index + 1).padStart(2, '0'));
@@ -200,7 +201,7 @@ const winnerScore = computed(() => {
                 </li>
             </ul>
             <p
-                v-if="hookLine"
+                v-if="hookLine && !compact"
                 class="snitch-glance-hook line-clamp-2"
             >
                 {{ hookLine }}

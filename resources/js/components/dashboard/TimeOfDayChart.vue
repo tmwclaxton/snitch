@@ -25,7 +25,7 @@ const leftPad = computed(() => (props.compact ? 44 : 62));
 const rightPad = 10;
 const topPad = 10;
 const plotHeight = computed(() => (props.compact ? 92 : 168));
-const plotWidth = computed(() => (props.compact ? 280 : 440));
+const plotWidth = computed(() => 440);
 const xLabelOffset = computed(() => (props.compact ? 14 : 18));
 const xTitleOffset = computed(() => (props.compact ? 28 : 36));
 const bottomPad = computed(() => (props.compact ? 40 : 50));
