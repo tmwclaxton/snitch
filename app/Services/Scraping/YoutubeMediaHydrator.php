@@ -241,65 +241,67 @@ class YoutubeMediaHydrator
     {
         $data = is_array($payload['data'] ?? null) ? $payload['data'] : $payload;
         $streaming = is_array($data['streamingData'] ?? null) ? $data['streamingData'] : [];
-        $formats = is_array($streaming['formats'] ?? null) ? $streaming['formats'] : [];
-        $adaptive = is_array($streaming['adaptiveFormats'] ?? null) ? $streaming['adaptiveFormats'] : [];
 
-        $bestMuxed = null;
-        $bestMuxedHeight = -1;
+        $muxed = $this->bestFormatUrl([
+            $streaming['formats'] ?? null,
+            $data['formats'] ?? null,
+        ], requireMp4: false);
 
-        foreach ($formats as $format) {
-            if (! is_array($format)) {
+        if ($muxed !== null) {
+            return $muxed;
+        }
+
+        return $this->bestFormatUrl([
+            $streaming['adaptiveFormats'] ?? null,
+            $data['adaptiveFormats'] ?? null,
+            $data['adaptive_formats'] ?? null,
+        ], requireMp4: true);
+    }
+
+    /**
+     * @param  list<mixed>  $groups
+     */
+    private function bestFormatUrl(array $groups, bool $requireMp4): ?string
+    {
+        $best = null;
+        $bestHeight = -1;
+
+        foreach ($groups as $formats) {
+            if (! is_array($formats)) {
                 continue;
             }
 
-            $candidate = $format['url'] ?? null;
+            foreach ($formats as $format) {
+                if (! is_array($format)) {
+                    continue;
+                }
 
-            if (! is_string($candidate) || $candidate === '' || ! str_starts_with($candidate, 'http')) {
-                continue;
-            }
+                $candidate = $format['url'] ?? null;
 
-            $mime = strtolower((string) ($format['mimeType'] ?? ''));
+                if (! is_string($candidate) || $candidate === '' || ! str_starts_with($candidate, 'http')) {
+                    continue;
+                }
 
-            if ($mime !== '' && ! str_contains($mime, 'video/')) {
-                continue;
-            }
+                $mime = strtolower((string) ($format['mimeType'] ?? $format['mime_type'] ?? ''));
 
-            $height = (int) ($format['height'] ?? 0);
+                if ($requireMp4) {
+                    if (! str_contains($mime, 'video/mp4') && ! str_contains($mime, 'mp4')) {
+                        continue;
+                    }
+                } elseif ($mime !== '' && ! str_contains($mime, 'video/')) {
+                    continue;
+                }
 
-            if ($height >= $bestMuxedHeight) {
-                $bestMuxedHeight = $height;
-                $bestMuxed = $candidate;
+                $height = (int) ($format['height'] ?? 0);
+
+                if ($height >= $bestHeight) {
+                    $bestHeight = $height;
+                    $best = $candidate;
+                }
             }
         }
 
-        if ($bestMuxed !== null) {
-            return $bestMuxed;
-        }
-
-        $bestAdaptive = null;
-        $bestAdaptiveHeight = -1;
-
-        foreach ($adaptive as $format) {
-            if (! is_array($format)) {
-                continue;
-            }
-
-            $candidate = $format['url'] ?? null;
-            $mime = strtolower((string) ($format['mimeType'] ?? ''));
-
-            if (! is_string($candidate) || $candidate === '' || ! str_contains($mime, 'video/mp4')) {
-                continue;
-            }
-
-            $height = (int) ($format['height'] ?? 0);
-
-            if ($height >= $bestAdaptiveHeight) {
-                $bestAdaptiveHeight = $height;
-                $bestAdaptive = $candidate;
-            }
-        }
-
-        return $bestAdaptive;
+        return $best;
     }
 
     private function resolveStreamUrl(string $videoId): ?string
@@ -370,7 +372,7 @@ class YoutubeMediaHydrator
     {
         return (string) config(
             'snitch.tikhub.endpoints.youtube.video_info',
-            '/api/v1/youtube/web/get_video_info_v2',
+            '/api/v1/youtube/web_v2/get_video_streams',
         );
     }
 

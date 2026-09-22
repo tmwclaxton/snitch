@@ -188,6 +188,7 @@ class LinkedInAdapter extends AbstractPlatformAdapter
         $media = is_array($item['media'] ?? null) ? $item['media'] : [];
         $mediaUrl = $this->firstVideoUrl(
             $item['video']['url'] ?? null,
+            is_array($item['video'] ?? null) ? ($item['video']['stream_url'] ?? null) : null,
             $item['videoUrl'] ?? null,
             $item['mediaUrl'] ?? null,
             $media['url'] ?? null,
@@ -215,7 +216,7 @@ class LinkedInAdapter extends AbstractPlatformAdapter
         }
 
         $stats = is_array($item['stats'] ?? null) ? $item['stats'] : [];
-        $postedAt = $item['posted_at'] ?? $item['postedAt'] ?? $item['publishedAt'] ?? $item['timestamp'] ?? null;
+        $postedAt = $item['posted_at'] ?? $item['postedAt'] ?? $item['posted'] ?? $item['publishedAt'] ?? $item['timestamp'] ?? null;
 
         if (is_array($postedAt)) {
             $postedAt = $postedAt['date'] ?? $postedAt['timestamp'] ?? null;
@@ -243,10 +244,10 @@ class LinkedInAdapter extends AbstractPlatformAdapter
             'caption' => isset($item['text']) ? (string) $item['text'] : (isset($item['commentary']) ? (string) $item['commentary'] : null),
             'media_url' => $mediaUrl,
             'metrics' => $this->metrics(
-                $item['views'] ?? $stats['views'] ?? 0,
-                $item['likes'] ?? $stats['like'] ?? $stats['total_reactions'] ?? $item['numLikes'] ?? 0,
-                $item['comments'] ?? $stats['comments'] ?? $item['numComments'] ?? 0,
-                $item['shares'] ?? $stats['reposts'] ?? $item['numShares'] ?? 0,
+                $item['views'] ?? $stats['views'] ?? $item['num_views'] ?? 0,
+                $item['likes'] ?? $stats['like'] ?? $stats['total_reactions'] ?? $item['numLikes'] ?? $item['num_likes'] ?? 0,
+                $item['comments'] ?? $stats['comments'] ?? $item['numComments'] ?? $item['num_comments'] ?? 0,
+                $item['shares'] ?? $stats['reposts'] ?? $item['numShares'] ?? $item['num_reposts'] ?? 0,
             ),
             'raw_payload' => $item,
         ];

@@ -70,6 +70,37 @@ class YoutubeMediaHydratorTest extends TestCase
         $this->assertSame('https://googlevideo.com/muxed-720.mp4', $url);
     }
 
+    public function test_pick_download_url_reads_web_v2_stream_formats(): void
+    {
+        $hydrator = app(YoutubeMediaHydrator::class);
+
+        $url = $hydrator->pickDownloadUrl([
+            'data' => [
+                'formats' => [
+                    [
+                        'url' => 'https://googlevideo.com/muxed-360.mp4',
+                        'mime_type' => 'video/mp4',
+                        'height' => 360,
+                    ],
+                    [
+                        'url' => 'https://googlevideo.com/audio-only',
+                        'mime_type' => 'audio/mp4',
+                        'height' => 0,
+                    ],
+                ],
+                'adaptive_formats' => [
+                    [
+                        'url' => 'https://googlevideo.com/adaptive-1080.mp4',
+                        'mime_type' => 'video/mp4',
+                        'height' => 1080,
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->assertSame('https://googlevideo.com/muxed-360.mp4', $url);
+    }
+
     public function test_hydrate_posts_persists_public_copy_from_tikhub_stream(): void
     {
         config([
@@ -85,7 +116,7 @@ class YoutubeMediaHydratorTest extends TestCase
         $client->shouldReceive('configured')->andReturn(true);
         $client->shouldReceive('get')
             ->once()
-            ->with('/api/v1/youtube/web/get_video_info_v2', ['video_id' => 'abc123XYZ'], 'youtube')
+            ->with('/api/v1/youtube/web_v2/get_video_streams', ['video_id' => 'abc123XYZ'], 'youtube')
             ->andReturn([
                 'code' => 200,
                 'data' => [

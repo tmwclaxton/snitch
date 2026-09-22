@@ -31,7 +31,7 @@ Skip images, carousels, text-only, and items without a resolvable video media_ur
 Facebook/TikTok CDN video URLs regularly exceed 255 chars. Keep `posts.media_url` as `text` (same reason `tracked_accounts.avatar` is text).
 
 ## LinkedIn actors are company vs profile
-Default `snitch.apify.actors.linkedin` is `apimaestro/linkedin-company-posts` (`company_name`). Personal `/in/` resolves use `linkedin_profile` (`apimaestro/linkedin-profile-posts`, `username`). Do not send a `urls` array - that input is invalid for both actors.
+Default `snitch.apify.actors.linkedin` is `apimaestro/linkedin-company-posts` (`company_name`). Personal `/in/` resolves use `linkedin_profile` (`apimaestro/linkedin-profile-posts`, `username`). Do not send a `urls` array - that input is invalid for both actors. TikHub company posts nest the file at `video.stream_url` and the time at `posted`, with `num_likes` / `num_comments` / `num_reposts`. Image-only posts stay dropped.
 
 ## Sync skips resolve when profile fields are present
 SyncTrackedAccountJob calls resolveProfile only when force=true or external_id / url / display_name is blank. Do not pay for a profile actor run on every weekly sync.
@@ -42,8 +42,8 @@ Known external_ids are not updateOrCreate'd. Soft-retry Failed analysis for exis
 ## TikTok is metadata-first then paid download
 TikTok listRecentPosts sets shouldDownloadVideos=false. hydrateMediaUrls runs a second actor call with postURLs + shouldDownloadVideos=true only for new analysis candidates missing media_url. Do not download videos for the full profile list.
 
-## YouTube Shorts hydrate via TikHub video_info_v2
-YouTube adapters leave `media_url` null when only a Shorts page URL exists, then `YoutubeMediaHydrator` fills a googlevideo MP4 in hydrateMediaUrls (and AnalyzePostJob for legacy rows). Requires `TIKHUB_API_KEY`. Facebook/LinkedIn reject platform page hosts as media_url; Instagram drops items without a video file URL (no page fallback). Null `posted_at` is backfilled from `web_v2/get_video_info` (`date_text` etc.) during hydrate/analyze - channel shorts list dates are often blank.
+## YouTube Shorts hydrate via TikHub video streams
+YouTube adapters leave `media_url` null when only a Shorts page URL exists, then `YoutubeMediaHydrator` fills a googlevideo MP4 from `web_v2/get_video_streams` in hydrateMediaUrls (and AnalyzePostJob for legacy rows). `web/get_video_info_v2` 404s. Requires `TIKHUB_API_KEY`. Facebook/LinkedIn reject platform page hosts as media_url; Instagram drops items without a video file URL (no page fallback). Null `posted_at` is backfilled from `web_v2/get_video_info` (`date_text` etc.) during hydrate/analyze - channel shorts list dates are often blank.
 
 ## Platform fetch multipliers replace blanket 3x
 snitch.sync.fetch_multipliers controls over-fetch (instagram 2.5, facebook/linkedin 2, tiktok 1.25, youtube 1). Do not hard-code limit*3 in adapters.

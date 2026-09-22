@@ -94,6 +94,8 @@ class LinkedInAdapter extends AbstractTikHubAdapter
         $mediaUrl = $this->firstVideoUrl(
             $item['videoUrl'] ?? null,
             $item['mediaUrl'] ?? null,
+            data_get($item, 'video.stream_url'),
+            data_get($item, 'video.url'),
             data_get($item, 'content.video.url'),
             data_get($item, 'media.video.url'),
         );
@@ -111,15 +113,15 @@ class LinkedInAdapter extends AbstractTikHubAdapter
         return [
             'external_id' => isset($item['urn']) ? (string) $item['urn'] : (isset($item['id']) ? (string) $item['id'] : null),
             'url' => $url,
-            'posted_at' => $this->normalizeDate($item['postedAt'] ?? $item['createdAt'] ?? $item['publishedAt'] ?? null),
+            'posted_at' => $this->normalizeDate($item['postedAt'] ?? $item['posted'] ?? $item['createdAt'] ?? $item['publishedAt'] ?? null),
             'type' => PostType::Reel->value,
             'caption' => isset($item['text']) ? (string) $item['text'] : (isset($item['commentary']) ? (string) $item['commentary'] : null),
             'media_url' => $mediaUrl,
             'metrics' => $this->metrics(
-                $item['views'] ?? $item['numViews'] ?? 0,
-                $item['likes'] ?? $item['numLikes'] ?? 0,
-                $item['comments'] ?? $item['numComments'] ?? 0,
-                $item['shares'] ?? $item['numShares'] ?? 0,
+                $item['views'] ?? $item['numViews'] ?? $item['num_views'] ?? 0,
+                $item['likes'] ?? $item['numLikes'] ?? $item['num_likes'] ?? 0,
+                $item['comments'] ?? $item['numComments'] ?? $item['num_comments'] ?? 0,
+                $item['shares'] ?? $item['numShares'] ?? $item['num_reposts'] ?? 0,
             ),
             'raw_payload' => $item,
         ];
