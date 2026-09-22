@@ -156,10 +156,6 @@ const lastSyncLabel = computed(() => {
     })}`;
 });
 
-const heatmapTotal = computed(() =>
-    (props.activity?.heatmap ?? []).reduce((sum, day) => sum + day.count, 0),
-);
-
 const playbookLine = computed(() => {
     const book = props.insights?.playbook;
 
@@ -429,16 +425,9 @@ function onFramesResize(): void {
             </div>
 
             <section class="mt-3">
-                <div class="flex flex-wrap items-end justify-between gap-3">
-                    <div>
-                        <h2 class="snitch-display text-2xl text-snitch-ink">
-                            Competitor Content Cadence
-                        </h2>
-                    </div>
-                    <p class="text-xs text-snitch-ink/55">
-                        {{ heatmapTotal }} posts · last 16 weeks
-                    </p>
-                </div>
+                <h2 class="snitch-display text-2xl text-snitch-ink">
+                    Competitor Content Cadence
+                </h2>
 
                 <div class="mt-3 grid items-stretch gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.8fr)]">
                     <div class="snitch-scrap relative flex h-full flex-col p-3 pt-4">
