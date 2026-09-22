@@ -155,12 +155,19 @@ class EmbedLoadQueueContractTest extends TestCase
 
         $show = file_get_contents(base_path('resources/js/pages/feed/Show.vue'));
         $this->assertIsString($show);
-        $this->assertStringContainsString('minmax(20rem,28rem)', $show);
+        $this->assertStringContainsString('snitch-post-fit', $show);
         $this->assertStringContainsString('snitch-post-player', $show);
         $this->assertStringContainsString('interactive', $show);
         $this->assertStringNotContainsString('minmax(0,12rem)', $show);
         $this->assertStringNotContainsString('!aspect-auto', $show);
         $this->assertStringNotContainsString('compact', $show);
+
+        $css = file_get_contents(base_path('resources/css/app.css'));
+        $this->assertIsString($css);
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-post-player\s+\[data-embed-provider=[\'"]instagram[\'"]\]\s+\.snitch-platform-embed-frame\s*\{[^}]*aspect-ratio:\s*4\s*\/\s*5/s',
+            $css,
+        );
     }
 
     #[Test]
@@ -186,7 +193,10 @@ class EmbedLoadQueueContractTest extends TestCase
         $css = file_get_contents(base_path('resources/css/app.css'));
         $this->assertIsString($css);
 
-        $this->assertStringNotContainsString('height: calc(100svh - 4rem)', $css);
+        $this->assertDoesNotMatchRegularExpression(
+            '/\.snitch-post-fit[^{]*\{[^}]*height:\s*calc\(100svh\s*-\s*4rem\)/s',
+            $css,
+        );
         $this->assertDoesNotMatchRegularExpression(
             '/\.snitch-post-fit\s+\.snitch-post-caption\s*\{[^}]*overflow:\s*auto/s',
             $css,

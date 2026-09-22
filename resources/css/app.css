@@ -1855,6 +1855,15 @@
             aspect-ratio: auto;
         }
 
+        .snitch-post-fit .snitch-post-media:has([data-embed-provider='instagram']) {
+            width: min(26rem, calc(70svh * 4 / 5));
+        }
+
+        .snitch-post-fit .snitch-post-player:has([data-embed-provider='instagram']) {
+            max-height: min(70svh, 40rem);
+            aspect-ratio: 4 / 5;
+        }
+
         .snitch-post-fit .snitch-post-media:has([data-embed-provider='tiktok']),
         .snitch-post-fit .snitch-post-media:has([data-embed-provider='youtube']),
         .snitch-post-fit .snitch-post-media:has([data-embed-provider='facebook']) {
@@ -1881,6 +1890,17 @@
             height: 100%;
             aspect-ratio: auto;
         }
+    }
+
+    /*
+     * Instagram must keep an intrinsic aspect. At lg, .snitch-post-fit sets the
+     * frame to height: 100% of an auto-height parent, which collapses the iframe
+     * to the browser default (~150px) without a more-specific ratio rule.
+     */
+    .snitch-post-player [data-embed-provider='instagram'] .snitch-platform-embed-frame {
+        height: auto;
+        aspect-ratio: 4 / 5;
+        max-height: min(70svh, 40rem);
     }
 
     .snitch-post-player [data-embed-provider='tiktok'] .snitch-platform-embed-frame,
@@ -2562,7 +2582,7 @@
 
     @media (max-height: 700px) {
         .snitch-hero-mobile-copy {
-            padding-top: 7.5rem;
+            padding-top: 8.5rem;
         }
 
         .snitch-hero-mobile-stage {
