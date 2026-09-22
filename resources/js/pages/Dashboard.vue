@@ -246,7 +246,7 @@ function fittedFrames(sheet: HTMLElement): number {
 function applyFittedFrames(): void {
     const sheet = framesSheetRef.value;
 
-    if (sheet == null) {
+    if (sheet == null || props.recent_posts == null) {
         return;
     }
 
@@ -291,7 +291,7 @@ function scheduleFrames(): void {
     frameTimer = setTimeout(() => {
         frameTimer = null;
         applyFittedFrames();
-    }, 150);
+    }, 320);
 }
 
 watch(framesSheetRef, (sheet, _previous, onCleanup) => {
@@ -456,7 +456,7 @@ function onFramesResize(): void {
                 </div>
             </div>
 
-            <section class="mt-3">
+            <section class="snitch-dash-charts mt-3">
                 <div class="grid items-stretch gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.8fr)]">
                     <div class="snitch-scrap relative flex h-full flex-col p-3 pt-4">
                         <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
@@ -706,7 +706,7 @@ function onFramesResize(): void {
                     <div
                         v-else-if="recent_posts.length"
                         ref="framesSheetRef"
-                        class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill snitch-contact-sheet-dash snitch-contact-reveal mt-3 grid"
+                        class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill snitch-contact-sheet-dash mt-3 grid"
                     >
                         <FeedContactCell
                             v-for="(post, index) in recent_posts"

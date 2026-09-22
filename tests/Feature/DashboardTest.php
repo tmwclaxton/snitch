@@ -48,7 +48,7 @@ class DashboardTest extends TestCase
                 ->missing('top_winners')
                 ->missing('activity')
                 ->missing('insights')
-                ->loadDeferredProps('board', fn (Assert $page) => $page
+                ->loadDeferredProps('panel', fn (Assert $page) => $page
                     ->has('activity.heatmap', DashboardActivityBuilder::HEATMAP_WEEKS * 7)
                     ->has('activity.weekly', DashboardActivityBuilder::WEEKLY_WEEKS)
                     ->has('activity.by_platform', 0)
@@ -66,8 +66,6 @@ class DashboardTest extends TestCase
                     ->where('insights.cta_clicks.posts_with_cta', 0)
                     ->where('insights.growth.followers', 0)
                     ->where('insights.playbook.peak_hour_label', null)
-                )
-                ->loadDeferredProps('feed', fn (Assert $page) => $page
                     ->has('recent_posts', 0)
                     ->has('top_winners', 0)
                 )
@@ -126,7 +124,7 @@ class DashboardTest extends TestCase
                 ->missing('top_winners')
                 ->missing('activity')
                 ->missing('insights')
-                ->loadDeferredProps('feed', fn (Assert $page) => $page
+                ->loadDeferredProps('panel', fn (Assert $page) => $page
                     ->has('recent_posts', 3)
                     ->has('top_winners', 1)
                     ->where('top_winners.0.post.id', $ready->id)
@@ -175,7 +173,7 @@ class DashboardTest extends TestCase
                     ->component('Dashboard')
                     ->missing('activity')
                     ->missing('insights')
-                    ->loadDeferredProps('board', fn (Assert $page) => $page
+                    ->loadDeferredProps('panel', fn (Assert $page) => $page
                         ->has('activity.heatmap', DashboardActivityBuilder::HEATMAP_WEEKS * 7)
                         ->where('activity.heatmap.0.date', '2026-04-19')
                         ->where('activity.weekly.0.week_start', '2026-05-17')
@@ -229,8 +227,7 @@ class DashboardTest extends TestCase
 
         $this->assertSame(
             [
-                'board' => ['activity', 'insights'],
-                'feed' => ['recent_posts', 'top_winners'],
+                'panel' => ['activity', 'insights', 'recent_posts', 'top_winners'],
             ],
             $page['deferredProps'] ?? null,
         );
@@ -242,6 +239,8 @@ class DashboardTest extends TestCase
         $this->assertIsString($pile);
         $this->assertStringContainsString('SnitchFacePile', $dashboard);
         $this->assertStringNotContainsString('SnitchChipPile', $dashboard);
+        $this->assertStringNotContainsString('snitch-contact-reveal', $dashboard);
+        $this->assertStringContainsString('snitch-dash-charts', $dashboard);
         $this->assertSame(2, substr_count($dashboard, 'Competitor Analytics'));
         $this->assertStringNotContainsString('>Snitch</span>', $dashboard);
         $this->assertStringNotContainsString('last 16 weeks', $dashboard);
@@ -252,6 +251,11 @@ class DashboardTest extends TestCase
 
         $css = file_get_contents(resource_path('css/app.css'));
         $this->assertNotFalse($css);
+        $this->assertStringContainsString('.snitch-app-shell > .snitch-grain', $css);
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-app-shell\s*>\s*\.snitch-grain\s*\{[^}]*animation:\s*none/s',
+            $css,
+        );
         $this->assertMatchesRegularExpression(
             '/\.snitch-face-pile\s*\{[^}]*flex-wrap:\s*nowrap/s',
             $css,
@@ -297,7 +301,7 @@ class DashboardTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('frames', 6)
                 ->missing('recent_posts')
-                ->loadDeferredProps('feed', fn (Assert $page) => $page
+                ->loadDeferredProps('panel', fn (Assert $page) => $page
                     ->has('recent_posts', 6)
                     ->where('recent_posts.0.id', $newestFirst[0])
                 )
@@ -308,7 +312,7 @@ class DashboardTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('frames', 4)
-                ->loadDeferredProps('feed', fn (Assert $page) => $page
+                ->loadDeferredProps('panel', fn (Assert $page) => $page
                     ->has('recent_posts', 4)
                     ->where('recent_posts.0.id', $newestFirst[0])
                     ->where('recent_posts.3.id', $newestFirst[3])
@@ -320,7 +324,7 @@ class DashboardTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('frames', 24)
-                ->loadDeferredProps('feed', fn (Assert $page) => $page
+                ->loadDeferredProps('panel', fn (Assert $page) => $page
                     ->has('recent_posts', 8)
                 )
             );
@@ -331,7 +335,7 @@ class DashboardTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('frames', 4)
-                ->loadDeferredProps('feed', fn (Assert $page) => $page
+                ->loadDeferredProps('panel', fn (Assert $page) => $page
                     ->has('recent_posts', 4)
                     ->where('recent_posts.0.id', $newestFirst[0])
                 )

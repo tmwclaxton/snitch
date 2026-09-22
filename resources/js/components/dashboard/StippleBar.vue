@@ -29,7 +29,8 @@ const props = withDefaults(
         variant: 'dots',
         fillClass: 'fill-snitch-ink/70',
         seed: 0,
-        animate: true,
+        // Instant by default - staggered mark timers jank when several charts mount at once.
+        animate: false,
         growFrom: 'bottom',
         delayOffset: 0,
         stepMs: 20,
@@ -165,14 +166,16 @@ onBeforeUnmount(() => {
         <template v-for="(mark, index) in marks" :key="index">
             <circle
                 v-if="mark.kind === 'circle' && index < visibleCount"
-                class="snitch-stipple-mark is-popping"
+                class="snitch-stipple-mark"
+                :class="{ 'is-popping': animate }"
                 :cx="mark.cx"
                 :cy="mark.cy"
                 :r="mark.r"
             />
             <polygon
                 v-else-if="mark.kind === 'hex' && index < visibleCount"
-                class="snitch-stipple-mark is-popping"
+                class="snitch-stipple-mark"
+                :class="{ 'is-popping': animate }"
                 :points="mark.points"
             />
         </template>

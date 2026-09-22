@@ -350,6 +350,15 @@
         animation: snitch-grain-drift 16s steps(8) infinite;
     }
 
+    /* App pages: static grain. Infinite drift + mix-blend over the full shell janks scroll. */
+    .snitch-app-shell > .snitch-grain {
+        animation: none;
+    }
+
+    .snitch-app-shell .snitch-tape {
+        animation: none;
+    }
+
     .snitch-display {
         font-family: var(--font-display);
         font-weight: 400;
@@ -3050,6 +3059,18 @@
 
     .snitch-contact-reveal > *:nth-child(6) {
         animation-delay: 350ms;
+    }
+
+    /* Dashboard chart blocks: skip offscreen work until scrolled near. */
+    .snitch-app-shell .snitch-dash-charts {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 28rem;
+    }
+
+    .snitch-app-shell .snitch-contact-sheet-dash,
+    .snitch-app-shell .snitch-tear-board {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 24rem;
     }
 
     /*

@@ -129,7 +129,7 @@ class StippleChartContractTest extends TestCase
     }
 
     #[Test]
-    public function stipple_bar_reveals_marks_one_by_one(): void
+    public function stipple_bar_reveals_marks_one_by_one_when_animate_is_on(): void
     {
         $source = file_get_contents(base_path('resources/js/components/dashboard/StippleBar.vue'));
         $css = file_get_contents(base_path('resources/css/app.css'));
@@ -139,6 +139,8 @@ class StippleChartContractTest extends TestCase
         $this->assertStringContainsString('visibleCount', $source);
         $this->assertStringContainsString('stepMs', $source);
         $this->assertStringContainsString('index < visibleCount', $source);
+        $this->assertMatchesRegularExpression('/animate:\s*false/', $source);
+        $this->assertStringContainsString("'is-popping': animate", $source);
         $this->assertStringContainsString('@keyframes snitch-stipple-pop', $css);
     }
 
