@@ -99,8 +99,8 @@ class BlogControllerTest extends TestCase
 
         $this->assertNotFalse($nav);
         $this->assertNotFalse($footer);
-        $this->assertStringContainsString("label: 'Blog'", $nav);
-        $this->assertStringContainsString("label: 'Blog'", $footer);
+        $this->assertStringContainsString('>Blog<', $nav);
+        $this->assertStringContainsString('>Blog<', $footer);
         $this->assertStringContainsString("from '@/routes/blog'", $nav);
         $this->assertStringContainsString("from '@/routes/blog'", $footer);
     }

@@ -67,37 +67,36 @@ function formatAverage(pence: number): string {
         <div class="px-5 py-14 sm:px-8 sm:py-20">
             <div class="mx-auto max-w-6xl">
                 <h1 class="snitch-display text-4xl text-snitch-ink sm:text-5xl">
-                    Platform + usage
+                    Full Access
                 </h1>
                 <p class="mt-4 max-w-2xl text-snitch-ink/80">
-                    A simple monthly platform fee, then prepaid credits for Apify syncs, NanoGPT analysis, and
-                    Firecrawl discovery. Signups start with a 7-day trial and £5 to spend. No snitch seat
-                    caps - you pay for the work you run.
+                    Competitor Instagram tracking, weekly refreshed data, gap analysis, and posting times.
+                    Book a free intro call, then subscribe in the app for {{ formatCatalog(platform.fee_pence) }} a month.
                 </p>
 
                 <div class="snitch-contact-reveal mt-12 grid gap-6 md:grid-cols-2">
                     <section class="snitch-scrap relative space-y-4 p-6 pt-8">
                         <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
-                        <p class="snitch-ink-label">Platform</p>
+                        <p class="snitch-ink-label">Full Access</p>
                         <p class="snitch-display text-4xl text-snitch-ink">
                             {{ formatCatalog(platform.fee_pence) }}<span class="text-lg">/mo</span>
                         </p>
                         <ul class="relative z-10 space-y-2 text-sm text-snitch-ink/80">
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                Unlimited tracked accounts
+                                Full competitor tracking
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                Web app: Tracking, Feed, Explore, Winners
+                                Weekly refreshed data
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                {{ formatCatalog(platform.bonus_pence) }} usage credits every billing period
+                                Gap Analysis
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                Feed, Explore, Winners
+                                Optimal posting times
                             </li>
                         </ul>
                     </section>
@@ -174,11 +173,19 @@ function formatAverage(pence: number): string {
                 </section>
 
                 <div class="mt-12 flex flex-wrap gap-3">
-                    <Link :href="ctaHref" class="snitch-btn snitch-btn-spot">
+                    <a
+                        href="https://calendly.com/dan-olympuslab/30min"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="snitch-btn snitch-btn-spot"
+                    >
                         <span class="relative z-10 inline-flex items-center gap-2">
                             <ArrowRight class="size-3.5 shrink-0" aria-hidden="true" />
-                            {{ ctaLabel }}
+                            Book a free intro call
                         </span>
+                    </a>
+                    <Link :href="ctaHref" class="snitch-btn">
+                        <span class="relative z-10">{{ ctaLabel }}</span>
                     </Link>
                 </div>
             </div>

@@ -1,13 +1,8 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Activity, Clapperboard, Compass, CreditCard, LayoutGrid, Megaphone, Settings, Shield, Store, Trophy, Users } from '@lucide/vue';
+import { Activity, CreditCard, LayoutGrid, Settings, Shield, Users } from '@lucide/vue';
 import { computed } from 'vue';
-import { index as adsIndex } from '@/actions/App/Http/Controllers/AdsController';
-import { edit as brand } from '@/actions/App/Http/Controllers/BrandProfileController';
 import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
-import { index as explore } from '@/actions/App/Http/Controllers/ExploreController';
-import { index as feed } from '@/actions/App/Http/Controllers/FeedController';
-import { index as winners } from '@/actions/App/Http/Controllers/WinnerController';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -40,34 +35,9 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'Brand',
-        href: brand(),
-        icon: Store,
-    },
-    {
-        title: 'Tracking',
+        title: 'Competitors',
         href: competitors(),
         icon: Users,
-    },
-    {
-        title: 'Feed',
-        href: feed(),
-        icon: Clapperboard,
-    },
-    {
-        title: 'Winners',
-        href: winners(),
-        icon: Trophy,
-    },
-    {
-        title: 'Ads',
-        href: adsIndex(),
-        icon: Megaphone,
-    },
-    {
-        title: 'Explore',
-        href: explore(),
-        icon: Compass,
     },
 ];
 

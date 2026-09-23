@@ -197,8 +197,8 @@ class PublicPagesTest extends TestCase
         $this->assertNotFalse($about);
 
         $this->assertStringNotContainsString('seats', strtolower($pricing));
-        $this->assertStringContainsString('usage credits every billing period', $pricing);
-        $this->assertStringContainsString('Feed, Explore, Winners', $pricing);
+        $this->assertStringContainsString('Full competitor tracking', $pricing);
+        $this->assertStringContainsString('Weekly refreshed data', $pricing);
         $this->assertStringNotContainsString('MCP + web app access', $pricing);
         $this->assertStringNotContainsString('Agents / MCP', $pricing);
         $this->assertStringContainsString('Live tool averages', $pricing);
@@ -290,35 +290,16 @@ class PublicPagesTest extends TestCase
         );
     }
 
-    public function test_landing_poster_hero_ctas_use_spot_then_ink_buttons(): void
+    public function test_landing_uses_calendly_cta_and_full_access_price(): void
     {
         $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
-        $css = file_get_contents(resource_path('css/app.css'));
 
         $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
-        $this->assertNotFalse($css, 'Missing app.css source');
-
-        $this->assertMatchesRegularExpression(
-            '/snitch-hero-mobile-cta[\s\S]*?snitch-btn snitch-btn-spot[\s\S]*?Get started[\s\S]*?class="snitch-btn[\s\S]*?Log in/',
-            $welcome,
-            'Poster hero must lead with Get started (spot) then Log in (ink)',
-        );
-        $this->assertMatchesRegularExpression(
-            '/snitch-hero-mobile-cta[\s\S]*?v-if="isAuthenticated"[\s\S]*?snitch-btn snitch-btn-spot[\s\S]*?Open dashboard/',
-            $welcome,
-            'Authenticated poster CTA must be yellow spot Open dashboard',
-        );
-        $this->assertMatchesRegularExpression(
-            '/snitch-hero-mobile-cta[\s\S]*?:href="login\(\)"[\s\S]*?:href="login\(\)"/',
-            $welcome,
-            'Poster Get started and Log in must both use login()',
-        );
-        $this->assertDoesNotMatchRegularExpression(
-            '/snitch-hero-mobile-cta[\s\S]*?snitch-btn-ghost/',
-            $welcome,
-            'Poster CTAs must not use ghost / paper fill',
-        );
-        $this->assertStringContainsString('.snitch-hero-mobile-cta .snitch-btn', $css);
+        $this->assertStringContainsString('https://calendly.com/dan-olympuslab/30min', $welcome);
+        $this->assertStringContainsString('Book a free intro call', $welcome);
+        $this->assertStringContainsString('£50', $welcome);
+        $this->assertStringContainsString('Full Access', $welcome);
+        $this->assertStringContainsString('Better social media performance.', $welcome);
     }
 
     public function test_beta_hero_background_is_static_on_mobile(): void
@@ -338,72 +319,15 @@ class PublicPagesTest extends TestCase
         );
     }
 
-    public function test_home_uses_poster_hero_at_every_breakpoint(): void
+    public function test_home_uses_lovable_core_copy(): void
     {
         $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
-        $css = file_get_contents(resource_path('css/app.css'));
 
         $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
-        $this->assertNotFalse($css, 'Missing app.css source');
-
-        $this->assertStringContainsString('snitch-hero-mobile', $welcome);
-        $this->assertStringNotContainsString('md:hidden', $welcome);
-        $this->assertStringNotContainsString('md:block', $welcome);
         $this->assertStringNotContainsString('desktopHeroArt', $welcome);
         $this->assertStringNotContainsString('platforms-front.png', $welcome);
-        $this->assertStringNotContainsString(
-            'class="snitch-hero relative hidden h-dvh w-full overflow-hidden md:block"',
-            $welcome,
-            'Desktop wall hero must be removed in favour of the poster',
-        );
-        $this->assertStringContainsString('heroEl', $welcome);
-        $this->assertStringContainsString('measureVisibleViewportHeight', $welcome);
-        $this->assertStringContainsString('--snitch-mobile-hero-height', $welcome);
-        $this->assertStringContainsString('lockedHeroHeight', $welcome);
-        $this->assertStringContainsString('orientationchange', $welcome);
-        $this->assertStringNotContainsString(
-            "visualViewport?.addEventListener('resize'",
-            $welcome,
-            'Do not remeasure on visualViewport resize - URL bar show/hide would resize the hero while scrolling',
-        );
-        $this->assertStringContainsString('snitch-hero-mobile-mascot', $welcome);
-        $this->assertStringContainsString('snitch-hero-mobile-floor', $welcome);
-        $this->assertStringContainsString('snitch-hero-mobile-cta', $welcome);
-        $this->assertDoesNotMatchRegularExpression(
-            '/snitch-hero-mobile[\s\S]{0,400}pt-44/',
-            $welcome,
-            'Poster must not use the oversized pt-44 gap under the nav',
-        );
-        $this->assertMatchesRegularExpression(
-            '/snitch-hero-mobile-cta[\s\S]*?Get started[\s\S]*?Log in/',
-            $welcome,
-            'Poster must lead with Get started then Log in',
-        );
-        $this->assertStringContainsString('.snitch-hero-mobile-wash', $css);
-        $this->assertStringContainsString('.snitch-hero-mobile-floor', $css);
-        $this->assertStringContainsString('snitch-hero-mobile-mascot-bob', $css);
-        $this->assertStringContainsString(
-            'height: var(--snitch-mobile-hero-height, 100dvh)',
-            $css,
-        );
-        $this->assertStringContainsString(
-            'max-height: var(--snitch-mobile-hero-height, 100dvh)',
-            $css,
-        );
-        $this->assertMatchesRegularExpression(
-            '/@media\s*\(min-width:\s*768px\)\s*\{[\s\S]*?\.snitch-hero-mobile-mascot/s',
-            $css,
-            'Poster mascot must scale up on desktop',
-        );
-        $this->assertMatchesRegularExpression(
-            '/max-w-6xl[\s\S]{0,80}snitch-hero-mobile-copy/',
-            $welcome,
-            'Hero copy must sit in the same max-w-6xl column as PublicNav logo',
-        );
-        $this->assertStringContainsString(
-            'mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-5 sm:px-8',
-            file_get_contents(resource_path('js/components/marketing/PublicNav.vue')) ?: '',
-        );
+        $this->assertStringContainsString('Stop scrolling your competitors', $welcome);
+        $this->assertStringContainsString('Questions, answered', $welcome);
     }
 
     public function test_beta_hero_backdrop_waits_for_decode_before_reveal(): void
@@ -447,23 +371,20 @@ class PublicPagesTest extends TestCase
         $this->assertStringNotContainsString('Connect your agent', $welcome);
         $this->assertStringNotContainsString('find influencers', $welcome);
         $this->assertStringNotContainsString('Agents setup', $welcome);
-        $this->assertStringContainsString('Competitor social intel', $welcome);
+        $this->assertStringContainsString('Better social media performance.', $welcome);
         $this->assertStringNotContainsString("title: 'MCP'", $sidebar);
         $this->assertStringNotContainsString("title: 'Brand Deals'", $sidebar);
+        $this->assertStringContainsString("title: 'Competitors'", $sidebar);
     }
 
-    public function test_public_nav_links_to_github_repository(): void
+    public function test_public_nav_stays_minimal(): void
     {
         $nav = file_get_contents(resource_path('js/components/marketing/PublicNav.vue'));
 
         $this->assertNotFalse($nav, 'Missing PublicNav.vue source');
-        $this->assertStringContainsString(
-            'https://github.com/tmwclaxton/snitch',
-            $nav,
-            'Guest header must link the GitHub icon to the public repo',
-        );
-        $this->assertStringContainsString("['fab', 'github']", $nav);
-        $this->assertStringContainsString('aria-label="Snitch on GitHub"', $nav);
+        $this->assertStringContainsString('aria-label="Snitch home"', $nav);
+        $this->assertStringContainsString('Log in', $nav);
+        $this->assertStringNotContainsString('How it works', $nav);
     }
 
     public function test_landing_page_does_not_push_open_source_section(): void
@@ -483,16 +404,8 @@ class PublicPagesTest extends TestCase
     public function test_ghost_ticket_buttons_stroke_follows_clip_not_inset_shadow(): void
     {
         $css = file_get_contents(resource_path('css/app.css'));
-        $nav = file_get_contents(resource_path('js/components/marketing/PublicNav.vue'));
 
         $this->assertNotFalse($css, 'Missing app.css source');
-        $this->assertNotFalse($nav, 'Missing PublicNav.vue source');
-
-        $this->assertStringContainsString(
-            'snitch-btn snitch-btn-ghost',
-            $nav,
-            'PublicNav Dashboard / Log out must use ghost ticket buttons',
-        );
         $this->assertStringContainsString('--snitch-ticket-stroke', $css);
         $this->assertStringContainsString('.snitch-btn-ghost::before', $css);
         $this->assertStringNotContainsString(
@@ -505,20 +418,8 @@ class PublicPagesTest extends TestCase
     public function test_spot_ticket_buttons_use_charcoal_outline_via_inset_face(): void
     {
         $css = file_get_contents(resource_path('css/app.css'));
-        $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
 
         $this->assertNotFalse($css, 'Missing app.css source');
-        $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
-
-        $this->assertStringContainsString(
-            'Start tracking the competition.',
-            $welcome,
-        );
-        $this->assertMatchesRegularExpression(
-            '/Start tracking the competition\.[\s\S]*?class="snitch-btn snitch-btn-spot"/',
-            $welcome,
-            'Closing CTA must use spot yellow with global charcoal ticket outline',
-        );
         $this->assertStringContainsString('.snitch-btn.snitch-btn-spot::before', $css);
         $this->assertStringContainsString(
             'inset: var(--snitch-ticket-stroke)',

@@ -4,7 +4,7 @@ return [
 
     'site_name' => env('APP_NAME', 'Snitch'),
 
-    'default_description' => 'Snitch tracks social posts from accounts you care about across TikTok, Instagram, YouTube, and more, explains why they work, and surfaces winners you can remake.',
+    'default_description' => 'Track your competitors on Instagram and see the gap between you and them. What is working, what you are missing, delivered weekly.',
 
     'default_image' => '/images/marketing/og.jpg',
 
@@ -29,8 +29,8 @@ return [
     'pages' => [
 
         'home' => [
-            'title' => 'Snitch social tracking',
-            'description' => 'See what competitors post on Instagram, TikTok, Facebook, and more. Snitch tracks cadence, hooks, and winners so social marketers know what to remake.',
+            'title' => 'Better social media performance without manual research',
+            'description' => 'Track competitor Instagram performance: follower growth, posting cadence, top posts and engagement. Refreshed weekly. No Instagram login required.',
             'json_ld' => 'website',
             'sitemap' => [
                 'changefreq' => 'weekly',
@@ -60,7 +60,7 @@ return [
 
         'pricing' => [
             'title' => 'Pricing',
-            'description' => 'Snitch plans with a 7-day free trial and prepaid usage credits. Subscribe for monthly plan value or top up as you go.',
+            'description' => 'Full Access to Snitch competitor tracking for £50 a month. Weekly refreshed Instagram data, gap analysis, and optimal posting times.',
             'json_ld' => 'webpage',
             'sitemap' => [
                 'changefreq' => 'weekly',

@@ -161,8 +161,8 @@ class BrandProfileUpdateTest extends TestCase
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
 
         $this->assertNotFalse($sidebar);
-        $this->assertStringContainsString("title: 'Brand'", $sidebar);
-        $this->assertStringContainsString('BrandProfileController', $sidebar);
+        $this->assertStringContainsString("title: 'Competitors'", $sidebar);
+        $this->assertStringContainsString('CompetitorController', $sidebar);
         $this->assertStringNotContainsString("title: 'MCP'", $sidebar);
         $this->assertStringNotContainsString("title: 'Brand Deals'", $sidebar);
         $this->assertStringNotContainsString('InfluencerController', $sidebar);
