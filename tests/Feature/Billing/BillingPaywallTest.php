@@ -3,6 +3,7 @@
 namespace Tests\Feature\Billing;
 
 use App\Enums\BillingVendor;
+use App\Enums\Platform;
 use App\Enums\PostType;
 use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\PlatformSubscriptionRequiredException;
@@ -195,13 +196,12 @@ class BillingPaywallTest extends TestCase
                 ->where('subscription.paywall.reason', 'subscribe')
                 ->where('subscription.paywall.can_top_up', false)
                 ->where('subscription.competitors_used', 0)
-                ->where('stats.tracked_accounts', 0)
-                ->where('stats.posts', 0)
-                ->where('stats.winners', 0)
-                ->where('recent_posts', [])
-                ->where('top_winners', [])
-                ->where('activity.heatmap', [])
-                ->missing('recent_posts.0')
+                ->where('rivals', [])
+                ->where('kpis.posts', 0)
+                ->where('top_posts', [])
+                ->has('heatmap', 7)
+                ->missing('recent_posts')
+                ->missing('top_winners')
             );
     }
 
@@ -287,7 +287,10 @@ class BillingPaywallTest extends TestCase
         $this->subscribe($user);
         $this->billing->creditSubscriptionBonus($user, 'subscription_bonus:invoice:data');
 
-        $account = TrackedAccount::factory()->competitor()->for($user)->create(['handle' => 'visible-rival']);
+        $account = TrackedAccount::factory()->competitor()->for($user)->create([
+            'handle' => 'visible-rival',
+            'platform' => Platform::Instagram,
+        ]);
         Post::factory()->forAccount($account)->create([
             'type' => PostType::Reel,
             'caption' => 'visible caption',
@@ -306,8 +309,8 @@ class BillingPaywallTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('subscription.paywall.blocked', false)
-                ->where('stats.tracked_accounts', 1)
-                ->where('stats.posts', 1)
+                ->where('rivals.0.handle', 'visible-rival')
+                ->where('kpis.posts', 1)
             );
 
         $this->actingAs($user)

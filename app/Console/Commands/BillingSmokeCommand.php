@@ -40,7 +40,7 @@ class BillingSmokeCommand extends Command
             $this->info('Checking platform price...');
             $platform = $stripe->prices->retrieve($platformPrice);
             $this->assertSame('gbp', $platform->currency, 'Platform currency');
-            $this->assertSame((int) config('billing.platform_fee_pence', 1900), $platform->unit_amount, 'Platform amount');
+            $this->assertSame((int) config('billing.platform_fee_pence', 5000), $platform->unit_amount, 'Platform amount');
             $this->assertSame('month', $platform->recurring?->interval, 'Platform interval');
             $this->line('  catalog OK');
 

@@ -788,7 +788,7 @@ class UsageBillingService
         return [
             'balance_pence' => $this->balancePence($user),
             'subscribed' => $this->hasPlatformSubscription($user),
-            'platform_fee_pence' => (int) config('billing.platform_fee_pence', 1900),
+            'platform_fee_pence' => (int) config('billing.platform_fee_pence', 5000),
             'period' => [
                 'from' => $from->toIso8601String(),
                 'to' => $to->toIso8601String(),

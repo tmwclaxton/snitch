@@ -56,7 +56,7 @@ class BillingController extends Controller
             'spendSeries' => Inertia::defer(fn () => $this->usage->spendSeries($user, $grain), 'chart'),
             'creditPacks' => $packs,
             'platform' => [
-                'fee_pence' => (int) config('billing.platform_fee_pence', 1900),
+                'fee_pence' => (int) config('billing.platform_fee_pence', 5000),
                 'bonus_pence' => (int) config('billing.subscription_bonus_pence', 3000),
                 'has_checkout' => filled(config('billing.platform_stripe_price')),
             ],

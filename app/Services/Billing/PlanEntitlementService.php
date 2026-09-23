@@ -219,7 +219,7 @@ class PlanEntitlementService
             'balance_pence' => $balancePence,
             'min_run_balance_pence' => $minRunBalancePence,
             'can_run_billable' => ! $paywall['blocked'],
-            'platform_fee_pence' => (int) config('billing.platform_fee_pence', 1900),
+            'platform_fee_pence' => (int) config('billing.platform_fee_pence', 5000),
             'paywall' => $paywall,
         ];
     }

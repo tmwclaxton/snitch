@@ -22,7 +22,7 @@ class StripeSyncPlansCommand extends Command
             return self::FAILURE;
         }
 
-        $platformFee = (int) config('billing.platform_fee_pence', 1900);
+        $platformFee = (int) config('billing.platform_fee_pence', 5000);
         $packs = config('billing.credit_packs', []);
 
         if ($this->option('dry-run')) {

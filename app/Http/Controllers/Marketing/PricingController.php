@@ -18,7 +18,7 @@ class PricingController extends Controller
         return Inertia::render('marketing/Pricing', [
             'toolAverages' => $this->usage->globalVendorAverages(),
             'platform' => [
-                'fee_pence' => (int) config('billing.platform_fee_pence', 1900),
+                'fee_pence' => (int) config('billing.platform_fee_pence', 5000),
                 'bonus_pence' => (int) config('billing.subscription_bonus_pence', 3000),
             ],
         ]);

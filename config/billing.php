@@ -8,7 +8,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'platform_fee_pence' => (int) env('SNITCH_PLATFORM_FEE_PENCE', 1900),
+    'platform_fee_pence' => (int) env('SNITCH_PLATFORM_FEE_PENCE', 5000),
     'platform_stripe_price' => env('STRIPE_PRICE_PLATFORM'),
     'subscription_type' => env('SNITCH_SUBSCRIPTION_TYPE', 'default'),
 
