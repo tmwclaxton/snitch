@@ -292,20 +292,13 @@ class CompetitorsTest extends TestCase
 
         $indexVue = file_get_contents(resource_path('js/pages/competitors/Index.vue'));
         $this->assertIsString($indexVue);
-        $this->assertStringContainsString('Sync status', $indexVue);
-        $this->assertStringContainsString('accountSyncStatusLabel', $indexVue);
-        $this->assertStringContainsString('syncAccount', $indexVue);
-        $this->assertStringContainsString('isAccountSyncing', $indexVue);
-        $this->assertStringContainsString('Sync in progress', $indexVue);
-        $this->assertStringContainsString('emptyImportHint', $indexVue);
-        $this->assertStringContainsString('No recent posts found', $indexVue);
-        $this->assertStringContainsString('RemoveCompetitorModal', $indexVue);
-        $this->assertStringContainsString('SyncAccountModal', $indexVue);
-        $this->assertStringContainsString('askRemove', $indexVue);
+        $this->assertStringContainsString('Add your account', $indexVue);
+        $this->assertStringContainsString('is_own_account', $indexVue);
+        $this->assertStringContainsString('Last refresh', $indexVue);
+        $this->assertStringContainsString('This is my account', $indexVue);
+        $this->assertStringContainsString('Track public Instagram accounts', $indexVue);
         $this->assertStringNotContainsString('Auto sync', $indexVue);
         $this->assertStringNotContainsString('nextSyncLabel', $indexVue);
-        $this->assertStringNotContainsString('Sync ok', $indexVue);
-        $this->assertStringNotContainsString('not synced', $indexVue);
     }
 
     public function test_index_exposes_running_sync_status(): void

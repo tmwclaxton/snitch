@@ -21,20 +21,24 @@ class StoreTrackedAccountRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'platform' => ['required', Rule::enum(Platform::class)],
+            'platform' => ['sometimes', Rule::enum(Platform::class)],
             'handle' => ['required', 'string', 'max:80'],
             'display_name' => ['nullable', 'string', 'max:120'],
+            'is_own_account' => ['sometimes', 'boolean'],
         ];
     }
 
     protected function prepareForValidation(): void
     {
         $handle = $this->input('handle');
+        $merged = [
+            'platform' => $this->input('platform') ?: Platform::Instagram->value,
+        ];
 
         if (is_string($handle)) {
-            $this->merge([
-                'handle' => ltrim(trim($handle), '@'),
-            ]);
+            $merged['handle'] = ltrim(trim($handle), '@');
         }
+
+        $this->merge($merged);
     }
 }

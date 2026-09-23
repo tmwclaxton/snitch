@@ -125,6 +125,8 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::get('/tracking/{trackedAccount}', [CompetitorController::class, 'show'])->name('competitors.show');
         Route::delete('/tracking/{trackedAccount}', [CompetitorController::class, 'destroy'])->name('competitors.destroy');
         Route::post('/tracking/{trackedAccount}/sync', [CompetitorController::class, 'sync'])->name('competitors.sync');
+        Route::post('/tracking/{trackedAccount}/own', [CompetitorController::class, 'markOwn'])->name('competitors.own');
+        Route::delete('/tracking/{trackedAccount}/own', [CompetitorController::class, 'unmarkOwn'])->name('competitors.unown');
 
         Route::permanentRedirect('/snitches', '/tracking');
         Route::get('/snitches/{path}', function (string $path) {

@@ -12,8 +12,8 @@ The product page is **Tracking** at `/tracking` (sidebar and page title). `/snit
 ## Untrack does not delete the corpus
 Removing a snitch/influencer deletes only the user's `tracked_accounts` row. Global `social_accounts` + `posts` + analyses stay. Re-add resolves the same social account and attaches existing posts (sync refreshes; it should not recreate from zero when the reel already exists).
 
-## Sync is intentional - no auto-sync countdown
-Snitches Index/Show show Sync status only: Manual, last synced date, or Syncing. Do not expose next_sync_at / sync_due or a scheduled countdown. Agents and users kick sync; snitch:sync-accounts is ops-only and not registered in routes/console.php.
+## Weekly refresh is scheduled
+Lovable core refreshes tracked Instagram accounts weekly via `snitch:sync-accounts` in `routes/console.php` (Monday 07:00). Competitors Index shows last refresh from `last_synced_at`. Do not expose `next_sync_at` / `sync_due` or a countdown. Users can still kick a manual sync.
 
 ## Suggest runs share one active cache pointer
 Web and MCP must call `SuggestCompetitorsJob::beginRun()` before dispatch so `competitor-suggest-active:{userId}` is set. Snitches Index reads that pointer as `suggestRun` and polls until terminal. Do not seed only `latest` / status `queued` - the UI will miss in-progress agent jobs.

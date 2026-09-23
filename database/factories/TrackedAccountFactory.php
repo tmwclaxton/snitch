@@ -26,6 +26,7 @@ class TrackedAccountFactory extends Factory
             'user_id' => User::factory(),
             'platform' => $platform,
             'kind' => TrackedAccountKind::Competitor,
+            'is_own_account' => false,
             'handle' => $handle,
             'url' => $this->profileUrl($platform, $handle),
             'external_id' => (string) fake()->unique()->numerify('##########'),

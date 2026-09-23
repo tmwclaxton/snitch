@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'social_account_id',
     'platform',
     'kind',
+    'is_own_account',
     'handle',
     'url',
     'external_id',
@@ -96,6 +97,7 @@ class TrackedAccount extends Model
         return [
             'platform' => Platform::class,
             'kind' => TrackedAccountKind::class,
+            'is_own_account' => 'boolean',
             'followers' => 'integer',
             'last_synced_at' => 'datetime',
         ];

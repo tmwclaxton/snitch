@@ -148,8 +148,13 @@ class CompetitorController extends Controller
                 'kind' => TrackedAccountKind::Competitor,
                 'url' => $this->defaultUrl($platform, $handle),
                 'display_name' => $data['display_name'] ?? $handle,
+                'is_own_account' => (bool) ($data['is_own_account'] ?? false),
             ],
         );
+
+        if ($account->is_own_account) {
+            $this->clearOtherOwnAccounts($user, $account);
+        }
 
         $this->queueSyncIfBillable($user, $account);
 
@@ -345,6 +350,25 @@ class CompetitorController extends Controller
         return redirect()->route('competitors.index');
     }
 
+    public function markOwn(Request $request, TrackedAccount $trackedAccount): RedirectResponse
+    {
+        $this->authorize('update', $trackedAccount);
+
+        $trackedAccount->forceFill(['is_own_account' => true])->save();
+        $this->clearOtherOwnAccounts($request->user(), $trackedAccount);
+
+        return redirect()->back(fallback: route('competitors.index'));
+    }
+
+    public function unmarkOwn(Request $request, TrackedAccount $trackedAccount): RedirectResponse
+    {
+        $this->authorize('update', $trackedAccount);
+
+        $trackedAccount->forceFill(['is_own_account' => false])->save();
+
+        return redirect()->back(fallback: route('competitors.index'));
+    }
+
     public function destroy(Request $request, TrackedAccount $trackedAccount): RedirectResponse
     {
         $this->authorize('delete', $trackedAccount);
@@ -452,6 +476,15 @@ class CompetitorController extends Controller
             postsLimit: $options->postsLimit,
             recencyDays: $options->recencyDays,
         );
+    }
+
+    private function clearOtherOwnAccounts(User $user, TrackedAccount $keep): void
+    {
+        TrackedAccount::query()
+            ->where('user_id', $user->id)
+            ->whereKeyNot($keep->id)
+            ->where('is_own_account', true)
+            ->update(['is_own_account' => false]);
     }
 
     private function queueSyncIfBillable(User $user, TrackedAccount $account): void
