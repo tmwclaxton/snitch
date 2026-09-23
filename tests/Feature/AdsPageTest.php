@@ -70,15 +70,12 @@ class AdsPageTest extends TestCase
 
     public function test_dashboard_ads_overview_links_to_ads_page(): void
     {
-        $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
 
-        $this->assertIsString($dashboard);
         $this->assertIsString($sidebar);
-        $this->assertStringContainsString('adsIndex.url()', $dashboard);
-        $this->assertStringContainsString('View all', $dashboard);
-        $this->assertStringContainsString("title: 'Ads'", $sidebar);
-        $this->assertStringContainsString('adsIndex()', $sidebar);
+        $this->assertStringContainsString("title: 'Dashboard'", $sidebar);
+        $this->assertStringContainsString("title: 'Competitors'", $sidebar);
+        $this->assertStringNotContainsString("title: 'Ads'", $sidebar);
     }
 
     public function test_dashboard_insights_preview_caps_active_ads_at_two(): void
@@ -99,10 +96,9 @@ class AdsPageTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->loadDeferredProps('board', fn (Assert $page) => $page
-                    ->has('insights.ads', 2)
-                    ->where('insights.paid_vs_organic.running_ads', 5)
-                )
+                ->component('Dashboard')
+                ->missing('insights.ads')
+                ->missing('insights.paid_vs_organic')
             );
     }
 }

@@ -39,23 +39,6 @@ class StippleChartContractTest extends TestCase
         $this->assertStringContainsString("yAxisLabel = 'No. of Posts'", $timeOfDay);
         $this->assertStringContainsString('props.compact ? hour % 4 === 0 : hour % 2 === 0', $timeOfDay);
 
-        $dashboard = file_get_contents(base_path('resources/js/pages/Dashboard.vue'));
-
-        $this->assertIsString($dashboard);
-        $this->assertLessThan(
-            strpos($dashboard, '<TimeOfDayChart') ?: PHP_INT_MAX,
-            strpos($dashboard, '<PlatformSplitChart') ?: PHP_INT_MAX,
-        );
-        $this->assertLessThan(
-            strpos($dashboard, '<WeeklyVolumeChart') ?: PHP_INT_MAX,
-            strpos($dashboard, '<TimeOfDayChart') ?: PHP_INT_MAX,
-        );
-        $this->assertStringContainsString('<FormatMixChart', $dashboard);
-        $this->assertLessThan(
-            strpos($dashboard, '<WeeklyVolumeChart') ?: PHP_INT_MAX,
-            strpos($dashboard, '<FormatMixChart') ?: PHP_INT_MAX,
-        );
-        $this->assertStringContainsString('compact', $dashboard);
         $this->assertStringContainsString("yAxisLabel: 'No. of Posts'", $weekly);
         $this->assertStringContainsString('Week starting', $weekly);
     }

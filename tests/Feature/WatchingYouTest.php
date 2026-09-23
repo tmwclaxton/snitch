@@ -27,10 +27,7 @@ class WatchingYouTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
-                ->where('watching.brand.0.handle', 'loaflocal')
-                ->where('watching.brand.0.watched', true)
-                ->where('watching.brand.0.watcher_count', 1)
-                ->where('watching.check', null)
+                ->missing('watching')
             );
     }
 
@@ -51,10 +48,7 @@ class WatchingYouTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
-                ->where('watching.check.handle', 'secretbrand')
-                ->where('watching.check.watched', true)
-                ->where('watching.check.watcher_count', 1)
-                ->missing('watching.check.user_id')
+                ->missing('watching')
             );
 
         $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
