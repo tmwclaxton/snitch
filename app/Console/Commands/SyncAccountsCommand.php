@@ -11,7 +11,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('snitch:sync-accounts')]
-#[Description('Ops only: enqueue sync jobs for tracked accounts past the min sync interval (not scheduled for users)')]
+#[Description('Enqueue sync jobs for tracked accounts past the min sync interval (weekly schedule + ops)')]
 class SyncAccountsCommand extends Command
 {
     public function handle(PlanEntitlementService $entitlements, UsageBillingService $billing): int

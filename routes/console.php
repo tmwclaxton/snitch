@@ -8,7 +8,6 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Product sync / winners rescore are agent- or user-triggered (usage billing).
 // Weekly AI blog draft (default status from config/blog.php). Spot-check then blog:publish.
 Schedule::command('blog:generate --length=long')
     ->weeklyOn(1, '9:00')
@@ -17,5 +16,11 @@ Schedule::command('blog:generate --length=long')
 // Current follower count only. Does not import posts. Skips accounts nobody tracks.
 Schedule::command('snitch:refresh-followers')
     ->weeklyOn(1, '6:00')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Lovable core: weekly Instagram post refresh for accounts past the min interval.
+Schedule::command('snitch:sync-accounts')
+    ->weeklyOn(1, '7:00')
     ->withoutOverlapping()
     ->onOneServer();
