@@ -290,13 +290,15 @@ class PublicPagesTest extends TestCase
         );
     }
 
-    public function test_landing_uses_calendly_cta_and_full_access_price(): void
+    public function test_landing_uses_start_tracking_cta_and_full_access_price(): void
     {
         $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
 
         $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
-        $this->assertStringContainsString('https://calendly.com/dan-olympuslab/30min', $welcome);
-        $this->assertStringContainsString('Book a free intro call', $welcome);
+        $this->assertStringContainsString("Start tracking - it's free", $welcome);
+        $this->assertStringContainsString("from '@/routes'", $welcome);
+        $this->assertStringContainsString('login()', $welcome);
+        $this->assertStringNotContainsString('calendly.com/dan-olympuslab', $welcome);
         $this->assertStringContainsString('£50', $welcome);
         $this->assertStringContainsString('Full Access', $welcome);
         $this->assertStringContainsString('Better social media performance.', $welcome);

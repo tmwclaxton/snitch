@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { onMounted, onUnmounted, ref } from 'vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
+import { login } from '@/routes';
 
 defineOptions({
     layout: PublicLayout,
 });
 
-const CTA_HREF = 'https://calendly.com/dan-olympuslab/30min';
-const CTA_TEXT = 'Book a free intro call';
+const CTA_TEXT = "Start tracking - it's free";
 
 const scrolled = ref(false);
 
@@ -75,14 +75,12 @@ const faqs = [
                     What's working, what you're missing, delivered instantly.
                 </p>
                 <div class="mt-8 flex justify-center">
-                    <a
-                        :href="CTA_HREF"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    <Link
+                        :href="login()"
                         class="inline-flex items-center justify-center bg-[#F0C400] px-5 py-2.5 text-sm font-medium text-neutral-950 hover:opacity-90"
                     >
                         {{ CTA_TEXT }}
-                    </a>
+                    </Link>
                 </div>
             </div>
         </section>
@@ -139,14 +137,12 @@ const faqs = [
                             </li>
                         </ul>
                         <div class="mt-8 border-t border-neutral-200 pt-6">
-                            <a
-                                :href="CTA_HREF"
-                                target="_blank"
-                                rel="noopener noreferrer"
+                            <Link
+                                :href="login()"
                                 class="inline-flex w-full items-center justify-center bg-[#F0C400] px-5 py-2.5 text-sm font-medium text-neutral-950 hover:opacity-90"
                             >
                                 {{ CTA_TEXT }}
-                            </a>
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -174,14 +170,12 @@ const faqs = [
                     Open your Competitors' content playbook.
                 </h2>
                 <div class="mt-8 flex justify-center">
-                    <a
-                        :href="CTA_HREF"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    <Link
+                        :href="login()"
                         class="inline-flex items-center justify-center bg-[#F0C400] px-5 py-2.5 text-sm font-medium text-neutral-950 hover:opacity-90"
                     >
                         {{ CTA_TEXT }}
-                    </a>
+                    </Link>
                 </div>
             </div>
         </section>
@@ -195,14 +189,12 @@ const faqs = [
                     <span class="font-semibold">Snitch</span>
                     <span class="hidden opacity-80 sm:inline"> - The best kept secret in social media marketing.</span>
                 </p>
-                <a
-                    :href="CTA_HREF"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                <Link
+                    :href="login()"
                     class="inline-flex items-center justify-center bg-neutral-950 px-4 py-2 text-xs font-medium text-white hover:opacity-90"
                 >
                     {{ CTA_TEXT }}
-                </a>
+                </Link>
             </div>
         </div>
     </div>
