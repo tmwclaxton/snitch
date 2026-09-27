@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Platform;
 use App\Enums\TrackedAccountKind;
 use App\Services\SocialAccounts\SocialAccountResolver;
+use App\Services\Tracking\FollowerCountRefresher;
 use Carbon\CarbonInterface;
 use Database\Factories\TrackedAccountFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -40,6 +41,11 @@ class TrackedAccount extends Model
     {
         static::creating(function (TrackedAccount $account): void {
             if ($account->social_account_id !== null) {
+                if ($account->followers === null) {
+                    $account->followers = app(FollowerCountRefresher::class)
+                        ->latestKnown((int) $account->social_account_id);
+                }
+
                 return;
             }
 
@@ -63,6 +69,17 @@ class TrackedAccount extends Model
             $account->url = $account->url ?: $social->url;
             $account->avatar = $account->avatar ?: $social->avatar;
             $account->display_name = $account->display_name ?: $social->display_name;
+
+            if ($account->followers === null) {
+                $account->followers = app(FollowerCountRefresher::class)->latestKnown($social->id);
+            }
+        });
+
+        static::created(function (TrackedAccount $account): void {
+            // Safety net for updateOrCreate / factory paths that left followers null.
+            if ($account->followers === null && $account->social_account_id !== null) {
+                app(FollowerCountRefresher::class)->seedTracker($account);
+            }
         });
 
         static::updating(function (TrackedAccount $account): void {

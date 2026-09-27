@@ -159,14 +159,14 @@ class CompetitorGrowthAndAdsTest extends TestCase
         $account->followers = 520;
         $recorder->recordFromAccount($account);
 
-        $this->assertSame(3, FollowerSnapshot::query()->count());
+        $this->assertSame(1, FollowerSnapshot::query()->count());
         $this->assertSame(
             520,
             FollowerSnapshot::query()->whereDate('captured_on', now()->toDateString())->value('followers'),
         );
     }
 
-    public function test_first_snapshot_plants_week_and_month_baselines(): void
+    public function test_first_snapshot_does_not_plant_week_and_month_baselines(): void
     {
         CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-22 12:00:00'));
 
@@ -178,26 +178,24 @@ class CompetitorGrowthAndAdsTest extends TestCase
             ]);
             app(FollowerSnapshotRecorder::class)->recordFromAccount($account);
 
-            $this->assertSame(3, FollowerSnapshot::query()->count());
-            $this->assertTrue(
+            $this->assertSame(1, FollowerSnapshot::query()->count());
+            $this->assertFalse(
                 FollowerSnapshot::query()
                     ->where('social_account_id', $account->social_account_id)
                     ->whereDate('captured_on', '2026-09-15')
-                    ->where('followers', 1000)
                     ->exists(),
             );
-            $this->assertTrue(
+            $this->assertFalse(
                 FollowerSnapshot::query()
                     ->where('social_account_id', $account->social_account_id)
                     ->whereDate('captured_on', '2026-08-23')
-                    ->where('followers', 1000)
                     ->exists(),
             );
 
             $insights = app(CompetitorInsightsBuilder::class)->forUser($user);
-            $this->assertSame(0, $insights['growth']['week_delta']);
-            $this->assertSame(0, $insights['growth']['month_delta']);
-            $this->assertGreaterThanOrEqual(2, count($insights['follower_series']));
+            $this->assertNull($insights['growth']['week_delta']);
+            $this->assertNull($insights['growth']['month_delta']);
+            $this->assertCount(1, $insights['follower_series']);
         } finally {
             CarbonImmutable::setTestNow();
         }

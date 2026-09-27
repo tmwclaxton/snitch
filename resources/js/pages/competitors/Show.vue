@@ -473,7 +473,7 @@ function askRemove(): void {
                             </p>
                         </div>
                         <div class="snitch-dash-rail-item">
-                            <p class="snitch-ink-label">Engagement rate</p>
+                            <p class="snitch-ink-label">Engagement / view</p>
                             <p class="snitch-display text-2xl tabular-nums">
                                 {{ (insights?.engagement.avg_rate ?? 0).toFixed(2) }}%
                             </p>

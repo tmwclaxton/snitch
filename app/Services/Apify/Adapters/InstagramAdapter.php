@@ -4,6 +4,7 @@ namespace App\Services\Apify\Adapters;
 
 use App\Enums\Platform;
 use App\Enums\PostType;
+use App\Support\InstagramPostId;
 use Carbon\CarbonImmutable;
 
 class InstagramAdapter extends AbstractPlatformAdapter
@@ -210,14 +211,14 @@ class InstagramAdapter extends AbstractPlatformAdapter
         $music = $item['musicInfo'] ?? $item['audio'] ?? null;
 
         return [
-            'external_id' => isset($item['id']) ? (string) $item['id'] : (isset($item['shortCode']) ? (string) $item['shortCode'] : null),
+            'external_id' => InstagramPostId::fromPayload($item),
             'url' => $url,
             'posted_at' => $this->normalizeDate($item['timestamp'] ?? $item['takenAt'] ?? $item['takenAtTimestamp'] ?? null),
             'type' => $type,
             'caption' => isset($item['caption']) ? (string) $item['caption'] : null,
             'media_url' => $mediaUrl,
             'metrics' => $this->metrics(
-                $item['videoViewCount'] ?? $item['videoPlayCount'] ?? $item['playsCount'] ?? 0,
+                InstagramPostId::viewsFromPayload($item),
                 $item['likesCount'] ?? $item['likeCount'] ?? 0,
                 $item['commentsCount'] ?? $item['commentCount'] ?? 0,
                 $item['sharesCount'] ?? 0,
