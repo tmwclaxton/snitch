@@ -32,6 +32,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
     'embedding_hash',
     'model',
     'error_message',
+    'analysis_attempt',
+    'caption_echo_diagnostics',
     'analyzed_at',
 ])]
 #[Hidden(['embedding', 'embedding_model', 'embedding_hash'])]
@@ -53,6 +55,8 @@ class PostAnalysis extends Model
             'topics' => 'array',
             'custom_tags' => 'array',
             'embedding' => 'array',
+            'caption_echo_diagnostics' => 'array',
+            'analysis_attempt' => 'integer',
             'analyzed_at' => 'datetime',
         ];
     }

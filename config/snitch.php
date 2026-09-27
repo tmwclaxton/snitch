@@ -242,6 +242,11 @@ return [
             'require_cta_field' => true,
             'require_how_to_copy_chars' => 20,
             'max_caption_overlap_ratio' => 0.65,
+            // Long recap captions share topic words with craft writeups; raise the
+            // fail threshold linearly from base at long_caption_chars toward this ceiling.
+            'long_caption_chars' => 300,
+            'long_caption_max_overlap_ratio' => 0.85,
+            'long_caption_scale_span_chars' => 700,
         ],
     ],
 

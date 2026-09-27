@@ -119,13 +119,15 @@ class VideoAnalysisService
                 throw new RuntimeException('Post type is missing; analysis skipped.');
             }
 
-            [$result, $recognizedMusic, $attempt] = $this->analyzePostWithOptionalCaptionEchoRetry($post);
+            [$result, $recognizedMusic, $attempt, $echoDiagnostics] = $this->analyzePostWithOptionalCaptionEchoRetry($post, $analysis);
 
-            Log::info('Post analysis succeeded', [
-                'post_id' => $post->id,
-                'attempt' => $attempt,
-                'caption_echo_retry' => $attempt === 2,
-            ]);
+            if ($attempt === 2) {
+                Log::warning('Post analysis succeeded after caption-echo retry', [
+                    'post_id' => $post->id,
+                    'attempt' => $attempt,
+                    'caption_echo_retry' => true,
+                ]);
+            }
 
             // Models often write freeform "myth-busting" topics but omit catalogue slugs;
             // infer missing taxonomy so Explore filters stay useful.
@@ -175,6 +177,8 @@ class VideoAnalysisService
                 'model' => $result->model,
                 'analyzed_at' => now(),
                 'error_message' => null,
+                'analysis_attempt' => $attempt,
+                'caption_echo_diagnostics' => $echoDiagnostics,
             ]);
             $analysis->save();
             $analysis->terms()->sync($termIds);
@@ -190,6 +194,7 @@ class VideoAnalysisService
             Log::warning('Post analysis failed', [
                 'post_id' => $post->id,
                 'error' => $e->getMessage(),
+                'attempt' => $analysis->analysis_attempt,
             ]);
 
             $analysis->fill([
@@ -207,9 +212,9 @@ class VideoAnalysisService
      * retry once with a stricter anti-echo prompt. Tokens from a failed attempt are
      * discarded so billing only sees the passing attempt.
      *
-     * @return array{0: VideoAnalysisResult, 1: array<string, mixed>|null, 2: int}
+     * @return array{0: VideoAnalysisResult, 1: array<string, mixed>|null, 2: int, 3: array<string, mixed>|null}
      */
-    private function analyzePostWithOptionalCaptionEchoRetry(Post $post): array
+    private function analyzePostWithOptionalCaptionEchoRetry(Post $post, PostAnalysis $analysis): array
     {
         $recognizedMusic = $post->type->isStill()
             ? $this->musicExtractor->fromPost($post)
@@ -218,23 +223,69 @@ class VideoAnalysisService
         $result = $this->generateAnalysisResult($post, $recognizedMusic);
         $evaluation = $this->evaluator->evaluate($result, $post->caption);
         $attempt = 1;
+        $echoDiagnostics = null;
 
         if (! $evaluation['passed'] && $this->isCaptionEchoFailure($evaluation['failures'])) {
-            Log::info('Post analysis rejected for caption echo; retrying with anti-echo prompt', [
+            $echoDiagnostics = $this->captionEchoDiagnosticsPayload(1, $result, $evaluation['caption_echo'] ?? null);
+            $analysis->fill([
+                'analysis_attempt' => 1,
+                'caption_echo_diagnostics' => $echoDiagnostics,
+            ]);
+            $analysis->save();
+
+            Log::warning('Post analysis rejected for caption echo; retrying with anti-echo prompt', [
                 'post_id' => $post->id,
+                'attempt' => 1,
                 'failures' => $evaluation['failures'],
+                'caption_echo_score' => $echoDiagnostics['score'] ?? null,
+                'caption_echo_reason' => $echoDiagnostics['reason'] ?? null,
             ]);
 
             $result = $this->generateAnalysisResult($post, $recognizedMusic, $result);
             $evaluation = $this->evaluator->evaluate($result, $post->caption);
             $attempt = 2;
+
+            if (! $evaluation['passed'] && $this->isCaptionEchoFailure($evaluation['failures'])) {
+                $echoDiagnostics = $this->captionEchoDiagnosticsPayload(2, $result, $evaluation['caption_echo'] ?? null);
+            }
         }
+
+        $analysis->fill([
+            'analysis_attempt' => $attempt,
+            'caption_echo_diagnostics' => $echoDiagnostics,
+        ]);
+        $analysis->save();
 
         if (! $evaluation['passed']) {
             throw new RuntimeException('Analysis failed checklist: '.implode(', ', $evaluation['failures']));
         }
 
-        return [$result, $recognizedMusic, $attempt];
+        return [$result, $recognizedMusic, $attempt, $echoDiagnostics];
+    }
+
+    /**
+     * @param  array{echoed?: bool, score?: float|null, reason?: string|null, caption_coverage?: float|null, analysis_reuse?: float|null, threshold?: float|null}|null  $captionEcho
+     * @return array<string, mixed>
+     */
+    private function captionEchoDiagnosticsPayload(int $attempt, VideoAnalysisResult $rejected, ?array $captionEcho): array
+    {
+        return [
+            'rejected_attempt' => $attempt,
+            'score' => $captionEcho['score'] ?? null,
+            'reason' => $captionEcho['reason'] ?? null,
+            'caption_coverage' => $captionEcho['caption_coverage'] ?? null,
+            'analysis_reuse' => $captionEcho['analysis_reuse'] ?? null,
+            'threshold' => $captionEcho['threshold'] ?? null,
+            'rejected_output' => [
+                'concept' => $rejected->concept,
+                'hook' => $rejected->hook,
+                'idea' => $rejected->idea,
+                'visual_summary' => $rejected->visualSummary,
+                'how_to_copy' => $rejected->howToCopy,
+                'cta' => $rejected->cta,
+                'topics' => $rejected->topics,
+            ],
+        ];
     }
 
     /**

@@ -8,12 +8,24 @@ use App\Support\UsableAnalysisCopy;
 class VideoAnalysisSuccessEvaluator
 {
     /**
-     * @return array{passed: bool, failures: list<string>}
+     * @return array{
+     *     passed: bool,
+     *     failures: list<string>,
+     *     caption_echo: array{
+     *         echoed: bool,
+     *         score: float|null,
+     *         reason: string|null,
+     *         caption_coverage: float|null,
+     *         analysis_reuse: float|null,
+     *         threshold: float|null
+     *     }|null
+     * }
      */
     public function evaluate(VideoAnalysisResult $result, ?string $caption = null): array
     {
         $config = config('snitch.video_analysis.success');
         $failures = [];
+        $captionEcho = null;
 
         if (strlen($result->hook) < (int) $config['min_hook_chars']) {
             $failures[] = 'hook too short';
@@ -67,8 +79,16 @@ class VideoAnalysisSuccessEvaluator
             $failures[] = 'placeholder or unprocessed copy';
         }
 
-        if ($caption !== null && $this->looksLikeCaptionEcho($result, $caption, (float) ($config['max_caption_overlap_ratio'] ?? 0.65))) {
-            $failures[] = 'analysis echoes caption/script too closely';
+        if ($caption !== null) {
+            $captionEcho = $this->assessCaptionEcho(
+                $result,
+                $caption,
+                (float) ($config['max_caption_overlap_ratio'] ?? 0.65),
+            );
+
+            if ($captionEcho['echoed']) {
+                $failures[] = 'analysis echoes caption/script too closely';
+            }
         }
 
         // Short captions (e.g. "And so much more… #DoGoodGetFit") are too thin to
@@ -80,6 +100,89 @@ class VideoAnalysisSuccessEvaluator
         return [
             'passed' => $failures === [],
             'failures' => $failures,
+            'caption_echo' => $captionEcho,
+        ];
+    }
+
+    /**
+     * Bag-of-words echo check over analytical craft fields only (not transcript /
+     * quoted speech). Ignores stopwords, handles, hashtags, and proper nouns, and
+     * raises the fail threshold for long recap captions.
+     *
+     * @return array{
+     *     echoed: bool,
+     *     score: float|null,
+     *     reason: string|null,
+     *     caption_coverage: float|null,
+     *     analysis_reuse: float|null,
+     *     threshold: float|null
+     * }
+     */
+    public function assessCaptionEcho(VideoAnalysisResult $result, string $caption, ?float $baseMaxRatio = null): array
+    {
+        $config = config('snitch.video_analysis.success');
+        $baseMaxRatio ??= (float) ($config['max_caption_overlap_ratio'] ?? 0.65);
+        $threshold = $this->effectiveMaxRatio($caption, $baseMaxRatio);
+
+        $empty = [
+            'echoed' => false,
+            'score' => null,
+            'reason' => null,
+            'caption_coverage' => null,
+            'analysis_reuse' => null,
+            'threshold' => $threshold,
+        ];
+
+        $captionTokens = $this->contentTokenSet($caption, preserveProperNounsFrom: $caption);
+
+        if (count($captionTokens) < 8) {
+            return $empty;
+        }
+
+        foreach (['hook' => $result->hook, 'idea' => $result->idea, 'concept' => $result->concept] as $fieldName => $field) {
+            $fieldAssessment = $this->fieldEchoAssessment($field, $captionTokens, $threshold);
+
+            if ($fieldAssessment['echoed']) {
+                return [
+                    'echoed' => true,
+                    'score' => $fieldAssessment['score'],
+                    'reason' => "near-verbatim dump in {$fieldName} (field_overlap={$fieldAssessment['score']}, threshold={$threshold})",
+                    'caption_coverage' => null,
+                    'analysis_reuse' => $fieldAssessment['score'],
+                    'threshold' => $threshold,
+                ];
+            }
+        }
+
+        $analysisTokens = $this->contentTokenSet(
+            $this->analyticalText($result),
+            preserveProperNounsFrom: $caption,
+        );
+
+        if ($analysisTokens === []) {
+            return $empty;
+        }
+
+        $overlap = count(array_intersect($captionTokens, $analysisTokens));
+        $captionCoverage = $overlap / count($captionTokens);
+        $analysisReuse = $overlap / count($analysisTokens);
+        $score = max($captionCoverage, $analysisReuse);
+        $echoed = $captionCoverage >= $threshold && $analysisReuse >= $threshold;
+
+        return [
+            'echoed' => $echoed,
+            'score' => round($score, 4),
+            'reason' => $echoed
+                ? sprintf(
+                    'caption_coverage=%.2f analysis_reuse=%.2f threshold=%.2f (analytical fields only)',
+                    $captionCoverage,
+                    $analysisReuse,
+                    $threshold,
+                )
+                : null,
+            'caption_coverage' => round($captionCoverage, 4),
+            'analysis_reuse' => round($analysisReuse, 4),
+            'threshold' => $threshold,
         ];
     }
 
@@ -168,80 +271,163 @@ class VideoAnalysisSuccessEvaluator
         return $hits >= 2;
     }
 
-    private function looksLikeCaptionEcho(VideoAnalysisResult $result, string $caption, float $maxRatio): bool
+    /**
+     * Craft fields only - transcript and quoted spoken lines are excluded so a
+     * long recap caption does not fail a genuine analytical writeup.
+     */
+    private function analyticalText(VideoAnalysisResult $result): string
     {
-        $captionTokens = $this->tokenSet($caption);
-
-        if (count($captionTokens) < 8) {
-            return false;
-        }
-
-        // Near-verbatim dumps of the caption into a primary field.
-        foreach ([$result->hook, $result->idea, $result->concept] as $field) {
-            if ($this->fieldEchoesCaption($field, $captionTokens)) {
-                return true;
-            }
-        }
-
-        $analysisTokens = $this->tokenSet(implode(' ', [
+        $parts = [
             $result->hook,
             $result->idea,
             $result->concept,
             $result->visualSummary,
             $result->howToCopy,
-        ]));
+            $result->cta,
+            ...$result->topics,
+        ];
 
-        if ($analysisTokens === []) {
-            return false;
-        }
+        return implode(' ', array_map(
+            fn (string $part): string => $this->stripQuotedText($part),
+            $parts,
+        ));
+    }
 
-        $overlap = count(array_intersect($captionTokens, $analysisTokens));
-        $captionCoverage = $overlap / count($captionTokens);
-        // Short topic-dense captions (proper nouns, product names) often appear in a
-        // good craft writeup. Only fail bag-of-words when the analysis itself is
-        // mostly caption tokens, not merely when it mentions the subject.
-        $analysisReuse = $overlap / count($analysisTokens);
+    private function stripQuotedText(string $text): string
+    {
+        $stripped = preg_replace('/"([^"\\\\]|\\\\.)*"/u', ' ', $text) ?? $text;
+        $stripped = preg_replace("/'([^'\\\\]|\\\\.)*'/u", ' ', $stripped) ?? $stripped;
 
-        return $captionCoverage >= $maxRatio && $analysisReuse >= $maxRatio;
+        return $stripped;
     }
 
     /**
      * @param  list<string>  $captionTokens
+     * @return array{echoed: bool, score: float|null}
      */
-    private function fieldEchoesCaption(string $field, array $captionTokens): bool
+    private function fieldEchoAssessment(string $field, array $captionTokens, float $threshold): array
     {
-        $fieldTokens = $this->tokenSet($field);
+        $fieldTokens = $this->contentTokenSet($this->stripQuotedText($field));
 
-        if (count($fieldTokens) < 6) {
-            return false;
+        if (count($fieldTokens) < 5) {
+            return ['echoed' => false, 'score' => null];
         }
 
         $overlap = count(array_intersect($fieldTokens, $captionTokens));
+        $score = round($overlap / count($fieldTokens), 4);
+        // Near-verbatim field dumps stay strict; long-caption threshold only softens bag-of-words.
+        $fieldThreshold = max(0.85, $threshold);
 
-        return ($overlap / count($fieldTokens)) >= 0.85;
+        return [
+            'echoed' => $score >= $fieldThreshold,
+            'score' => $score,
+        ];
+    }
+
+    private function effectiveMaxRatio(string $caption, float $baseRatio): float
+    {
+        $config = config('snitch.video_analysis.success');
+        $longChars = (int) ($config['long_caption_chars'] ?? 300);
+        $ceiling = (float) ($config['long_caption_max_overlap_ratio'] ?? 0.85);
+        $len = mb_strlen($caption);
+
+        if ($len <= $longChars) {
+            return $baseRatio;
+        }
+
+        // Linear ease from base at longChars toward ceiling over the next ~700 chars.
+        $span = max(1, (int) ($config['long_caption_scale_span_chars'] ?? 700));
+        $progress = min(1.0, ($len - $longChars) / $span);
+
+        return min($ceiling, $baseRatio + (($ceiling - $baseRatio) * $progress));
     }
 
     /**
      * @return list<string>
      */
-    private function tokenSet(string $text): array
+    private function contentTokenSet(string $text, ?string $preserveProperNounsFrom = null): array
     {
-        return array_values(array_unique($this->tokens($text)));
+        return array_values(array_unique($this->contentTokens($text, $preserveProperNounsFrom)));
     }
 
     /**
      * @return list<string>
      */
-    private function tokens(string $text): array
+    private function contentTokens(string $text, ?string $preserveProperNounsFrom = null): array
     {
-        $normalized = strtolower(preg_replace('/[^a-z0-9\s]/i', ' ', $text) ?? '');
+        $properNouns = $this->properNounSet($preserveProperNounsFrom ?? $text);
+        $withoutHandles = preg_replace('/https?:\/\/\S+/u', ' ', $text) ?? $text;
+        $withoutHandles = preg_replace('/[#@]\S+/u', ' ', $withoutHandles) ?? $withoutHandles;
+        $normalized = strtolower(preg_replace('/[^a-z0-9\s]/i', ' ', $withoutHandles) ?? '');
         $parts = preg_split('/\s+/', trim($normalized)) ?: [];
-
-        $stop = ['the', 'and', 'for', 'with', 'that', 'this', 'from', 'your', 'you', 'are', 'was', 'were', 'have', 'has'];
+        $stop = $this->stopwords();
 
         return array_values(array_filter(
             $parts,
-            static fn (string $token): bool => strlen($token) > 2 && ! in_array($token, $stop, true),
+            static fn (string $token): bool => strlen($token) > 2
+                && ! in_array($token, $stop, true)
+                && ! isset($properNouns[$token]),
         ));
+    }
+
+    /**
+     * Lowercased tokens that look like proper nouns / event names in the source text.
+     *
+     * @return array<string, true>
+     */
+    private function properNounSet(string $text): array
+    {
+        $withoutHandles = preg_replace('/https?:\/\/\S+/u', ' ', $text) ?? $text;
+        $withoutHandles = preg_replace('/[#@]\S+/u', ' ', $withoutHandles) ?? $withoutHandles;
+        $parts = preg_split('/\s+/u', trim($withoutHandles)) ?: [];
+        $proper = [];
+        $sentenceStart = true;
+
+        foreach ($parts as $raw) {
+            $clean = preg_replace('/[^a-zA-Z0-9]/', '', $raw) ?? '';
+
+            if ($clean === '') {
+                if (preg_match('/[.!?]$/u', $raw) === 1) {
+                    $sentenceStart = true;
+                }
+
+                continue;
+            }
+
+            $lower = strtolower($clean);
+            $isCapitalized = preg_match('/^[A-Z]/', $clean) === 1
+                && preg_match('/[a-z]/', $clean) === 1;
+
+            if ($isCapitalized && ! $sentenceStart && strlen($lower) > 2) {
+                $proper[$lower] = true;
+            }
+
+            $sentenceStart = preg_match('/[.!?]$/u', $raw) === 1;
+        }
+
+        return $proper;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function stopwords(): array
+    {
+        return [
+            'the', 'and', 'for', 'with', 'that', 'this', 'from', 'your', 'you', 'are', 'was', 'were',
+            'have', 'has', 'had', 'been', 'being', 'they', 'them', 'their', 'our', 'ours', 'his', 'her',
+            'hers', 'its', 'who', 'what', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each',
+            'few', 'more', 'most', 'other', 'some', 'such', 'than', 'too', 'very', 'can', 'will', 'just',
+            'should', 'now', 'about', 'into', 'over', 'after', 'before', 'between', 'through', 'during',
+            'without', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'out', 'off', 'above',
+            'below', 'down', 'but', 'not', 'yes', 'did', 'does', 'doing', 'done', 'got', 'get', 'getting',
+            'went', 'going', 'came', 'come', 'coming', 'last', 'next', 'also', 'really', 'like', 'make',
+            'made', 'making', 'people', 'everyone', 'someone', 'anyone', 'thing', 'things', 'week',
+            'weekend', 'night', 'nights', 'day', 'days', 'friday', 'saturday', 'sunday', 'monday',
+            'tuesday', 'wednesday', 'thursday', 'today', 'tomorrow', 'yesterday', 'would', 'could',
+            'across', 'around', 'among', 'along', 'onto', 'upon', 'near', 'via', 'per', 'plus', 'still',
+            'even', 'ever', 'never', 'always', 'often', 'together', 'back', 'away', 'let', 'lets',
+            'thank', 'thanks', 'huge', 'exactly', 'follow', 'save', 'share', 'tag', 'link', 'bio',
+        ];
     }
 }

@@ -947,12 +947,26 @@ class VideoAnalysisServiceTest extends TestCase
                 && str_contains($encoded, 'Describe the hook, format, angle, structure');
         });
 
-        Log::shouldHaveReceived('info')
+        Log::shouldHaveReceived('warning')
             ->withArgs(function (string $message, array $context): bool {
-                return $message === 'Post analysis succeeded'
+                return $message === 'Post analysis rejected for caption echo; retrying with anti-echo prompt'
+                    && ($context['attempt'] ?? null) === 1
+                    && isset($context['caption_echo_score']);
+            });
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(function (string $message, array $context): bool {
+                return $message === 'Post analysis succeeded after caption-echo retry'
                     && ($context['attempt'] ?? null) === 2
                     && ($context['caption_echo_retry'] ?? null) === true;
             });
+
+        $this->assertSame(2, $outcome['analysis']->analysis_attempt);
+        $this->assertIsArray($outcome['analysis']->caption_echo_diagnostics);
+        $this->assertSame(1, $outcome['analysis']->caption_echo_diagnostics['rejected_attempt'] ?? null);
+        $this->assertArrayHasKey('rejected_output', $outcome['analysis']->caption_echo_diagnostics);
+        $this->assertArrayHasKey('score', $outcome['analysis']->caption_echo_diagnostics);
+        $this->assertArrayHasKey('reason', $outcome['analysis']->caption_echo_diagnostics);
     }
 
     public function test_caption_echo_retry_failure_marks_failed_without_passing_tokens(): void
@@ -1022,6 +1036,12 @@ class VideoAnalysisServiceTest extends TestCase
             VideoAnalysisService::CAPTION_ECHO_FAILURE,
             (string) $analysis->error_message,
         );
+        $this->assertSame(2, $analysis->analysis_attempt);
+        $this->assertIsArray($analysis->caption_echo_diagnostics);
+        $this->assertSame(2, $analysis->caption_echo_diagnostics['rejected_attempt'] ?? null);
+        $this->assertNotNull($analysis->caption_echo_diagnostics['rejected_output'] ?? null);
+        $this->assertNotNull($analysis->caption_echo_diagnostics['score'] ?? null);
+        $this->assertNotNull($analysis->caption_echo_diagnostics['reason'] ?? null);
         $chatCalls = collect(Http::recorded())
             ->filter(fn (array $pair): bool => str_contains($pair[0]->url(), 'chat/completions'));
         $this->assertCount(2, $chatCalls);
