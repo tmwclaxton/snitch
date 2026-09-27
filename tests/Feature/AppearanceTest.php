@@ -57,7 +57,7 @@ class AppearanceTest extends TestCase
             );
     }
 
-    public function test_app_shell_fills_the_viewport_so_halftone_reaches_the_bottom(): void
+    public function test_app_chrome_fills_the_viewport_on_white_shell(): void
     {
         $layout = file_get_contents(resource_path('js/layouts/app/AppSidebarLayout.vue'));
         $settings = file_get_contents(resource_path('js/layouts/settings/Layout.vue'));
@@ -67,9 +67,11 @@ class AppearanceTest extends TestCase
         $this->assertIsString($settings);
         $this->assertNotFalse($css);
         $this->assertStringContainsString('min-h-[calc(100svh-4rem)]', $layout);
+        $this->assertStringContainsString('snitch-app-chrome', $layout);
         $this->assertStringNotContainsString('min-h-[50vh]', $layout);
-        $this->assertStringContainsString('snitch-app-shell', $settings);
-        $this->assertStringContainsString('snitch-grain', $settings);
+        $this->assertStringContainsString('bg-white', $settings);
+        $this->assertStringNotContainsString('quieter paper', $settings);
+        $this->assertStringContainsString('snitch-app-chrome', $css);
         $this->assertMatchesRegularExpression(
             '/\.snitch-app-shell\s*\{[^}]*min-height:\s*calc\(100svh\s*-\s*4rem\)/s',
             $css,

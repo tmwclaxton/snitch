@@ -93,6 +93,7 @@ const props = defineProps<{
         id: number;
         post_id: number | null;
         platform: string | null;
+        error_label: string;
         error_message: string | null;
         analyzed_at: string | null;
         created_at: string | null;
@@ -951,7 +952,12 @@ function formatGbpAxis(value: number): string {
                                 <span v-else>-</span>
                             </td>
                             <td class="py-2 pr-3">{{ row.platform || '-' }}</td>
-                            <td class="py-2 text-snitch-ink/70">{{ row.error_message || 'Failed' }}</td>
+                            <td
+                                class="py-2 text-snitch-ink/70"
+                                :title="row.error_message || undefined"
+                            >
+                                {{ row.error_label || row.error_message || 'Failed' }}
+                            </td>
                         </tr>
                         <tr v-if="!failedAnalyses.length">
                             <td colspan="3" class="py-3 text-snitch-ink/55">No failed analyses.</td>

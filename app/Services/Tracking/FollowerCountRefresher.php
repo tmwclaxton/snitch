@@ -2,6 +2,7 @@
 
 namespace App\Services\Tracking;
 
+use App\Enums\Platform;
 use App\Models\FollowerSnapshot;
 use App\Models\SocialAccount;
 use App\Models\TrackedAccount;
@@ -24,6 +25,7 @@ class FollowerCountRefresher
         $cutoff = $this->cutoffDate();
 
         return SocialAccount::query()
+            ->where('platform', Platform::Instagram)
             ->whereHas('trackedAccounts')
             ->whereDoesntHave('followerSnapshots', function ($query) use ($cutoff): void {
                 $query->whereDate('captured_on', '>=', $cutoff);

@@ -61,6 +61,36 @@ class DashboardTest extends TestCase
             );
     }
 
+    public function test_dashboard_empty_state_copy_mentions_instagram(): void
+    {
+        $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
+
+        $this->assertNotFalse($dashboard);
+        $this->assertStringContainsString('No Instagram competitors yet', $dashboard);
+        $this->assertStringContainsString('Only Instagram accounts appear here', $dashboard);
+        $this->assertStringContainsString('No rivals to compare yet', $dashboard);
+        $this->assertStringContainsString('legacy_non_instagram_count', $dashboard);
+    }
+
+    public function test_dashboard_reports_legacy_non_instagram_trackers(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Facebook,
+            'handle' => 'oldfacebookpage',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->has('rivals', 0)
+                ->where('legacy_non_instagram_count', 1)
+            );
+    }
+
     public function test_authenticated_users_without_brand_are_sent_to_onboarding(): void
     {
         $user = User::factory()->create();

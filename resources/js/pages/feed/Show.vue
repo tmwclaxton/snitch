@@ -22,10 +22,15 @@ import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import TranscriptModal from '@/components/TranscriptModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { analysisDimensionIcon, exploreHrefForTerm } from '@/lib/analysisTerms';
+import { formatAppDate } from '@/lib/dates';
 import { metricIcon } from '@/lib/metricIcons';
 import { metricPairs } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
-import { platformIconSrc, platformLabel } from '@/lib/platforms';
+import {
+    openOnPlatformLabel,
+    platformIconSrc,
+    productPlatformLabel,
+} from '@/lib/platforms';
 import {
     glanceTermChips,
     postPrimaryTitle,
@@ -192,17 +197,7 @@ const spotifyEmbedUrl = computed(() => {
     return `https://open.spotify.com/embed/track/${spotifyTrackId.value}?utm_source=snitch`;
 });
 
-const postedLabel = computed(() => {
-    if (!props.post.posted_at) {
-        return null;
-    }
-
-    return new Date(props.post.posted_at).toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-    });
-});
+const postedLabel = computed(() => formatAppDate(props.post.posted_at));
 
 const profileHref = computed(() => {
     const account = props.post.tracked_account;
@@ -315,7 +310,7 @@ function openTranscript(): void {
                         class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
                     >
                         <ExternalLink class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
-                        <span class="relative z-10">Open on {{ platformLabel(post.platform) }}</span>
+                        <span class="relative z-10">{{ openOnPlatformLabel(post.platform) }}</span>
                     </a>
                 </div>
             </div>
@@ -336,7 +331,7 @@ function openTranscript(): void {
                             width="14"
                             height="14"
                         >
-                        {{ platformLabel(post.platform) }} · {{ postTypeLabel(post.type) }}
+                        {{ productPlatformLabel(post.platform) }} · {{ postTypeLabel(post.type) }}
                         <span v-if="postedLabel"> · {{ postedLabel }}</span>
                     </p>
                     <span

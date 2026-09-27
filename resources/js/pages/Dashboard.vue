@@ -25,6 +25,7 @@ type Phrase = { text: string; count: number };
 const props = defineProps<{
     own_account: Account | null;
     rivals: Account[];
+    legacy_non_instagram_count?: number;
     selected: string[];
     max_compare: number;
     headline: string | null;
@@ -103,13 +104,25 @@ function pct(part: number, total: number): number {
         </div>
 
         <div v-if="rivals.length === 0" class="border border-dashed border-neutral-200 bg-white p-12 text-center">
-            <h2 class="text-lg font-semibold">No competitors yet</h2>
-            <p class="mt-2 text-sm text-neutral-500">Add an Instagram handle to start snitching.</p>
+            <h2 class="text-lg font-semibold">
+                {{ own_account ? 'No rivals to compare yet' : 'No Instagram competitors yet' }}
+            </h2>
+            <p class="mt-2 text-sm text-neutral-500">
+                <template v-if="own_account">
+                    You have marked @{{ own_account.handle }} as your account. Add rival Instagram handles on Tracking to see the gap.
+                </template>
+                <template v-else-if="(legacy_non_instagram_count ?? 0) > 0">
+                    Tracking lists {{ legacy_non_instagram_count }} account{{ legacy_non_instagram_count === 1 ? '' : 's' }} from older platforms. This dashboard only compares Instagram rivals - add Instagram handles on Tracking to populate it.
+                </template>
+                <template v-else>
+                    Add Instagram competitor handles on Tracking to populate this dashboard. Only Instagram accounts appear here.
+                </template>
+            </p>
             <Link
                 :href="competitors()"
-                class="mt-6 inline-block bg-neutral-950 px-4 py-2 text-sm text-white hover:opacity-90"
+                class="mt-6 inline-block bg-[#F0C400] px-4 py-2 text-sm font-medium text-neutral-950 hover:opacity-90"
             >
-                Add competitor
+                {{ own_account ? 'Add a rival' : 'Go to Tracking' }}
             </Link>
         </div>
 

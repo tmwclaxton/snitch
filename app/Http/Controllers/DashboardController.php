@@ -49,6 +49,7 @@ class DashboardController extends Controller
         return [
             'own_account' => null,
             'rivals' => [],
+            'legacy_non_instagram_count' => 0,
             'selected' => [],
             'max_compare' => LovableDashboardBuilder::MAX_COMPARE,
             'headline' => null,

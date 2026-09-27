@@ -30,9 +30,15 @@ import SnitchAvatar from '@/components/SnitchAvatar.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import SyncAccountModal from '@/components/SyncAccountModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { formatAppDate } from '@/lib/dates';
 import type { PostMetrics } from '@/lib/metrics';
 import { formatFollowers } from '@/lib/metrics';
-import { platformIconSrc, platformLabel } from '@/lib/platforms';
+import {
+    isInstagramPlatform,
+    openOnPlatformLabel,
+    platformIconSrc,
+    productPlatformLabel,
+} from '@/lib/platforms';
 import type { SubscriptionSummary } from '@/types/global';
 
 type Account = {
@@ -178,16 +184,14 @@ const isSyncing = computed(
 );
 
 const lastSyncedLabel = computed(() => {
-    if (!props.account.last_synced_at) {
-        return null;
-    }
+    const formatted = formatAppDate(props.account.last_synced_at);
 
-    return `Last synced ${new Date(props.account.last_synced_at).toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-    })}`;
+    return formatted ? `Last synced ${formatted}` : null;
 });
+
+const hasInsightPosts = computed(
+    () => (props.insights?.engagement.posts ?? 0) > 0,
+);
 
 const syncErrorLabel = computed(() => {
     if (isSyncing.value || props.account.last_sync_status !== 'failed') {
@@ -336,7 +340,7 @@ function askRemove(): void {
                         class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
                     >
                         <ExternalLink class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
-                        <span class="relative z-10">Open on platform</span>
+                        <span class="relative z-10">{{ openOnPlatformLabel(account.platform) }}</span>
                     </a>
                     <button
                         type="button"
@@ -385,14 +389,18 @@ function askRemove(): void {
                     <div class="min-w-0">
                         <div class="flex items-center gap-2">
                             <img
+                                v-if="isInstagramPlatform(account.platform)"
                                 :src="platformIconSrc(account.platform)"
-                                :alt="`${platformLabel(account.platform)} logo`"
+                                :alt="`${productPlatformLabel(account.platform)} logo`"
                                 class="snitch-platform-logo size-4 shrink-0"
                                 width="16"
                                 height="16"
                             />
-                            <p class="snitch-ink-label">
-                                {{ platformLabel(account.platform) }}
+                            <p
+                                v-if="isInstagramPlatform(account.platform)"
+                                class="text-xs font-medium uppercase tracking-wide text-neutral-500"
+                            >
+                                {{ productPlatformLabel(account.platform) }}
                             </p>
                         </div>
                         <h1 class="snitch-display mt-1 truncate text-3xl text-snitch-ink">
@@ -458,6 +466,22 @@ function askRemove(): void {
                         height="8rem"
                     />
                 </div>
+                <template v-else-if="!hasInsightPosts">
+                    <div class="mt-3 border border-dashed border-neutral-200 bg-neutral-50 p-8 text-center">
+                        <p class="text-sm font-medium text-neutral-950">No posting data yet</p>
+                        <p class="mt-2 text-sm text-neutral-500">
+                            Sync this account to pull recent posts. Charts and averages will appear here once posts land.
+                        </p>
+                        <button
+                            type="button"
+                            class="mt-4 inline-flex items-center gap-2 bg-[#F0C400] px-4 py-2 text-sm font-medium text-neutral-950 hover:opacity-90 disabled:opacity-50"
+                            :disabled="isSyncing || !canRunBillable"
+                            @click="syncNow"
+                        >
+                            {{ isSyncing ? 'Syncing…' : 'Sync now' }}
+                        </button>
+                    </div>
+                </template>
                 <template v-else>
                     <div class="snitch-account-rail mt-3">
                         <div class="snitch-dash-rail-item">

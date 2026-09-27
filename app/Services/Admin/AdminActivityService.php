@@ -249,7 +249,11 @@ class AdminActivityService
             });
 
         PostAnalysis::query()
-            ->with(['post:id,platform'])
+            ->with([
+                'post:id,platform,social_account_id',
+                'post.socialAccount.trackedAccounts:id,social_account_id,user_id',
+                'post.socialAccount.trackedAccounts.user:id,email',
+            ])
             ->orderByDesc('id')
             ->limit(15)
             ->get()
@@ -262,13 +266,18 @@ class AdminActivityService
                     ? $analysis->status->value
                     : (string) $analysis->status;
 
+                $owner = $analysis->post?->socialAccount?->trackedAccounts
+                    ->sortBy('id')
+                    ->first()
+                    ?->user;
+
                 $events[] = [
                     'id' => 'analysis-'.$analysis->id,
                     'type' => 'analysis',
                     'summary' => 'Analysis · '.$platformLabel.' · '.$status,
                     'occurred_at' => ($analysis->analyzed_at ?? $analysis->created_at)?->toIso8601String() ?? now()->toIso8601String(),
-                    'user_id' => null,
-                    'user_email' => null,
+                    'user_id' => $owner?->id,
+                    'user_email' => $owner?->email,
                     'ok' => $status !== 'failed',
                 ];
             });

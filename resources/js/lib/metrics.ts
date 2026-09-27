@@ -10,7 +10,7 @@ const METRIC_ORDER = ['views', 'likes', 'comments', 'shares'] as const;
 
 export function formatFollowers(value: number | null | undefined): string {
     if (value == null) {
-        return 'unknown';
+        return 'Not yet known';
     }
 
     if (value <= 0) {

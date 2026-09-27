@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Platform;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Models\TrackedAccount;
 use App\Models\User;
@@ -27,23 +28,34 @@ class SyncAccountsCommandTest extends TestCase
         $this->enablePlatformBilling($user);
 
         $dueNeverSynced = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
             'last_synced_at' => null,
             'last_sync_status' => null,
         ]);
 
         $dueStale = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
             'last_synced_at' => now()->subDays(8),
             'last_sync_status' => 'success',
         ]);
 
         $dueFailed = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
             'last_synced_at' => now()->subDay(),
             'last_sync_status' => 'failed',
         ]);
 
         $skippedRecent = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
             'last_synced_at' => now()->subDays(2),
             'last_sync_status' => 'success',
+        ]);
+
+        // Legacy non-Instagram trackers must not be weekly-synced.
+        TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Facebook,
+            'last_synced_at' => null,
+            'last_sync_status' => null,
         ]);
 
         $this->artisan('snitch:sync-accounts')

@@ -9,7 +9,7 @@ import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import { metricPairs } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
-import { platformIconSrc, platformLabel } from '@/lib/platforms';
+import { platformIconSrc, productPlatformLabel } from '@/lib/platforms';
 import {
     glanceTermChips,
     postPrimaryTitle,
@@ -159,7 +159,7 @@ const winnerScore = computed(() => {
                     decoding="async"
                 >
                 <span class="snitch-contact-cell-platform-text">
-                    {{ platformLabel(post.platform) }} · {{ postTypeLabel(post.type) }}
+                    {{ productPlatformLabel(post.platform) }} · {{ postTypeLabel(post.type) }}
                 </span>
             </span>
             <span

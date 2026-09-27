@@ -24,51 +24,44 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-2 py-6 sm:px-3 sm:py-8">
-        <div class="snitch-grain" aria-hidden="true" />
+    <div class="relative min-h-full bg-white px-4 py-6 text-neutral-950 sm:px-8 sm:py-8">
+        <header class="mb-6 border-b border-neutral-200 pb-5">
+            <p class="text-xs font-medium uppercase tracking-wide text-neutral-500">Account</p>
+            <h1 class="mt-1.5 text-3xl font-semibold tracking-tight sm:text-4xl">
+                Settings
+            </h1>
+            <p class="mt-1.5 text-sm text-neutral-500 sm:text-base">
+                Profile and appearance preferences.
+            </p>
+        </header>
 
-        <div class="snitch-app-canvas">
-            <header class="mb-6 border-b border-snitch-ink/10 pb-5">
-                <p class="snitch-ink-label">Snitch / Account</p>
-                <h1 class="snitch-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
-                    Settings
-                </h1>
-                <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
-                    Profile and appearance on quieter paper.
-                </p>
-            </header>
-
-            <div class="flex flex-col gap-8 lg:flex-row lg:gap-10">
-                <aside class="w-full lg:w-44 lg:shrink-0">
-                    <nav
-                        class="snitch-paper-nav"
-                        aria-label="Settings"
+        <div class="flex flex-col gap-8 lg:flex-row lg:gap-10">
+            <aside class="w-full lg:w-44 lg:shrink-0">
+                <nav class="flex flex-col gap-1" aria-label="Settings">
+                    <Link
+                        v-for="item in sidebarNavItems"
+                        :key="toUrl(item.href)"
+                        :href="item.href"
+                        class="inline-flex items-center gap-2 border-l-2 px-3 py-2 text-sm transition-colors"
+                        :class="
+                            isCurrentOrParentUrl(item.href)
+                                ? 'border-[#F0C400] font-medium text-neutral-950'
+                                : 'border-transparent text-neutral-600 hover:text-neutral-950'
+                        "
                     >
-                        <Link
-                            v-for="item in sidebarNavItems"
-                            :key="toUrl(item.href)"
-                            :href="item.href"
-                            class="snitch-paper-nav-link"
-                            :class="
-                                isCurrentOrParentUrl(item.href)
-                                    ? 'snitch-paper-nav-link-active'
-                                    : ''
-                            "
-                        >
-                            <component
-                                :is="item.icon"
-                                v-if="item.icon"
-                                class="size-3.5 shrink-0 opacity-70"
-                                aria-hidden="true"
-                            />
-                            {{ item.title }}
-                        </Link>
-                    </nav>
-                </aside>
+                        <component
+                            :is="item.icon"
+                            v-if="item.icon"
+                            class="size-3.5 shrink-0 opacity-70"
+                            aria-hidden="true"
+                        />
+                        {{ item.title }}
+                    </Link>
+                </nav>
+            </aside>
 
-                <div class="min-w-0 flex-1 md:max-w-2xl">
-                    <slot />
-                </div>
+            <div class="min-w-0 flex-1 md:max-w-2xl">
+                <slot />
             </div>
         </div>
     </div>

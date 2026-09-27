@@ -407,7 +407,7 @@ class AdminOverviewService
     }
 
     /**
-     * @return list<array{id: int, post_id: int|null, platform: string|null, error_message: string|null, analyzed_at: string|null, created_at: string|null}>
+     * @return list<array{id: int, post_id: int|null, platform: string|null, error_label: string, error_message: string|null, analyzed_at: string|null, created_at: string|null}>
      */
     private function failedAnalyses(): array
     {
@@ -417,17 +417,57 @@ class AdminOverviewService
             ->orderByDesc('id')
             ->limit(25)
             ->get()
-            ->map(fn (PostAnalysis $analysis): array => [
-                'id' => $analysis->id,
-                'post_id' => $analysis->post_id,
-                'platform' => $analysis->post?->platform?->value ?? (is_string($analysis->post?->platform) ? $analysis->post->platform : null),
-                'error_message' => $analysis->error_message !== null
-                    ? mb_substr((string) $analysis->error_message, 0, 180)
-                    : null,
-                'analyzed_at' => $analysis->analyzed_at?->toIso8601String(),
-                'created_at' => $analysis->created_at?->toIso8601String(),
-            ])
+            ->map(function (PostAnalysis $analysis): array {
+                $raw = $analysis->error_message !== null
+                    ? (string) $analysis->error_message
+                    : null;
+
+                return [
+                    'id' => $analysis->id,
+                    'post_id' => $analysis->post_id,
+                    'platform' => $analysis->post?->platform?->value ?? (is_string($analysis->post?->platform) ? $analysis->post->platform : null),
+                    'error_label' => $this->humanizeAnalysisError($raw),
+                    'error_message' => $raw !== null ? mb_substr($raw, 0, 500) : null,
+                    'analyzed_at' => $analysis->analyzed_at?->toIso8601String(),
+                    'created_at' => $analysis->created_at?->toIso8601String(),
+                ];
+            })
             ->all();
+    }
+
+    private function humanizeAnalysisError(?string $raw): string
+    {
+        if ($raw === null || trim($raw) === '') {
+            return 'Analysis failed';
+        }
+
+        $lower = strtolower($raw);
+
+        if (str_contains($lower, 'invalid_api_key') || str_contains($lower, 'invalid session')) {
+            return 'AI provider auth failed';
+        }
+
+        if (str_contains($lower, 'checklist') || str_contains($lower, 'did not return valid json')) {
+            return 'AI response incomplete';
+        }
+
+        if (str_contains($lower, 'timeout') || str_contains($lower, 'timed out')) {
+            return 'Timed out';
+        }
+
+        if (str_contains($lower, 'unavailable') || str_contains($lower, '403') || str_contains($lower, '404')) {
+            return 'Media unavailable';
+        }
+
+        if (str_contains($lower, 'rate') || str_contains($lower, '429')) {
+            return 'Rate limited';
+        }
+
+        $firstLine = trim(explode("\n", $raw)[0] ?? $raw);
+
+        return mb_strlen($firstLine) > 80
+            ? mb_substr($firstLine, 0, 77).'…'
+            : $firstLine;
     }
 
     /**

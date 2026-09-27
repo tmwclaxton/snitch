@@ -64,8 +64,9 @@ class CompetitorShowTest extends TestCase
 
         $showVue = file_get_contents(resource_path('js/pages/competitors/Show.vue'));
         $this->assertIsString($showVue);
-        $this->assertStringContainsString('Open on platform', $showVue);
-        $this->assertStringContainsString('border-b border-snitch-ink/10', $showVue);
+        $this->assertStringContainsString('openOnPlatformLabel', $showVue);
+        $this->assertStringContainsString('No posting data yet', $showVue);
+        $this->assertStringNotContainsString('Open on platform', $showVue);
         $this->assertStringNotContainsString('snitch-cutout--hero', $showVue);
         $this->assertStringContainsString('RemoveCompetitorModal', $showVue);
         $this->assertStringContainsString('askRemove', $showVue);
