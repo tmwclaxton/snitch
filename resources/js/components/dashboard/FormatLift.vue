@@ -55,5 +55,41 @@ const options = computed(() => ({
 
 <template>
     <EmptyState v-if="status !== 'ok' || !rows?.length" :reason="reason" compact />
-    <VueApexCharts v-else type="bar" height="180" :options="options" :series="chartSeries" />
+    <div v-else class="space-y-2">
+        <VueApexCharts type="bar" height="160" :options="options" :series="chartSeries" />
+        <ul class="grid gap-1 sm:grid-cols-2">
+            <li
+                v-for="row in rows"
+                :key="row.handle"
+                class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-600"
+            >
+                <span class="font-medium text-slate-800">{{ row.is_own_account ? 'You' : `@${row.handle}` }}</span>
+                <span
+                    v-for="format in formats"
+                    :key="`${row.handle}-${format}`"
+                    class="tabular-nums"
+                >
+                    {{ format }}
+                    <template v-if="row.lifts[format]">
+                        {{ row.lifts[format].lift.toFixed(2) }}×
+                        <span class="text-slate-400">(n={{ row.lifts[format].n }})</span>
+                    </template>
+                    <template v-else>—</template>
+                </span>
+            </li>
+        </ul>
+        <p
+            v-if="peerMedianLift && Object.keys(peerMedianLift).length"
+            class="text-[10px] text-slate-500"
+        >
+            Peer median lift:
+            <span
+                v-for="(lift, format) in peerMedianLift"
+                :key="String(format)"
+                class="mr-2 tabular-nums"
+            >
+                {{ format }} {{ lift != null ? `${Number(lift).toFixed(2)}×` : '—' }}
+            </span>
+        </p>
+    </div>
 </template>

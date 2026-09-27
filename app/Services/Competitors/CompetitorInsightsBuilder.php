@@ -143,6 +143,43 @@ class CompetitorInsightsBuilder
     }
 
     /**
+     * Hashtags, keywords, CTA language, and format mix for an already-scoped
+     * post corpus. Read-only - does not seed follower snapshots.
+     *
+     * @param  Collection<int, Post>  $posts
+     * @return array{
+     *     hashtags: list<array{term: string, count: int}>,
+     *     keywords: list<array{term: string, count: int}>,
+     *     ctas: list<array{term: string, count: int, lines: list<array{text: string, count: int, post_id: int|null}>}>,
+     *     cta_clicks: array{posts_with_cta: int, posts: int},
+     *     format_mix: list<array{type: string, count: int}>
+     * }
+     */
+    public function captionIntel(Collection $posts): array
+    {
+        $summary = $this->summarise($posts);
+
+        return [
+            'hashtags' => $summary['hashtags'],
+            'keywords' => $summary['keywords'],
+            'ctas' => $summary['ctas'],
+            'cta_clicks' => $summary['cta_clicks'],
+            'format_mix' => $summary['format_mix'],
+        ];
+    }
+
+    /**
+     * Summed follower history across social accounts. Read-only.
+     *
+     * @param  list<int>  $socialAccountIds
+     * @return list<array{captured_on: string, label: string, followers: int}>
+     */
+    public function followerSeriesForIds(array $socialAccountIds): array
+    {
+        return $this->followerSeriesForUser($socialAccountIds);
+    }
+
+    /**
      * @param  Collection<int, Post>  $posts
      * @return array{
      *     engagement: array{posts: int, avg_views: float, avg_likes: float, avg_comments: float, avg_shares: float, avg_rate: float},

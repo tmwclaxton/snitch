@@ -32,12 +32,20 @@ class DashboardMetricsTest extends TestCase
                 ->component('Dashboard')
                 ->where('own_account.handle', 'letsgosocialuk')
                 ->has('rivals', 2)
-                ->has('insights.status')
                 ->has('kpis.status')
-                ->has('leaderboard.status')
-                ->has('winners.status')
-                ->where('leaderboard.data.rows.0.is_own_account', true)
+                ->has('rail.cells', 9)
+                ->missing('insights')
                 ->missing('top_posts')
+                ->loadDeferredProps('panel', fn (Assert $panel) => $panel
+                    ->has('insights.status')
+                    ->has('leaderboard.status')
+                    ->has('winners.status')
+                    ->has('activity.heatmap')
+                    ->has('recent_posts')
+                    ->has('caption_intel.hashtags')
+                    ->where('leaderboard.data.rows.0.is_own_account', true)
+                    ->missing('activity.by_platform')
+                )
             );
     }
 
@@ -405,6 +413,37 @@ class DashboardMetricsTest extends TestCase
         $row = $payload['leaderboard']['data']['rows'][0];
 
         $this->assertEqualsWithDelta(10.0, (float) $row['growth_pct'], 0.2);
+    }
+
+    public function test_backup_port_payload_scopes_activity_and_omits_platform_split(): void
+    {
+        [$user] = $this->seedRichFixture();
+
+        $payload = app(DashboardMetrics::class)->forUser($user, ['great.friendship'], 30);
+
+        $this->assertCount(9, $payload['rail']['cells']);
+        $this->assertTrue($payload['rail']['ready']);
+        $this->assertArrayHasKey('heatmap', $payload['activity']);
+        $this->assertArrayHasKey('weekly', $payload['activity']);
+        $this->assertArrayHasKey('by_time_of_day', $payload['activity']);
+        $this->assertArrayNotHasKey('by_platform', $payload['activity']);
+        $this->assertIsArray($payload['follower_series']);
+        $this->assertArrayHasKey('week_delta', $payload['growth_delta']);
+        $this->assertIsArray($payload['recent_posts']);
+        $this->assertLessThanOrEqual(24, count($payload['recent_posts']));
+        $this->assertArrayHasKey('hashtags', $payload['caption_intel']);
+        $this->assertArrayHasKey('keywords', $payload['caption_intel']);
+        $this->assertArrayHasKey('ctas', $payload['caption_intel']);
+        $this->assertArrayHasKey('format_mix', $payload['caption_intel']);
+
+        foreach ($payload['recent_posts'] as $post) {
+            $this->assertArrayNotHasKey('embed', $post);
+            $this->assertArrayHasKey('cover_url', $post);
+        }
+
+        $erCell = collect($payload['rail']['cells'])->firstWhere('key', 'er');
+        $this->assertNotNull($erCell);
+        $this->assertStringContainsString('peer', strtolower((string) $erCell['hint']));
     }
 
     /**

@@ -58,7 +58,12 @@ class DashboardTest extends TestCase
                 ->component('Dashboard')
                 ->has('rivals', 1)
                 ->where('rivals.0.handle', 'rivalbakery')
-                ->where('leaderboard.status', 'ok')
+                ->has('rail.cells')
+                ->loadDeferredProps('panel', fn (Assert $panel) => $panel
+                    ->where('leaderboard.status', 'ok')
+                    ->has('activity.heatmap')
+                    ->has('recent_posts')
+                )
             );
     }
 

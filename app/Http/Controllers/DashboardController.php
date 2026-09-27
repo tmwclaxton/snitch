@@ -12,6 +12,53 @@ class DashboardController extends Controller
 {
     use OmitsProductDataWhenPaywalled;
 
+    /**
+     * Keys sent on the first paint (controls + rail). Everything else loads in
+     * one deferred `panel` group so charts and the contact sheet arrive together.
+     *
+     * @var list<string>
+     */
+    private const IMMEDIATE_KEYS = [
+        'period',
+        'periods',
+        'timezone',
+        'own_account',
+        'rivals',
+        'selected',
+        'max_compare',
+        'legacy_non_instagram_count',
+        'show_hidden_likes',
+        'controls',
+        'onboarding',
+        'rail',
+        'kpis',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    private const PANEL_KEYS = [
+        'insights',
+        'leaderboard',
+        'winners',
+        'growth_series',
+        'efficiency',
+        'format_mix',
+        'format_lift',
+        'heatmap',
+        'captions',
+        'themes',
+        'weekly',
+        'attention',
+        'actions',
+        'data_notes',
+        'activity',
+        'follower_series',
+        'growth_delta',
+        'recent_posts',
+        'caption_intel',
+    ];
+
     public function __invoke(Request $request, DashboardMetrics $metrics): Response
     {
         $user = $request->user();
@@ -23,7 +70,18 @@ class DashboardController extends Controller
             return Inertia::render('Dashboard', $metrics->emptyPayload());
         }
 
-        return Inertia::render('Dashboard', $metrics->forUser($user, $handles, $period, $showHiddenLikes));
+        $load = fn (): array => $metrics->forUser($user, $handles, $period, $showHiddenLikes);
+        $props = [];
+
+        foreach (self::IMMEDIATE_KEYS as $key) {
+            $props[$key] = fn () => $load()[$key] ?? null;
+        }
+
+        foreach (self::PANEL_KEYS as $key) {
+            $props[$key] = Inertia::defer(fn () => $load()[$key] ?? null, 'panel');
+        }
+
+        return Inertia::render('Dashboard', $props);
     }
 
     /**

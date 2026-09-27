@@ -19,37 +19,68 @@ class DashboardActivityBuilder
      *     heatmap: list<array{date: string, count: int}>,
      *     weekly: list<array{week_start: string, label: string, count: int}>,
      *     by_platform: list<array{platform: string, count: int}>,
-     *     by_time_of_day: list<array{hour: int, label: string, count: int}>
+     *     by_time_of_day: list<array{hour: int, label: string, count: int}>,
+     *     window_start: string,
+     *     window_end: string
      * }
      */
     public function forUser(User $user, ?int $socialAccountId = null): array
     {
-        $today = CarbonImmutable::now()->startOfDay();
-        $heatmapEnd = $today;
+        $ids = $socialAccountId !== null
+            ? [$socialAccountId]
+            : Post::query()
+                ->forUser($user)
+                ->whereNotNull('social_account_id')
+                ->distinct()
+                ->pluck('social_account_id')
+                ->map(fn (mixed $id): int => (int) $id)
+                ->values()
+                ->all();
+
+        return $this->forSocialAccounts($ids);
+    }
+
+    /**
+     * Cadence charts for a fixed set of Instagram social accounts, sharing one
+     * end date (today) and the standard heatmap / weekly window lengths.
+     *
+     * @param  list<int>  $socialAccountIds
+     * @return array{
+     *     heatmap: list<array{date: string, count: int}>,
+     *     weekly: list<array{week_start: string, label: string, count: int}>,
+     *     by_platform: list<array{platform: string, count: int}>,
+     *     by_time_of_day: list<array{hour: int, label: string, count: int}>,
+     *     window_start: string,
+     *     window_end: string
+     * }
+     */
+    public function forSocialAccounts(array $socialAccountIds, ?CarbonImmutable $end = null): array
+    {
+        $heatmapEnd = ($end ?? CarbonImmutable::now())->startOfDay();
         $heatmapStart = $this->sundayOnOrBefore($heatmapEnd)->subWeeks(self::HEATMAP_WEEKS - 1);
         $weeklyStart = $this->sundayOnOrBefore($heatmapEnd)->subWeeks(self::WEEKLY_WEEKS - 1);
+        $ids = array_values(array_unique(array_filter(
+            array_map(static fn (mixed $id): int => (int) $id, $socialAccountIds),
+            static fn (int $id): bool => $id > 0,
+        )));
 
-        $posts = Post::query()
-            ->forUser($user)
-            ->when(
-                $socialAccountId !== null,
-                fn ($query) => $query->where('social_account_id', $socialAccountId),
-            )
-            ->where('posted_at', '>=', $heatmapStart)
-            ->whereNotNull('posted_at')
-            ->get(['posted_at', 'platform', 'social_account_id']);
+        $posts = $ids === []
+            ? collect()
+            : Post::query()
+                ->whereIn('social_account_id', $ids)
+                ->where('posted_at', '>=', $heatmapStart)
+                ->whereNotNull('posted_at')
+                ->get(['posted_at', 'platform', 'social_account_id']);
 
         $dailyCounts = $this->dailyCounts($posts);
-        $heatmap = $this->buildHeatmap($heatmapStart, $heatmapEnd, $dailyCounts);
-        $weekly = $this->buildWeekly($weeklyStart, $heatmapEnd, $dailyCounts);
-        $byPlatform = $this->buildByPlatform($posts, $weeklyStart);
-        $byTimeOfDay = $this->buildByTimeOfDay($posts, $weeklyStart);
 
         return [
-            'heatmap' => $heatmap,
-            'weekly' => $weekly,
-            'by_platform' => $byPlatform,
-            'by_time_of_day' => $byTimeOfDay,
+            'heatmap' => $this->buildHeatmap($heatmapStart, $heatmapEnd, $dailyCounts),
+            'weekly' => $this->buildWeekly($weeklyStart, $heatmapEnd, $dailyCounts),
+            'by_platform' => $this->buildByPlatform($posts, $weeklyStart),
+            'by_time_of_day' => $this->buildByTimeOfDay($posts, $weeklyStart),
+            'window_start' => $heatmapStart->toDateString(),
+            'window_end' => $heatmapEnd->toDateString(),
         ];
     }
 

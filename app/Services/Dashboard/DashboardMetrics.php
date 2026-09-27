@@ -3,10 +3,14 @@
 namespace App\Services\Dashboard;
 
 use App\Enums\Platform;
+use App\Enums\PostType;
 use App\Models\FollowerSnapshot;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Services\Analysis\AnalysisTermCatalogue;
+use App\Services\Competitors\CompetitorInsightsBuilder;
+use App\Support\PostAccountPresenter;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -16,10 +20,15 @@ class DashboardMetrics
 
     public const PERIODS = [7, 30, 90];
 
+    public const RECENT_POST_FRAMES = 24;
+
     public function __construct(
         private DashboardMath $math,
         private InsightRules $insightRules,
         private DashboardCache $cache,
+        private DashboardActivityBuilder $activity,
+        private CompetitorInsightsBuilder $competitorInsights,
+        private AnalysisTermCatalogue $catalogue,
     ) {}
 
     /**
@@ -68,6 +77,10 @@ class DashboardMetrics
             ], 0),
             'insights' => CardResult::empty('We\'ll write your first insights after the first refresh (need at least 5 posts from 2 accounts).'),
             'kpis' => CardResult::empty('Add Instagram competitors to see KPIs.'),
+            'rail' => [
+                'cells' => [],
+                'ready' => false,
+            ],
             'leaderboard' => CardResult::empty('Add Instagram competitors to compare.'),
             'winners' => CardResult::empty('No standout posts this period.'),
             'growth_series' => CardResult::empty('Not built yet.'),
@@ -82,6 +95,27 @@ class DashboardMetrics
             'attention' => CardResult::empty('Not built yet.'),
             'actions' => CardResult::empty('Not built yet.'),
             'data_notes' => CardResult::empty('Not built yet.'),
+            'activity' => [
+                'heatmap' => [],
+                'weekly' => [],
+                'by_time_of_day' => [],
+                'window_start' => null,
+                'window_end' => null,
+            ],
+            'follower_series' => [],
+            'growth_delta' => [
+                'followers' => 0,
+                'week_delta' => null,
+                'week_pct' => null,
+            ],
+            'recent_posts' => [],
+            'caption_intel' => [
+                'hashtags' => [],
+                'keywords' => [],
+                'ctas' => [],
+                'cta_clicks' => ['posts_with_cta' => 0, 'posts' => 0],
+                'format_mix' => [],
+            ],
         ];
     }
 
@@ -173,6 +207,26 @@ class DashboardMetrics
         $actions = $this->actionsCard($insightContext, $ownRow);
         $dataNotes = $this->dataNotesCard($accountRows, $periodPosts, $periodDays, $lastSynced);
 
+        $activity = $this->activity->forSocialAccounts(array_map('intval', $socialIds));
+        // Drop platform split - dashboard is Instagram-only.
+        unset($activity['by_platform']);
+
+        $followerSeries = $this->competitorInsights->followerSeriesForIds(array_map('intval', $socialIds));
+        $growthDelta = $this->growthDeltaFromSnapshots($visibleAccounts, $snapshots);
+        $captionIntel = $this->captionIntelForAccounts($user, $socialIds, $since);
+        $recentPosts = $this->recentPostsPayload($user, $visibleAccounts, self::RECENT_POST_FRAMES);
+        $rail = $this->railCard(
+            $visibleAccounts,
+            $ownRow,
+            $peerRows,
+            $periodPosts,
+            $winners,
+            $growthDelta,
+            $captionIntel,
+            $lastSynced,
+            $periodDays,
+        );
+
         return [
             'period' => $periodDays,
             'periods' => self::PERIODS,
@@ -202,6 +256,7 @@ class DashboardMetrics
             'onboarding' => $onboarding,
             'insights' => $insights,
             'kpis' => $kpis,
+            'rail' => $rail,
             'leaderboard' => $leaderboard,
             'winners' => $winners,
             'growth_series' => $growthSeries,
@@ -215,6 +270,11 @@ class DashboardMetrics
             'attention' => $attention,
             'actions' => $actions,
             'data_notes' => $dataNotes,
+            'activity' => $activity,
+            'follower_series' => $followerSeries,
+            'growth_delta' => $growthDelta,
+            'recent_posts' => $recentPosts,
+            'caption_intel' => $captionIntel,
         ];
     }
 
@@ -306,6 +366,7 @@ class DashboardMetrics
             return [
                 'id' => $post->id,
                 'social_account_id' => (int) $post->social_account_id,
+                'tracked_account_id' => $account?->id,
                 'handle' => $account?->handle,
                 'is_own_account' => (bool) ($account?->is_own_account),
                 'posted_at' => $post->posted_at,
@@ -1134,6 +1195,7 @@ class DashboardMetrics
         return [
             'id' => $row['id'],
             'handle' => $row['handle'],
+            'tracked_account_id' => $row['tracked_account_id'] ?? null,
             'is_own_account' => $row['is_own_account'],
             'format' => $row['format'],
             'posted_at' => $row['london_at']?->format('D j M, H:i'),
@@ -1805,5 +1867,403 @@ class DashboardMetrics
             'excluded_hidden_likes' => $hidden,
             'note' => 'Reach, saves and shares are private to each account and not included.',
         ], $periodPosts->count());
+    }
+
+    /**
+     * Compact one-row KPI strip: own value + peer median hint where relevant.
+     *
+     * @param  Collection<int, TrackedAccount>  $visibleAccounts
+     * @param  array<string, mixed>|null  $ownRow
+     * @param  Collection<int, array<string, mixed>>  $peerRows
+     * @param  Collection<int, array<string, mixed>>  $periodPosts
+     * @param  array{status: string, n: int, data: mixed, reason: string|null}  $winners
+     * @param  array{followers: int, week_delta: int|null, week_pct: float|null}  $growthDelta
+     * @param  array<string, mixed>  $captionIntel
+     * @return array{cells: list<array<string, mixed>>, ready: bool}
+     */
+    private function railCard(
+        Collection $visibleAccounts,
+        ?array $ownRow,
+        Collection $peerRows,
+        Collection $periodPosts,
+        array $winners,
+        array $growthDelta,
+        array $captionIntel,
+        mixed $lastSynced,
+        int $periodDays,
+    ): array {
+        $followers = (int) $visibleAccounts->sum(fn (TrackedAccount $a): int => (int) ($a->followers ?? 0));
+        $syncHint = $lastSynced instanceof \DateTimeInterface
+            ? 'Last sync '.CarbonImmutable::parse($lastSynced)->timezone(DashboardMath::TIMEZONE)->format('j M')
+            : 'No sync yet';
+
+        $measurable = $periodPosts->filter(fn (array $row): bool => ! $row['hidden_likes']);
+        $avgViews = $periodPosts->isEmpty()
+            ? null
+            : round((float) $periodPosts->avg(fn (array $row): int => (int) ($row['views'] ?? 0)), 0);
+        $avgLikes = $measurable->isEmpty()
+            ? null
+            : round((float) $measurable->avg(fn (array $row): int => (int) ($row['likes'] ?? 0)), 0);
+
+        $youEr = $ownRow['er'] ?? null;
+        $peerEr = $this->math->median(
+            $peerRows
+                ->filter(fn (array $row): bool => (int) ($row['measurable_posts_n'] ?? 0) >= DashboardMath::MIN_SAMPLE)
+                ->pluck('er')
+                ->filter(fn ($v) => $v !== null)
+                ->values(),
+        );
+        $youPpw = $ownRow['posts_per_week'] ?? null;
+        $peerPpw = $this->math->median($peerRows->pluck('posts_per_week')->filter(fn ($v) => $v !== null)->values());
+        $winnerCount = is_array($winners['data'] ?? null)
+            ? count($winners['data']['winners'] ?? [])
+            : 0;
+        $ctaPosts = (int) ($captionIntel['cta_clicks']['posts_with_cta'] ?? 0);
+        $ctaTotal = (int) ($captionIntel['cta_clicks']['posts'] ?? $periodPosts->count());
+
+        $cells = [
+            [
+                'key' => 'accounts',
+                'label' => 'Accounts',
+                'value' => (string) $visibleAccounts->count(),
+                'hint' => $this->compactNumber($followers).' followers · '.$syncHint,
+                'href' => 'tracking',
+                'you' => null,
+                'peer' => null,
+            ],
+            [
+                'key' => 'posts',
+                'label' => 'Posts',
+                'value' => (string) $periodPosts->count(),
+                'hint' => "Last {$periodDays}d · reels, stills, carousels",
+                'href' => 'feed',
+                'you' => $ownRow !== null ? (int) ($ownRow['posts_n'] ?? 0) : null,
+                'peer' => $peerRows->isEmpty()
+                    ? null
+                    : (int) round((float) $peerRows->avg(fn (array $row): int => (int) ($row['posts_n'] ?? 0))),
+            ],
+            [
+                'key' => 'winners',
+                'label' => 'Winners',
+                'value' => (string) $winnerCount,
+                'hint' => 'PI ≥ 2.0× this period',
+                'href' => 'winners',
+                'you' => $ownRow !== null ? (int) ($ownRow['winners'] ?? 0) : null,
+                'peer' => $peerRows->isEmpty()
+                    ? null
+                    : (int) round((float) $peerRows->avg(fn (array $row): int => (int) ($row['winners'] ?? 0))),
+            ],
+            [
+                'key' => 'avg_views',
+                'label' => 'Avg views',
+                'value' => $avgViews === null ? '—' : $this->compactNumber((int) $avgViews),
+                'hint' => $this->compareHint(
+                    $ownRow !== null ? (float) ($periodPosts->where('is_own_account', true)->avg(fn (array $r) => (int) ($r['views'] ?? 0)) ?? 0) : null,
+                    $peerRows->isEmpty() ? null : (float) $periodPosts->where('is_own_account', false)->avg(fn (array $r) => (int) ($r['views'] ?? 0)),
+                    'views',
+                ),
+                'href' => null,
+                'you' => null,
+                'peer' => null,
+            ],
+            [
+                'key' => 'avg_likes',
+                'label' => 'Avg likes',
+                'value' => $avgLikes === null ? '—' : $this->compactNumber((int) $avgLikes),
+                'hint' => 'Hidden likes excluded',
+                'href' => null,
+                'you' => null,
+                'peer' => null,
+            ],
+            [
+                'key' => 'er',
+                'label' => 'Engagement rate',
+                'value' => $youEr !== null
+                    ? $this->math->round2((float) $youEr).'%'
+                    : ($peerEr !== null ? $this->math->round2((float) $peerEr).'%' : '—'),
+                'hint' => $this->compareHint(
+                    $youEr !== null ? (float) $youEr : null,
+                    $peerEr !== null ? (float) $peerEr : null,
+                    'pct',
+                    youLabel: 'You',
+                    peerLabel: 'peer median',
+                ),
+                'href' => null,
+                'you' => $youEr !== null ? $this->math->round2((float) $youEr) : null,
+                'peer' => $peerEr !== null ? $this->math->round2((float) $peerEr) : null,
+            ],
+            [
+                'key' => 'growth',
+                'label' => 'Growth',
+                'value' => $this->compactNumber((int) ($growthDelta['followers'] ?? 0)),
+                'hint' => $growthDelta['week_delta'] !== null
+                    ? sprintf(
+                        '%s this week%s',
+                        $this->signedCompact((int) $growthDelta['week_delta']),
+                        $growthDelta['week_pct'] !== null
+                            ? ' ('.$this->signedNumber((float) $growthDelta['week_pct']).'%)'
+                            : '',
+                    )
+                    : 'No earlier count yet',
+                'href' => null,
+                'you' => $ownRow['growth_pct'] ?? null,
+                'peer' => $this->math->median($peerRows->pluck('growth_pct')->filter(fn ($v) => $v !== null)->values()),
+            ],
+            [
+                'key' => 'posts_per_week',
+                'label' => 'Posts / week',
+                'value' => $youPpw !== null
+                    ? (string) $this->math->round1((float) $youPpw)
+                    : ($peerPpw !== null ? (string) $this->math->round1((float) $peerPpw) : '—'),
+                'hint' => $this->compareHint(
+                    $youPpw !== null ? (float) $youPpw : null,
+                    $peerPpw !== null ? (float) $peerPpw : null,
+                    'number',
+                    youLabel: 'You',
+                    peerLabel: 'peer median',
+                ),
+                'href' => null,
+                'you' => $youPpw !== null ? $this->math->round1((float) $youPpw) : null,
+                'peer' => $peerPpw !== null ? $this->math->round1((float) $peerPpw) : null,
+            ],
+            [
+                'key' => 'cta',
+                'label' => 'Posts with an ask',
+                'value' => (string) $ctaPosts,
+                'hint' => $ctaTotal > 0
+                    ? sprintf('%d of %d analysed (%d%%)', $ctaPosts, $ctaTotal, (int) round(($ctaPosts / $ctaTotal) * 100))
+                    : 'In analysed captions',
+                'href' => null,
+                'you' => null,
+                'peer' => null,
+            ],
+        ];
+
+        return [
+            'cells' => $cells,
+            'ready' => $visibleAccounts->isNotEmpty(),
+        ];
+    }
+
+    /**
+     * @param  Collection<int, TrackedAccount>  $accounts
+     * @param  Collection<int, Collection<int, array{captured_on: string, followers: int}>>  $snapshots
+     * @return array{followers: int, week_delta: int|null, week_pct: float|null}
+     */
+    private function growthDeltaFromSnapshots(Collection $accounts, Collection $snapshots): array
+    {
+        $today = CarbonImmutable::now()->toDateString();
+        $weekAgo = CarbonImmutable::now()->subDays(7)->toDateString();
+        $current = 0;
+        $weekNow = 0;
+        $weekThen = 0;
+        $matched = false;
+
+        foreach ($accounts as $account) {
+            $sid = (int) $account->social_account_id;
+            $rows = $snapshots->get($sid, collect())->sortBy('captured_on')->values();
+            $now = $this->math->followersAt($rows, CarbonImmutable::parse($today), $account->followers);
+            $then = $this->math->followersAt($rows, CarbonImmutable::parse($weekAgo), null);
+
+            if ($now !== null) {
+                $current += $now;
+            }
+
+            if ($now !== null && $then !== null) {
+                $matched = true;
+                $weekNow += $now;
+                $weekThen += $then;
+            }
+        }
+
+        $delta = $matched ? $weekNow - $weekThen : null;
+        $pct = $matched && $weekThen > 0
+            ? round((($weekNow - $weekThen) / $weekThen) * 100, 1)
+            : null;
+
+        return [
+            'followers' => $current,
+            'week_delta' => $delta,
+            'week_pct' => $pct,
+        ];
+    }
+
+    /**
+     * @param  list<int|string>  $socialIds
+     * @return array{
+     *     hashtags: list<array{term: string, count: int}>,
+     *     keywords: list<array{term: string, count: int}>,
+     *     ctas: list<array{term: string, count: int, lines: list<array{text: string, count: int, post_id: int|null}>}>,
+     *     cta_clicks: array{posts_with_cta: int, posts: int},
+     *     format_mix: list<array{type: string, count: int}>
+     * }
+     */
+    private function captionIntelForAccounts(User $user, array $socialIds, CarbonImmutable $since): array
+    {
+        $ids = array_values(array_filter(array_map('intval', $socialIds)));
+
+        if ($ids === []) {
+            return [
+                'hashtags' => [],
+                'keywords' => [],
+                'ctas' => [],
+                'cta_clicks' => ['posts_with_cta' => 0, 'posts' => 0],
+                'format_mix' => [],
+            ];
+        }
+
+        $posts = Post::query()
+            ->whereIn('social_account_id', $ids)
+            ->whereNotNull('posted_at')
+            ->where('posted_at', '>=', $since)
+            ->with(['analysis:id,post_id,cta,status'])
+            ->get(['id', 'social_account_id', 'caption', 'type', 'metrics', 'posted_at', 'raw_payload']);
+
+        return $this->competitorInsights->captionIntel($posts);
+    }
+
+    /**
+     * @param  Collection<int, TrackedAccount>  $visibleAccounts
+     * @return list<array<string, mixed>>
+     */
+    private function recentPostsPayload(User $user, Collection $visibleAccounts, int $limit): array
+    {
+        $ids = $visibleAccounts->pluck('social_account_id')->filter()->map(fn ($id) => (int) $id)->values()->all();
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $posts = Post::query()
+            ->whereIn('social_account_id', $ids)
+            ->whereNotNull('posted_at')
+            ->with([
+                'analysis:id,post_id,status,hook,concept,topics,custom_tags',
+                'analysis.terms:id,dimension,slug,label',
+                'winnerInsight' => fn ($q) => $q->where('user_id', $user->id)->select(['id', 'post_id', 'user_id', 'score']),
+            ])
+            ->latest('posted_at')
+            ->limit($limit)
+            ->get([
+                'id',
+                'social_account_id',
+                'platform',
+                'type',
+                'url',
+                'caption',
+                'media_url',
+                'cover_url',
+                'media_availability',
+                'metrics',
+                'posted_at',
+            ]);
+
+        PostAccountPresenter::attachForUser($posts, $user);
+
+        return $posts->map(function (Post $post): array {
+            $analysis = $post->analysis;
+            $winner = $post->winnerInsight;
+            $metrics = is_array($post->metrics) ? $post->metrics : [];
+
+            return [
+                'id' => $post->id,
+                'platform' => $post->platform instanceof Platform
+                    ? $post->platform->value
+                    : (string) $post->platform,
+                'type' => $post->type instanceof PostType
+                    ? $post->type->value
+                    : (string) $post->type,
+                'url' => $post->url,
+                'caption' => $post->caption,
+                'media_url' => $post->media_url,
+                'cover_url' => $post->cover_url,
+                'media_availability' => $post->media_availability,
+                'metrics' => [
+                    'views' => $metrics['views'] ?? null,
+                    'likes' => ($metrics['like_count_hidden'] ?? false) === true ? null : ($metrics['likes'] ?? null),
+                    'comments' => $metrics['comments'] ?? null,
+                    'shares' => $metrics['shares'] ?? null,
+                    'like_count_hidden' => (bool) ($metrics['like_count_hidden'] ?? false),
+                ],
+                'tracked_account' => $post->getAttribute('tracked_account'),
+                'analysis' => $analysis === null ? null : [
+                    'status' => $analysis->status?->value ?? (string) $analysis->status,
+                    'hook' => $analysis->hook,
+                    'concept' => $analysis->concept,
+                    'topics' => $analysis->topics,
+                    'custom_tags' => $analysis->custom_tags,
+                    'term_labels' => $analysis->relationLoaded('terms')
+                        ? $this->catalogue->frontendLabels($analysis->terms)
+                        : [],
+                ],
+                'winner_insight' => $winner === null ? null : [
+                    'score' => (float) $winner->score,
+                ],
+            ];
+        })->values()->all();
+    }
+
+    private function compactNumber(int|float $value): string
+    {
+        $n = (float) $value;
+        $abs = abs($n);
+
+        if ($abs >= 1_000_000) {
+            return rtrim(rtrim(number_format($n / 1_000_000, 1), '0'), '.').'M';
+        }
+
+        if ($abs >= 1_000) {
+            return rtrim(rtrim(number_format($n / 1_000, 1), '0'), '.').'k';
+        }
+
+        return (string) (int) round($n);
+    }
+
+    private function signedCompact(int $value): string
+    {
+        $prefix = $value > 0 ? '+' : '';
+
+        return $prefix.$this->compactNumber($value);
+    }
+
+    private function signedNumber(float $value): string
+    {
+        $prefix = $value > 0 ? '+' : '';
+
+        return $prefix.$this->math->round1($value);
+    }
+
+    private function compareHint(
+        ?float $you,
+        ?float $peer,
+        string $kind,
+        string $youLabel = 'You',
+        string $peerLabel = 'peer',
+    ): string {
+        if ($you === null && $peer === null) {
+            return '—';
+        }
+
+        $fmt = function (?float $value) use ($kind): string {
+            if ($value === null) {
+                return '—';
+            }
+
+            return match ($kind) {
+                'pct' => $this->math->round2($value).'%',
+                'views' => $this->compactNumber((int) round($value)),
+                default => (string) $this->math->round1($value),
+            };
+        };
+
+        if ($you !== null && $peer !== null) {
+            return "{$youLabel} {$fmt($you)} · {$peerLabel} {$fmt($peer)}";
+        }
+
+        if ($you !== null) {
+            return "{$youLabel} {$fmt($you)}";
+        }
+
+        return "{$peerLabel} {$fmt($peer)}";
     }
 }
