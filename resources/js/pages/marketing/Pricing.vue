@@ -67,36 +67,37 @@ function formatAverage(pence: number): string {
         <div class="px-5 py-14 sm:px-8 sm:py-20">
             <div class="mx-auto max-w-6xl">
                 <h1 class="snitch-display text-4xl text-snitch-ink sm:text-5xl">
-                    Full Access
+                    Platform + usage
                 </h1>
                 <p class="mt-4 max-w-2xl text-snitch-ink/80">
-                    Competitor Instagram tracking, weekly refreshed data, gap analysis, and posting times.
-                    Book a free intro call, then subscribe in the app for {{ formatCatalog(platform.fee_pence) }} a month.
+                    A simple monthly platform fee, then prepaid credits for Apify syncs, NanoGPT analysis, and
+                    Firecrawl discovery. Signups start with a 7-day trial and £5 to spend. No snitch seat
+                    caps - you pay for the work you run.
                 </p>
 
                 <div class="snitch-contact-reveal mt-12 grid gap-6 md:grid-cols-2">
                     <section class="snitch-scrap relative space-y-4 p-6 pt-8">
                         <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
-                        <p class="snitch-ink-label">Full Access</p>
+                        <p class="snitch-ink-label">Platform</p>
                         <p class="snitch-display text-4xl text-snitch-ink">
                             {{ formatCatalog(platform.fee_pence) }}<span class="text-lg">/mo</span>
                         </p>
                         <ul class="relative z-10 space-y-2 text-sm text-snitch-ink/80">
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                Full competitor tracking
+                                Unlimited tracked accounts
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                Weekly refreshed data
+                                Web app: Tracking, Feed, Explore, Winners
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                Gap Analysis
+                                {{ formatCatalog(platform.bonus_pence) }} usage credits every billing period
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                Optimal posting times
+                                Feed, Explore, Winners
                             </li>
                         </ul>
                     </section>

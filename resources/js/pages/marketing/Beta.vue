@@ -36,6 +36,8 @@ const benefits = [
 ] as const;
 
 const pricingFeatures = [
+    '£19/mo platform plus pay-as-you-go usage credits',
+    '£30 usage credits included each billing period',
     'Full competitor tracking',
     'Weekly refreshed data',
     'Gap Analysis',
@@ -459,12 +461,12 @@ onMounted(() => {
                                     <h3
                                         class="snitch-display text-3xl text-snitch-ink md:text-4xl"
                                     >
-                                        Full Access
+                                        Platform
                                     </h3>
                                     <p
                                         class="snitch-display text-4xl text-snitch-ink"
                                     >
-                                        £50<span
+                                        £19<span
                                             class="text-base font-medium text-snitch-ink/60"
                                         >/mo</span>
                                     </p>

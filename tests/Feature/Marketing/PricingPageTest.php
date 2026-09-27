@@ -92,6 +92,13 @@ class PricingPageTest extends TestCase
             );
     }
 
+    public function test_default_platform_fee_config_is_nineteen_pounds(): void
+    {
+        $this->assertSame(1900, (int) config('billing.platform_fee_pence'));
+        $this->assertSame(1900, (int) config('subscriptions.plans.platform.price_pence'));
+        $this->assertSame('Platform', config('subscriptions.plans.platform.name'));
+    }
+
     private function seedCharge(User $user, BillingVendor $vendor, float $amountPence, string $key): void
     {
         CreditLedgerEntry::query()->create([
