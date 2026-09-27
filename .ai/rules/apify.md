@@ -18,6 +18,9 @@ Both clients buffer run costs in-process for `VendorUsageCharger::chargePulled*`
 ## Refresh usageTotalUsd after waitForFinish
 Apify's first finished-run payload often has `usageTotalUsd: 0` before costs settle. `runActorDetailed` and the multi-job `runActors` pool path must refresh `/actor-runs/{id}` (brief delay) when usage is null or <= 0 before buffering costs for billing. Skipping this made influencer/competitor verify batches write hundreds of £0 Apify ledger rows while Console later showed real USD.
 
+## Instagram keys posts on shortcode and prefers play counts
+Apify and TikHub Instagram adapters set `external_id` from shortcode/code (via `InstagramPostId`), not numeric media id / pk, so the same reel cannot be stored twice when providers disagree on id shape. Reel views prefer `videoPlayCount` / `play_count` over legacy `videoViewCount` (3-second views). Sync also matches existing Instagram posts by shortcode extracted from URL. Repair historical rows with `snitch:repair-engagement-data` (always dry-run first; do not invent this into deploys).
+
 ## Empty Apify sync falls back to TikHub
 `SyncTrackedAccountJob` retries `listRecentPosts` via TikHub when Apify returns `[]` and a TikHub adapter exists for that platform. Apify can finish with an empty dataset and `$0` usage without tripping the monthly cap - without this fallback, sync marks success and advances `last_synced_at` while backlog stays empty. Manual/`force` sync always uses the full `recency_days` window (not incremental `last_synced_at - 1 day`) so a prior empty scrape cannot hide real posts.
 

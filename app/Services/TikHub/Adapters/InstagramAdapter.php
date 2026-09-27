@@ -4,6 +4,7 @@ namespace App\Services\TikHub\Adapters;
 
 use App\Enums\Platform;
 use App\Enums\PostType;
+use App\Support\InstagramPostId;
 use Carbon\CarbonImmutable;
 
 class InstagramAdapter extends AbstractTikHubAdapter
@@ -198,14 +199,14 @@ class InstagramAdapter extends AbstractTikHubAdapter
         }
 
         return [
-            'external_id' => isset($media['pk']) ? (string) $media['pk'] : ($code !== '' ? $code : (isset($media['id']) ? (string) $media['id'] : null)),
+            'external_id' => InstagramPostId::fromPayload($media) ?? InstagramPostId::fromUrl($url),
             'url' => $url,
             'posted_at' => $this->normalizeDate($media['taken_at'] ?? $media['device_timestamp'] ?? $media['caption']['created_at'] ?? null),
             'type' => PostType::Reel->value,
             'caption' => isset($media['caption']['text']) ? (string) $media['caption']['text'] : (isset($media['caption']) && is_string($media['caption']) ? $media['caption'] : null),
             'media_url' => $mediaUrl,
             'metrics' => $this->metrics(
-                $media['play_count'] ?? $media['view_count'] ?? $media['ig_play_count'] ?? 0,
+                InstagramPostId::viewsFromPayload($media),
                 $media['like_count'] ?? 0,
                 $media['comment_count'] ?? 0,
                 $media['share_count'] ?? 0,

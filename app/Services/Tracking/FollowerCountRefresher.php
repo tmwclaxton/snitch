@@ -2,6 +2,7 @@
 
 namespace App\Services\Tracking;
 
+use App\Models\FollowerSnapshot;
 use App\Models\SocialAccount;
 use App\Models\TrackedAccount;
 use App\Services\Apify\PlatformAdapterManager;
@@ -47,6 +48,10 @@ class FollowerCountRefresher
             ->exists();
 
         if ($recent) {
+            // A second tracker of an already-refreshed account must still inherit
+            // the latest known count without paying for another profile scrape.
+            $this->seedMissingTrackers($social->id);
+
             return false;
         }
 
@@ -75,13 +80,81 @@ class FollowerCountRefresher
             return false;
         }
 
-        TrackedAccount::query()
-            ->where('social_account_id', $social->id)
-            ->update(['followers' => $followers]);
-
+        $this->propagate($social->id, $followers);
         app(FollowerSnapshotRecorder::class)->record($social->id, $followers);
 
         return true;
+    }
+
+    /**
+     * Latest observed follower count for a social account (snapshot, else any tracker).
+     */
+    public function latestKnown(int $socialAccountId): ?int
+    {
+        $fromSnapshot = FollowerSnapshot::query()
+            ->where('social_account_id', $socialAccountId)
+            ->orderByDesc('captured_on')
+            ->orderByDesc('id')
+            ->value('followers');
+
+        if (is_numeric($fromSnapshot)) {
+            return max(0, (int) $fromSnapshot);
+        }
+
+        $fromTracker = TrackedAccount::query()
+            ->where('social_account_id', $socialAccountId)
+            ->whereNotNull('followers')
+            ->orderByDesc('updated_at')
+            ->value('followers');
+
+        return is_numeric($fromTracker) ? max(0, (int) $fromTracker) : null;
+    }
+
+    /**
+     * Copy the latest known count onto every tracker for this social account.
+     */
+    public function propagate(int $socialAccountId, int $followers): void
+    {
+        TrackedAccount::query()
+            ->where('social_account_id', $socialAccountId)
+            ->update(['followers' => max(0, $followers)]);
+    }
+
+    /**
+     * Fill null tracker follower columns from the latest known value.
+     *
+     * @return int Number of trackers updated
+     */
+    public function seedMissingTrackers(int $socialAccountId): int
+    {
+        $latest = $this->latestKnown($socialAccountId);
+
+        if ($latest === null) {
+            return 0;
+        }
+
+        return TrackedAccount::query()
+            ->where('social_account_id', $socialAccountId)
+            ->whereNull('followers')
+            ->update(['followers' => $latest]);
+    }
+
+    /**
+     * Seed a newly created tracker from any known count for its social account.
+     */
+    public function seedTracker(TrackedAccount $account): void
+    {
+        if ($account->followers !== null || $account->social_account_id === null) {
+            return;
+        }
+
+        $latest = $this->latestKnown((int) $account->social_account_id);
+
+        if ($latest === null) {
+            return;
+        }
+
+        $account->forceFill(['followers' => $latest])->save();
     }
 
     private function cutoffDate(): string

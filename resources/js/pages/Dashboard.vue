@@ -190,7 +190,7 @@ function pct(part: number, total: number): number {
                             <td v-for="row in compare" :key="row.handle + 'f'" class="px-4 py-3 text-right tabular-nums">{{ row.followers.toLocaleString() }}</td>
                         </tr>
                         <tr>
-                            <td class="px-4 py-3 text-xs uppercase tracking-wider text-neutral-500">Avg engagement rate</td>
+                            <td class="px-4 py-3 text-xs uppercase tracking-wider text-neutral-500">Avg engagement / follower</td>
                             <td v-for="row in compare" :key="row.handle + 'er'" class="px-4 py-3 text-right tabular-nums">{{ row.avg_er.toFixed(2) }}%</td>
                         </tr>
                         <tr>
@@ -202,7 +202,7 @@ function pct(part: number, total: number): number {
             </div>
             <div v-else class="grid gap-px border border-neutral-200 bg-neutral-200 sm:grid-cols-5">
                 <div class="bg-white p-4">
-                    <div class="text-xs uppercase tracking-wider text-neutral-500">Avg engagement rate</div>
+                    <div class="text-xs uppercase tracking-wider text-neutral-500">Avg engagement / follower</div>
                     <div class="mt-2 text-2xl font-semibold tabular-nums">{{ kpis.avg_er.toFixed(2) }}%</div>
                 </div>
                 <div class="bg-white p-4">

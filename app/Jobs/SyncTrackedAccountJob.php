@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\AnalysisStatus;
 use App\Enums\MediaAvailability;
+use App\Enums\Platform;
 use App\Enums\PostType;
 use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\PlatformSubscriptionRequiredException;
@@ -14,13 +15,16 @@ use App\Services\Apify\PlatformAdapterManager;
 use App\Services\Billing\VendorUsageCharger;
 use App\Services\Competitors\CompetitorAdsFinder;
 use App\Services\SnitchAnalyticsService;
+use App\Services\Tracking\FollowerCountRefresher;
 use App\Services\Tracking\FollowerSnapshotRecorder;
 use App\Services\Tracking\PostCoverHydrator;
+use App\Support\InstagramPostId;
 use App\Support\SafeExceptionMessage;
 use App\Support\SyncOptions;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -194,14 +198,11 @@ class SyncTrackedAccountJob implements ShouldQueue
                 }
 
                 $externalId = (string) ($payload['external_id'] ?? md5((string) $payload['url']));
+                $existing = $this->findExistingPost($existingPosts, $externalId, $payload, $account->platform);
 
-                if ($existingPosts->has($externalId)) {
-                    $existing = $existingPosts->get($externalId);
-
-                    if ($existing instanceof Post) {
-                        $covers->persist($existing, fetchRemote: true, mapped: $payload);
-                        $this->dispatchAnalysisIfNeeded($existing, (int) $account->user_id, $recencyDays);
-                    }
+                if ($existing instanceof Post) {
+                    $covers->persist($existing, fetchRemote: true, mapped: $payload);
+                    $this->dispatchAnalysisIfNeeded($existing, (int) $account->user_id, $recencyDays);
 
                     continue;
                 }
@@ -284,6 +285,15 @@ class SyncTrackedAccountJob implements ShouldQueue
 
             app(FollowerSnapshotRecorder::class)->recordFromAccount($account->fresh() ?? $account);
 
+            if ($account->followers !== null && $account->social_account_id !== null) {
+                app(FollowerCountRefresher::class)->propagate(
+                    (int) $account->social_account_id,
+                    (int) $account->followers,
+                );
+            } elseif ($account->social_account_id !== null) {
+                app(FollowerCountRefresher::class)->seedMissingTrackers((int) $account->social_account_id);
+            }
+
             try {
                 app(CompetitorAdsFinder::class)->refresh($account->fresh() ?? $account);
             } catch (Throwable $adsError) {
@@ -338,6 +348,10 @@ class SyncTrackedAccountJob implements ShouldQueue
     private function applyResolvedProfile(PlatformAdapter $adapter, TrackedAccount $account): void
     {
         if (! $this->shouldResolveProfile($account)) {
+            if ($account->followers === null && $account->social_account_id !== null) {
+                app(FollowerCountRefresher::class)->seedTracker($account);
+            }
+
             return;
         }
 
@@ -351,6 +365,56 @@ class SyncTrackedAccountJob implements ShouldQueue
             'display_name' => $profile['display_name'] ?? $account->display_name,
             ...($followers !== null ? ['followers' => $followers] : []),
         ]);
+
+        if ($followers !== null && $account->social_account_id !== null) {
+            app(FollowerCountRefresher::class)->propagate((int) $account->social_account_id, $followers);
+        }
+    }
+
+    /**
+     * @param  Collection<string, Post>  $existingPosts
+     * @param  array<string, mixed>  $payload
+     */
+    private function findExistingPost(
+        Collection $existingPosts,
+        string $externalId,
+        array $payload,
+        Platform $platform,
+    ): ?Post {
+        $hit = $existingPosts->get($externalId);
+
+        if ($hit instanceof Post) {
+            return $hit;
+        }
+
+        if ($platform !== Platform::Instagram) {
+            return null;
+        }
+
+        $shortcode = InstagramPostId::fromPayload($payload)
+            ?? InstagramPostId::fromUrl((string) ($payload['url'] ?? ''));
+
+        if ($shortcode === null || $shortcode === '') {
+            return null;
+        }
+
+        foreach ($existingPosts as $post) {
+            if (! $post instanceof Post) {
+                continue;
+            }
+
+            if ((string) $post->external_id === $shortcode) {
+                return $post;
+            }
+
+            $existingCode = InstagramPostId::fromUrl((string) $post->url);
+
+            if ($existingCode !== null && $existingCode === $shortcode) {
+                return $post;
+            }
+        }
+
+        return null;
     }
 
     private function shouldResolveProfile(TrackedAccount $account): bool

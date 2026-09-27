@@ -187,7 +187,8 @@ class CompetitorInsightsBuilder
         $likes = 0.0;
         $comments = 0.0;
         $shares = 0.0;
-        $rateSum = 0.0;
+        $viewed = 0.0;
+        $viewedInteractions = 0.0;
 
         foreach ($posts as $post) {
             $metrics = is_array($post->metrics) ? $post->metrics : [];
@@ -195,14 +196,19 @@ class CompetitorInsightsBuilder
             $postLikes = (float) ($metrics['likes'] ?? 0);
             $postComments = (float) ($metrics['comments'] ?? 0);
             $postShares = (float) ($metrics['shares'] ?? 0);
+            $postInteractions = $postLikes + $postComments + $postShares;
 
             $views += $postViews;
             $likes += $postLikes;
             $comments += $postComments;
             $shares += $postShares;
-            $rateSum += $postViews > 0
-                ? (($postLikes + $postComments + $postShares) / $postViews) * 100
-                : 0.0;
+
+            // Ratio-of-sums over posts with valid views. Skip impossible rows
+            // (more interactions than views) so one bad scrape cannot dominate.
+            if ($postViews > 0 && $postInteractions <= $postViews) {
+                $viewed += $postViews;
+                $viewedInteractions += $postInteractions;
+            }
         }
 
         return [
@@ -211,7 +217,9 @@ class CompetitorInsightsBuilder
             'avg_likes' => round($likes / $count, 1),
             'avg_comments' => round($comments / $count, 1),
             'avg_shares' => round($shares / $count, 1),
-            'avg_rate' => round($rateSum / $count, 2),
+            'avg_rate' => $viewed > 0
+                ? round(($viewedInteractions / $viewed) * 100, 2)
+                : 0.0,
         ];
     }
 
@@ -618,10 +626,11 @@ class CompetitorInsightsBuilder
             $id = (int) $account->social_account_id;
             $followers = (int) $account->followers;
 
+            // Only record a real observation for today. Do not invent week/month
+            // anchors - platforms only return the current count.
             if (! in_array($id, $have, true)) {
                 $recorder->record($id, $followers);
-            } else {
-                $recorder->ensureBaselines($id, $followers);
+                $have[] = $id;
             }
         }
     }
