@@ -60,7 +60,7 @@ return [
 
         'pricing' => [
             'title' => 'Pricing',
-            'description' => 'Full Access to Snitch competitor tracking for £50 a month. Weekly refreshed Instagram data, gap analysis, and optimal posting times.',
+            'description' => '£19/month platform fee plus prepaid usage credits. 7-day free trial and £5 to start, then top up as you go.',
             'json_ld' => 'webpage',
             'sitemap' => [
                 'changefreq' => 'weekly',

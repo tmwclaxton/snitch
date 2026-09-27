@@ -25,8 +25,8 @@ return [
             'stripe_price_yearly' => null,
         ],
         'platform' => [
-            'name' => 'Full Access',
-            'price_pence' => (int) env('SNITCH_PLATFORM_FEE_PENCE', 5000),
+            'name' => 'Platform',
+            'price_pence' => (int) env('SNITCH_PLATFORM_FEE_PENCE', 1900),
             'yearly_price_pence' => 0,
             'competitor_limit' => null,
             'influencer_limit' => null,

@@ -71,6 +71,21 @@ class SeoTest extends TestCase
         }
     }
 
+    public function test_pricing_seo_describes_platform_fee_plus_usage(): void
+    {
+        $description = config('seo.pages.pricing.description');
+
+        $this->assertIsString($description);
+        $this->assertStringContainsString('£19/month', $description);
+        $this->assertStringContainsString('usage', strtolower($description));
+        $this->assertStringNotContainsString('£50', $description);
+        $this->assertStringNotContainsString('Full Access', $description);
+
+        $this->get(route('pricing'))
+            ->assertOk()
+            ->assertSee(e($description), false);
+    }
+
     public function test_not_found_is_noindex(): void
     {
         $this->get('/this-page-does-not-exist-snitch-seo')

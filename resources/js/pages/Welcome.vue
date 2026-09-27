@@ -125,11 +125,14 @@ const faqs = [
                 <div class="relative mt-10 inline-block w-full max-w-md text-left">
                     <div class="rounded-2xl bg-white p-8 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.10)]">
                         <div class="flex items-baseline justify-between">
-                            <h3 class="text-2xl font-semibold tracking-tight">Full Access</h3>
+                            <h3 class="text-2xl font-semibold tracking-tight">Platform</h3>
                             <p class="text-3xl font-semibold tracking-tight">
-                                £50<span class="text-base font-medium text-neutral-500">/mo</span>
+                                £19<span class="text-base font-medium text-neutral-500">/mo</span>
                             </p>
                         </div>
+                        <p class="mt-2 text-sm text-neutral-500">
+                            Plus pay-as-you-go usage credits (£30 included each month).
+                        </p>
                         <ul class="mt-6 space-y-3 text-sm text-neutral-500">
                             <li v-for="item in ['Full competitor tracking', 'Weekly refreshed data', 'Gap Analysis', 'Optimal posting times']" :key="item" class="flex items-start gap-3">
                                 <span class="mt-0.5 text-neutral-950">✓</span>
