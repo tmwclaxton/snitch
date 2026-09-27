@@ -17,12 +17,13 @@ class DashboardController extends Controller
         $user = $request->user();
         $handles = $this->selectedHandles($request);
         $period = $this->periodDays($request);
+        $showHiddenLikes = $this->showHiddenLikes($request);
 
         if ($this->productAccessBlocked($user)) {
             return Inertia::render('Dashboard', $metrics->emptyPayload());
         }
 
-        return Inertia::render('Dashboard', $metrics->forUser($user, $handles, $period));
+        return Inertia::render('Dashboard', $metrics->forUser($user, $handles, $period, $showHiddenLikes));
     }
 
     /**
@@ -48,5 +49,12 @@ class DashboardController extends Controller
         $period = is_numeric($raw) ? (int) $raw : 30;
 
         return in_array($period, DashboardMetrics::PERIODS, true) ? $period : 30;
+    }
+
+    private function showHiddenLikes(Request $request): bool
+    {
+        $raw = $request->query('hidden', '0');
+
+        return in_array($raw, [1, '1', true, 'true', 'on'], true);
     }
 }

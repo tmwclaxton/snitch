@@ -9,7 +9,7 @@ class DashboardCache
 {
     public const TTL_SECONDS = 12 * 60 * 60;
 
-    public function key(User $user, string $period, array $selectedHandles): string
+    public function key(User $user, string $period, array $selectedHandles, bool $showHiddenLikes = false): string
     {
         $handles = collect($selectedHandles)
             ->map(fn (string $handle): string => strtolower(ltrim(trim($handle), '@')))
@@ -19,7 +19,9 @@ class DashboardCache
             ->values()
             ->implode(',');
 
-        return "dashboard:metrics:{$user->id}:{$period}:{$handles}";
+        $hidden = $showHiddenLikes ? 'h1' : 'h0';
+
+        return "dashboard:metrics:{$user->id}:{$period}:{$handles}:{$hidden}";
     }
 
     public function forgetForUser(User|int $user): void
@@ -44,9 +46,9 @@ class DashboardCache
      * @param  callable(): array<string, mixed>  $callback
      * @return array<string, mixed>
      */
-    public function remember(User $user, string $period, array $selectedHandles, callable $callback): array
+    public function remember(User $user, string $period, array $selectedHandles, callable $callback, bool $showHiddenLikes = false): array
     {
-        $key = $this->key($user, $period, $selectedHandles);
+        $key = $this->key($user, $period, $selectedHandles, $showHiddenLikes);
         $this->trackKey($user->id, $key);
 
         return Cache::remember($key, self::TTL_SECONDS, $callback);

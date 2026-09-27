@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { Info } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
+import ActionList from '@/components/dashboard/ActionList.vue';
+import AttentionBars from '@/components/dashboard/AttentionBars.vue';
+import CaptionPanels from '@/components/dashboard/CaptionPanels.vue';
 import CompareTable from '@/components/dashboard/CompareTable.vue';
 import DashCard from '@/components/dashboard/DashCard.vue';
+import DataNotes from '@/components/dashboard/DataNotes.vue';
 import EfficiencyScatter from '@/components/dashboard/EfficiencyScatter.vue';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
 import FormatLift from '@/components/dashboard/FormatLift.vue';
@@ -11,6 +16,8 @@ import FormatMix from '@/components/dashboard/FormatMix.vue';
 import GrowthChart from '@/components/dashboard/GrowthChart.vue';
 import InsightList from '@/components/dashboard/InsightList.vue';
 import StatCard from '@/components/dashboard/StatCard.vue';
+import ThemeMatrix from '@/components/dashboard/ThemeMatrix.vue';
+import WeeklyMultiples from '@/components/dashboard/WeeklyMultiples.vue';
 import WhenHeatmap from '@/components/dashboard/WhenHeatmap.vue';
 import WinnerCard from '@/components/dashboard/WinnerCard.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
@@ -50,6 +57,7 @@ const props = defineProps<{
     selected: string[];
     max_compare: number;
     legacy_non_instagram_count?: number;
+    show_hidden_likes?: boolean;
     controls: {
         last_refreshed_at: string | null;
         next_refresh_at: string | null;
@@ -76,9 +84,16 @@ const props = defineProps<{
         cells: Record<string, unknown>[][];
         own_dots: { dow: number; block: number }[];
     }>;
+    captions: Card<Record<string, unknown>>;
+    themes: Card<Record<string, unknown>>;
+    weekly: Card<Record<string, unknown>>;
+    attention: Card<Record<string, unknown>>;
+    actions: Card<{ items: { text: string; links_to: string; n: number }[]; peer_only?: boolean }>;
+    data_notes: Card<Record<string, unknown>>;
 }>();
 
 const winnerTab = ref<'winners' | 'flops'>('winners');
+const showHiddenTip = ref(false);
 
 const showOnboarding = computed(
     () => props.onboarding.status === 'ok' && !(props.onboarding.data?.hide ?? false),
@@ -86,15 +101,17 @@ const showOnboarding = computed(
 
 const hasInstagramSet = computed(() => props.rivals.length > 0 || props.own_account != null);
 
-function refreshQuery(next: { accounts?: string[]; period?: number }): void {
+function refreshQuery(next: { accounts?: string[]; period?: number; hidden?: boolean }): void {
     const accounts = next.accounts ?? props.selected;
     const period = next.period ?? props.period;
+    const hidden = next.hidden ?? props.show_hidden_likes ?? false;
 
     router.get(
         dashboard.url({
             query: {
                 accounts: accounts.join(','),
                 period: String(period),
+                hidden: hidden ? '1' : '0',
             },
         }),
         {},
@@ -200,6 +217,29 @@ const winnerItems = computed(() => {
                 </button>
 
                 <div class="ml-auto flex items-center gap-2">
+                    <label class="inline-flex items-center gap-1 text-[10px] text-slate-500" title="Include posts with hidden likes in winner lists">
+                        <input
+                            type="checkbox"
+                            class="size-3 rounded border-slate-300"
+                            :checked="!!show_hidden_likes"
+                            @change="refreshQuery({ hidden: !show_hidden_likes })"
+                        >
+                        Hidden likes
+                        <button
+                            type="button"
+                            class="relative rounded p-0.5 text-slate-400 hover:text-slate-700"
+                            @click.prevent="showHiddenTip = !showHiddenTip"
+                            @blur="showHiddenTip = false"
+                        >
+                            <Info class="h-3 w-3" />
+                            <span
+                                v-if="showHiddenTip"
+                                class="absolute right-0 z-20 mt-2 w-56 rounded border border-slate-200 bg-white p-2 text-left text-[10px] leading-snug text-slate-600 shadow-sm"
+                            >
+                                Some accounts hide like counts. Those posts are left out of engagement averages and winner rankings by default. Turn this on to include them in post lists, ranked on comments and views.
+                            </span>
+                        </button>
+                    </label>
                     <div class="flex items-center gap-0.5 rounded border border-slate-200 p-0.5">
                         <button
                             v-for="days in periods"
@@ -402,20 +442,116 @@ const winnerItems = computed(() => {
                     </DashCard>
                 </div>
 
+                <div class="grid gap-2.5 xl:grid-cols-2">
+                    <DashCard
+                        title="When posts do best"
+                        why="Peer timing evidence in Europe/London, not generic '5 AM' advice."
+                        formula="Cell = median Performance Index. Grey when n < 3. Your posts as dots."
+                        anchor="heatmap"
+                    >
+                        <WhenHeatmap
+                            :status="heatmap.status"
+                            :reason="heatmap.reason"
+                            :days="heatmap.data?.days"
+                            :blocks="heatmap.data?.blocks"
+                            :cells="(heatmap.data?.cells as any) || []"
+                            :own-dots="heatmap.data?.own_dots || []"
+                            :mode="heatmap.data?.mode || 'pi'"
+                        />
+                    </DashCard>
+
+                    <DashCard
+                        title="Share of attention"
+                        why="Who gets outsized attention per post (proxy, not true SOV)."
+                        formula="eng_share = Σinteractions(a)/Σall · post_share = posts(a)/posts(all)"
+                        anchor="attention"
+                    >
+                        <AttentionBars
+                            :status="attention.status"
+                            :reason="attention.reason"
+                            :rows="(attention.data?.rows as any) || []"
+                        />
+                    </DashCard>
+                </div>
+
                 <DashCard
-                    title="When posts do best"
-                    why="Peer timing evidence in Europe/London, not generic '5 AM' advice."
-                    formula="Cell = median Performance Index. Grey when n < 3. Your posts as dots."
-                    anchor="heatmap"
+                    title="Captions and hooks"
+                    why="Free changes to how posts are written."
+                    formula="Length excludes trailing hashtags. CTA via regex. Hooks from top PI winners."
+                    anchor="captions"
                 >
-                    <WhenHeatmap
-                        :status="heatmap.status"
-                        :reason="heatmap.reason"
-                        :days="heatmap.data?.days"
-                        :blocks="heatmap.data?.blocks"
-                        :cells="(heatmap.data?.cells as any) || []"
-                        :own-dots="heatmap.data?.own_dots || []"
-                        :mode="heatmap.data?.mode || 'pi'"
+                    <CaptionPanels
+                        :status="captions.status"
+                        :reason="captions.reason"
+                        :length-buckets="(captions.data?.length_buckets as any) || []"
+                        :ctas="(captions.data?.ctas as any) || []"
+                        :hashtag-buckets="(captions.data?.hashtag_buckets as any) || []"
+                        :hooks="(captions.data?.hooks as any) || []"
+                    />
+                </DashCard>
+
+                <div class="grid gap-2.5 xl:grid-cols-3">
+                    <DashCard
+                        class="xl:col-span-2"
+                        title="Topics and themes"
+                        why="Topic gaps peers win with that you skip."
+                        formula="share = posts(theme)/posts · colour = median PI"
+                        anchor="themes"
+                    >
+                        <ThemeMatrix
+                            :status="themes.status"
+                            :reason="themes.reason"
+                            :accounts="(themes.data?.accounts as any) || []"
+                            :matrix="(themes.data?.matrix as any) || []"
+                            :gaps="(themes.data?.gaps as any) || []"
+                        />
+                    </DashCard>
+
+                    <DashCard
+                        title="Your next 3 moves"
+                        why="Closes the loop from analysis to action."
+                        formula="Top gap rules where You is below peer median and n ≥ 5."
+                        anchor="actions"
+                    >
+                        <ActionList
+                            :status="actions.status"
+                            :reason="actions.reason"
+                            :items="actions.data?.items"
+                            :peer-only="!!actions.data?.peer_only"
+                        />
+                    </DashCard>
+                </div>
+
+                <DashCard
+                    title="Week-over-week"
+                    why="What changed since you last looked."
+                    formula="ISO weeks Mon-Sun in Europe/London."
+                    anchor="weekly"
+                >
+                    <WeeklyMultiples
+                        :status="weekly.status"
+                        :reason="weekly.reason"
+                        :weeks="(weekly.data?.weeks as any) || []"
+                        :series="(weekly.data?.series as any) || []"
+                        :deltas="(weekly.data?.deltas as any) || null"
+                    />
+                </DashCard>
+
+                <DashCard
+                    title="Data notes"
+                    why="Trust after the 102% ER incident."
+                    formula="Posts analysed, range, excluded hidden likes. Reach/saves/shares are private."
+                    anchor="data_notes"
+                >
+                    <DataNotes
+                        :status="data_notes.status"
+                        :reason="data_notes.reason"
+                        :accounts="(data_notes.data?.accounts as any) || []"
+                        :range="(data_notes.data?.range as string) || null"
+                        :last-refreshed-at="(data_notes.data?.last_refreshed_at as string) || null"
+                        :excluded-hidden-likes="Number(data_notes.data?.excluded_hidden_likes || 0)"
+                        :note="(data_notes.data?.note as string) || null"
+                        :format-uk="formatUk"
                     />
                 </DashCard>
             </template>

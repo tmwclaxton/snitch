@@ -12,6 +12,7 @@ withDefaults(
             pi: number;
             early: boolean;
             likes: number | null;
+            likes_hidden?: boolean;
             comments: number;
             views: number | null;
             hook: string;
@@ -59,7 +60,8 @@ const fmt = new Intl.NumberFormat('en-GB');
             </div>
             <p v-if="!compact" class="mt-0.5 line-clamp-1 text-[10px] text-slate-600">{{ post.hook || 'No caption' }}</p>
             <div class="mt-0.5 text-[10px] tabular-nums text-slate-500">
-                <span v-if="post.likes != null">{{ fmt.format(post.likes) }}♥</span>
+                <span v-if="post.likes_hidden" class="rounded bg-amber-50 px-1 text-amber-700">likes hidden</span>
+                <span v-else-if="post.likes != null">{{ fmt.format(post.likes) }}♥</span>
                 <span v-else>—</span>
                 · {{ fmt.format(post.comments) }}💬
             </div>

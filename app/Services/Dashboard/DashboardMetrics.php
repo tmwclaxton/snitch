@@ -26,7 +26,7 @@ class DashboardMetrics
      * @param  list<string>  $selectedHandles
      * @return array<string, mixed>
      */
-    public function forUser(User $user, array $selectedHandles = [], int $periodDays = 30): array
+    public function forUser(User $user, array $selectedHandles = [], int $periodDays = 30, bool $showHiddenLikes = false): array
     {
         $periodDays = in_array($periodDays, self::PERIODS, true) ? $periodDays : 30;
 
@@ -34,7 +34,8 @@ class DashboardMetrics
             $user,
             (string) $periodDays,
             $selectedHandles,
-            fn (): array => $this->build($user, $selectedHandles, $periodDays),
+            fn (): array => $this->build($user, $selectedHandles, $periodDays, $showHiddenLikes),
+            $showHiddenLikes,
         );
     }
 
@@ -74,6 +75,7 @@ class DashboardMetrics
             'format_mix' => CardResult::empty('Not built yet.'),
             'format_lift' => CardResult::empty('Not built yet.'),
             'heatmap' => CardResult::empty('Not built yet.'),
+            'show_hidden_likes' => false,
             'captions' => CardResult::empty('Not built yet.'),
             'themes' => CardResult::empty('Not built yet.'),
             'weekly' => CardResult::empty('Not built yet.'),
@@ -87,7 +89,7 @@ class DashboardMetrics
      * @param  list<string>  $selectedHandles
      * @return array<string, mixed>
      */
-    private function build(User $user, array $selectedHandles, int $periodDays): array
+    private function build(User $user, array $selectedHandles, int $periodDays, bool $showHiddenLikes = false): array
     {
         $allTrackers = $user->trackedAccounts()
             ->competitors()
@@ -153,17 +155,23 @@ class DashboardMetrics
         $insights = $this->insightsCard($insightContext, $peerRows, $periodPosts);
         $kpis = $this->kpisCard($ownRow, $peerRows, $enrichedAll, $periodDays);
         $leaderboard = $this->leaderboardCard($accountRows, $periodPosts);
-        $winners = $this->winnersCard($periodPosts);
+        $winners = $this->winnersCard($periodPosts, $showHiddenLikes);
         $growthSeries = $this->growthSeriesCard($visibleAccounts, $snapshots);
         $efficiency = $this->efficiencyCard($accountRows);
         $formatMix = $this->formatMixCard($accountRows, $periodPosts);
         $formatLift = $this->formatLiftCard($accountRows, $periodPosts);
         $heatmap = $this->heatmapCard($periodPosts);
-
         $lastSynced = $accounts
             ->map(fn (TrackedAccount $a) => $a->last_synced_at)
             ->filter()
             ->max();
+
+        $captions = $this->captionsCard($periodPosts, $accountRows);
+        $themes = $this->themesCard($periodPosts, $accountRows);
+        $weekly = $this->weeklyCard($accountRows, $enrichedAll, $snapshots);
+        $attention = $this->attentionCard($accountRows);
+        $actions = $this->actionsCard($insightContext, $ownRow);
+        $dataNotes = $this->dataNotesCard($accountRows, $periodPosts, $periodDays, $lastSynced);
 
         return [
             'period' => $periodDays,
@@ -181,6 +189,7 @@ class DashboardMetrics
             'selected' => $validSelected->all(),
             'max_compare' => self::MAX_COMPARE,
             'legacy_non_instagram_count' => $nonIgCount,
+            'show_hidden_likes' => $showHiddenLikes,
             'controls' => [
                 'last_refreshed_at' => $lastSynced?->timezone(DashboardMath::TIMEZONE)->toIso8601String(),
                 'next_refresh_at' => CarbonImmutable::now(DashboardMath::TIMEZONE)
@@ -200,12 +209,12 @@ class DashboardMetrics
             'format_mix' => $formatMix,
             'format_lift' => $formatLift,
             'heatmap' => $heatmap,
-            'captions' => CardResult::empty('Caption panels arrive later.'),
-            'themes' => CardResult::empty('Theme matrix arrives later.'),
-            'weekly' => CardResult::empty('Week-over-week trends arrive later.'),
-            'attention' => CardResult::empty('Share of attention arrives later.'),
-            'actions' => CardResult::empty('Action list arrives later.'),
-            'data_notes' => CardResult::empty('Data notes arrive later.'),
+            'captions' => $captions,
+            'themes' => $themes,
+            'weekly' => $weekly,
+            'attention' => $attention,
+            'actions' => $actions,
+            'data_notes' => $dataNotes,
         ];
     }
 
@@ -319,6 +328,8 @@ class DashboardMetrics
                 'hashtag_count' => $this->math->hashtagCount($post->caption),
                 'mention_count' => $this->math->mentionCount($post->caption),
                 'length_bucket' => $this->math->captionLengthBucket($post->caption),
+                'theme' => $this->math->classifyTheme($post->caption),
+                'hook_pattern' => $this->math->hookPattern($this->math->hook($post->caption)),
                 'thumbnail_url' => $post->cover_url,
                 'url' => $post->url,
                 'dow' => $bucket['dow'] ?? null,
@@ -442,6 +453,7 @@ class DashboardMetrics
 
             return [
                 'id' => $account->id,
+                'social_account_id' => $sid,
                 'handle' => $account->handle,
                 'display_name' => $account->display_name,
                 'avatar' => $account->avatar,
@@ -684,9 +696,54 @@ class DashboardMetrics
             'best_heatmap_cell' => $bestCell,
             'cta_question' => $ctaQuestion,
             'hashtag_lift' => $hashtagLift,
-            'theme_gap' => null,
+            'theme_gap' => $this->themeGapForInsights($periodPosts, $ownRow),
             'wow_change' => null,
         ];
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $periodPosts
+     * @param  array<string, mixed>|null  $ownRow
+     * @return array{theme: string, pi: float, n: int}|null
+     */
+    private function themeGapForInsights(Collection $periodPosts, ?array $ownRow): ?array
+    {
+        $peer = $periodPosts->where('is_own_account', false);
+        $ownThemes = $periodPosts
+            ->where('is_own_account', true)
+            ->pluck('theme')
+            ->unique()
+            ->all();
+
+        $best = null;
+
+        foreach ($peer->groupBy('theme') as $theme => $rows) {
+            if ($theme === 'other' || in_array($theme, $ownThemes, true)) {
+                continue;
+            }
+
+            $pis = $rows->pluck('pi')->filter(fn ($v) => is_numeric($v))->values();
+
+            if ($pis->count() < DashboardMath::MIN_SAMPLE) {
+                continue;
+            }
+
+            $pi = $this->math->median($pis);
+
+            if ($pi === null || $pi < 1.3) {
+                continue;
+            }
+
+            if ($best === null || $pi > $best['pi']) {
+                $best = [
+                    'theme' => $this->math->themeLabel((string) $theme),
+                    'pi' => $pi,
+                    'n' => $pis->count(),
+                ];
+            }
+        }
+
+        return $best;
     }
 
     /**
@@ -938,11 +995,42 @@ class DashboardMetrics
      * @param  Collection<int, array<string, mixed>>  $periodPosts
      * @return array{status: string, n: int, data: mixed, reason: string|null}
      */
-    private function winnersCard(Collection $periodPosts): array
+    private function winnersCard(Collection $periodPosts, bool $showHiddenLikes = false): array
     {
-        $scored = $periodPosts
-            ->filter(fn (array $row): bool => is_numeric($row['pi']) && ! $row['hidden_likes'])
+        $visible = $periodPosts
+            ->filter(fn (array $row): bool => ! $row['hidden_likes'] && is_numeric($row['pi']))
             ->values();
+
+        $hiddenExtras = collect();
+
+        if ($showHiddenLikes) {
+            $hiddenExtras = $periodPosts
+                ->filter(fn (array $row): bool => $row['hidden_likes'])
+                ->map(function (array $row) use ($periodPosts): array {
+                    $sid = (int) $row['social_account_id'];
+
+                    // Rank hidden-like posts on comments (+ views) vs the account's
+                    // visible median - never invent a like-based PI.
+                    $proxyBase = $this->math->median(
+                        $periodPosts
+                            ->where('social_account_id', $sid)
+                            ->filter(fn (array $prior): bool => ! $prior['hidden_likes'])
+                            ->map(fn (array $prior): float => (float) $prior['comments'] + ((float) $prior['views'] * 0.01))
+                            ->values(),
+                    );
+                    $score = (float) $row['comments'] + ((float) $row['views'] * 0.01);
+                    $row['pi'] = $proxyBase !== null && $proxyBase > 0
+                        ? $score / $proxyBase
+                        : null;
+                    $row['likes_hidden_badge'] = true;
+
+                    return $row;
+                })
+                ->filter(fn (array $row): bool => is_numeric($row['pi']))
+                ->values();
+        }
+
+        $scored = $visible->concat($hiddenExtras)->values();
 
         if ($scored->isEmpty()) {
             $early = $periodPosts->filter(fn (array $row): bool => ($row['prior_n'] ?? 0) < DashboardMath::PI_MIN_PRIORS);
@@ -971,7 +1059,7 @@ class DashboardMetrics
             ->all();
 
         $flops = $scored
-            ->filter(fn (array $row): bool => (float) $row['pi'] <= DashboardMath::FLOP_THRESHOLD)
+            ->filter(fn (array $row): bool => (float) $row['pi'] <= DashboardMath::FLOP_THRESHOLD && ! ($row['likes_hidden_badge'] ?? false))
             ->sortBy('pi')
             ->take(6)
             ->map(fn (array $row): array => $this->winnerPayload($row))
@@ -1007,6 +1095,7 @@ class DashboardMetrics
             'pi' => $this->math->round1((float) $row['pi']),
             'early' => (bool) $row['early'],
             'likes' => $row['likes'],
+            'likes_hidden' => (bool) ($row['likes_hidden_badge'] ?? $row['hidden_likes'] ?? false),
             'comments' => $row['comments'],
             'views' => $row['format'] === 'Reel' ? $row['views'] : null,
             'hook' => $row['hook'],
@@ -1014,6 +1103,7 @@ class DashboardMetrics
                 ($row['mention_count'] ?? 0) > 0 ? 'collab' : null,
                 in_array('question', $row['ctas'] ?? [], true) ? 'question' : null,
                 in_array('link_in_bio', $row['ctas'] ?? [], true) ? 'link in bio' : null,
+                ($row['likes_hidden_badge'] ?? false) ? 'likes hidden' : null,
             ])),
             'thumbnail_url' => $row['thumbnail_url'],
             'url' => $row['url'],
@@ -1289,5 +1379,386 @@ class DashboardMetrics
             'cells' => $cells,
             'own_dots' => $ownDots,
         ], $n);
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $periodPosts
+     * @param  Collection<int, array<string, mixed>>  $accountRows
+     * @return array{status: string, n: int, data: mixed, reason: string|null}
+     */
+    private function captionsCard(Collection $periodPosts, Collection $accountRows): array
+    {
+        $scored = $periodPosts->filter(fn (array $row): bool => is_numeric($row['pi']) && ! $row['hidden_likes']);
+
+        if ($scored->count() < DashboardMath::MIN_SAMPLE) {
+            return CardResult::insufficient(
+                $this->math->insufficientReason($scored->count()),
+                $scored->count(),
+            );
+        }
+
+        $lengthBuckets = [];
+
+        foreach (['<50', '50-150', '150-500', '500+'] as $bucket) {
+            $rows = $scored->where('length_bucket', $bucket);
+            $n = $rows->count();
+            $lengthBuckets[] = [
+                'bucket' => $bucket,
+                'n' => $n,
+                'pi' => $n >= 3 ? $this->math->round2($this->math->median($rows->pluck('pi'))) : null,
+            ];
+        }
+
+        $ctaTypes = ['question', 'tag_friend', 'comment', 'save', 'share', 'link_in_bio', 'dm_or_signup'];
+        $ctaRows = [];
+
+        foreach ($ctaTypes as $type) {
+            $with = $scored->filter(fn (array $row): bool => in_array($type, $row['ctas'] ?? [], true));
+            $without = $scored->filter(fn (array $row): bool => ! in_array($type, $row['ctas'] ?? [], true));
+            $nWith = $with->count();
+
+            if ($nWith < 3) {
+                continue;
+            }
+
+            $ctaRows[] = [
+                'type' => str_replace('_', ' ', $type),
+                'share_pct' => $this->math->round1(($nWith / max(1, $scored->count())) * 100),
+                'pi_with' => $this->math->round2($this->math->median($with->pluck('pi'))),
+                'pi_without' => $without->count() >= 3
+                    ? $this->math->round2($this->math->median($without->pluck('pi')))
+                    : null,
+                'n' => $nWith,
+            ];
+        }
+
+        $hashBuckets = [];
+
+        foreach ([['0', fn ($n) => $n === 0], ['1-3', fn ($n) => $n >= 1 && $n <= 3], ['4+', fn ($n) => $n >= 4]] as [$label, $pred]) {
+            $rows = $scored->filter(fn (array $row): bool => $pred((int) ($row['hashtag_count'] ?? 0)));
+            $n = $rows->count();
+            $hashBuckets[] = [
+                'bucket' => $label,
+                'n' => $n,
+                'pi' => $n >= 3 ? $this->math->round2($this->math->median($rows->pluck('pi'))) : null,
+            ];
+        }
+
+        $hooks = $scored
+            ->filter(fn (array $row): bool => (float) $row['pi'] >= DashboardMath::WINNER_THRESHOLD && filled($row['hook']))
+            ->sortByDesc('pi')
+            ->take(5)
+            ->map(fn (array $row): array => [
+                'handle' => $row['handle'],
+                'hook' => $row['hook'],
+                'pattern' => $row['hook_pattern'] ?? 'plain',
+                'pi' => $this->math->round1((float) $row['pi']),
+            ])
+            ->values()
+            ->all();
+
+        $avgHashtags = $accountRows->map(fn (array $row): array => [
+            'handle' => $row['handle'],
+            'is_own_account' => $row['is_own_account'],
+            'avg' => $this->math->round1(
+                (float) $periodPosts
+                    ->where('social_account_id', $row['social_account_id'] ?? null)
+                    ->avg('hashtag_count'),
+            ),
+        ])->all();
+
+        // Fallback: attach by handle when social_account_id missing on accountRows
+        if ($avgHashtags === [] || collect($avgHashtags)->every(fn (array $r) => $r['avg'] === null)) {
+            $avgHashtags = $accountRows->map(function (array $row) use ($periodPosts): array {
+                $posts = $periodPosts->where('handle', $row['handle']);
+
+                return [
+                    'handle' => $row['handle'],
+                    'is_own_account' => $row['is_own_account'],
+                    'avg' => $posts->isEmpty()
+                        ? null
+                        : $this->math->round1((float) $posts->avg('hashtag_count')),
+                ];
+            })->all();
+        }
+
+        return CardResult::ok([
+            'length_buckets' => $lengthBuckets,
+            'ctas' => $ctaRows,
+            'hashtag_buckets' => $hashBuckets,
+            'avg_hashtags' => $avgHashtags,
+            'hooks' => $hooks,
+        ], $scored->count());
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $periodPosts
+     * @param  Collection<int, array<string, mixed>>  $accountRows
+     * @return array{status: string, n: int, data: mixed, reason: string|null}
+     */
+    private function themesCard(Collection $periodPosts, Collection $accountRows): array
+    {
+        $usable = $periodPosts->filter(fn (array $row): bool => filled($row['theme'] ?? null));
+
+        if ($usable->count() < 10) {
+            return CardResult::insufficient(
+                'Need 10+ classified posts.',
+                $usable->count(),
+            );
+        }
+
+        $themes = $usable->pluck('theme')->unique()->sort()->values();
+        $handles = $accountRows->map(fn (array $row): array => [
+            'handle' => $row['handle'],
+            'is_own_account' => $row['is_own_account'],
+        ])->values();
+
+        $matrix = [];
+
+        foreach ($themes as $theme) {
+            $cells = [];
+
+            foreach ($handles as $account) {
+                $rows = $usable->where('handle', $account['handle'])->where('theme', $theme);
+                $accountPosts = $usable->where('handle', $account['handle']);
+                $n = $rows->count();
+                $share = $accountPosts->count() > 0
+                    ? $this->math->round1(($n / $accountPosts->count()) * 100)
+                    : 0.0;
+                $pis = $rows->pluck('pi')->filter(fn ($v) => is_numeric($v))->values();
+                $cells[] = [
+                    'handle' => $account['handle'],
+                    'share' => $share,
+                    'pi' => $pis->count() >= 3 ? $this->math->round2($this->math->median($pis)) : null,
+                    'n' => $n,
+                ];
+            }
+
+            $matrix[] = [
+                'theme' => $this->math->themeLabel((string) $theme),
+                'theme_key' => (string) $theme,
+                'cells' => $cells,
+            ];
+        }
+
+        $ownHandle = $accountRows->firstWhere('is_own_account', true)['handle'] ?? null;
+        $gaps = [];
+
+        foreach ($matrix as $row) {
+            $ownCell = collect($row['cells'])->firstWhere('handle', $ownHandle);
+            $peerCells = collect($row['cells'])->where('handle', '!=', $ownHandle);
+            $peerPi = $this->math->median($peerCells->pluck('pi')->filter(fn ($v) => $v !== null)->values());
+            $ownShare = (float) ($ownCell['share'] ?? 0);
+
+            if ($peerPi !== null && $peerPi >= 1.3 && $ownShare <= 0.0) {
+                $gaps[] = [
+                    'theme' => $row['theme'],
+                    'peer_pi' => $this->math->round1($peerPi),
+                    'n' => (int) $peerCells->sum('n'),
+                ];
+            }
+        }
+
+        return CardResult::ok([
+            'accounts' => $handles->all(),
+            'matrix' => $matrix,
+            'gaps' => array_slice($gaps, 0, 5),
+        ], $usable->count());
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $accountRows
+     * @param  Collection<int, array<string, mixed>>  $enrichedAll
+     * @param  Collection<int, Collection<int, array{captured_on: string, followers: int}>>  $snapshots
+     * @return array{status: string, n: int, data: mixed, reason: string|null}
+     */
+    private function weeklyCard(Collection $accountRows, Collection $enrichedAll, Collection $snapshots): array
+    {
+        $now = CarbonImmutable::now(DashboardMath::TIMEZONE)->startOfWeek();
+        $weeks = [];
+
+        for ($i = 11; $i >= 0; $i--) {
+            $start = $now->subWeeks($i);
+            $weeks[] = [
+                'label' => $start->format('j M'),
+                'start' => $start->utc(),
+                'end' => $start->endOfWeek()->utc(),
+            ];
+        }
+
+        $series = $accountRows->map(function (array $row) use ($weeks, $enrichedAll, $snapshots): array {
+            $posts = $enrichedAll->where('handle', $row['handle']);
+            $snap = $snapshots->get($row['social_account_id'] ?? ($posts->first()['social_account_id'] ?? -1), collect());
+
+            $points = [];
+
+            foreach ($weeks as $week) {
+                $weekPosts = $posts->filter(function (array $post) use ($week): bool {
+                    if ($post['posted_at'] === null) {
+                        return false;
+                    }
+
+                    $posted = CarbonImmutable::parse($post['posted_at']);
+
+                    return $posted->gte($week['start']) && $posted->lte($week['end']);
+                });
+                $visible = $weekPosts->filter(fn (array $p): bool => ! $p['hidden_likes']);
+                $ers = $visible->pluck('er')->filter(fn ($v) => $v !== null)->values();
+                $followers = $this->math->followersAt($snap, $week['end'], $row['followers']);
+
+                $points[] = [
+                    'label' => $week['label'],
+                    'posts' => $weekPosts->count(),
+                    'interactions' => (int) $visible->sum(fn (array $p): int => (int) ($p['interactions'] ?? 0)),
+                    'er' => $ers->count() >= 1 ? $this->math->round2($this->math->median($ers)) : null,
+                    'followers' => $followers,
+                ];
+            }
+
+            return [
+                'handle' => $row['handle'],
+                'is_own_account' => $row['is_own_account'],
+                'points' => $points,
+            ];
+        })->values();
+
+        $own = $series->firstWhere('is_own_account', true);
+        $deltas = null;
+
+        if ($own !== null && count($own['points']) >= 2) {
+            $thisWeek = $own['points'][count($own['points']) - 1];
+            $lastWeek = $own['points'][count($own['points']) - 2];
+            $deltas = [
+                'posts' => $thisWeek['posts'] - $lastWeek['posts'],
+                'er' => ($thisWeek['er'] !== null && $lastWeek['er'] !== null)
+                    ? $this->math->round1($thisWeek['er'] - $lastWeek['er'])
+                    : null,
+            ];
+        }
+
+        $n = $enrichedAll->count();
+
+        if ($n < 5) {
+            return CardResult::insufficient('Trends appear after 2 weekly refreshes.', $n);
+        }
+
+        return CardResult::ok([
+            'weeks' => array_column($weeks, 'label'),
+            'series' => $series->all(),
+            'deltas' => $deltas,
+        ], $n);
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $accountRows
+     * @return array{status: string, n: int, data: mixed, reason: string|null}
+     */
+    private function attentionCard(Collection $accountRows): array
+    {
+        $usable = $accountRows->filter(fn (array $row): bool => ($row['posts_n'] ?? 0) > 0)->values();
+
+        if ($usable->count() < 2) {
+            return CardResult::insufficient('Needs 2+ accounts with posts in the period.', $usable->count());
+        }
+
+        $totalInteractions = max(1, (float) $usable->sum('interactions_sum'));
+        $totalPosts = max(1, (float) $usable->sum('posts_n'));
+
+        $rows = $usable->map(fn (array $row): array => [
+            'handle' => $row['handle'],
+            'is_own_account' => $row['is_own_account'],
+            'eng_share' => $this->math->round1((((float) ($row['interactions_sum'] ?? 0)) / $totalInteractions) * 100),
+            'post_share' => $this->math->round1((((float) $row['posts_n']) / $totalPosts) * 100),
+        ])->all();
+
+        return CardResult::ok(['rows' => $rows], $usable->count());
+    }
+
+    /**
+     * @param  array<string, mixed>  $insightContext
+     * @param  array<string, mixed>|null  $ownRow
+     * @return array{status: string, n: int, data: mixed, reason: string|null}
+     */
+    private function actionsCard(array $insightContext, ?array $ownRow): array
+    {
+        if ($ownRow === null) {
+            $peerOnly = collect($this->insightRules->top($insightContext, 3))
+                ->map(fn (array $row): array => [
+                    'text' => strip_tags(str_replace('**', '', $row['text'])),
+                    'links_to' => $row['links_to'],
+                    'n' => $row['n'],
+                ])
+                ->all();
+
+            return CardResult::insufficient(
+                'Add your own account to get personalised actions. Meanwhile, here is what works for peers:',
+                count($peerOnly),
+                ['items' => $peerOnly, 'peer_only' => true],
+            );
+        }
+
+        $items = [];
+        $peerPosts = $insightContext['peer_posts_per_week'] ?? null;
+        $youPosts = $ownRow['posts_per_week'] ?? null;
+
+        if (is_numeric($peerPosts) && is_numeric($youPosts) && (float) $youPosts < 0.5 * (float) $peerPosts) {
+            $items[] = [
+                'text' => sprintf('Post %.1f×/week (peers: %.1f)', max(1, round((float) $peerPosts)), (float) $peerPosts),
+                'links_to' => 'kpis',
+                'n' => (int) ($ownRow['posts_n'] ?? 0),
+            ];
+        }
+
+        foreach ($this->insightRules->top($insightContext, 8) as $insight) {
+            if (count($items) >= 3) {
+                break;
+            }
+
+            if (in_array($insight['category'], ['frequency', 'your_win'], true)) {
+                continue;
+            }
+
+            $items[] = [
+                'text' => strip_tags(str_replace('**', '', $insight['text'])),
+                'links_to' => $insight['links_to'],
+                'n' => $insight['n'],
+            ];
+        }
+
+        $items = array_slice($items, 0, 3);
+
+        if ($items === []) {
+            return CardResult::empty('Post 5 times to unlock comparisons.', (int) ($ownRow['posts_n'] ?? 0));
+        }
+
+        return CardResult::ok(['items' => $items, 'peer_only' => false], count($items));
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $accountRows
+     * @param  Collection<int, array<string, mixed>>  $periodPosts
+     * @return array{status: string, n: int, data: mixed, reason: string|null}
+     */
+    private function dataNotesCard(Collection $accountRows, Collection $periodPosts, int $periodDays, mixed $lastSynced): array
+    {
+        $hidden = $periodPosts->filter(fn (array $row): bool => $row['hidden_likes'])->count();
+        $perAccount = $accountRows->map(fn (array $row): array => [
+            'handle' => $row['handle'],
+            'is_own_account' => $row['is_own_account'],
+            'posts' => (int) ($row['posts_n'] ?? 0),
+        ])->all();
+
+        $from = CarbonImmutable::now(DashboardMath::TIMEZONE)->subDays($periodDays)->format('j M Y');
+        $to = CarbonImmutable::now(DashboardMath::TIMEZONE)->format('j M Y');
+
+        return CardResult::ok([
+            'accounts' => $perAccount,
+            'range' => "{$from} - {$to}",
+            'last_refreshed_at' => $lastSynced instanceof \DateTimeInterface
+                ? CarbonImmutable::parse($lastSynced)->timezone(DashboardMath::TIMEZONE)->toIso8601String()
+                : null,
+            'excluded_hidden_likes' => $hidden,
+            'note' => 'Reach, saves and shares are private to each account and not included.',
+        ], $periodPosts->count());
     }
 }

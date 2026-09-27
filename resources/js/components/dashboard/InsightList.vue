@@ -18,15 +18,6 @@ defineProps<{
 
 const { colourFor } = useAccountColours();
 
-const ANCHOR_FALLBACKS: Record<string, string> = {
-    captions: 'winners',
-    themes: 'format_lift',
-    weekly: 'growth_series',
-    attention: 'leaderboard',
-    actions: 'insights',
-    data_notes: 'kpis',
-};
-
 function handleFromText(text: string): string | null {
     const match = text.match(/@([a-zA-Z0-9._]+)/);
 
@@ -47,13 +38,8 @@ function htmlText(text: string): string {
     return escaped.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-slate-900">$1</strong>');
 }
 
-function resolveAnchor(id: string): string {
-    return ANCHOR_FALLBACKS[id] ?? id;
-}
-
 function scrollTo(id: string): void {
-    const targetId = resolveAnchor(id);
-    const el = document.getElementById(targetId);
+    const el = document.getElementById(id);
 
     if (!el) {
         return;

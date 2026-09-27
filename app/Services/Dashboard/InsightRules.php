@@ -16,19 +16,9 @@ namespace App\Services\Dashboard;
 class InsightRules
 {
     /**
-     * Card anchors currently rendered on /dashboard.
-     * Deferred cards (captions/themes/weekly/…) map to the nearest live section.
-     *
      * @var array<string, string>
      */
-    public const ANCHOR_ALIASES = [
-        'captions' => 'winners',
-        'themes' => 'format_lift',
-        'weekly' => 'growth_series',
-        'attention' => 'leaderboard',
-        'actions' => 'insights',
-        'data_notes' => 'kpis',
-    ];
+    public const ANCHOR_ALIASES = [];
 
     /** @var list<string> */
     public const LIVE_ANCHORS = [
@@ -42,6 +32,12 @@ class InsightRules
         'format_mix',
         'format_lift',
         'heatmap',
+        'captions',
+        'themes',
+        'weekly',
+        'attention',
+        'actions',
+        'data_notes',
     ];
 
     public function resolveAnchor(string $linksTo): string

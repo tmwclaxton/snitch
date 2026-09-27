@@ -347,6 +347,59 @@ class DashboardMath
         return rtrim(mb_substr($firstLine, 0, $max - 1)).'…';
     }
 
+    /**
+     * Lightweight caption theme for community / meetup peers.
+     */
+    public function classifyTheme(?string $caption): string
+    {
+        $text = mb_strtolower((string) $caption);
+
+        if ($text === '') {
+            return 'other';
+        }
+
+        return match (true) {
+            (bool) preg_match('/\b(recap|highlights|last (week|night|sunday)|threw back|dump)\b/u', $text) => 'event_recap',
+            (bool) preg_match('/\b(join us|this (saturday|sunday|week)|come along|sign up|tickets?|meetup)\b/u', $text) => 'meetup_invite',
+            (bool) preg_match('/\b(how to|tips?|guide|ways to|checklist)\b/u', $text) => 'tip_howto',
+            (bool) preg_match('/\b(volunteer|food bank|park tidy|charity|donate)\b/u', $text) => 'volunteer',
+            (bool) preg_match('/\b(badminton|walk|hike|football|run|gym|board games?|picnic|escape room)\b/u', $text) => 'activity',
+            (bool) preg_match('/\b(made a friend|lonel(y|iness)|community|belong)\b/u', $text) => 'social_proof',
+            default => 'other',
+        };
+    }
+
+    public function themeLabel(string $theme): string
+    {
+        return match ($theme) {
+            'event_recap' => 'event recap',
+            'meetup_invite' => 'meetup invite',
+            'tip_howto' => 'tip / how-to',
+            'volunteer' => 'volunteer',
+            'activity' => 'activity',
+            'social_proof' => 'social proof',
+            default => 'other',
+        };
+    }
+
+    public function hookPattern(?string $hook): string
+    {
+        $text = trim((string) $hook);
+
+        if ($text === '') {
+            return 'plain';
+        }
+
+        return match (true) {
+            str_contains($text, '?') => 'question',
+            (bool) preg_match('/^\d+|^\d+\s|\blist\b/i', $text) => 'number_list',
+            (bool) preg_match('/\bpov\b/i', $text) => 'pov',
+            (bool) preg_match('/\bfirst time\b/i', $text) => 'first_time',
+            (bool) preg_match('/\b(sat|sun|mon|tue|wed|thu|fri|saturday|sunday)\b/i', $text) => 'event_date',
+            default => 'plain',
+        };
+    }
+
     public function insufficientReason(int $n): string
     {
         return "Not enough posts yet (n={$n})";

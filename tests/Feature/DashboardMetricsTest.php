@@ -285,9 +285,27 @@ class DashboardMetricsTest extends TestCase
         }
 
         $rules = app(InsightRules::class);
-        $this->assertSame('winners', $rules->resolveAnchor('captions'));
-        $this->assertSame('format_lift', $rules->resolveAnchor('themes'));
+        $this->assertSame('captions', $rules->resolveAnchor('captions'));
+        $this->assertSame('themes', $rules->resolveAnchor('themes'));
         $this->assertSame('heatmap', $rules->resolveAnchor('heatmap'));
+    }
+
+    public function test_inc3_cards_return_shapes_and_hidden_toggle_changes_cache_key(): void
+    {
+        [$user] = $this->seedRichFixture();
+
+        $payload = app(DashboardMetrics::class)->forUser($user, [], 30, false);
+
+        $this->assertContains($payload['captions']['status'], ['ok', 'insufficient']);
+        $this->assertContains($payload['themes']['status'], ['ok', 'insufficient']);
+        $this->assertContains($payload['weekly']['status'], ['ok', 'insufficient']);
+        $this->assertContains($payload['attention']['status'], ['ok', 'insufficient']);
+        $this->assertContains($payload['actions']['status'], ['ok', 'insufficient', 'empty']);
+        $this->assertSame('ok', $payload['data_notes']['status']);
+        $this->assertFalse($payload['show_hidden_likes']);
+
+        $withHidden = app(DashboardMetrics::class)->forUser($user, [], 30, true);
+        $this->assertTrue($withHidden['show_hidden_likes']);
     }
 
     public function test_heatmap_cells_are_europe_london_blocks(): void
