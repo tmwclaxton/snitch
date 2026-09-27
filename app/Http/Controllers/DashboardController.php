@@ -70,15 +70,20 @@ class DashboardController extends Controller
             return Inertia::render('Dashboard', $metrics->emptyPayload());
         }
 
-        $load = fn (): array => $metrics->forUser($user, $handles, $period, $showHiddenLikes);
+        // Build once for the first paint (fills cache). Closures on immediate
+        // keys would become Inertia optional/lazy props and skip the response.
+        $payload = $metrics->forUser($user, $handles, $period, $showHiddenLikes);
         $props = [];
 
         foreach (self::IMMEDIATE_KEYS as $key) {
-            $props[$key] = fn () => $load()[$key] ?? null;
+            $props[$key] = $payload[$key] ?? null;
         }
 
         foreach (self::PANEL_KEYS as $key) {
-            $props[$key] = Inertia::defer(fn () => $load()[$key] ?? null, 'panel');
+            $props[$key] = Inertia::defer(
+                fn () => $metrics->forUser($user, $handles, $period, $showHiddenLikes)[$key] ?? null,
+                'panel',
+            );
         }
 
         return Inertia::render('Dashboard', $props);
