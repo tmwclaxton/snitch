@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Platform;
 use App\Enums\TrackedAccountKind;
+use App\Services\Dashboard\DashboardCache;
 use App\Services\SocialAccounts\SocialAccountResolver;
 use App\Services\Tracking\FollowerCountRefresher;
 use Carbon\CarbonInterface;
@@ -126,6 +127,18 @@ class TrackedAccount extends Model
                 'avatar' => $account->avatar,
                 'display_name' => $account->display_name,
             ], static fn (mixed $value): bool => $value !== null && $value !== ''))->save();
+        });
+
+        static::saved(function (TrackedAccount $account): void {
+            if ($account->user_id !== null) {
+                app(DashboardCache::class)->forgetForUser((int) $account->user_id);
+            }
+        });
+
+        static::deleted(function (TrackedAccount $account): void {
+            if ($account->user_id !== null) {
+                app(DashboardCache::class)->forgetForUser((int) $account->user_id);
+            }
         });
     }
 

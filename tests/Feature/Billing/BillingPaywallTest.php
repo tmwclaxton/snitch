@@ -197,9 +197,10 @@ class BillingPaywallTest extends TestCase
                 ->where('subscription.paywall.can_top_up', false)
                 ->where('subscription.competitors_used', 0)
                 ->where('rivals', [])
-                ->where('kpis.posts', 0)
-                ->where('top_posts', [])
-                ->has('heatmap', 7)
+                ->where('kpis.status', 'empty')
+                ->where('leaderboard.status', 'empty')
+                ->where('winners.status', 'empty')
+                ->missing('top_posts')
                 ->missing('recent_posts')
                 ->missing('top_winners')
             );
@@ -310,7 +311,8 @@ class BillingPaywallTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('subscription.paywall.blocked', false)
                 ->where('rivals.0.handle', 'visible-rival')
-                ->where('kpis.posts', 1)
+                ->where('leaderboard.status', 'ok')
+                ->where('rivals.0.posts_count', 1)
             );
 
         $this->actingAs($user)

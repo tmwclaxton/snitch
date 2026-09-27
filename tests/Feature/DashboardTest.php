@@ -31,8 +31,9 @@ class DashboardTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
                 ->has('rivals', 0)
-                ->where('kpis.posts', 0)
-                ->has('heatmap', 7)
+                ->where('kpis.status', 'empty')
+                ->has('onboarding')
+                ->where('legacy_non_instagram_count', 0)
             );
     }
 
@@ -57,7 +58,7 @@ class DashboardTest extends TestCase
                 ->component('Dashboard')
                 ->has('rivals', 1)
                 ->where('rivals.0.handle', 'rivalbakery')
-                ->where('kpis.posts', 1)
+                ->where('leaderboard.status', 'ok')
             );
     }
 

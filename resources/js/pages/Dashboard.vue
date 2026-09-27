@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ExternalLink, X } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
+import CompareTable from '@/components/dashboard/CompareTable.vue';
+import DashCard from '@/components/dashboard/DashCard.vue';
+import EmptyState from '@/components/dashboard/EmptyState.vue';
+import InsightList from '@/components/dashboard/InsightList.vue';
+import StatCard from '@/components/dashboard/StatCard.vue';
+import WinnerCard from '@/components/dashboard/WinnerCard.vue';
+import SnitchAvatar from '@/components/SnitchAvatar.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 
@@ -10,337 +16,370 @@ defineOptions({
     layout: AppLayout,
 });
 
+type Card<T> = {
+    status: 'ok' | 'insufficient' | 'empty';
+    n: number;
+    data: T | null;
+    reason: string | null;
+};
+
 type Account = {
     id: number;
     handle: string;
     display_name: string | null;
     avatar: string | null;
-    followers: number;
+    followers: number | null;
     is_own_account: boolean;
     posts_count: number;
+    period_posts_count?: number;
+    no_posts_in_period?: boolean;
 };
 
-type Phrase = { text: string; count: number };
-
 const props = defineProps<{
+    period: number;
+    periods: number[];
+    timezone: string;
     own_account: Account | null;
     rivals: Account[];
-    legacy_non_instagram_count?: number;
     selected: string[];
     max_compare: number;
-    headline: string | null;
-    insights: {
-        bestTimes: { day: string; hour: number }[];
-        formatStats: { format: string }[];
-        bestLength: { label: string } | null;
-        patternLifts: { label: string }[];
-        hasAnyData: boolean;
+    legacy_non_instagram_count?: number;
+    controls: {
+        last_refreshed_at: string | null;
+        next_refresh_at: string | null;
+        has_non_instagram_trackers: boolean;
+        ready?: boolean;
     };
-    gaps: { label: string; detail: string }[];
-    kpis: {
-        avg_er: number;
-        posts: number;
-        posts_week: number;
-        avg_likes: number;
-        avg_comments: number;
-    };
-    compare: {
-        handle: string;
-        avatar: string | null;
-        followers: number;
-        avg_er: number;
-        posts: number;
-        posts_week: number;
-        avg_likes: number;
-        avg_comments: number;
-    }[];
-    top_posts: {
-        id: number;
-        handle: string | null;
-        caption: string | null;
-        likes: number | null;
-        comments: number;
-        er: number;
-        thumbnail_url: string | null;
-        url: string | null;
-    }[];
-    heatmap: number[][];
-    format_split: { handle: string; count: number; reels: number; carousels: number; images: number }[];
-    phrases: { handle: string; avatar: string | null; words: Phrase[]; bigrams: Phrase[] }[];
+    onboarding: Card<{
+        hide?: boolean;
+        steps: { key: string; label: string; done: boolean; suggestions?: string[] }[];
+        note?: string | null;
+    }>;
+    insights: Card<{ items: { category: string; text: string; score: number; n: number; links_to: string }[] }>;
+    kpis: Card<{ cards: Record<string, unknown>[] }>;
+    leaderboard: Card<{ rows: Record<string, unknown>[] }>;
+    winners: Card<{ winners: Record<string, unknown>[]; flops: Record<string, unknown>[] }>;
 }>();
 
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const mode = computed(() => (props.selected.length > 1 ? 'compare' : 'single'));
-const heatMax = computed(() => Math.max(1, ...props.heatmap.flat()));
-const maxFormat = computed(() => Math.max(1, ...props.format_split.map((row) => row.count)));
+const winnerTab = ref<'winners' | 'flops'>('winners');
 
-function toggle(handle: string): void {
+const showOnboarding = computed(
+    () => props.onboarding.status === 'ok' && !(props.onboarding.data?.hide ?? false),
+);
+
+const hasInstagramSet = computed(() => props.rivals.length > 0 || props.own_account != null);
+
+function refreshQuery(next: { accounts?: string[]; period?: number }): void {
+    const accounts = next.accounts ?? props.selected;
+    const period = next.period ?? props.period;
+
+    router.get(
+        dashboard.url({
+            query: {
+                accounts: accounts.join(','),
+                period: String(period),
+            },
+        }),
+        {},
+        { preserveState: true, replace: true },
+    );
+}
+
+function toggleAccount(handle: string): void {
+    const key = handle.toLowerCase();
     const current = [...props.selected];
-    const exists = current.includes(handle);
+    const exists = current.includes(key);
 
     if (exists && current.length === 1) {
         return;
     }
 
     const next = exists
-        ? current.filter((value) => value !== handle)
+        ? current.filter((value) => value !== key)
         : current.length >= props.max_compare
             ? current
-            : [...current, handle];
+            : [...current, key];
 
-    router.get(dashboard.url({ query: { accounts: next.join(',') } }), {}, { preserveState: true, replace: true });
+    refreshQuery({ accounts: next });
 }
 
-function pct(part: number, total: number): number {
-    return total > 0 ? Math.round((part / total) * 100) : 0;
+function formatUk(iso: string | null): string {
+    if (!iso) {
+        return '—';
+    }
+
+    try {
+        return new Intl.DateTimeFormat('en-GB', {
+            timeZone: props.timezone || 'Europe/London',
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+        }).format(new Date(iso));
+    } catch {
+        return iso;
+    }
 }
+
+const winnerItems = computed(() => {
+    const data = props.winners.data;
+
+    if (!data) {
+        return [];
+    }
+
+    return winnerTab.value === 'flops' ? (data.flops ?? []) : (data.winners ?? []);
+});
 </script>
 
 <template>
-    <div class="px-4 py-6 sm:px-8">
+    <div class="min-h-full bg-white px-4 py-6 sm:px-8">
         <Head title="Dashboard" />
-        <div class="mb-6 border-b border-neutral-200 pb-4">
-            <h1 class="text-xl font-semibold tracking-tight sm:text-2xl">Dashboard</h1>
-        </div>
 
-        <div v-if="rivals.length === 0" class="border border-dashed border-neutral-200 bg-white p-12 text-center">
-            <h2 class="text-lg font-semibold">
-                {{ own_account ? 'No rivals to compare yet' : 'No Instagram competitors yet' }}
-            </h2>
-            <p class="mt-2 text-sm text-neutral-500">
-                <template v-if="own_account">
-                    You have marked @{{ own_account.handle }} as your account. Add rival Instagram handles on Tracking to see the gap.
-                </template>
-                <template v-else-if="(legacy_non_instagram_count ?? 0) > 0">
-                    Tracking lists {{ legacy_non_instagram_count }} account{{ legacy_non_instagram_count === 1 ? '' : 's' }} from older platforms. This dashboard only compares Instagram rivals - add Instagram handles on Tracking to populate it.
-                </template>
-                <template v-else>
-                    Add Instagram competitor handles on Tracking to populate this dashboard. Only Instagram accounts appear here.
-                </template>
-            </p>
-            <Link
-                :href="competitors()"
-                class="mt-6 inline-block bg-[#F0C400] px-4 py-2 text-sm font-medium text-neutral-950 hover:opacity-90"
+        <div class="mx-auto max-w-[1200px] space-y-6">
+            <div class="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
+                    <p class="mt-1 text-sm text-slate-500">
+                        How your Instagram competitors post - and what tends to work.
+                    </p>
+                </div>
+                <div class="text-xs text-slate-500">
+                    <div>Data refreshed {{ formatUk(controls.last_refreshed_at) }}</div>
+                    <div>Next refresh {{ formatUk(controls.next_refresh_at) }}</div>
+                </div>
+            </div>
+
+            <div
+                v-if="hasInstagramSet"
+                class="sticky top-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:-mx-0 sm:rounded-xl sm:border sm:px-4"
             >
-                {{ own_account ? 'Add a rival' : 'Go to Tracking' }}
-            </Link>
-        </div>
-
-        <div v-else class="space-y-8">
-            <div v-if="headline" class="border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm">
-                {{ headline }}
-            </div>
-
-            <section v-if="gaps.length && own_account">
-                <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                    Gaps on @{{ own_account.handle }}
-                </h2>
-                <ul class="divide-y divide-neutral-200 border border-neutral-200 bg-white">
-                    <li v-for="gap in gaps" :key="gap.label" class="p-4">
-                        <div class="text-[10px] uppercase tracking-wider text-neutral-500">{{ gap.label }}</div>
-                        <p class="mt-1 text-sm">{{ gap.detail }}</p>
-                    </li>
-                </ul>
-            </section>
-
-            <section>
-                <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">What the data shows</h2>
-                <div class="grid grid-cols-1 gap-px border border-neutral-200 bg-neutral-200 sm:grid-cols-3">
-                    <div class="bg-white p-4">
-                        <div class="mb-3 text-[10px] uppercase tracking-wider text-neutral-500">Post times currently performing best</div>
-                        <p v-if="!insights.bestTimes.length" class="text-xs text-neutral-500">Not enough data yet.</p>
-                        <ul v-else class="space-y-2 text-sm">
-                            <li v-for="time in insights.bestTimes" :key="`${time.day}-${time.hour}`">
-                                {{ time.day }} {{ time.hour }}:00
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="bg-white p-4">
-                        <div class="mb-3 text-[10px] uppercase tracking-wider text-neutral-500">Formats currently performing best</div>
-                        <p v-if="!insights.formatStats.length" class="text-xs text-neutral-500">Not enough data yet.</p>
-                        <ul v-else class="space-y-2 text-sm">
-                            <li v-for="format in insights.formatStats" :key="format.format">{{ format.format }}</li>
-                        </ul>
-                    </div>
-                    <div class="bg-white p-4">
-                        <div class="mb-3 text-[10px] uppercase tracking-wider text-neutral-500">Caption insights</div>
-                        <div v-if="insights.bestLength" class="text-sm">{{ insights.bestLength.label }} chars</div>
-                        <p v-else class="text-xs text-neutral-500">Not enough data.</p>
-                        <ul v-if="insights.patternLifts.length" class="mt-3 space-y-1 text-xs">
-                            <li v-for="pattern in insights.patternLifts" :key="pattern.label">{{ pattern.label }}</li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-
-            <div class="flex items-center gap-2 overflow-x-auto border border-neutral-200 bg-white p-3">
-                <button
-                    v-for="rival in rivals"
-                    :key="rival.id"
-                    type="button"
-                    class="inline-flex shrink-0 items-center gap-2 border border-neutral-200 px-2 py-1 text-xs"
-                    :class="selected.includes(rival.handle.toLowerCase()) ? 'bg-neutral-950 text-white' : 'hover:bg-neutral-50'"
-                    @click="toggle(rival.handle.toLowerCase())"
-                >
-                    @{{ rival.handle }}
-                    <X v-if="selected.includes(rival.handle.toLowerCase())" class="h-3 w-3" />
-                </button>
-            </div>
-
-            <div v-if="mode === 'compare'" class="overflow-x-auto border border-neutral-200 bg-white">
-                <table class="w-full text-sm">
-                    <thead class="bg-neutral-50 text-xs uppercase tracking-wider text-neutral-500">
-                        <tr>
-                            <th class="px-4 py-2 text-left font-medium">Metric</th>
-                            <th v-for="row in compare" :key="row.handle" class="px-4 py-2 text-right font-medium">
-                                @{{ row.handle }}
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-neutral-200">
-                        <tr>
-                            <td class="px-4 py-3 text-xs uppercase tracking-wider text-neutral-500">Followers</td>
-                            <td v-for="row in compare" :key="row.handle + 'f'" class="px-4 py-3 text-right tabular-nums">{{ row.followers.toLocaleString() }}</td>
-                        </tr>
-                        <tr>
-                            <td class="px-4 py-3 text-xs uppercase tracking-wider text-neutral-500">Avg engagement / follower</td>
-                            <td v-for="row in compare" :key="row.handle + 'er'" class="px-4 py-3 text-right tabular-nums">{{ row.avg_er.toFixed(2) }}%</td>
-                        </tr>
-                        <tr>
-                            <td class="px-4 py-3 text-xs uppercase tracking-wider text-neutral-500">Posts last week</td>
-                            <td v-for="row in compare" :key="row.handle + 'w'" class="px-4 py-3 text-right tabular-nums">{{ row.posts_week }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div v-else class="grid gap-px border border-neutral-200 bg-neutral-200 sm:grid-cols-5">
-                <div class="bg-white p-4">
-                    <div class="text-xs uppercase tracking-wider text-neutral-500">Avg engagement / follower</div>
-                    <div class="mt-2 text-2xl font-semibold tabular-nums">{{ kpis.avg_er.toFixed(2) }}%</div>
-                </div>
-                <div class="bg-white p-4">
-                    <div class="text-xs uppercase tracking-wider text-neutral-500">Posts pulled</div>
-                    <div class="mt-2 text-2xl font-semibold tabular-nums">{{ kpis.posts }}</div>
-                </div>
-                <div class="bg-white p-4">
-                    <div class="text-xs uppercase tracking-wider text-neutral-500">Posts last week</div>
-                    <div class="mt-2 text-2xl font-semibold tabular-nums">{{ kpis.posts_week }}</div>
-                </div>
-                <div class="bg-white p-4">
-                    <div class="text-xs uppercase tracking-wider text-neutral-500">Avg likes / post</div>
-                    <div class="mt-2 text-2xl font-semibold tabular-nums">{{ kpis.avg_likes.toLocaleString() }}</div>
-                </div>
-                <div class="bg-white p-4">
-                    <div class="text-xs uppercase tracking-wider text-neutral-500">Avg comments / post</div>
-                    <div class="mt-2 text-2xl font-semibold tabular-nums">{{ kpis.avg_comments.toLocaleString() }}</div>
-                </div>
-            </div>
-
-            <section>
-                <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">Top posts last week</h2>
-                <p v-if="!top_posts.length" class="text-sm text-neutral-500">No posts in the last 7 days yet.</p>
-                <div v-else class="grid gap-px border border-neutral-200 bg-neutral-200 sm:grid-cols-3">
-                    <div v-for="(post, index) in top_posts" :key="post.id" class="flex gap-4 bg-white p-4">
-                        <div class="text-3xl text-neutral-400">{{ index + 1 }}</div>
-                        <img
-                            v-if="post.thumbnail_url"
-                            :src="post.thumbnail_url"
-                            alt=""
-                            class="h-20 w-20 border border-neutral-200 object-cover"
+                <div class="flex flex-wrap items-center gap-2">
+                    <button
+                        v-if="own_account"
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-2.5 py-1 text-xs font-medium text-white"
+                    >
+                        <SnitchAvatar
+                            :src="own_account.avatar"
+                            :name="own_account.display_name"
+                            :handle="own_account.handle"
+                            size="sm"
+                            class="!size-5"
                         />
-                        <div class="min-w-0 flex-1">
-                            <div class="text-xs text-neutral-500">@{{ post.handle }}</div>
-                            <div class="mt-1 line-clamp-2 text-sm">{{ post.caption || 'No caption' }}</div>
-                            <div class="mt-2 flex flex-wrap gap-3 text-xs tabular-nums">
-                                <span>{{ post.likes == null ? 'Hidden' : post.likes.toLocaleString() }} likes</span>
-                                <span>{{ post.comments.toLocaleString() }} comments</span>
-                                <span class="font-semibold">{{ post.er.toFixed(2) }}% ER</span>
-                                <a v-if="post.url" :href="post.url" target="_blank" rel="noreferrer" class="ml-auto inline-flex items-center gap-1 underline">
-                                    View <ExternalLink class="h-3 w-3" />
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+                        You
+                    </button>
+                    <button
+                        v-for="rival in rivals"
+                        :key="rival.id"
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium"
+                        :class="
+                            selected.includes(rival.handle.toLowerCase())
+                                ? 'border-slate-800 bg-slate-800 text-white'
+                                : rival.no_posts_in_period
+                                    ? 'border-slate-200 bg-slate-50 text-slate-500'
+                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        "
+                        :title="rival.no_posts_in_period ? 'No posts imported yet' : undefined"
+                        @click="toggleAccount(rival.handle)"
+                    >
+                        <SnitchAvatar
+                            :src="rival.avatar"
+                            :name="rival.display_name"
+                            :handle="rival.handle"
+                            size="sm"
+                            class="!size-5"
+                        />
+                        @{{ rival.handle }}
+                        <span v-if="rival.no_posts_in_period" class="text-[10px] opacity-80">no posts</span>
+                    </button>
                 </div>
-            </section>
-
-            <div class="grid gap-6 lg:grid-cols-2">
-                <section>
-                    <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">When competitors post</h2>
-                    <div class="overflow-x-auto border border-neutral-200 bg-white p-3">
-                        <div class="min-w-[520px]">
-                            <div class="flex">
-                                <div class="w-10" />
-                                <div class="grid flex-1 grid-cols-24 gap-px">
-                                    <div v-for="hour in 24" :key="hour" class="text-center text-[9px] text-neutral-400">
-                                        {{ (hour - 1) % 3 === 0 ? hour - 1 : '' }}
-                                    </div>
-                                </div>
-                            </div>
-                            <div v-for="(day, dayIndex) in DAYS" :key="day" class="mt-1 flex">
-                                <div class="w-10 text-xs text-neutral-500">{{ day }}</div>
-                                <div class="grid flex-1 grid-cols-24 gap-px">
-                                    <div
-                                        v-for="(value, hour) in heatmap[dayIndex]"
-                                        :key="hour"
-                                        class="aspect-square border border-neutral-200"
-                                        :style="{ backgroundColor: value === 0 ? 'transparent' : `oklch(${1 - (value / heatMax) * 0.95} 0 0)` }"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section>
-                    <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">Format split</h2>
-                    <div class="divide-y divide-neutral-200 border border-neutral-200 bg-white">
-                        <div v-for="row in format_split" :key="row.handle" class="p-3">
-                            <div class="flex items-baseline justify-between">
-                                <span class="text-sm">@{{ row.handle }}</span>
-                                <span class="text-sm tabular-nums">{{ row.count }} posts</span>
-                            </div>
-                            <div class="mt-2 h-2 bg-neutral-100">
-                                <div class="h-full bg-neutral-950" :style="{ width: `${(row.count / maxFormat) * 100}%` }" />
-                            </div>
-                            <div v-if="row.count > 0" class="mt-1.5 flex flex-wrap gap-3 text-[10px] text-neutral-500">
-                                <span>Reels {{ pct(row.reels, row.count) }}%</span>
-                                <span>Carousels {{ pct(row.carousels, row.count) }}%</span>
-                                <span>Images {{ pct(row.images, row.count) }}%</span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+                <div class="ml-auto flex items-center gap-1 rounded-lg border border-slate-200 p-0.5">
+                    <button
+                        v-for="days in periods"
+                        :key="days"
+                        type="button"
+                        class="rounded-md px-2.5 py-1 text-xs font-medium"
+                        :class="period === days ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'"
+                        @click="refreshQuery({ period: days })"
+                    >
+                        {{ days }}d
+                    </button>
+                </div>
             </div>
 
-            <section>
-                <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">Most-used words & phrases in captions</h2>
-                <div class="grid grid-cols-1 gap-px border border-neutral-200 bg-neutral-200 sm:grid-cols-2">
-                    <div v-for="row in phrases" :key="row.handle" class="bg-white p-4">
-                        <div class="mb-3 text-xs uppercase tracking-wider text-neutral-500">@{{ row.handle }}</div>
-                        <div class="grid grid-cols-2 gap-4 text-xs">
-                            <div>
-                                <div class="mb-2 text-[10px] uppercase text-neutral-400">Words</div>
-                                <ul class="space-y-1">
-                                    <li v-for="word in row.words" :key="word.text" class="flex justify-between gap-2">
-                                        <span class="truncate">{{ word.text }}</span>
-                                        <span class="tabular-nums text-neutral-500">{{ word.count }}</span>
-                                    </li>
-                                </ul>
-                            </div>
-                            <div>
-                                <div class="mb-2 text-[10px] uppercase text-neutral-400">Phrases</div>
-                                <ul class="space-y-1">
-                                    <li v-for="phrase in row.bigrams" :key="phrase.text" class="flex justify-between gap-2">
-                                        <span class="truncate">{{ phrase.text }}</span>
-                                        <span class="tabular-nums text-neutral-500">{{ phrase.count }}</span>
-                                    </li>
-                                </ul>
+            <DashCard
+                v-if="showOnboarding"
+                title="Get your dashboard ready"
+                why="An empty dashboard with zeros is useless - complete these steps first."
+                formula="Shown until at least one Instagram rival has 5+ posts in the selected period."
+                anchor="onboarding"
+            >
+                <p v-if="onboarding.data?.note" class="mb-4 text-sm text-slate-600">
+                    {{ onboarding.data.note }}
+                </p>
+                <ol class="space-y-3">
+                    <li
+                        v-for="(step, index) in onboarding.data?.steps || []"
+                        :key="step.key"
+                        class="flex gap-3 rounded-lg border border-slate-200 px-3 py-3"
+                    >
+                        <span
+                            class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+                            :class="step.done ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-600'"
+                        >
+                            {{ step.done ? '✓' : index + 1 }}
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-sm font-medium text-slate-900">{{ step.label }}</div>
+                            <div
+                                v-if="step.key === 'rivals' && step.suggestions?.length"
+                                class="mt-2 flex flex-wrap gap-1.5"
+                            >
+                                <span
+                                    v-for="handle in step.suggestions"
+                                    :key="handle"
+                                    class="rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-600"
+                                >
+                                    @{{ handle }}
+                                </span>
                             </div>
                         </div>
+                    </li>
+                </ol>
+                <Link
+                    :href="competitors()"
+                    class="mt-4 inline-flex rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                >
+                    Go to Tracking
+                </Link>
+            </DashCard>
+
+            <template v-if="hasInstagramSet">
+                <DashCard
+                    title="This week in 30 seconds"
+                    why="Turns the numbers into do-this-next for a busy organiser."
+                    formula="score = |effect| × min(1, n/20); top 5, max 1 per category; n ≥ 5."
+                    anchor="insights"
+                >
+                    <InsightList
+                        :status="insights.status"
+                        :reason="insights.reason"
+                        :items="insights.data?.items"
+                    />
+                </DashCard>
+
+                <DashCard
+                    title="You vs peers"
+                    why="Compare your KPIs against the peer median so the page is about your next move."
+                    formula="Each card: You, peer median, gap. Sample size n < 5 shows Not enough posts yet."
+                    anchor="kpis"
+                >
+                    <div
+                        v-if="kpis.status === 'ok' && kpis.data?.cards?.length"
+                        class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
+                    >
+                        <StatCard
+                            v-for="card in kpis.data.cards"
+                            :key="String(card.key)"
+                            :label="String(card.label)"
+                            :why="String(card.why)"
+                            :formula="String(card.formula)"
+                            :status="String(card.status)"
+                            :reason="(card.reason as string | null) || null"
+                            :you="(card.you as number | null) ?? null"
+                            :you-display="(card.you_display as number | string | null) ?? null"
+                            :peer-median="(card.peer_median as number | null) ?? null"
+                            :gap="(card.gap as any) ?? null"
+                            :unit="String(card.unit)"
+                        />
                     </div>
-                </div>
-            </section>
+                    <EmptyState v-else :reason="kpis.reason" />
+                </DashCard>
+
+                <DashCard
+                    title="Competitor leaderboard"
+                    why="One glance shows who is ahead, and on what."
+                    formula="ER = median per-follower engagement. Consistency = weeks with ≥1 post in last 8. Engagement share = interactions / set total."
+                    anchor="leaderboard"
+                >
+                    <CompareTable
+                        :status="leaderboard.status"
+                        :reason="leaderboard.reason"
+                        :rows="(leaderboard.data?.rows as any) || []"
+                    />
+                </DashCard>
+
+                <DashCard
+                    title="Winning posts"
+                    why="Ready-made post ideas already proven with a similar audience."
+                    formula="Performance Index = interactions ÷ median of the account's previous 30 posts. Winner ≥ 2.0×."
+                    anchor="winners"
+                >
+                    <div class="mb-4 flex gap-2">
+                        <button
+                            type="button"
+                            class="rounded-lg px-3 py-1.5 text-xs font-medium"
+                            :class="winnerTab === 'winners' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'"
+                            @click="winnerTab = 'winners'"
+                        >
+                            Winners
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-lg px-3 py-1.5 text-xs font-medium"
+                            :class="winnerTab === 'flops' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'"
+                            @click="winnerTab = 'flops'"
+                        >
+                            Flops
+                        </button>
+                    </div>
+                    <EmptyState
+                        v-if="winners.status !== 'ok' || !winnerItems.length"
+                        :reason="winners.reason || 'No posts in this tab.'"
+                    />
+                    <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <WinnerCard
+                            v-for="post in winnerItems"
+                            :key="String(post.id)"
+                            :post="post as any"
+                        />
+                    </div>
+                </DashCard>
+            </template>
+
+            <div
+                v-else-if="!showOnboarding"
+                class="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-12 text-center"
+            >
+                <h2 class="text-lg font-semibold text-slate-900">
+                    {{ own_account ? 'No rivals to compare yet' : 'No Instagram competitors yet' }}
+                </h2>
+                <p class="mt-2 text-sm text-slate-500">
+                    <template v-if="own_account">
+                        You have marked @{{ own_account.handle }} as your account. Add rival Instagram handles on
+                        Tracking to see the gap.
+                    </template>
+                    <template v-else-if="(legacy_non_instagram_count ?? 0) > 0">
+                        Tracking lists {{ legacy_non_instagram_count }} account{{
+                            legacy_non_instagram_count === 1 ? '' : 's'
+                        }}
+                        from older platforms. This dashboard only compares Instagram rivals - add Instagram handles on
+                        Tracking to populate it.
+                    </template>
+                    <template v-else>
+                        Add Instagram competitor handles on Tracking to populate this dashboard. Only Instagram accounts appear here.
+                    </template>
+                </p>
+                <Link
+                    :href="competitors()"
+                    class="mt-6 inline-block rounded-lg bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800"
+                >
+                    Go to Tracking
+                </Link>
+            </div>
         </div>
     </div>
 </template>

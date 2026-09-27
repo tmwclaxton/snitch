@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\OmitsProductDataWhenPaywalled;
-use App\Services\Dashboard\LovableDashboardBuilder;
+use App\Services\Dashboard\DashboardMetrics;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -12,16 +12,17 @@ class DashboardController extends Controller
 {
     use OmitsProductDataWhenPaywalled;
 
-    public function __invoke(Request $request, LovableDashboardBuilder $builder): Response
+    public function __invoke(Request $request, DashboardMetrics $metrics): Response
     {
         $user = $request->user();
         $handles = $this->selectedHandles($request);
+        $period = $this->periodDays($request);
 
         if ($this->productAccessBlocked($user)) {
-            return Inertia::render('Dashboard', $this->emptyPayload());
+            return Inertia::render('Dashboard', $metrics->emptyPayload());
         }
 
-        return Inertia::render('Dashboard', $builder->forUser($user, $handles));
+        return Inertia::render('Dashboard', $metrics->forUser($user, $handles, $period));
     }
 
     /**
@@ -41,38 +42,11 @@ class DashboardController extends Controller
         )));
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function emptyPayload(): array
+    private function periodDays(Request $request): int
     {
-        return [
-            'own_account' => null,
-            'rivals' => [],
-            'legacy_non_instagram_count' => 0,
-            'selected' => [],
-            'max_compare' => LovableDashboardBuilder::MAX_COMPARE,
-            'headline' => null,
-            'insights' => [
-                'bestTimes' => [],
-                'formatStats' => [],
-                'bestLength' => null,
-                'patternLifts' => [],
-                'hasAnyData' => false,
-            ],
-            'gaps' => [],
-            'kpis' => [
-                'avg_er' => 0,
-                'posts' => 0,
-                'posts_week' => 0,
-                'avg_likes' => 0,
-                'avg_comments' => 0,
-            ],
-            'compare' => [],
-            'top_posts' => [],
-            'heatmap' => array_fill(0, 7, array_fill(0, 24, 0)),
-            'format_split' => [],
-            'phrases' => [],
-        ];
+        $raw = $request->query('period', 30);
+        $period = is_numeric($raw) ? (int) $raw : 30;
+
+        return in_array($period, DashboardMetrics::PERIODS, true) ? $period : 30;
     }
 }

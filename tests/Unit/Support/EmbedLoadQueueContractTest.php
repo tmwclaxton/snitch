@@ -131,9 +131,10 @@ class EmbedLoadQueueContractTest extends TestCase
         $dashboard = file_get_contents(base_path('resources/js/pages/Dashboard.vue'));
         $this->assertIsString($dashboard);
         $this->assertStringContainsString('px-4 py-6 sm:px-8', $dashboard);
-        $this->assertStringContainsString('What the data shows', $dashboard);
+        $this->assertStringContainsString('Winning posts', $dashboard);
+        $this->assertStringContainsString('WinnerCard', $dashboard);
         $this->assertStringNotContainsString('snitch-contact-sheet-proof', $dashboard);
-        $this->assertStringNotContainsString('xl:grid-cols-5', $dashboard);
+        $this->assertStringContainsString('xl:grid-cols-5', $dashboard);
 
         $css = file_get_contents(base_path('resources/css/app.css'));
         $this->assertIsString($css);

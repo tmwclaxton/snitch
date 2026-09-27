@@ -16,7 +16,7 @@ class LovableDashboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_dashboard_returns_lovable_insights_shape(): void
+    public function test_dashboard_returns_metrics_card_shape(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -38,7 +38,7 @@ class LovableDashboardTest extends TestCase
             'type' => PostType::Reel,
             'caption' => 'Shop the drop today?',
             'posted_at' => now()->subDay(),
-            'metrics' => ['likes' => 80, 'comments' => 10],
+            'metrics' => ['likes' => 80, 'comments' => 10, 'views' => 900],
         ]);
         Post::factory()->forAccount($own)->create([
             'type' => PostType::Image,
@@ -57,10 +57,10 @@ class LovableDashboardTest extends TestCase
                 ->where('selected.0', 'rivalbrand')
                 ->has('kpis')
                 ->has('insights')
-                ->has('heatmap', 7)
-                ->has('top_posts')
-                ->has('format_split')
-                ->has('phrases')
+                ->has('leaderboard')
+                ->has('winners')
+                ->missing('top_posts')
+                ->missing('heatmap.0')
             );
     }
 }
