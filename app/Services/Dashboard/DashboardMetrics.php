@@ -389,7 +389,9 @@ class DashboardMetrics
         return $accounts->map(function (TrackedAccount $account) use ($enrichedAll, $periodPosts, $snapshots, $periodDays): array {
             $sid = (int) $account->social_account_id;
             $all = $enrichedAll->where('social_account_id', $sid)->values();
-            $period = $periodPosts->where('social_account_id', $sid)
+            $periodAll = $periodPosts->where('social_account_id', $sid)->values();
+            // Like-based ER/PI never treat hidden likes as 0 - drop those rows.
+            $period = $periodAll
                 ->filter(fn (array $row): bool => ! $row['hidden_likes'])
                 ->values();
 
@@ -418,8 +420,9 @@ class DashboardMetrics
                 fn (array $row): bool => is_numeric($row['pi']) && (float) $row['pi'] >= DashboardMath::WINNER_THRESHOLD,
             )->count();
 
-            $formatCounts = $period->countBy('format');
-            $totalFormat = max(1, $period->count());
+            // Format mix uses every imported post; lift/ER still need measurable likes.
+            $formatCounts = $periodAll->countBy('format');
+            $totalFormat = max(1, $periodAll->count());
             $formatShare = [];
 
             foreach (['Reel', 'Carousel', 'Image', 'Video'] as $format) {
@@ -437,19 +440,24 @@ class DashboardMetrics
                 }
             }
 
-            $topFormat = collect($formatLift)->sortDesc()->keys()->first();
+            $topFormat = $periodAll->isEmpty()
+                ? null
+                : (collect($formatShare)->sortDesc()->keys()->first()
+                    ?? collect($formatLift)->sortDesc()->keys()->first());
 
             $consistency = $this->consistencyDots($all);
-            $commentsPerPost = $period->count() > 0
-                ? $period->avg(fn (array $row): int => (int) $row['comments'])
+            $commentsPerPost = $periodAll->count() > 0
+                ? $periodAll->avg(fn (array $row): int => (int) $row['comments'])
                 : null;
 
             $reelReach = $this->math->median(
-                $period
+                $periodAll
                     ->filter(fn (array $row): bool => $row['format'] === 'Reel' && ($row['followers'] ?? 0) > 0 && ($row['views'] ?? 0) > 0)
                     ->map(fn (array $row): float => ((int) $row['views'] / (int) $row['followers']) * 100)
                     ->values(),
             );
+
+            $hiddenInPeriod = $periodAll->filter(fn (array $row): bool => $row['hidden_likes'])->count();
 
             return [
                 'id' => $account->id,
@@ -460,7 +468,9 @@ class DashboardMetrics
                 'is_own_account' => (bool) $account->is_own_account,
                 'followers' => $followersNow,
                 'growth_pct' => $growthPct,
-                'posts_n' => $period->count(),
+                'posts_n' => $periodAll->count(),
+                'measurable_posts_n' => $period->count(),
+                'hidden_likes_n' => $hiddenInPeriod,
                 'posts_per_week' => $postsPerWeek,
                 'consistency' => $consistency,
                 'er' => $er,
@@ -873,10 +883,22 @@ class DashboardMetrics
         bool $reelEmpty = false,
     ): array {
         $youN = (int) ($you['posts_n'] ?? 0);
+        $measurableN = (int) ($you['measurable_posts_n'] ?? $youN);
+        $sampleN = $requireN ? $measurableN : $youN;
         $youValue = $you[$valueKey] ?? null;
         $display = $displayKey !== '' ? ($you[$displayKey] ?? null) : $youValue;
         $peerMedian = $this->math->median(
-            $peers->pluck($valueKey)->filter(fn ($v) => $v !== null)->values(),
+            $peers
+                ->filter(function (array $peer) use ($requireN): bool {
+                    if (! $requireN) {
+                        return true;
+                    }
+
+                    return (int) ($peer['measurable_posts_n'] ?? $peer['posts_n'] ?? 0) >= DashboardMath::MIN_SAMPLE;
+                })
+                ->pluck($valueKey)
+                ->filter(fn ($v) => $v !== null)
+                ->values(),
         );
 
         $status = 'ok';
@@ -893,9 +915,12 @@ class DashboardMetrics
             $reason = 'No posts imported yet';
             $youValue = null;
             $display = null;
-        } elseif ($requireN && $you !== null && $youN < DashboardMath::MIN_SAMPLE) {
+        } elseif ($requireN && $you !== null && $sampleN < DashboardMath::MIN_SAMPLE) {
             $status = 'insufficient';
-            $reason = $this->math->insufficientReason($youN);
+            $hiddenN = (int) ($you['hidden_likes_n'] ?? 0);
+            $reason = $sampleN === 0 && $hiddenN > 0
+                ? 'Likes hidden on Instagram'
+                : $this->math->insufficientReason($sampleN);
             $youValue = null;
             $display = $displayKey !== '' ? $display : null;
         } elseif ($you === null) {
@@ -933,7 +958,7 @@ class DashboardMetrics
             'peer_median' => $peerMedian === null ? null : $this->math->round2($peerMedian),
             'gap' => $gap,
             'unit' => $unit,
-            'n' => $youN,
+            'n' => $sampleN,
             'sparkline' => [],
         ];
     }
@@ -956,6 +981,20 @@ class DashboardMetrics
             ->values()
             ->map(function (array $row) use ($totalInteractions): array {
                 $n = (int) $row['posts_n'];
+                $measurable = (int) ($row['measurable_posts_n'] ?? $n);
+                $hiddenN = (int) ($row['hidden_likes_n'] ?? 0);
+                $noPosts = $n === 0;
+                $erUnavailable = $measurable < DashboardMath::MIN_SAMPLE;
+
+                $rowNote = null;
+
+                if ($noPosts) {
+                    $rowNote = 'No posts imported yet';
+                } elseif ($measurable === 0 && $hiddenN > 0) {
+                    $rowNote = 'Likes hidden on Instagram';
+                } elseif ($erUnavailable && $hiddenN > 0) {
+                    $rowNote = "Only {$measurable} posts with visible likes";
+                }
 
                 return [
                     'handle' => $row['handle'],
@@ -964,17 +1003,23 @@ class DashboardMetrics
                     'is_own_account' => $row['is_own_account'],
                     'followers' => $row['followers'],
                     'growth_pct' => $row['growth_pct'] === null ? null : $this->math->round1((float) $row['growth_pct']),
-                    'posts_per_week' => $this->math->round1((float) $row['posts_per_week']),
+                    'posts_per_week' => $noPosts ? null : $this->math->round1((float) $row['posts_per_week']),
                     'consistency' => $row['consistency'],
-                    'er' => $n < DashboardMath::MIN_SAMPLE ? null : $this->math->round2($row['er']),
-                    'er_reason' => $n < DashboardMath::MIN_SAMPLE ? $this->math->insufficientReason($n) : null,
-                    'comments_per_post' => $n < DashboardMath::MIN_SAMPLE ? null : $this->math->round1($row['comments_per_post']),
-                    'top_format' => $row['top_format'],
+                    'er' => $erUnavailable ? null : $this->math->round2($row['er']),
+                    'er_reason' => $erUnavailable
+                        ? ($measurable === 0 && $hiddenN > 0
+                            ? 'Likes hidden on Instagram'
+                            : $this->math->insufficientReason($measurable))
+                        : null,
+                    'comments_per_post' => $noPosts ? null : $this->math->round1($row['comments_per_post']),
+                    'top_format' => $noPosts ? null : $row['top_format'],
                     'winners' => $row['winners'],
-                    'engagement_share' => $this->math->round1(($row['interactions_sum'] / $totalInteractions) * 100),
+                    'engagement_share' => $measurable === 0
+                        ? null
+                        : $this->math->round1(($row['interactions_sum'] / $totalInteractions) * 100),
                     'posts_n' => $n,
-                    'no_posts_in_period' => $n === 0,
-                    'row_note' => $n === 0 ? 'No posts imported yet' : null,
+                    'no_posts_in_period' => $noPosts,
+                    'row_note' => $rowNote,
                 ];
             })
             ->all();
@@ -1175,7 +1220,7 @@ class DashboardMetrics
     private function efficiencyCard(Collection $accountRows): array
     {
         $usable = $accountRows
-            ->filter(fn (array $row): bool => ($row['posts_n'] ?? 0) >= DashboardMath::MIN_SAMPLE && $row['er'] !== null)
+            ->filter(fn (array $row): bool => ($row['measurable_posts_n'] ?? $row['posts_n'] ?? 0) >= DashboardMath::MIN_SAMPLE && $row['er'] !== null)
             ->values();
 
         if ($usable->count() < 2) {

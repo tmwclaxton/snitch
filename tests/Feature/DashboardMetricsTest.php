@@ -248,6 +248,61 @@ class DashboardMetricsTest extends TestCase
         unset($empty);
     }
 
+    public function test_hidden_likes_are_excluded_from_er_and_not_treated_as_zero(): void
+    {
+        $user = User::factory()->onTrial()->create();
+        BrandProfile::factory()->for($user)->create();
+
+        $hiddenAccount = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'goodgym',
+            'followers' => 29000,
+        ]);
+        $visibleAccount = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'great.friendship',
+            'followers' => 5000,
+        ]);
+
+        for ($i = 0; $i < 8; $i++) {
+            Post::factory()->forAccount($hiddenAccount)->create([
+                'type' => PostType::Reel,
+                'posted_at' => now()->subDays($i + 1),
+                'metrics' => [
+                    'likes' => null,
+                    'like_count_hidden' => true,
+                    'comments' => 3,
+                    'views' => 400,
+                ],
+            ]);
+            Post::factory()->forAccount($visibleAccount)->create([
+                'type' => PostType::Carousel,
+                'posted_at' => now()->subDays($i + 1),
+                'metrics' => ['likes' => 40, 'comments' => 4],
+            ]);
+        }
+
+        $payload = app(DashboardMetrics::class)->forUser($user, [], 30);
+
+        $this->assertContains('goodgym', $payload['selected']);
+        $this->assertContains('great.friendship', $payload['selected']);
+
+        $hiddenRow = collect($payload['leaderboard']['data']['rows'])->firstWhere('handle', 'goodgym');
+        $visibleRow = collect($payload['leaderboard']['data']['rows'])->firstWhere('handle', 'great.friendship');
+
+        $this->assertFalse($hiddenRow['no_posts_in_period']);
+        $this->assertSame(8, $hiddenRow['posts_n']);
+        $this->assertNull($hiddenRow['er']);
+        $this->assertSame('Likes hidden on Instagram', $hiddenRow['er_reason']);
+        $this->assertSame('Likes hidden on Instagram', $hiddenRow['row_note']);
+        $this->assertSame('Reel', $hiddenRow['top_format']);
+        $this->assertNotNull($visibleRow['er']);
+        $this->assertGreaterThan(0, $visibleRow['er']);
+
+        $winnerHandles = collect($payload['winners']['data']['winners'] ?? [])->pluck('handle');
+        $this->assertNotContains('goodgym', $winnerHandles->all());
+    }
+
     public function test_growth_efficiency_format_and_heatmap_cards_return_shapes(): void
     {
         [$user] = $this->seedRichFixture();
