@@ -290,13 +290,16 @@ class VideoAnalysisSuccessEvaluatorTest extends TestCase
         /** @var array{158: string, 159: string} $captions */
         $captions = require base_path('tests/Fixtures/Analysis/great_friendship_recap_captions.php');
         $caption = $captions[159];
-        $onscreenHook = 'POV: Adult life gets a lot better when your weekends look like this';
+        $openingWithoutPrefix = 'Adult life gets a lot better when your weekends look like this.';
+        $povHook = 'POV: Adult life gets a lot better when your weekends look like this';
 
-        $this->assertStringStartsWith($onscreenHook, trim($caption));
+        $this->assertStringStartsWith('🎲', trim($caption));
+        $this->assertStringContainsString($openingWithoutPrefix, $caption);
+        $this->assertStringNotContainsString('POV:', $caption);
 
         $analytical = VideoAnalysisResult::fromModelPayload([
             'concept' => 'Lifestyle POV title card that sells belonging before the event recap',
-            'hook' => $onscreenHook,
+            'hook' => $povHook,
             'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
             'visual_summary' => str_repeat('Bold text overlay over packed board-game tables, then handheld cuts of first-timers finding seats. ', 2),
             'idea' => 'Aspiration then proof: the on-screen claim frames the montage so ticket CTA feels like upgrading your weekends.',
@@ -316,11 +319,11 @@ class VideoAnalysisSuccessEvaluatorTest extends TestCase
         $this->assertNotContains('analysis echoes caption/script too closely', $evaluation['failures']);
         $this->assertFalse($evaluation['caption_echo']['echoed'] ?? true);
 
-        // Same short hook, but other fields paraphrase the caption body - must still fail.
+        // Same short POV hook, but other fields paraphrase the caption body - must still fail.
         $echo = preg_replace('/\s+/', ' ', $caption) ?? $caption;
         $paraphrase = VideoAnalysisResult::fromModelPayload([
             'concept' => $echo,
-            'hook' => $onscreenHook,
+            'hook' => $povHook,
             'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
             'visual_summary' => $echo.' Warm lamps over packed tables fill every cut.',
             'idea' => $echo,

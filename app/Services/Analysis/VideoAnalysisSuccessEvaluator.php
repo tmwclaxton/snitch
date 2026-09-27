@@ -308,6 +308,9 @@ class VideoAnalysisSuccessEvaluator
     /**
      * Hooks are allowed to quote a short on-screen text / caption opening line
      * (roughly one line, <=20 words). Longer hook dumps still count as echo.
+     * Matching ignores leading emoji/punctuation and common overlay prefixes
+     * (POV:, When, Me when, etc.) so on-screen "POV: …" can match a caption
+     * that opens with the same line sans prefix.
      */
     private function isAllowedShortHookQuote(string $hook, string $caption): bool
     {
@@ -321,20 +324,12 @@ class VideoAnalysisSuccessEvaluator
 
         $hookNorm = $this->normalizeForQuoteMatch($hook);
         $openingNorm = $this->normalizeForQuoteMatch($this->captionOpeningLine($caption));
-        $captionNorm = $this->normalizeForQuoteMatch($caption);
 
-        if ($hookNorm === '' || $captionNorm === '') {
+        if ($hookNorm === '' || $openingNorm === '') {
             return false;
         }
 
-        if ($openingNorm !== '' && ($hookNorm === $openingNorm
-            || str_starts_with($openingNorm, $hookNorm)
-            || str_starts_with($hookNorm, $openingNorm))) {
-            return true;
-        }
-
-        // On-screen text often leads the caption before a blank line / recap body.
-        return str_starts_with($captionNorm, $hookNorm);
+        return str_contains($hookNorm, $openingNorm) || str_contains($openingNorm, $hookNorm);
     }
 
     private function captionOpeningLine(string $caption): string
@@ -349,6 +344,11 @@ class VideoAnalysisSuccessEvaluator
         $firstLine = trim((string) ($lines[0] ?? ''));
 
         if ($firstLine !== '') {
+            // Prefer the first sentence on the opening line when punctuation ends it.
+            if (preg_match('/^(.+?[.!?])(?:\s|$)/u', $firstLine, $matches) === 1) {
+                return trim($matches[1]);
+            }
+
             return $firstLine;
         }
 
@@ -359,10 +359,36 @@ class VideoAnalysisSuccessEvaluator
         return $trimmed;
     }
 
+    /**
+     * Lowercase alnum text with leading emoji/punctuation and overlay prefixes removed.
+     */
     private function normalizeForQuoteMatch(string $text): string
     {
+        // Drop leading emoji, symbols, quotes, and punctuation before the words.
+        $text = preg_replace('/^[\p{So}\p{Sk}\p{P}\p{S}\s"\'“”‘’]+/u', '', trim($text)) ?? trim($text);
+
         $normalized = strtolower(preg_replace('/[^a-z0-9\s]/i', ' ', $text) ?? '');
         $normalized = preg_replace('/\s+/', ' ', trim($normalized)) ?? '';
+
+        $prefixes = [
+            'pov ',
+            'me when ',
+            'tell me ',
+            'things ',
+            'when ',
+        ];
+
+        $changed = true;
+        while ($changed && $normalized !== '') {
+            $changed = false;
+            foreach ($prefixes as $prefix) {
+                if (str_starts_with($normalized, $prefix)) {
+                    $normalized = trim(substr($normalized, strlen($prefix)));
+                    $changed = true;
+                    break;
+                }
+            }
+        }
 
         return $normalized;
     }
