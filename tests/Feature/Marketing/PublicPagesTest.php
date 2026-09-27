@@ -409,7 +409,7 @@ class PublicPagesTest extends TestCase
         $this->assertNotFalse($footer, 'Missing PublicFooter.vue source');
         $this->assertStringContainsString('fixed inset-x-0 bottom-0', $welcome);
         $this->assertStringContainsString('The best kept secret in social media marketing', $welcome);
-        $this->assertStringContainsString("isHome ? 'pb-20' : 'pb-6'", $footer);
+        $this->assertStringContainsString("isHome ? 'pb-24' : 'pb-6'", $footer);
     }
 
     public function test_blog_index_copy_is_instagram_only(): void

@@ -32,7 +32,7 @@ const isHome = computed(() => {
         </div>
         <p
             class="text-center text-[11px] text-neutral-400"
-            :class="isHome ? 'pb-20' : 'pb-6'"
+            :class="isHome ? 'pb-24' : 'pb-6'"
         >
             © {{ year }} Snitch
         </p>
