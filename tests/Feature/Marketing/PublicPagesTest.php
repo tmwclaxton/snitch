@@ -152,6 +152,11 @@ class PublicPagesTest extends TestCase
         $this->assertNotFalse($contents, 'Missing Beta.vue source');
         $this->assertStringContainsString('https://calendly.com/dan-olympuslab/30min', $contents);
         $this->assertStringContainsString('Book a free intro call', $contents);
+        $this->assertStringContainsString('£19', $contents);
+        $this->assertStringContainsString('Platform', $contents);
+        $this->assertStringContainsString('usage credits', $contents);
+        $this->assertStringNotContainsString('Full Access', $contents);
+        $this->assertStringNotContainsString('£50/mo', $contents);
         $this->assertStringContainsString('snitch-hero-mascot-peek', $contents,
             'Beta hero must reuse the main landing page mascot peek animation');
         $this->assertStringContainsString('snitch-hero-copy', $contents);
@@ -197,8 +202,10 @@ class PublicPagesTest extends TestCase
         $this->assertNotFalse($about);
 
         $this->assertStringNotContainsString('seats', strtolower($pricing));
-        $this->assertStringContainsString('Full competitor tracking', $pricing);
-        $this->assertStringContainsString('Weekly refreshed data', $pricing);
+        $this->assertStringContainsString('Platform + usage', $pricing);
+        $this->assertStringContainsString('usage credits every billing period', $pricing);
+        $this->assertStringContainsString('Unlimited tracked accounts', $pricing);
+        $this->assertStringNotContainsString('Full Access', $pricing);
         $this->assertStringNotContainsString('MCP + web app access', $pricing);
         $this->assertStringNotContainsString('Agents / MCP', $pricing);
         $this->assertStringContainsString('Live tool averages', $pricing);
@@ -290,7 +297,7 @@ class PublicPagesTest extends TestCase
         );
     }
 
-    public function test_landing_uses_start_tracking_cta_and_full_access_price(): void
+    public function test_landing_uses_start_tracking_cta_and_platform_price(): void
     {
         $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
 
@@ -299,8 +306,11 @@ class PublicPagesTest extends TestCase
         $this->assertStringContainsString("from '@/routes'", $welcome);
         $this->assertStringContainsString('login()', $welcome);
         $this->assertStringNotContainsString('calendly.com/dan-olympuslab', $welcome);
-        $this->assertStringContainsString('£50', $welcome);
-        $this->assertStringContainsString('Full Access', $welcome);
+        $this->assertStringContainsString('£19', $welcome);
+        $this->assertStringContainsString('Platform', $welcome);
+        $this->assertStringContainsString('usage credits', $welcome);
+        $this->assertStringNotContainsString('Full Access', $welcome);
+        $this->assertStringNotContainsString('£50/mo', $welcome);
         $this->assertStringContainsString('Better social media performance.', $welcome);
     }
 
