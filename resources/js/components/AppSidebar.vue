@@ -10,14 +10,11 @@ import {
     Sidebar,
     SidebarContent,
     SidebarFooter,
-    SidebarGroup,
-    SidebarGroupContent,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard, home } from '@/routes';
 import { overview as adminOverview, activity as adminActivity } from '@/routes/admin';
 import { index as adminUsersIndex } from '@/routes/admin/users';
@@ -79,13 +76,15 @@ const accountNavItems = computed<NavItem[]>(() => {
 
     return items;
 });
-
-const { isCurrentOrParentUrl } = useCurrentUrl();
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="sidebar" class="border-r border-snitch-ink/10 bg-snitch-paper/80">
-        <SidebarHeader>
+    <Sidebar
+        collapsible="icon"
+        variant="sidebar"
+        class="border-r border-neutral-200 bg-white"
+    >
+        <SidebarHeader class="border-b border-neutral-200">
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
@@ -97,32 +96,12 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
             </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent>
-            <NavMain :items="mainNavItems" />
+        <SidebarContent class="gap-4 overflow-y-auto">
+            <NavMain :items="mainNavItems" label="Platform" />
+            <NavMain :items="accountNavItems" label="Account" />
         </SidebarContent>
 
-        <SidebarFooter>
-            <SidebarGroup class="group-data-[collapsible=icon]:p-0">
-                <SidebarGroupContent>
-                    <SidebarMenu>
-                        <SidebarMenuItem
-                            v-for="item in accountNavItems"
-                            :key="item.title"
-                        >
-                            <SidebarMenuButton
-                                as-child
-                                :is-active="isCurrentOrParentUrl(item.href)"
-                                :tooltip="item.title"
-                            >
-                                <Link :href="item.href" prefetch="hover">
-                                    <component :is="item.icon" />
-                                    <span>{{ item.title }}</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    </SidebarMenu>
-                </SidebarGroupContent>
-            </SidebarGroup>
+        <SidebarFooter class="mt-auto shrink-0 border-t border-neutral-200">
             <NavUser />
         </SidebarFooter>
     </Sidebar>

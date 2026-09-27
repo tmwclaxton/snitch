@@ -25,8 +25,19 @@ use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureBrandProfile;
 use App\Http\Middleware\EnsureProductAccess;
 use App\Http\Middleware\ValidateSessionWithWorkOS;
+use App\Models\User;
 use App\Support\Seo;
 use Illuminate\Support\Facades\Route;
+
+if (app()->environment('local') && blank(config('services.workos.client_id'))) {
+    Route::get('/__local-login/{user}', function (User $user) {
+        auth()->login($user);
+        request()->session()->put('workos_access_token', 'local-dev-access');
+        request()->session()->put('workos_refresh_token', 'local-dev-refresh');
+
+        return redirect()->route('dashboard');
+    })->name('local.login');
+}
 
 Route::inertia('/', 'Welcome')->name('home');
 Route::inertia('/about', 'marketing/About')->name('about');

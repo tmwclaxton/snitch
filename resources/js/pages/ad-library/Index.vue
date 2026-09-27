@@ -5,7 +5,8 @@ import { computed } from 'vue';
 import { show as competitorShow, index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { platformLabel } from '@/lib/platforms';
+import { formatAppDate } from '@/lib/dates';
+import { productPlatformLabel } from '@/lib/platforms';
 
 type AdRow = {
     id: number;
@@ -30,11 +31,7 @@ const adsLoaded = computed(() => Array.isArray(props.ads));
 const adsList = computed(() => props.ads ?? []);
 
 function seenLabel(iso: string | null): string | null {
-    if (!iso) {
-        return null;
-    }
-
-    return new Date(iso).toLocaleDateString(undefined, {
+    return formatAppDate(iso, {
         month: 'short',
         day: 'numeric',
     });
@@ -90,7 +87,7 @@ function seenLabel(iso: string | null): string | null {
                     <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
                     <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <p class="snitch-ink-label">
-                            {{ platformLabel(ad.platform) }}
+                            {{ productPlatformLabel(ad.platform) }}
                         </p>
                         <Link
                             v-if="ad.tracked_account?.id"

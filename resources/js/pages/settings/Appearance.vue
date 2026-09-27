@@ -25,7 +25,7 @@ defineOptions({
                 Appearance
             </h2>
             <p class="relative z-10 mt-1.5 text-sm text-snitch-ink/65">
-                Pick light, dark, or follow the system. Paper grade stays warm either way.
+                Pick light, dark, or follow the system.
             </p>
             <div class="relative z-10 mt-5">
                 <AppearanceTabs />

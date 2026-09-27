@@ -21,6 +21,11 @@ class LovableDashboardBuilder
      */
     public function forUser(User $user, array $selectedHandles = []): array
     {
+        $legacyNonInstagramCount = $user->trackedAccounts()
+            ->competitors()
+            ->where('platform', '!=', Platform::Instagram)
+            ->count();
+
         $accounts = $user->trackedAccounts()
             ->competitors()
             ->where('platform', Platform::Instagram)
@@ -82,6 +87,7 @@ class LovableDashboardBuilder
         return [
             'own_account' => $own === null ? null : $this->accountPayload($own, $posts),
             'rivals' => $rivals->map(fn (TrackedAccount $account) => $this->accountPayload($account, $posts))->values()->all(),
+            'legacy_non_instagram_count' => $legacyNonInstagramCount,
             'selected' => $validSelected->all(),
             'max_compare' => self::MAX_COMPARE,
             'headline' => $this->insights->headline($insights),

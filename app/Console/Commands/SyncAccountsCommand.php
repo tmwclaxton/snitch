@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\Platform;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Models\TrackedAccount;
 use App\Services\Billing\PlanEntitlementService;
@@ -11,7 +12,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('snitch:sync-accounts')]
-#[Description('Enqueue sync jobs for tracked accounts past the min sync interval (weekly schedule + ops)')]
+#[Description('Enqueue Instagram sync jobs for tracked accounts past the min sync interval (weekly schedule + ops)')]
 class SyncAccountsCommand extends Command
 {
     public function handle(PlanEntitlementService $entitlements, UsageBillingService $billing): int
@@ -25,6 +26,7 @@ class SyncAccountsCommand extends Command
 
         TrackedAccount::query()
             ->with('user')
+            ->where('platform', Platform::Instagram)
             ->orderBy('id')
             ->chunkById(100, function ($accounts) use (
                 $entitlements,

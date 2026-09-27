@@ -28,6 +28,12 @@ class ValidateSessionWithWorkOS
             return $next($request);
         }
 
+        if (app()->environment('local')
+            && blank(config('services.workos.client_id'))
+            && $request->session()->get('workos_access_token') === 'local-dev-access') {
+            return $next($request);
+        }
+
         WorkOS::configure();
 
         if (! $request->session()->get('workos_access_token') ||

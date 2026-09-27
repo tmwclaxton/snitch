@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { formatAppDate } from '@/lib/dates';
 
 export type HeatmapDay = {
     date: string;
@@ -37,8 +38,7 @@ const monthLabels = computed(() => {
             return;
         }
 
-        const date = new Date(`${first.date}T12:00:00`);
-        const label = date.toLocaleDateString(undefined, { month: 'short' });
+        const label = formatAppDate(`${first.date}T12:00:00`, { month: 'short' }) ?? '';
 
         if (label !== lastMonth) {
             labels.push({ weekIndex, label });
@@ -81,12 +81,11 @@ function levelFor(count: number): number {
 }
 
 function dayTitle(day: HeatmapDay): string {
-    const date = new Date(`${day.date}T12:00:00`);
-    const label = date.toLocaleDateString(undefined, {
+    const label = formatAppDate(`${day.date}T12:00:00`, {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
-    });
+    }) ?? day.date;
 
     if (day.count === 0) {
         return `${label}: no posts`;

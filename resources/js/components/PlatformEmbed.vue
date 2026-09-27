@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { platformLabel } from '@/lib/platforms';
+import { openOnPlatformLabel, productPlatformLabel } from '@/lib/platforms';
 
 export type EmbedConfig = {
     provider: string;
@@ -146,11 +146,11 @@ watch(interactiveSrc, () => {
                 v-else
                 class="snitch-platform-embed-fallback-empty"
             >
-                <p class="snitch-ink-label">
-                    {{ platform ? platformLabel(platform) : 'Post' }}
+                <p class="text-xs font-medium text-neutral-500">
+                    Preview unavailable
                 </p>
-                <p class="mt-1 text-xs text-snitch-paper/55">
-                    No preview
+                <p class="mt-1 text-[11px] text-neutral-400">
+                    {{ productPlatformLabel(platform) }} media link expired
                 </p>
             </div>
         </div>
@@ -163,7 +163,7 @@ watch(interactiveSrc, () => {
             class="snitch-platform-embed-open"
             @click.stop
         >
-            Open on {{ platform ? platformLabel(platform) : 'platform' }}
+            {{ openOnPlatformLabel(platform) }}
         </a>
     </div>
 </template>

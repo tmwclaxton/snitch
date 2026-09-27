@@ -140,7 +140,29 @@ class TrackedAccount extends Model
 
     public function isSyncing(): bool
     {
-        return $this->last_sync_status === 'running';
+        if ($this->last_sync_status !== 'running') {
+            return false;
+        }
+
+        // Workers can die mid-job (deploy, OOM, timeout). A stuck "running"
+        // status must not block weekly sync forever.
+        return ! $this->hasStaleRunningSync();
+    }
+
+    public function hasStaleRunningSync(): bool
+    {
+        if ($this->last_sync_status !== 'running') {
+            return false;
+        }
+
+        $staleAfterMinutes = max(30, (int) config('snitch.sync.stale_running_minutes', 180));
+        $updatedAt = $this->updated_at;
+
+        if ($updatedAt === null) {
+            return true;
+        }
+
+        return $updatedAt->lte(now()->subMinutes($staleAfterMinutes));
     }
 
     public function markSyncRunning(): void
@@ -154,7 +176,8 @@ class TrackedAccount extends Model
     /**
      * Whether this account should be synced for new posts.
      *
-     * Never-synced and failed syncs are always due. In-flight syncs are not.
+     * Never-synced and failed syncs are always due. Fresh in-flight syncs are not.
+     * Stale "running" rows (worker died) are treated as due again.
      * Successful syncs wait snitch.sync.min_interval_days (default 7) before
      * another Apify pull.
      */
@@ -162,6 +185,10 @@ class TrackedAccount extends Model
     {
         if ($this->isSyncing()) {
             return false;
+        }
+
+        if ($this->hasStaleRunningSync()) {
+            return true;
         }
 
         if ($this->last_synced_at === null) {

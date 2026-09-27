@@ -228,7 +228,7 @@ function typeLabel(type: string): string {
                                 >
                                     {{ row.user_email || `#${row.user_id}` }}
                                 </Link>
-                                <span v-else class="text-snitch-ink/45">-</span>
+                                <span v-else class="text-snitch-ink/45">System</span>
                             </td>
                         </tr>
                         <tr v-if="!recentEvents.length">

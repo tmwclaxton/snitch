@@ -53,13 +53,31 @@ class TrackedAccountSyncIntervalTest extends TestCase
     public function test_running_sync_is_not_due(): void
     {
         config(['snitch.sync.min_interval_days' => 7]);
+        config(['snitch.sync.stale_running_minutes' => 180]);
 
         $running = TrackedAccount::factory()->make([
             'last_synced_at' => null,
             'last_sync_status' => 'running',
+            'updated_at' => now(),
         ]);
 
         $this->assertTrue($running->isSyncing());
         $this->assertFalse($running->isDueForSync());
+    }
+
+    public function test_stale_running_sync_is_due_again(): void
+    {
+        config(['snitch.sync.min_interval_days' => 7]);
+        config(['snitch.sync.stale_running_minutes' => 180]);
+
+        $stale = TrackedAccount::factory()->make([
+            'last_synced_at' => now()->subDays(10),
+            'last_sync_status' => 'running',
+            'updated_at' => now()->subHours(4),
+        ]);
+
+        $this->assertFalse($stale->isSyncing());
+        $this->assertTrue($stale->hasStaleRunningSync());
+        $this->assertTrue($stale->isDueForSync());
     }
 }
