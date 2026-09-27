@@ -35,7 +35,7 @@ const colours = computed(() =>
 );
 
 const options = computed(() => ({
-    chart: { type: 'bubble' as const, height: 200, toolbar: { show: false }, fontFamily: 'inherit' },
+    chart: { type: 'bubble' as const, height: 180, toolbar: { show: false }, fontFamily: 'inherit' },
     colors: colours.value,
     dataLabels: { enabled: false },
     grid: { borderColor: '#e2e8f0', strokeDashArray: 3 },
@@ -62,5 +62,5 @@ const options = computed(() => ({
 
 <template>
     <EmptyState v-if="status !== 'ok' || !points?.length" :reason="reason" compact />
-    <VueApexCharts v-else type="bubble" height="200" :options="options" :series="chartSeries" />
+    <VueApexCharts v-else type="bubble" height="180" :options="options" :series="chartSeries" />
 </template>

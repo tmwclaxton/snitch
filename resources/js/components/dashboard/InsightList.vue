@@ -55,11 +55,11 @@ function scrollTo(id: string): void {
 
 <template>
     <EmptyState v-if="status !== 'ok' || !items?.length" :reason="reason" compact />
-    <ul v-else class="grid gap-1 sm:grid-cols-2">
+    <ul v-else class="grid gap-0.5 sm:grid-cols-2">
         <li
             v-for="item in items"
             :key="item.category + item.text"
-            class="flex min-h-9 items-start gap-1.5 rounded border border-slate-100 bg-slate-50/50 px-2 py-1"
+            class="flex items-start gap-1.5 px-0.5 py-0.5"
         >
             <span
                 class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"

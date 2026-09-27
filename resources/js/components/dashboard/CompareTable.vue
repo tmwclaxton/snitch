@@ -47,94 +47,86 @@ function num(value: number | null): string {
 
 <template>
     <EmptyState v-if="status !== 'ok' || !rows?.length" :reason="reason" compact />
-    <div v-else class="overflow-x-auto">
-        <table class="w-full text-left text-[11px]">
-            <thead>
-                <tr class="border-b border-slate-200 text-[10px] uppercase tracking-wide text-slate-500">
-                    <th class="py-1 pr-1.5 font-medium">Account</th>
-                    <th class="px-1 py-1 font-medium">Followers</th>
-                    <th class="px-1 py-1 font-medium">Growth</th>
-                    <th class="px-1 py-1 font-medium">Posts/wk</th>
-                    <th class="px-1 py-1 font-medium">Cons.</th>
-                    <th class="px-1 py-1 font-medium">ER</th>
-                    <th class="px-1 py-1 font-medium">Format</th>
-                    <th class="px-1 py-1 font-medium">Win</th>
-                    <th class="px-1 py-1 font-medium">Share</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr
-                    v-for="row in rows"
-                    :key="row.handle"
-                    class="border-b border-slate-100"
-                    :class="row.is_own_account ? 'bg-slate-50' : ''"
-                >
-                    <td class="py-1.5 pr-1.5">
-                        <div class="flex items-center gap-1.5">
-                            <SnitchAvatar
-                                :src="row.avatar"
-                                :name="row.display_name"
-                                :handle="row.handle"
-                                size="sm"
-                                class="!size-5"
-                            />
-                            <div class="min-w-0">
-                                <div class="truncate font-medium text-slate-900">
-                                    <span v-if="row.is_own_account">You</span>
-                                    <span v-else>@{{ row.handle }}</span>
-                                </div>
-                                <div v-if="row.row_note" class="text-[10px] text-slate-400">{{ row.row_note }}</div>
+    <table v-else class="w-full table-fixed text-left text-[11px]">
+        <colgroup>
+            <col class="w-[28%]">
+            <col class="w-[12%]">
+            <col class="w-[10%]">
+            <col class="w-[10%]">
+            <col class="w-[10%]">
+            <col class="w-[10%]">
+            <col class="w-[10%]">
+            <col class="w-[10%]">
+        </colgroup>
+        <thead>
+            <tr class="border-b border-slate-200 text-[10px] uppercase tracking-wide text-slate-500">
+                <th class="py-1 pr-1 font-medium">Account</th>
+                <th class="px-1 py-1 font-medium">Followers</th>
+                <th class="px-1 py-1 font-medium">Growth</th>
+                <th class="px-1 py-1 font-medium">Posts/wk</th>
+                <th class="px-1 py-1 font-medium">ER</th>
+                <th class="px-1 py-1 font-medium">Format</th>
+                <th class="px-1 py-1 font-medium">Win</th>
+                <th class="px-1 py-1 font-medium">Share</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr
+                v-for="row in rows"
+                :key="row.handle"
+                class="border-b border-slate-100"
+                :class="row.is_own_account ? 'bg-slate-50' : ''"
+            >
+                <td class="py-1 pr-1">
+                    <div class="flex min-w-0 items-center gap-1">
+                        <SnitchAvatar
+                            :src="row.avatar"
+                            :name="row.display_name"
+                            :handle="row.handle"
+                            size="sm"
+                            class="!size-4 shrink-0"
+                        />
+                        <div class="min-w-0">
+                            <div class="truncate font-medium text-slate-900">
+                                <span v-if="row.is_own_account">You</span>
+                                <span v-else>@{{ row.handle }}</span>
                             </div>
+                            <div v-if="row.row_note" class="truncate text-[9px] text-slate-400">{{ row.row_note }}</div>
                         </div>
-                    </td>
-                    <td class="px-1 py-1.5 tabular-nums text-slate-700">{{ followers(row.followers) }}</td>
-                    <td class="px-1 py-1.5 tabular-nums text-slate-700">
-                        {{ row.no_posts_in_period ? '—' : pct(row.growth_pct) }}
-                    </td>
-                    <td class="px-1 py-1.5 tabular-nums text-slate-700">
-                        {{ row.no_posts_in_period ? '—' : num(row.posts_per_week) }}
-                    </td>
-                    <td class="px-1 py-1.5">
-                        <div
-                            v-if="!row.no_posts_in_period"
-                            class="flex items-center gap-0.5"
-                            :title="`${row.consistency.filled}/8 weeks`"
-                        >
-                            <span
-                                v-for="(filled, idx) in row.consistency.weeks"
-                                :key="idx"
-                                class="h-1.5 w-1.5 rounded-full"
-                                :class="filled ? 'bg-slate-800' : 'bg-slate-200'"
+                    </div>
+                </td>
+                <td class="px-1 py-1 tabular-nums text-slate-700">{{ followers(row.followers) }}</td>
+                <td class="px-1 py-1 tabular-nums text-slate-700">
+                    {{ row.no_posts_in_period ? '—' : pct(row.growth_pct) }}
+                </td>
+                <td class="px-1 py-1 tabular-nums text-slate-700">
+                    {{ row.no_posts_in_period ? '—' : num(row.posts_per_week) }}
+                </td>
+                <td class="px-1 py-1 tabular-nums text-slate-700">
+                    <span v-if="row.no_posts_in_period || row.er == null" class="text-slate-400" :title="row.er_reason || undefined">—</span>
+                    <span v-else>{{ row.er.toFixed(2) }}%</span>
+                </td>
+                <td class="truncate px-1 py-1 text-slate-700">
+                    {{ row.no_posts_in_period ? '—' : row.top_format || '—' }}
+                </td>
+                <td class="px-1 py-1 tabular-nums text-slate-700">
+                    {{ row.no_posts_in_period ? '—' : row.winners }}
+                </td>
+                <td class="px-1 py-1">
+                    <template v-if="row.no_posts_in_period || row.engagement_share == null">
+                        <span class="text-slate-400">—</span>
+                    </template>
+                    <div v-else class="flex min-w-0 items-center gap-1">
+                        <div class="h-1 w-8 shrink-0 overflow-hidden rounded-full bg-slate-100">
+                            <div
+                                class="h-full rounded-full bg-slate-700"
+                                :style="{ width: `${Math.min(100, row.engagement_share)}%` }"
                             />
                         </div>
-                        <span v-else class="text-slate-400">—</span>
-                    </td>
-                    <td class="px-1 py-1.5 tabular-nums text-slate-700">
-                        <span v-if="row.no_posts_in_period || row.er == null" class="text-slate-400">—</span>
-                        <span v-else>{{ row.er.toFixed(2) }}%</span>
-                    </td>
-                    <td class="px-1 py-1.5 text-slate-700">
-                        {{ row.no_posts_in_period ? '—' : row.top_format || '—' }}
-                    </td>
-                    <td class="px-1 py-1.5 tabular-nums text-slate-700">
-                        {{ row.no_posts_in_period ? '—' : row.winners }}
-                    </td>
-                    <td class="px-1 py-1.5">
-                        <template v-if="row.no_posts_in_period || row.engagement_share == null">
-                            <span class="text-slate-400">—</span>
-                        </template>
-                        <div v-else class="flex items-center gap-1">
-                            <div class="h-1 w-8 overflow-hidden rounded-full bg-slate-100">
-                                <div
-                                    class="h-full rounded-full bg-slate-700"
-                                    :style="{ width: `${Math.min(100, row.engagement_share)}%` }"
-                                />
-                            </div>
-                            <span class="tabular-nums text-slate-700">{{ pct(row.engagement_share) }}</span>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+                        <span class="tabular-nums text-slate-700">{{ pct(row.engagement_share) }}</span>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
 </template>

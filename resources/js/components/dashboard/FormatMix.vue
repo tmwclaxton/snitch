@@ -31,7 +31,7 @@ const chartSeries = computed(() =>
 );
 
 const options = computed(() => ({
-    chart: { type: 'bar' as const, stacked: true, stackType: '100%' as const, height: 200, toolbar: { show: false }, fontFamily: 'inherit' },
+    chart: { type: 'bar' as const, stacked: true, stackType: '100%' as const, height: 180, toolbar: { show: false }, fontFamily: 'inherit' },
     colors: colours,
     plotOptions: { bar: { horizontal: true, barHeight: '55%' } },
     dataLabels: { enabled: false },
@@ -47,6 +47,6 @@ const options = computed(() => ({
     <EmptyState v-if="status === 'empty' || !rows?.length" :reason="reason" compact />
     <div v-else>
         <p v-if="status === 'insufficient'" class="mb-2 text-[11px] text-slate-500">{{ reason }}</p>
-        <VueApexCharts type="bar" height="200" :options="options" :series="chartSeries" />
+        <VueApexCharts type="bar" height="180" :options="options" :series="chartSeries" />
     </div>
 </template>

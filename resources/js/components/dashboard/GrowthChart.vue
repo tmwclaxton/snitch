@@ -30,7 +30,7 @@ const colours = computed(() =>
 );
 
 const options = computed(() => ({
-    chart: { type: 'line' as const, height: 200, toolbar: { show: false }, zoom: { enabled: false }, fontFamily: 'inherit' },
+    chart: { type: 'line' as const, height: 180, toolbar: { show: false }, zoom: { enabled: false }, fontFamily: 'inherit' },
     colors: colours.value,
     stroke: { width: 2, curve: 'straight' as const },
     markers: { size: 3 },
@@ -57,6 +57,6 @@ const options = computed(() => ({
     <EmptyState v-if="status === 'empty' || !series?.length" :reason="reason" compact />
     <div v-else>
         <p v-if="status === 'insufficient'" class="mb-2 text-[11px] text-slate-500">{{ reason }}</p>
-        <VueApexCharts type="line" height="200" :options="options" :series="chartSeries" />
+        <VueApexCharts type="line" height="180" :options="options" :series="chartSeries" />
     </div>
 </template>

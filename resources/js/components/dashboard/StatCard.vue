@@ -89,9 +89,9 @@ const gapClass = computed(() => {
 </script>
 
 <template>
-    <div class="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
+    <div class="rounded-md border border-slate-200 bg-white px-2 py-1.5">
         <div class="flex items-center justify-between gap-1">
-            <div class="truncate text-[10px] font-medium uppercase tracking-wide text-slate-500">{{ label }}</div>
+            <div class="truncate text-[9px] font-medium uppercase tracking-wide text-slate-500">{{ label }}</div>
             <button
                 type="button"
                 class="relative rounded p-0.5 text-slate-400 hover:text-slate-700"
@@ -111,10 +111,10 @@ const gapClass = computed(() => {
         </div>
 
         <template v-if="youLabel != null">
-            <div class="mt-0.5 text-lg font-semibold tracking-tight text-slate-900 tabular-nums leading-tight">
+            <div class="mt-0.5 text-base font-semibold tracking-tight text-slate-900 tabular-nums leading-none">
                 {{ youLabel }}
             </div>
-            <div class="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
+            <div class="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] leading-none text-slate-500">
                 <span>Peer {{ peerLabel }}</span>
                 <span
                     v-if="gapLabel"
@@ -125,7 +125,7 @@ const gapClass = computed(() => {
                 </span>
             </div>
         </template>
-        <div v-else class="mt-1 text-[11px] text-slate-400">
+        <div v-else class="mt-1 text-[10px] leading-snug text-slate-400">
             {{ reason || '—' }}
         </div>
     </div>

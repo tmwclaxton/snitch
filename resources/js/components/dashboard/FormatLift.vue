@@ -34,7 +34,7 @@ const chartSeries = computed(() =>
 );
 
 const options = computed(() => ({
-    chart: { type: 'bar' as const, height: 200, toolbar: { show: false }, fontFamily: 'inherit' },
+    chart: { type: 'bar' as const, height: 180, toolbar: { show: false }, fontFamily: 'inherit' },
     plotOptions: { bar: { columnWidth: '55%' } },
     dataLabels: { enabled: false },
     xaxis: {
@@ -55,5 +55,5 @@ const options = computed(() => ({
 
 <template>
     <EmptyState v-if="status !== 'ok' || !rows?.length" :reason="reason" compact />
-    <VueApexCharts v-else type="bar" height="200" :options="options" :series="chartSeries" />
+    <VueApexCharts v-else type="bar" height="180" :options="options" :series="chartSeries" />
 </template>

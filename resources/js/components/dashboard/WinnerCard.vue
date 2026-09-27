@@ -33,13 +33,9 @@ const fmt = new Intl.NumberFormat('en-GB');
         :href="post.url || undefined"
         :target="post.url ? '_blank' : undefined"
         rel="noreferrer"
-        class="flex gap-1.5 overflow-hidden rounded-md border border-slate-200 bg-white p-1"
-        :class="compact ? 'flex-col' : 'items-start'"
+        class="flex items-start gap-1.5 overflow-hidden rounded-md border border-slate-200 bg-white p-1"
     >
-        <div
-            class="relative shrink-0 overflow-hidden rounded bg-slate-100"
-            :class="compact ? 'aspect-square w-full' : 'h-14 w-14'"
-        >
+        <div class="relative h-16 w-16 shrink-0 overflow-hidden rounded bg-slate-100 sm:h-20 sm:w-20">
             <SnitchImage
                 v-if="post.thumbnail_url"
                 :src="post.thumbnail_url"
@@ -53,14 +49,16 @@ const fmt = new Intl.NumberFormat('en-GB');
                 {{ post.pi.toFixed(1) }}×
             </span>
         </div>
-        <div class="min-w-0 flex-1 px-0.5 pb-0.5">
+        <div class="min-w-0 flex-1 py-0.5 pr-0.5">
             <div class="truncate text-[10px] font-medium text-slate-900">
                 {{ post.is_own_account ? 'You' : `@${post.handle}` }}
-                <span class="font-normal text-slate-400">· {{ post.format }}</span>
             </div>
-            <p v-if="!compact" class="mt-0.5 line-clamp-1 text-[10px] text-slate-600">{{ post.hook || 'No caption' }}</p>
+            <div class="truncate text-[10px] text-slate-400">
+                {{ post.format }}<span v-if="post.posted_at"> · {{ post.posted_at }}</span>
+            </div>
+            <p class="mt-0.5 line-clamp-1 text-[10px] text-slate-600">{{ post.hook || 'No caption' }}</p>
             <div class="mt-0.5 text-[10px] tabular-nums text-slate-500">
-                <span v-if="post.likes_hidden" class="rounded bg-amber-50 px-1 text-amber-700">likes hidden</span>
+                <span v-if="post.likes_hidden" class="rounded bg-amber-50 px-1 text-amber-700">hidden</span>
                 <span v-else-if="post.likes != null">{{ fmt.format(post.likes) }}♥</span>
                 <span v-else>—</span>
                 · {{ fmt.format(post.comments) }}💬

@@ -170,17 +170,17 @@ const winnerItems = computed(() => {
 </script>
 
 <template>
-    <div class="min-h-full bg-white px-3 py-3 sm:px-5">
+    <div class="min-h-full bg-white px-3 py-2 sm:px-4">
         <Head title="Dashboard" />
 
-        <div class="mx-auto max-w-[1400px] space-y-2.5">
-            <div class="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-slate-200 pb-2">
-                <h1 class="shrink-0 text-base font-semibold tracking-tight text-slate-900">Dashboard</h1>
+        <div class="mx-auto max-w-[1400px] space-y-2">
+            <div class="flex flex-nowrap items-center gap-x-1.5 overflow-x-auto border-b border-slate-200 pb-1.5">
+                <h1 class="shrink-0 text-sm font-semibold tracking-tight text-slate-900">Dashboard</h1>
 
                 <button
                     v-if="own_account"
                     type="button"
-                    class="inline-flex h-7 items-center gap-1 rounded-full border border-slate-900 bg-slate-900 px-1.5 text-[11px] font-medium text-white"
+                    class="inline-flex h-6 shrink-0 items-center gap-1 rounded-full border border-slate-900 bg-slate-900 px-1.5 text-[10px] font-medium text-white"
                 >
                     <SnitchAvatar
                         :src="own_account.avatar"
@@ -195,7 +195,7 @@ const winnerItems = computed(() => {
                     v-for="rival in rivals"
                     :key="rival.id"
                     type="button"
-                    class="inline-flex h-7 max-w-[9.5rem] items-center gap-1 rounded-full border px-1.5 text-[11px] font-medium"
+                    class="inline-flex h-6 max-w-[8.5rem] shrink-0 items-center gap-1 rounded-full border px-1.5 text-[10px] font-medium"
                     :class="
                         selected.includes(rival.handle.toLowerCase())
                             ? 'border-slate-800 bg-slate-800 text-white'
@@ -313,7 +313,7 @@ const winnerItems = computed(() => {
                 </div>
                 <EmptyState v-else :reason="kpis.reason" compact />
 
-                <div class="grid gap-2.5 xl:grid-cols-5">
+                <div class="grid gap-2 xl:grid-cols-5">
                     <DashCard
                         class="xl:col-span-2"
                         title="This week in 30 seconds"
@@ -375,7 +375,7 @@ const winnerItems = computed(() => {
                         :reason="winners.reason || 'No posts in this tab.'"
                         compact
                     />
-                    <div v-else class="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+                    <div v-else class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-6">
                         <WinnerCard
                             v-for="post in winnerItems"
                             :key="String(post.id)"
@@ -385,8 +385,9 @@ const winnerItems = computed(() => {
                     </div>
                 </DashCard>
 
-                <div class="grid gap-2.5 md:grid-cols-2 xl:grid-cols-4">
+                <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
                     <DashCard
+                        v-if="growth_series.status !== 'empty'"
                         title="Follower growth"
                         why="Spikes show when a peer did something that worked."
                         formula="% change since first snapshot in period. Real snapshots only - never fabricated."
@@ -400,6 +401,7 @@ const winnerItems = computed(() => {
                     </DashCard>
 
                     <DashCard
+                        v-if="efficiency.status !== 'empty'"
                         title="Efficiency map"
                         why="Volume vs quality - post more, or post better?"
                         formula="x = posts/week · y = median ER/follower · bubble = followers"
@@ -415,6 +417,7 @@ const winnerItems = computed(() => {
                     </DashCard>
 
                     <DashCard
+                        v-if="format_mix.status !== 'empty'"
                         title="Format mix"
                         why="What peers publish."
                         formula="share of posts by type in the period"
@@ -428,6 +431,7 @@ const winnerItems = computed(() => {
                     </DashCard>
 
                     <DashCard
+                        v-if="format_lift.status !== 'empty'"
                         title="Format lift"
                         why="Which formats beat each account's usual."
                         formula="median ER(format) ÷ median ER(account); need n≥3 per format"
@@ -442,7 +446,7 @@ const winnerItems = computed(() => {
                     </DashCard>
                 </div>
 
-                <div class="grid gap-2.5 xl:grid-cols-2">
+                <div class="grid gap-2 xl:grid-cols-2">
                     <DashCard
                         title="When posts do best"
                         why="Peer timing evidence in Europe/London, not generic '5 AM' advice."
@@ -461,6 +465,7 @@ const winnerItems = computed(() => {
                     </DashCard>
 
                     <DashCard
+                        v-if="attention.status !== 'empty'"
                         title="Share of attention"
                         why="Who gets outsized attention per post (proxy, not true SOV)."
                         formula="eng_share = Σinteractions(a)/Σall · post_share = posts(a)/posts(all)"
@@ -474,36 +479,22 @@ const winnerItems = computed(() => {
                     </DashCard>
                 </div>
 
-                <DashCard
-                    title="Captions and hooks"
-                    why="Free changes to how posts are written."
-                    formula="Length excludes trailing hashtags. CTA via regex. Hooks from top PI winners."
-                    anchor="captions"
-                >
-                    <CaptionPanels
-                        :status="captions.status"
-                        :reason="captions.reason"
-                        :length-buckets="(captions.data?.length_buckets as any) || []"
-                        :ctas="(captions.data?.ctas as any) || []"
-                        :hashtag-buckets="(captions.data?.hashtag_buckets as any) || []"
-                        :hooks="(captions.data?.hooks as any) || []"
-                    />
-                </DashCard>
-
-                <div class="grid gap-2.5 xl:grid-cols-3">
+                <div class="grid gap-2 xl:grid-cols-3">
                     <DashCard
+                        v-if="captions.status !== 'empty'"
                         class="xl:col-span-2"
-                        title="Topics and themes"
-                        why="Topic gaps peers win with that you skip."
-                        formula="share = posts(theme)/posts · colour = median PI"
-                        anchor="themes"
+                        title="Captions and hooks"
+                        why="Free changes to how posts are written."
+                        formula="Length excludes trailing hashtags. CTA via regex. Hooks from top PI winners."
+                        anchor="captions"
                     >
-                        <ThemeMatrix
-                            :status="themes.status"
-                            :reason="themes.reason"
-                            :accounts="(themes.data?.accounts as any) || []"
-                            :matrix="(themes.data?.matrix as any) || []"
-                            :gaps="(themes.data?.gaps as any) || []"
+                        <CaptionPanels
+                            :status="captions.status"
+                            :reason="captions.reason"
+                            :length-buckets="(captions.data?.length_buckets as any) || []"
+                            :ctas="(captions.data?.ctas as any) || []"
+                            :hashtag-buckets="(captions.data?.hashtag_buckets as any) || []"
+                            :hooks="(captions.data?.hooks as any) || []"
                         />
                     </DashCard>
 
@@ -522,20 +513,39 @@ const winnerItems = computed(() => {
                     </DashCard>
                 </div>
 
-                <DashCard
-                    title="Week-over-week"
-                    why="What changed since you last looked."
-                    formula="ISO weeks Mon-Sun in Europe/London."
-                    anchor="weekly"
-                >
-                    <WeeklyMultiples
-                        :status="weekly.status"
-                        :reason="weekly.reason"
-                        :weeks="(weekly.data?.weeks as any) || []"
-                        :series="(weekly.data?.series as any) || []"
-                        :deltas="(weekly.data?.deltas as any) || null"
-                    />
-                </DashCard>
+                <div class="grid gap-2 xl:grid-cols-2">
+                    <DashCard
+                        v-if="themes.status !== 'empty'"
+                        title="Topics and themes"
+                        why="Topic gaps peers win with that you skip."
+                        formula="share = posts(theme)/posts · colour = median PI"
+                        anchor="themes"
+                    >
+                        <ThemeMatrix
+                            :status="themes.status"
+                            :reason="themes.reason"
+                            :accounts="(themes.data?.accounts as any) || []"
+                            :matrix="(themes.data?.matrix as any) || []"
+                            :gaps="(themes.data?.gaps as any) || []"
+                        />
+                    </DashCard>
+
+                    <DashCard
+                        v-if="weekly.status !== 'empty'"
+                        title="Week-over-week"
+                        why="What changed since you last looked."
+                        formula="ISO weeks Mon-Sun in Europe/London."
+                        anchor="weekly"
+                    >
+                        <WeeklyMultiples
+                            :status="weekly.status"
+                            :reason="weekly.reason"
+                            :weeks="(weekly.data?.weeks as any) || []"
+                            :series="(weekly.data?.series as any) || []"
+                            :deltas="(weekly.data?.deltas as any) || null"
+                        />
+                    </DashCard>
+                </div>
 
                 <DashCard
                     title="Data notes"

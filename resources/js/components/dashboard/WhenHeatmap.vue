@@ -69,7 +69,7 @@ function hasOwn(dow: number, block: number): boolean {
                 <div
                     v-for="(cell, block) in cells?.[dow] || []"
                     :key="`${day}-${block}`"
-                    class="relative flex h-8 items-center justify-center rounded border border-slate-100"
+                    class="relative flex h-6 items-center justify-center rounded border border-slate-100"
                     :style="{ backgroundColor: bg(cell) }"
                     :title="`${day} ${blocks?.[block]} · n=${cell.n || cell.count}${cell.pi != null ? ` · PI ${cell.pi}` : ''}`"
                 >
