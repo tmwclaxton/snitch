@@ -48,4 +48,25 @@ class BlogArticleGenerationServiceTest extends TestCase
         $this->assertStringNotContainsString('# How to track rival Reels', $normalized);
         $this->assertStringContainsString('## Next', $normalized);
     }
+
+    #[Test]
+    public function generation_prompts_describe_instagram_only_product(): void
+    {
+        $service = file_get_contents(app_path('Services/Blog/BlogArticleGenerationService.php'));
+        $config = file_get_contents(config_path('blog.php'));
+
+        $this->assertNotFalse($service);
+        $this->assertNotFalse($config);
+        $this->assertStringContainsString('Instagram only', $service);
+        $this->assertStringContainsString('Stay Instagram-focused', $service);
+        $this->assertStringNotContainsString(
+            'across TikTok, Instagram, YouTube, Facebook, and LinkedIn',
+            $service,
+        );
+        $this->assertStringNotContainsString("'id' => 'tiktok-hooks'", $config);
+        $this->assertStringNotContainsString("'id' => 'youtube-shorts'", $config);
+        $this->assertStringNotContainsString("'id' => 'cross-platform'", $config);
+        $this->assertStringContainsString("'id' => 'instagram-reels'", $config);
+        $this->assertStringContainsString("'id' => 'instagram-gap'", $config);
+    }
 }

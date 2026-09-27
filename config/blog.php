@@ -46,11 +46,7 @@ return [
         'target_max' => 5,
         'preferred_host_suffixes' => [
             'snitchsocial.net',
-            'tiktok.com',
             'instagram.com',
-            'youtube.com',
-            'linkedin.com',
-            'facebook.com',
             'meta.com',
             'hootsuite.com',
             'sproutsocial.com',
@@ -77,25 +73,25 @@ return [
     'seo_clusters' => [
         [
             'id' => 'competitor-tracking',
-            'primary' => 'competitor social media tracking',
+            'primary' => 'Instagram competitor tracking',
             'supporting' => [
-                'track competitor posts',
-                'social competitive intelligence',
-                'monitor rival creators',
+                'track competitor Instagram posts',
+                'Instagram competitive intelligence',
+                'monitor rival Instagram creators',
             ],
             'angle_hints' => [
                 'local brands and agencies',
                 'public posts only',
-                'one contact sheet across platforms',
+                'one Instagram feed for rivals',
             ],
         ],
         [
-            'id' => 'tiktok-hooks',
-            'primary' => 'TikTok hooks that win',
+            'id' => 'instagram-hooks',
+            'primary' => 'Instagram hooks that win',
             'supporting' => [
-                'TikTok competitor analysis',
-                'hook patterns for short video',
-                'remake winning TikToks',
+                'Instagram competitor analysis',
+                'hook patterns for Reels',
+                'remake winning Instagram posts',
             ],
             'angle_hints' => [
                 'first three seconds',
@@ -118,25 +114,26 @@ return [
             ],
         ],
         [
-            'id' => 'youtube-shorts',
-            'primary' => 'YouTube Shorts competitive research',
+            'id' => 'instagram-cadence',
+            'primary' => 'when competitors post on Instagram',
             'supporting' => [
-                'Shorts ideas from competitors',
-                'track YouTube rivals',
-                'Shorts hooks worth remaking',
+                'Instagram posting frequency',
+                'best times from rival data',
+                'track competitor cadence',
             ],
             'angle_hints' => [
-                'channel vs Shorts cadence',
-                'title packaging',
+                'weekly refresh',
+                'heatmaps and timing',
+                'planning around rivals',
             ],
         ],
         [
             'id' => 'winners-remakes',
-            'primary' => 'how to remake winning social posts',
+            'primary' => 'how to remake winning Instagram posts',
             'supporting' => [
                 'score competitor winners',
                 'remake brief for creators',
-                'what to copy from rivals',
+                'what to copy from Instagram rivals',
             ],
             'angle_hints' => [
                 'rules-based winners',
@@ -146,10 +143,10 @@ return [
         ],
         [
             'id' => 'agency-intel',
-            'primary' => 'agency competitive social listening',
+            'primary' => 'agency Instagram competitive listening',
             'supporting' => [
-                'client competitor tracking',
-                'multi-brand social intel',
+                'client competitor tracking on Instagram',
+                'multi-brand Instagram intel',
                 'report what rivals posted',
             ],
             'angle_hints' => [
@@ -158,16 +155,17 @@ return [
             ],
         ],
         [
-            'id' => 'cross-platform',
-            'primary' => 'cross-platform competitor content tracking',
+            'id' => 'instagram-gap',
+            'primary' => 'Instagram competitive gap analysis',
             'supporting' => [
-                'TikTok Instagram YouTube in one feed',
-                'compare rivals across platforms',
-                'unified competitor feed',
+                'see the gap vs Instagram rivals',
+                'compare competitor engagement',
+                'what you are missing on Instagram',
             ],
             'angle_hints' => [
-                'platform mix',
-                'avoid tab-hopping',
+                'follower trends',
+                'top posts and formats',
+                'weekly delivered insight',
             ],
         ],
     ],

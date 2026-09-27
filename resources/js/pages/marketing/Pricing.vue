@@ -63,132 +63,124 @@ function formatAverage(pence: number): string {
 </script>
 
 <template>
-    <div>
-        <div class="px-5 py-14 sm:px-8 sm:py-20">
-            <div class="mx-auto max-w-6xl">
-                <h1 class="snitch-display text-4xl text-snitch-ink sm:text-5xl">
-                    Platform + usage
-                </h1>
-                <p class="mt-4 max-w-2xl text-snitch-ink/80">
-                    A simple monthly platform fee, then prepaid credits for Apify syncs, NanoGPT analysis, and
-                    Firecrawl discovery. Signups start with a 7-day trial and £5 to spend. No snitch seat
-                    caps - you pay for the work you run.
-                </p>
+    <div class="px-4 py-14 sm:px-8 sm:py-20">
+        <div class="mx-auto max-w-6xl">
+            <h1 class="text-4xl font-semibold tracking-tight text-neutral-950 sm:text-5xl">
+                Platform + usage
+            </h1>
+            <p class="mt-4 max-w-2xl text-neutral-600">
+                A simple monthly platform fee, then prepaid credits for Apify syncs, NanoGPT analysis, and
+                Firecrawl discovery. Signups start with a 7-day trial and £5 to spend. No snitch seat
+                caps - you pay for the work you run.
+            </p>
 
-                <div class="snitch-contact-reveal mt-12 grid gap-6 md:grid-cols-2">
-                    <section class="snitch-scrap relative space-y-4 p-6 pt-8">
-                        <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
-                        <p class="snitch-ink-label">Platform</p>
-                        <p class="snitch-display text-4xl text-snitch-ink">
-                            {{ formatCatalog(platform.fee_pence) }}<span class="text-lg">/mo</span>
-                        </p>
-                        <ul class="relative z-10 space-y-2 text-sm text-snitch-ink/80">
-                            <li class="flex gap-2">
-                                <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                Unlimited tracked accounts
-                            </li>
-                            <li class="flex gap-2">
-                                <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                Web app: Tracking, Feed, Explore, Winners
-                            </li>
-                            <li class="flex gap-2">
-                                <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                {{ formatCatalog(platform.bonus_pence) }} usage credits every billing period
-                            </li>
-                            <li class="flex gap-2">
-                                <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                Feed, Explore, Winners
-                            </li>
-                        </ul>
-                    </section>
-
-                    <section class="snitch-scrap relative space-y-4 p-6 pt-8">
-                        <span class="snitch-tape right-4 -top-2" aria-hidden="true" />
-                        <p class="snitch-ink-label">Usage credits</p>
-                        <p class="snitch-display text-4xl text-snitch-ink">
-                            Pay as you go
-                        </p>
-                        <ul class="relative z-10 space-y-2 text-sm text-snitch-ink/80">
-                            <li class="flex gap-2">
-                                <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                Top up £10 / £25 / £50 / £100 when you need more
-                            </li>
-                            <li class="flex gap-2">
-                                <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                £5 usage when you create or claim your account
-                            </li>
-                            <li class="flex gap-2">
-                                <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                7-day trial when you sign up on the website
-                            </li>
-                            <li class="flex gap-2">
-                                <Check class="mt-0.5 size-4 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                                Usage split by Apify, NanoGPT, and Firecrawl
-                            </li>
-                        </ul>
-                    </section>
-                </div>
-
-                <section class="snitch-scrap relative mt-12 space-y-4 p-6 pt-8" data-test="tool-averages">
-                    <span class="snitch-tape left-8 -top-2" aria-hidden="true" />
-                    <h2 class="snitch-display text-2xl text-snitch-ink sm:text-3xl">
-                        Live tool averages
-                    </h2>
-                    <p class="max-w-2xl text-sm text-snitch-ink/75">
-                        Mean charge per step across every Snitch ledger entry, same vendors as Billing.
-                        Updated from live usage - shown to four decimal places.
+            <div class="mt-12 grid gap-6 md:grid-cols-2">
+                <section class="space-y-4 border border-neutral-200 bg-white p-6 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.10)] sm:p-8">
+                    <p class="text-xs font-medium uppercase tracking-wide text-neutral-500">Platform</p>
+                    <p class="text-4xl font-semibold tracking-tight text-neutral-950">
+                        {{ formatCatalog(platform.fee_pence) }}<span class="text-lg font-medium text-neutral-500">/mo</span>
                     </p>
-                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                        <div
-                            v-for="row in averagesByVendor"
-                            :key="row.vendor"
-                            class="border border-snitch-ink/10 border-l-4 bg-snitch-paper/60 p-3"
-                            :class="VENDOR_ACCENT_BORDER[row.vendor]"
-                            :data-test="`tool-average-${row.vendor}`"
-                        >
-                            <p class="snitch-ink-label inline-flex items-center gap-1.5">
-                                <img
-                                    :src="vendorIconSrc(row.vendor)"
-                                    alt=""
-                                    class="snitch-platform-logo size-3.5 shrink-0 object-contain"
-                                    width="14"
-                                    height="14"
-                                >
-                                {{ vendorLabel(row.vendor) }}
-                            </p>
-                            <p class="snitch-display text-2xl tabular-nums text-snitch-ink">
-                                {{ formatAverage(row.avg_pence) }}
-                            </p>
-                            <p class="text-xs text-snitch-ink/60">
-                                {{
-                                    row.entries > 0
-                                        ? `avg / step · ${row.entries.toLocaleString('en-GB')} steps`
-                                        : 'No charges yet'
-                                }}
-                            </p>
-                        </div>
-                    </div>
-                    <p v-if="!hasLiveCharges" class="text-xs text-snitch-ink/55">
-                        Averages fill in as the platform records Apify, NanoGPT, Firecrawl, TikHub, and Snitch charges.
-                    </p>
+                    <ul class="space-y-2 text-sm text-neutral-600">
+                        <li class="flex gap-2">
+                            <Check class="mt-0.5 size-4 shrink-0 text-neutral-950" aria-hidden="true" />
+                            Unlimited tracked accounts
+                        </li>
+                        <li class="flex gap-2">
+                            <Check class="mt-0.5 size-4 shrink-0 text-neutral-950" aria-hidden="true" />
+                            Web app: Tracking, Feed, Explore, Winners
+                        </li>
+                        <li class="flex gap-2">
+                            <Check class="mt-0.5 size-4 shrink-0 text-neutral-950" aria-hidden="true" />
+                            {{ formatCatalog(platform.bonus_pence) }} usage credits every billing period
+                        </li>
+                    </ul>
                 </section>
 
-                <div class="mt-12 flex flex-wrap gap-3">
-                    <a
-                        href="https://calendly.com/dan-olympuslab/30min"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="snitch-btn snitch-btn-spot"
+                <section class="space-y-4 border border-neutral-200 bg-white p-6 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.10)] sm:p-8">
+                    <p class="text-xs font-medium uppercase tracking-wide text-neutral-500">Usage credits</p>
+                    <p class="text-4xl font-semibold tracking-tight text-neutral-950">
+                        Pay as you go
+                    </p>
+                    <ul class="space-y-2 text-sm text-neutral-600">
+                        <li class="flex gap-2">
+                            <Check class="mt-0.5 size-4 shrink-0 text-neutral-950" aria-hidden="true" />
+                            Top up £10 / £25 / £50 / £100 when you need more
+                        </li>
+                        <li class="flex gap-2">
+                            <Check class="mt-0.5 size-4 shrink-0 text-neutral-950" aria-hidden="true" />
+                            £5 usage when you create or claim your account
+                        </li>
+                        <li class="flex gap-2">
+                            <Check class="mt-0.5 size-4 shrink-0 text-neutral-950" aria-hidden="true" />
+                            7-day trial when you sign up on the website
+                        </li>
+                        <li class="flex gap-2">
+                            <Check class="mt-0.5 size-4 shrink-0 text-neutral-950" aria-hidden="true" />
+                            Usage split by Apify, NanoGPT, and Firecrawl
+                        </li>
+                    </ul>
+                </section>
+            </div>
+
+            <section class="mt-12 space-y-4 border border-neutral-200 bg-neutral-50 p-6 sm:p-8" data-test="tool-averages">
+                <h2 class="text-2xl font-semibold tracking-tight text-neutral-950 sm:text-3xl">
+                    Live tool averages
+                </h2>
+                <p class="max-w-2xl text-sm text-neutral-600">
+                    Mean charge per step across every Snitch ledger entry, same vendors as Billing.
+                    Updated from live usage - shown to four decimal places.
+                </p>
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                    <div
+                        v-for="row in averagesByVendor"
+                        :key="row.vendor"
+                        class="border border-neutral-200 border-l-4 bg-white p-3"
+                        :class="VENDOR_ACCENT_BORDER[row.vendor]"
+                        :data-test="`tool-average-${row.vendor}`"
                     >
-                        <span class="relative z-10 inline-flex items-center gap-2">
-                            <ArrowRight class="size-3.5 shrink-0" aria-hidden="true" />
-                            Book a free intro call
-                        </span>
-                    </a>
-                    <Link :href="ctaHref" class="snitch-btn">
-                        <span class="relative z-10">{{ ctaLabel }}</span>
-                    </Link>
+                        <p class="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-neutral-500">
+                            <img
+                                :src="vendorIconSrc(row.vendor)"
+                                alt=""
+                                class="size-3.5 shrink-0 object-contain"
+                                width="14"
+                                height="14"
+                            >
+                            {{ vendorLabel(row.vendor) }}
+                        </p>
+                        <p class="text-2xl font-semibold tabular-nums tracking-tight text-neutral-950">
+                            {{ formatAverage(row.avg_pence) }}
+                        </p>
+                        <p class="text-xs text-neutral-500">
+                            {{
+                                row.entries > 0
+                                    ? `avg / step · ${row.entries.toLocaleString('en-GB')} steps`
+                                    : 'No charges yet'
+                            }}
+                        </p>
+                    </div>
                 </div>
+                <p v-if="!hasLiveCharges" class="text-xs text-neutral-500">
+                    Averages fill in as the platform records Apify, NanoGPT, Firecrawl, TikHub, and Snitch charges.
+                </p>
+            </section>
+
+            <div class="mt-12 flex flex-wrap gap-3">
+                <a
+                    href="https://calendly.com/dan-olympuslab/30min"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-2 bg-[#F0C400] px-5 py-2.5 text-sm font-medium text-neutral-950 hover:opacity-90"
+                >
+                    <ArrowRight class="size-3.5 shrink-0" aria-hidden="true" />
+                    Book a free intro call
+                </a>
+                <Link
+                    :href="ctaHref"
+                    class="inline-flex items-center border border-neutral-200 px-5 py-2.5 text-sm font-medium text-neutral-950 hover:border-neutral-400"
+                >
+                    {{ ctaLabel }}
+                </Link>
             </div>
         </div>
     </div>

@@ -25,4 +25,5 @@ Public blog posts live in the `blogs` table (Markdown body). There is no in-app 
 - Content ops are CLI: `blog:generate` (default status from `config/blog.php`, usually `draft`) then `blog:publish` after spot-check. Weekly schedule runs `blog:generate --length=long`.
 - Generated product links must use `config('blog.public_site_url')` (`https://www.snitchsocial.net`), never localhost.
 - Hero images store on the `public` disk under `blogs/heroes/`.
-- UI uses `PublicLayout` + soft risograph scrap/doc patterns; keep `blog/` out of the authenticated `AppLayout` switch in `app.ts`.
+- UI uses `PublicLayout` with the white marketing shell (sans-serif, yellow `#F0C400` accents); keep `blog/` out of the authenticated `AppLayout` switch in `app.ts`.
+- Product framing for generate prompts and SEO clusters is Instagram-only. Do not invent multi-platform TikTok/YouTube tracking copy for new posts.

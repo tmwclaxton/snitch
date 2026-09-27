@@ -15,7 +15,7 @@ defineOptions({
                 you use the product at www.snitchsocial.net.
             </p>
 
-            <h2 class="snitch-display text-xl text-snitch-ink">
+            <h2>
                 Account information
             </h2>
             <p>
@@ -25,7 +25,7 @@ defineOptions({
                 Brand settings.
             </p>
 
-            <h2 class="snitch-display text-xl text-snitch-ink">
+            <h2>
                 Snitch and post data
             </h2>
             <p>
@@ -38,7 +38,7 @@ defineOptions({
                 Shorts-style video.
             </p>
 
-            <h2 class="snitch-display text-xl text-snitch-ink">
+            <h2>
                 AI analysis
             </h2>
             <p>
@@ -49,7 +49,7 @@ defineOptions({
                 in Feed, Explore, and Winners.
             </p>
 
-            <h2 class="snitch-display text-xl text-snitch-ink">
+            <h2>
                 Billing
             </h2>
             <p>
@@ -61,7 +61,7 @@ defineOptions({
                 data.
             </p>
 
-            <h2 class="snitch-display text-xl text-snitch-ink">
+            <h2>
                 Public blog and analytics
             </h2>
             <p>
@@ -74,7 +74,7 @@ defineOptions({
                 or tracked-account content with those hits.
             </p>
 
-            <h2 class="snitch-display text-xl text-snitch-ink">
+            <h2>
                 Cookies and sessions
             </h2>
             <p>
@@ -84,7 +84,7 @@ defineOptions({
                 Cookies page for details.
             </p>
 
-            <h2 class="snitch-display text-xl text-snitch-ink">
+            <h2>
                 Contact
             </h2>
             <p>

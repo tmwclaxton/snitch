@@ -21,28 +21,15 @@ class PublicPagesTest extends TestCase
             );
     }
 
-    public function test_surface_clips_grain_so_it_does_not_expand_scroll(): void
+    public function test_public_layout_uses_white_marketing_shell(): void
     {
-        $css = file_get_contents(resource_path('css/app.css'));
         $layout = file_get_contents(resource_path('js/layouts/PublicLayout.vue'));
 
-        $this->assertNotFalse($css, 'Missing app.css source');
         $this->assertNotFalse($layout, 'Missing PublicLayout.vue source');
-        $this->assertMatchesRegularExpression(
-            '/\.snitch-surface\s*\{[^}]*overflow:\s*clip/s',
-            $css,
-            'snitch-surface must clip both axes to avoid a nested mobile scrollport',
-        );
-        $this->assertMatchesRegularExpression(
-            '/@keyframes snitch-grain-drift\s*\{[^}]*background-position:/s',
-            $css,
-            'Grain drift must use background-position, not transform (transform expands scrollHeight)',
-        );
-        $this->assertStringNotContainsString(
-            'overflow-x-clip',
-            $layout,
-            'PublicLayout should rely on .snitch-surface overflow:clip, not overflow-x-clip alone',
-        );
+        $this->assertStringContainsString('bg-white', $layout);
+        $this->assertStringNotContainsString('snitch-surface', $layout);
+        $this->assertStringNotContainsString('snitch-grain', $layout);
+        $this->assertStringNotContainsString('overflow-x-clip', $layout);
     }
 
     public function test_platform_logo_assets_exist(): void
@@ -216,9 +203,18 @@ class PublicPagesTest extends TestCase
         $this->assertStringContainsString('formatPenceAsGbp', $pricing);
         $this->assertStringContainsString('Stripe', $privacy);
         $this->assertStringContainsString('Stripe', $terms);
-        $this->assertStringContainsString('YouTube Shorts', $how);
+        $this->assertStringContainsString('Instagram', $how);
+        $this->assertStringNotContainsString('TikTok', $how);
+        $this->assertStringNotContainsString('YouTube Shorts', $how);
         $this->assertStringContainsString('Explore', $how);
         $this->assertStringContainsString('Blog', $about);
+        $this->assertStringContainsString('Instagram', $about);
+        $this->assertStringContainsString('Web app: Tracking, Feed, Explore, Winners', $pricing);
+        $this->assertSame(
+            1,
+            substr_count($pricing, 'Feed, Explore, Winners'),
+            'Platform feature list must not repeat Feed, Explore, Winners',
+        );
     }
 
     public function test_sitemap_lists_public_routes(): void
@@ -289,12 +285,8 @@ class PublicPagesTest extends TestCase
 
         $this->assertNotFalse($contents, 'Missing Contact.vue source');
         $this->assertStringContainsString('contact-annotation', $contents);
-        $this->assertStringContainsString('text-snitch-ink', $contents);
-        $this->assertDoesNotMatchRegularExpression(
-            '/class="snitch-annotation(?![^"]*text-snitch-ink)/',
-            $contents,
-            'Contact annotations must use charcoal ink, not yellow-on-paper alone',
-        );
+        $this->assertStringContainsString('text-neutral-950', $contents);
+        $this->assertStringContainsString('hello@snitchsocial.net', $contents);
     }
 
     public function test_landing_uses_start_tracking_cta_and_platform_price(): void
@@ -389,14 +381,45 @@ class PublicPagesTest extends TestCase
         $this->assertStringContainsString("title: 'Competitors'", $sidebar);
     }
 
-    public function test_public_nav_stays_minimal(): void
+    public function test_public_nav_includes_pricing_and_blog_with_mobile_menu(): void
     {
         $nav = file_get_contents(resource_path('js/components/marketing/PublicNav.vue'));
+        $footer = file_get_contents(resource_path('js/components/marketing/PublicFooter.vue'));
 
         $this->assertNotFalse($nav, 'Missing PublicNav.vue source');
+        $this->assertNotFalse($footer, 'Missing PublicFooter.vue source');
         $this->assertStringContainsString('aria-label="Snitch home"', $nav);
         $this->assertStringContainsString('Log in', $nav);
+        $this->assertStringContainsString("label: 'Pricing'", $nav);
+        $this->assertStringContainsString("label: 'Blog'", $nav);
+        $this->assertStringContainsString('public-mobile-nav', $nav);
+        $this->assertStringContainsString('Open menu', $nav);
         $this->assertStringNotContainsString('How it works', $nav);
+        $this->assertStringContainsString('>Pricing<', $footer);
+        $this->assertStringContainsString('mailto:hello@snitchsocial.net', $footer);
+        $this->assertStringNotContainsString('snitch377@gmail.com', $footer);
+    }
+
+    public function test_home_footer_reserves_space_for_sticky_cta_bar(): void
+    {
+        $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
+        $footer = file_get_contents(resource_path('js/components/marketing/PublicFooter.vue'));
+
+        $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
+        $this->assertNotFalse($footer, 'Missing PublicFooter.vue source');
+        $this->assertStringContainsString('fixed inset-x-0 bottom-0', $welcome);
+        $this->assertStringContainsString('The best kept secret in social media marketing', $welcome);
+        $this->assertStringContainsString("isHome ? 'pb-20' : 'pb-6'", $footer);
+    }
+
+    public function test_blog_index_copy_is_instagram_only(): void
+    {
+        $index = file_get_contents(resource_path('js/pages/blog/Index.vue'));
+
+        $this->assertNotFalse($index, 'Missing blog/Index.vue source');
+        $this->assertStringContainsString('Instagram', $index);
+        $this->assertStringNotContainsString('TikTok', $index);
+        $this->assertStringNotContainsString('YouTube', $index);
     }
 
     public function test_landing_page_does_not_push_open_source_section(): void

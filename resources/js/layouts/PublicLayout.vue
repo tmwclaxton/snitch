@@ -14,9 +14,8 @@ withDefaults(
 </script>
 
 <template>
-    <div class="snitch-surface relative min-h-screen w-full">
+    <div class="relative min-h-screen w-full bg-white text-neutral-950">
         <SeoHead />
-        <div class="snitch-grain" aria-hidden="true" />
         <div class="relative z-10 flex min-h-screen w-full flex-col">
             <PublicNav :minimal="minimal" />
             <main class="w-full flex-1">
