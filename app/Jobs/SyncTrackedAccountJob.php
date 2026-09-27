@@ -95,9 +95,25 @@ class SyncTrackedAccountJob implements ShouldQueue
 
         $account->markSyncRunning();
 
+        $isFirstSync = $account->last_synced_at === null;
         $syncOptions = new SyncOptions($this->postsLimit, $this->recencyDays);
         $limit = $syncOptions->resolvedPostsLimit();
         $recencyDays = $syncOptions->resolvedRecencyDays();
+
+        // Newly added trackers need a longer backfill so the dashboard has enough
+        // posts for medians. Explicit job overrides still win.
+        if ($isFirstSync && $this->postsLimit === null) {
+            $firstLimit = max(1, (int) config('snitch.sync.first_sync_posts_limit', 50));
+            $maxLimit = max($firstLimit, (int) config('snitch.sync.posts_limit_max', 50));
+            $limit = min($firstLimit, $maxLimit);
+        }
+
+        if ($isFirstSync && $this->recencyDays === null) {
+            $firstRecency = max(1, (int) config('snitch.sync.first_sync_recency_days', 90));
+            $maxRecency = max($firstRecency, (int) config('snitch.sync.recency_days_max', 90));
+            $recencyDays = min($firstRecency, $maxRecency);
+        }
+
         $cutoff = CarbonImmutable::now()->subDays($recencyDays);
         $scrapeDriver = $adapters->driverFor($account->platform);
         $triedTikHub = $scrapeDriver === 'tikhub';
@@ -263,17 +279,17 @@ class SyncTrackedAccountJob implements ShouldQueue
             $charger->chargePulledApifyRuns($owner, 'sync.account', $syncMeta);
             $charger->chargePulledTikHubRuns($owner, 'sync.account', $syncMeta);
 
-            $reelsInWindow = Post::query()
+            $postsInWindow = Post::query()
                 ->where('social_account_id', $account->social_account_id)
-                ->reelLike()
+                ->whereIn('type', self::importableTypes())
                 ->where('posted_at', '>=', $cutoff)
                 ->count();
 
-            if ($reelsInWindow === 0) {
+            if ($postsInWindow === 0) {
                 $account->fill([
                     'last_synced_at' => now(),
                     'last_sync_status' => 'empty',
-                    'last_sync_error' => 'No recent reels found for this handle.',
+                    'last_sync_error' => 'No recent posts found for this handle.',
                 ])->save();
             } else {
                 $account->fill([

@@ -185,6 +185,7 @@ class CompetitorInsightsBuilder
 
         $views = 0.0;
         $likes = 0.0;
+        $likesCounted = 0;
         $comments = 0.0;
         $shares = 0.0;
         $viewed = 0.0;
@@ -193,18 +194,29 @@ class CompetitorInsightsBuilder
         foreach ($posts as $post) {
             $metrics = is_array($post->metrics) ? $post->metrics : [];
             $postViews = (float) ($metrics['views'] ?? 0);
-            $postLikes = (float) ($metrics['likes'] ?? 0);
+            $likesHidden = ($metrics['like_count_hidden'] ?? false) === true
+                || ! array_key_exists('likes', $metrics)
+                || $metrics['likes'] === null;
+            $postLikes = $likesHidden ? null : (float) $metrics['likes'];
             $postComments = (float) ($metrics['comments'] ?? 0);
             $postShares = (float) ($metrics['shares'] ?? 0);
-            $postInteractions = $postLikes + $postComments + $postShares;
+            // Hidden likes are excluded from interaction totals (not treated as 0).
+            $postInteractions = ($postLikes ?? 0.0) + $postComments + $postShares;
+            if ($likesHidden) {
+                $postInteractions = $postComments + $postShares;
+            }
 
             $views += $postViews;
-            $likes += $postLikes;
+            if ($postLikes !== null) {
+                $likes += $postLikes;
+                $likesCounted++;
+            }
             $comments += $postComments;
             $shares += $postShares;
 
             // Ratio-of-sums over posts with valid views. Skip impossible rows
             // (more interactions than views) so one bad scrape cannot dominate.
+            // When likes are hidden, still include comments/shares vs views.
             if ($postViews > 0 && $postInteractions <= $postViews) {
                 $viewed += $postViews;
                 $viewedInteractions += $postInteractions;
@@ -214,7 +226,8 @@ class CompetitorInsightsBuilder
         return [
             'posts' => $count,
             'avg_views' => round($views / $count, 1),
-            'avg_likes' => round($likes / $count, 1),
+            // Exclude hidden-like posts from the likes average (null ≠ 0).
+            'avg_likes' => $likesCounted > 0 ? round($likes / $likesCounted, 1) : 0.0,
             'avg_comments' => round($comments / $count, 1),
             'avg_shares' => round($shares / $count, 1),
             'avg_rate' => $viewed > 0

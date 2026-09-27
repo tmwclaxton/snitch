@@ -460,9 +460,19 @@ class CompetitorInsights
         };
     }
 
-    public function likes(Post $post): int
+    public function likes(Post $post): ?int
     {
-        return (int) data_get($post->metrics, 'likes', 0);
+        $metrics = is_array($post->metrics) ? $post->metrics : [];
+
+        if (($metrics['like_count_hidden'] ?? false) === true) {
+            return null;
+        }
+
+        if (! array_key_exists('likes', $metrics) || $metrics['likes'] === null) {
+            return array_key_exists('likes', $metrics) ? null : 0;
+        }
+
+        return max(0, (int) $metrics['likes']);
     }
 
     public function comments(Post $post): int
@@ -499,7 +509,14 @@ class CompetitorInsights
             return 0.0;
         }
 
-        return (($this->likes($post) + $this->comments($post)) / $followers) * 100;
+        $likes = $this->likes($post);
+
+        // Hidden like counts must not be treated as 0 engagement.
+        if ($likes === null) {
+            return 0.0;
+        }
+
+        return (($likes + $this->comments($post)) / $followers) * 100;
     }
 
     /**

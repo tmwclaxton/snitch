@@ -1,0 +1,35 @@
+{
+  "code": 200,
+  "data": {
+    "items": [
+      {
+        "media": {
+          "code": "OLDREEL1",
+          "media_type": 2,
+          "product_type": "clips",
+          "taken_at": 1750000000,
+          "caption": {"text": "Old reel outside window"},
+          "like_count": 10,
+          "comment_count": 1,
+          "play_count": 400,
+          "video_versions": [
+            {"url": "https://cdn.example.com/old-reel.mp4"}
+          ]
+        }
+      },
+      {
+        "media": {
+          "code": "DUPEREEL",
+          "media_type": 2,
+          "product_type": "clips",
+          "taken_at": 1758643200,
+          "caption": {"text": "Also in reels feed"},
+          "like_count": 55,
+          "comment_count": 2,
+          "play_count": 900,
+          "video_url": "https://cdn.example.com/duper-from-reels.mp4"
+        }
+      }
+    ]
+  }
+}

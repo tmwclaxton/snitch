@@ -1,0 +1,73 @@
+{
+  "code": 200,
+  "data": {
+    "items": [
+      {
+        "code": "CAROUSEL1",
+        "media_type": 8,
+        "product_type": "carousel_container",
+        "taken_at": 1758902400,
+        "caption": {"text": "Weekend carousel drop"},
+        "like_count": 42,
+        "comment_count": 3,
+        "share_count": 1,
+        "image_versions2": {
+          "candidates": [
+            {"url": "https://cdn.example.com/carousel1.jpg"}
+          ]
+        },
+        "carousel_media": [
+          {
+            "media_type": 1,
+            "image_versions2": {
+              "candidates": [{"url": "https://cdn.example.com/carousel1.jpg"}]
+            }
+          }
+        ]
+      },
+      {
+        "code": "PHOTO1",
+        "media_type": 1,
+        "product_type": "feed",
+        "taken_at": 1758816000,
+        "caption": {"text": "Studio still"},
+        "like_count": 18,
+        "comment_count": 1,
+        "image_versions2": {
+          "candidates": [
+            {"url": "https://cdn.example.com/photo1.jpg"}
+          ]
+        }
+      },
+      {
+        "code": "HIDDENLIKES1",
+        "media_type": 2,
+        "product_type": "clips",
+        "taken_at": 1758729600,
+        "caption": {"text": "Likes hidden reel"},
+        "like_count": 0,
+        "comment_count": 7,
+        "play_count": 1200,
+        "video_versions": [
+          {"url": "https://cdn.example.com/hidden.mp4"}
+        ],
+        "image_versions2": {
+          "candidates": [{"url": "https://cdn.example.com/hidden.jpg"}]
+        }
+      },
+      {
+        "code": "DUPEREEL",
+        "media_type": 2,
+        "product_type": "clips",
+        "taken_at": 1758643200,
+        "caption": {"text": "Also in reels feed"},
+        "like_count": 55,
+        "comment_count": 2,
+        "play_count": 900,
+        "video_versions": [
+          {"url": "https://cdn.example.com/duper-from-posts.mp4"}
+        ]
+      }
+    ]
+  }
+}

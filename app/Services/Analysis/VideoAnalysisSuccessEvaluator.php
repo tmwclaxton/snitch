@@ -71,7 +71,9 @@ class VideoAnalysisSuccessEvaluator
             $failures[] = 'analysis echoes caption/script too closely';
         }
 
-        if ($this->containsNonEnglishProse($result)) {
+        // Short captions (e.g. "And so much more… #DoGoodGetFit") are too thin to
+        // classify language against. Treat them as neutral and skip the English gate.
+        if (! $this->captionTooShortToClassify($caption) && $this->containsNonEnglishProse($result)) {
             $failures[] = 'analysis must be English';
         }
 
@@ -79,6 +81,24 @@ class VideoAnalysisSuccessEvaluator
             'passed' => $failures === [],
             'failures' => $failures,
         ];
+    }
+
+    private function captionTooShortToClassify(?string $caption): bool
+    {
+        if ($caption === null) {
+            return false;
+        }
+
+        $stripped = preg_replace('/https?:\/\/\S+/u', ' ', $caption) ?? '';
+        $stripped = preg_replace('/[#@]\S+/u', ' ', $stripped) ?? '';
+        $stripped = preg_replace('/[^\p{L}\s]/u', ' ', $stripped) ?? '';
+        $parts = preg_split('/\s+/u', trim($stripped)) ?: [];
+        $words = array_values(array_filter(
+            $parts,
+            static fn (string $word): bool => mb_strlen($word) >= 2,
+        ));
+
+        return count($words) < 5;
     }
 
     private function containsNonEnglishProse(VideoAnalysisResult $result): bool

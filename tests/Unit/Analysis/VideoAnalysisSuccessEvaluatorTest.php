@@ -132,10 +132,35 @@ class VideoAnalysisSuccessEvaluatorTest extends TestCase
             'sfx' => [],
         ], 'qwen3.7-flash');
 
-        $evaluation = app(VideoAnalysisSuccessEvaluator::class)->evaluate($result);
+        $evaluation = app(VideoAnalysisSuccessEvaluator::class)->evaluate(
+            $result,
+            'A longer caption with enough English words to classify language against the analysis fields.',
+        );
 
         $this->assertFalse($evaluation['passed']);
         $this->assertContains('analysis must be English', $evaluation['failures']);
+    }
+
+    public function test_short_caption_skips_english_language_check(): void
+    {
+        $result = VideoAnalysisResult::fromModelPayload([
+            'concept' => 'Leveraging the boring-business frame with proof docs',
+            'hook' => 'But some of the most profitable businesses are the ones that nobody talks about.',
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+            'visual_summary' => str_repeat('Speaker against a white wall with document grid overlays. ', 2),
+            'idea' => '利用反直觉对比制造认知冲突，随后通过展示具体的案例文件提供实质性 proof。',
+            'topics' => ['反直觉营销', '利基市场'],
+            'cta' => 'Browse the library before you invest time.',
+            'how_to_copy' => '1. 提炼一个被大众忽视但现金流稳定的业务；2. 展示带有具体价格的文档封面。',
+            'sfx' => [],
+        ], 'qwen3.7-flash');
+
+        $evaluation = app(VideoAnalysisSuccessEvaluator::class)->evaluate(
+            $result,
+            'And so much more… #DoGoodGetFit',
+        );
+
+        $this->assertNotContains('analysis must be English', $evaluation['failures']);
     }
 
     public function test_fails_placeholder_latin_copy(): void

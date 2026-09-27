@@ -317,13 +317,51 @@ abstract class AbstractTikHubAdapter implements PlatformAdapter
         return filled($mediaUrl);
     }
 
+    /**
+     * Prefer a still cover or photo URL for image and carousel posts.
+     */
+    protected function firstStillUrl(mixed ...$candidates): ?string
+    {
+        foreach ($candidates as $candidate) {
+            if (is_array($candidate)) {
+                foreach ($candidate as $nested) {
+                    $resolved = $this->firstStillUrl($nested);
+
+                    if ($resolved !== null) {
+                        return $resolved;
+                    }
+                }
+
+                continue;
+            }
+
+            if (! is_string($candidate) || trim($candidate) === '') {
+                continue;
+            }
+
+            $url = trim($candidate);
+
+            if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
+                continue;
+            }
+
+            if (preg_match('/\.(mp4|webm|mov|m4v|m3u8)(\?|$)/i', $url) === 1) {
+                continue;
+            }
+
+            return $url;
+        }
+
+        return null;
+    }
+
     protected function normalizeDate(mixed $value): ?string
     {
         return SocialDateParser::toIso8601($value);
     }
 
     /**
-     * @return array{views: int, likes: int, comments: int, shares: int, clicks: int}
+     * @return array{views: int, likes: int|null, comments: int, shares: int, clicks: int}
      */
     protected function metrics(mixed ...$values): array
     {
@@ -331,6 +369,12 @@ abstract class AbstractTikHubAdapter implements PlatformAdapter
         $metrics = [];
 
         foreach ($keys as $index => $key) {
+            if ($key === 'likes' && array_key_exists($index, $values) && $values[$index] === null) {
+                $metrics[$key] = null;
+
+                continue;
+            }
+
             $metrics[$key] = (int) ($values[$index] ?? 0);
         }
 

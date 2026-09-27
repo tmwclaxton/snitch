@@ -143,6 +143,10 @@ return [
         'posts_limit' => (int) env('SNITCH_SYNC_POSTS_LIMIT', 12),
         'recency_days_max' => (int) env('SNITCH_SYNC_RECENCY_DAYS_MAX', 90),
         'posts_limit_max' => (int) env('SNITCH_SYNC_POSTS_LIMIT_MAX', 50),
+        // First sync of a newly added tracker: longer window so medians have enough posts.
+        // Weekly / incremental syncs keep recency_days + posts_limit above.
+        'first_sync_recency_days' => (int) env('SNITCH_SYNC_FIRST_RECENCY_DAYS', 90),
+        'first_sync_posts_limit' => (int) env('SNITCH_SYNC_FIRST_POSTS_LIMIT', 50),
         'min_interval_days' => (int) env('SNITCH_SYNC_MIN_INTERVAL_DAYS', 7),
         // Minutes after which a "running" sync is treated as dead (worker crash/deploy).
         'stale_running_minutes' => (int) env('SNITCH_SYNC_STALE_RUNNING_MINUTES', 180),

@@ -4,6 +4,7 @@ namespace App\Services\Apify\Adapters;
 
 use App\Enums\Platform;
 use App\Enums\PostType;
+use App\Support\InstagramMetrics;
 use App\Support\InstagramPostId;
 use Carbon\CarbonImmutable;
 
@@ -171,10 +172,6 @@ class InstagramAdapter extends AbstractPlatformAdapter
             return null;
         }
 
-        if (! str_starts_with($url, 'http')) {
-            $url = 'https://www.instagram.com/reel/'.$url.'/';
-        }
-
         $videoUrl = $this->firstVideoUrl(
             $item['videoUrl'] ?? null,
             $item['video']['url'] ?? null,
@@ -200,6 +197,12 @@ class InstagramAdapter extends AbstractPlatformAdapter
             $type = PostType::Reel->value;
         }
 
+        if (! str_starts_with($url, 'http')) {
+            $url = $type === PostType::Reel->value
+                ? 'https://www.instagram.com/reel/'.$url.'/'
+                : 'https://www.instagram.com/p/'.$url.'/';
+        }
+
         $mediaUrl = in_array($type, PostType::analyzableValues(), true)
             ? $videoUrl
             : ($stillUrl ?? $videoUrl);
@@ -217,11 +220,9 @@ class InstagramAdapter extends AbstractPlatformAdapter
             'type' => $type,
             'caption' => isset($item['caption']) ? (string) $item['caption'] : null,
             'media_url' => $mediaUrl,
-            'metrics' => $this->metrics(
-                InstagramPostId::viewsFromPayload($item),
-                $item['likesCount'] ?? $item['likeCount'] ?? 0,
-                $item['commentsCount'] ?? $item['commentCount'] ?? 0,
-                $item['sharesCount'] ?? 0,
+            'metrics' => InstagramMetrics::metricsFromPayload(
+                $item,
+                (int) ($item['sharesCount'] ?? 0),
                 $this->clicksFrom(is_array($item) ? $item : []),
             ),
             'raw_payload' => array_merge($item, is_array($music) ? ['normalized_music' => $music] : []),

@@ -133,7 +133,9 @@ class LovableDashboardBuilder
             ->map(fn (Post $post): float => $this->insights->engagementRate($post, $followersById))
             ->filter(fn (float $er): bool => $er > 0);
 
-        $likes = $posts->sum(fn (Post $post): int => $this->insights->likes($post));
+        $knownLikes = $posts
+            ->map(fn (Post $post): ?int => $this->insights->likes($post))
+            ->filter(fn (?int $likes): bool => $likes !== null);
         $comments = $posts->sum(fn (Post $post): int => $this->insights->comments($post));
         $count = $posts->count();
 
@@ -141,7 +143,8 @@ class LovableDashboardBuilder
             'avg_er' => $rates->isEmpty() ? 0.0 : round((float) $rates->avg(), 2),
             'posts' => $count,
             'posts_week' => $weekPosts->count(),
-            'avg_likes' => $count > 0 ? (int) round($likes / $count) : 0,
+            // Hidden Instagram likes (metrics.likes = null) are excluded, not averaged as 0.
+            'avg_likes' => $knownLikes->isNotEmpty() ? (int) round((float) $knownLikes->avg()) : 0,
             'avg_comments' => $count > 0 ? (int) round($comments / $count) : 0,
         ];
     }
@@ -161,6 +164,9 @@ class LovableDashboardBuilder
             $rates = $cPosts
                 ->map(fn (Post $post): float => $this->insights->engagementRateForFollowers($post, $followers))
                 ->filter(fn (float $er): bool => $er > 0);
+            $knownLikes = $cPosts
+                ->map(fn (Post $post): ?int => $this->insights->likes($post))
+                ->filter(fn (?int $likes): bool => $likes !== null);
             $count = $cPosts->count();
 
             return [
@@ -170,7 +176,7 @@ class LovableDashboardBuilder
                 'avg_er' => $rates->isEmpty() ? 0.0 : round((float) $rates->avg(), 2),
                 'posts' => $count,
                 'posts_week' => $cWeek->count(),
-                'avg_likes' => $count > 0 ? (int) round($cPosts->sum(fn (Post $post): int => $this->insights->likes($post)) / $count) : 0,
+                'avg_likes' => $knownLikes->isNotEmpty() ? (int) round((float) $knownLikes->avg()) : 0,
                 'avg_comments' => $count > 0 ? (int) round($cPosts->sum(fn (Post $post): int => $this->insights->comments($post)) / $count) : 0,
             ];
         })->values()->all();
@@ -187,7 +193,7 @@ class LovableDashboardBuilder
         $byHandle = $accounts->keyBy('social_account_id');
 
         return $weekPosts
-            ->sortByDesc(fn (Post $post): int => $this->insights->likes($post) + $this->insights->comments($post))
+            ->sortByDesc(fn (Post $post): int => ($this->insights->likes($post) ?? 0) + $this->insights->comments($post))
             ->take(3)
             ->map(function (Post $post) use ($byHandle, $followersById): array {
                 $account = $byHandle->get($post->social_account_id);
@@ -196,6 +202,7 @@ class LovableDashboardBuilder
                     'id' => $post->id,
                     'handle' => $account?->handle,
                     'caption' => $post->caption,
+                    // null likes (hidden) serialize as null; UI should not treat as 0 engagement.
                     'likes' => $this->insights->likes($post),
                     'comments' => $this->insights->comments($post),
                     'er' => round($this->insights->engagementRate($post, $followersById), 2),

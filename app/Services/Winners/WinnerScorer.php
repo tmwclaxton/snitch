@@ -43,7 +43,9 @@ class WinnerScorer
     {
         $metrics = is_array($post->metrics) ? $post->metrics : [];
         $views = (int) ($metrics['views'] ?? 0);
-        $likes = (int) ($metrics['likes'] ?? 0);
+        $likesHidden = ($metrics['like_count_hidden'] ?? false) === true
+            || (array_key_exists('likes', $metrics) && $metrics['likes'] === null);
+        $likes = $likesHidden ? null : (int) ($metrics['likes'] ?? 0);
         $comments = (int) ($metrics['comments'] ?? 0);
         $shares = (int) ($metrics['shares'] ?? 0);
         $reasons = [];
@@ -52,11 +54,13 @@ class WinnerScorer
             $reasons[] = 'views below threshold';
         }
 
-        if ($likes < (int) $rule->min_likes) {
+        // Hidden like counts are unknown - do not fail min_likes as if likes were 0.
+        if ($likes !== null && $likes < (int) $rule->min_likes) {
             $reasons[] = 'likes below threshold';
         }
 
-        $engagementRate = $views > 0 ? (($likes + $comments + $shares) / $views) * 100 : 0;
+        $interactionLikes = $likes ?? 0;
+        $engagementRate = $views > 0 ? (($interactionLikes + $comments + $shares) / $views) * 100 : 0;
 
         if ($engagementRate < (int) $rule->min_engagement_rate) {
             $reasons[] = 'engagement rate below threshold';
@@ -78,7 +82,7 @@ class WinnerScorer
         }
 
         $weights = is_array($rule->weights) ? $rule->weights : [];
-        $score = $this->scoreMetrics($views, $likes, $comments, $shares, $weights);
+        $score = $this->scoreMetrics($views, $interactionLikes, $comments, $shares, $weights);
 
         $minScore = (float) ($advanced['min_score'] ?? 0);
 

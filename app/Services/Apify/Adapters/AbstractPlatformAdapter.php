@@ -401,7 +401,7 @@ abstract class AbstractPlatformAdapter implements PlatformAdapter
     }
 
     /**
-     * @return array{views: int, likes: int, comments: int, shares: int, clicks: int}
+     * @return array{views: int, likes: int|null, comments: int, shares: int, clicks: int}
      */
     protected function metrics(mixed ...$values): array
     {
@@ -409,6 +409,12 @@ abstract class AbstractPlatformAdapter implements PlatformAdapter
         $metrics = [];
 
         foreach ($keys as $index => $key) {
+            if ($key === 'likes' && array_key_exists($index, $values) && $values[$index] === null) {
+                $metrics[$key] = null;
+
+                continue;
+            }
+
             $metrics[$key] = (int) ($values[$index] ?? 0);
         }
 

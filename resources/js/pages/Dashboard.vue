@@ -58,7 +58,7 @@ const props = defineProps<{
         id: number;
         handle: string | null;
         caption: string | null;
-        likes: number;
+        likes: number | null;
         comments: number;
         er: number;
         thumbnail_url: string | null;
@@ -252,7 +252,7 @@ function pct(part: number, total: number): number {
                             <div class="text-xs text-neutral-500">@{{ post.handle }}</div>
                             <div class="mt-1 line-clamp-2 text-sm">{{ post.caption || 'No caption' }}</div>
                             <div class="mt-2 flex flex-wrap gap-3 text-xs tabular-nums">
-                                <span>{{ post.likes.toLocaleString() }} likes</span>
+                                <span>{{ post.likes == null ? 'Hidden' : post.likes.toLocaleString() }} likes</span>
                                 <span>{{ post.comments.toLocaleString() }} comments</span>
                                 <span class="font-semibold">{{ post.er.toFixed(2) }}% ER</span>
                                 <a v-if="post.url" :href="post.url" target="_blank" rel="noreferrer" class="ml-auto inline-flex items-center gap-1 underline">

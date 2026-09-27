@@ -39,6 +39,11 @@ class SyncTrackedAccountJobTest extends TestCase
         $account = TrackedAccount::factory()->for($user)->create([
             'platform' => Platform::Facebook,
             'handle' => 'rivalbakery',
+            // Not a first sync - keep the normal 30-day incremental window.
+            'last_synced_at' => now()->subDays(8),
+            'external_id' => 'page_1',
+            'url' => 'https://facebook.com/rivalbakery',
+            'display_name' => 'Rival Bakery',
         ]);
 
         $client = Mockery::mock(ApifyClient::class);
@@ -90,6 +95,7 @@ class SyncTrackedAccountJobTest extends TestCase
         config([
             'snitch.sync.recency_days' => 30,
             'snitch.sync.posts_limit' => 12,
+            'snitch.sync.min_interval_days' => 7,
         ]);
 
         (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(VendorUsageCharger::class));
@@ -636,7 +642,7 @@ class SyncTrackedAccountJobTest extends TestCase
 
         $account->refresh();
         $this->assertSame('empty', $account->last_sync_status);
-        $this->assertSame('No recent reels found for this handle.', $account->last_sync_error);
+        $this->assertSame('No recent posts found for this handle.', $account->last_sync_error);
         $this->assertSame(0, Post::query()->count());
     }
 
@@ -938,5 +944,77 @@ class SyncTrackedAccountJobTest extends TestCase
 
         $this->assertSame(1, Post::query()->count());
         $this->assertSame('in_window', Post::query()->value('external_id'));
+    }
+
+    public function test_first_sync_uses_longer_backfill_window(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Facebook,
+            'handle' => 'newrival',
+            'external_id' => 'page_new',
+            'url' => 'https://facebook.com/newrival',
+            'display_name' => 'New Rival',
+            'last_synced_at' => null,
+        ]);
+
+        $adapter = Mockery::mock(PlatformAdapter::class);
+        $adapter->shouldReceive('platform')->andReturn(Platform::Facebook);
+        // Profile fields are already filled - first sync still skips resolve.
+        $adapter->shouldReceive('resolveProfile')->never();
+        $adapter->shouldReceive('listRecentPosts')
+            ->once()
+            ->withArgs(function (string $handle, int $limit, ?CarbonImmutable $since): bool {
+                $this->assertSame('newrival', $handle);
+                $this->assertSame(50, $limit);
+                $this->assertInstanceOf(CarbonImmutable::class, $since);
+                $this->assertTrue($since->lessThanOrEqualTo(CarbonImmutable::now()->subDays(89)));
+
+                return true;
+            })
+            ->andReturn([
+                [
+                    'external_id' => 'day_60',
+                    'url' => 'https://facebook.com/newrival/videos/1',
+                    'posted_at' => now()->subDays(60)->toIso8601String(),
+                    'type' => PostType::Video->value,
+                    'caption' => 'Inside first-sync window',
+                    'media_url' => 'https://cdn.example.com/day60.mp4',
+                    'metrics' => [],
+                    'raw_payload' => [],
+                ],
+            ]);
+        $adapter->shouldReceive('hydrateMediaUrls')->once()->andReturnUsing(fn (array $posts) => $posts);
+
+        $adapters = Mockery::mock(PlatformAdapterManager::class);
+        $adapters->shouldReceive('driverFor')->andReturn('apify');
+        $adapters->shouldReceive('for')->with(Platform::Facebook)->andReturn($adapter);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
+        $this->app->instance(ApifyClient::class, $client);
+
+        config([
+            'snitch.sync.recency_days' => 30,
+            'snitch.sync.posts_limit' => 12,
+            'snitch.sync.first_sync_recency_days' => 90,
+            'snitch.sync.first_sync_posts_limit' => 50,
+            'snitch.sync.recency_days_max' => 90,
+            'snitch.sync.posts_limit_max' => 50,
+        ]);
+
+        (new SyncTrackedAccountJob($account->id))->handle(
+            $adapters,
+            app(SnitchAnalyticsService::class),
+            app(VendorUsageCharger::class),
+        );
+
+        $this->assertSame(1, Post::query()->count());
+        $this->assertSame('day_60', Post::query()->value('external_id'));
+        $account->refresh();
+        $this->assertSame('success', $account->last_sync_status);
     }
 }
