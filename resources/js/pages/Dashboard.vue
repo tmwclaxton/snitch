@@ -105,7 +105,7 @@ function toggleAccount(handle: string): void {
 
 function formatUk(iso: string | null): string {
     if (!iso) {
-        return '—';
+        return '-';
     }
 
     try {
@@ -250,8 +250,9 @@ const winnerItems = computed(() => {
                     </li>
                 </ol>
                 <Link
+                    v-if="rivals.length === 0"
                     :href="competitors()"
-                    class="mt-4 inline-flex rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                    class="mt-4 inline-flex rounded-lg bg-[#F0C400] px-3 py-2 text-sm font-medium text-neutral-950 hover:opacity-90"
                 >
                     Go to Tracking
                 </Link>

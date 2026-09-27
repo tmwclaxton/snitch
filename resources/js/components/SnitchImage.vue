@@ -82,6 +82,7 @@ const showFallback = computed(() => !showImage.value && props.fallback !== 'none
             :height="height"
             :loading="loading"
             :decoding="decoding"
+            referrerpolicy="no-referrer"
             :class="cn('snitch-image-img', imgClass)"
             v-bind="$attrs"
             @error="onError"

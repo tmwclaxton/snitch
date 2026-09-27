@@ -134,6 +134,7 @@ function refreshLabel(value: string | null): string {
                                 <Link :href="competitorShow.url(account.id)" class="flex items-center gap-3">
                                     <SnitchAvatar
                                         :src="account.avatar"
+                                        :name="account.display_name"
                                         :handle="account.handle"
                                         size="sm"
                                         :alt="account.display_name || account.handle"
@@ -202,6 +203,7 @@ function refreshLabel(value: string | null): string {
                     <Link :href="competitorShow.url(account.id)" class="flex items-center gap-3">
                         <SnitchAvatar
                             :src="account.avatar"
+                            :name="account.display_name"
                             :handle="account.handle"
                             size="sm"
                             :alt="account.display_name || account.handle"

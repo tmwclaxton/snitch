@@ -161,12 +161,18 @@ class BrandProfileUpdateTest extends TestCase
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
 
         $this->assertNotFalse($sidebar);
+        $this->assertStringContainsString("title: 'Brand'", $sidebar);
         $this->assertStringContainsString("title: 'Competitors'", $sidebar);
+        $this->assertStringContainsString("title: 'Feed'", $sidebar);
+        $this->assertStringContainsString("title: 'Winners'", $sidebar);
+        $this->assertStringContainsString("title: 'Explore'", $sidebar);
+        $this->assertStringContainsString('BrandProfileController', $sidebar);
         $this->assertStringContainsString('CompetitorController', $sidebar);
         $this->assertStringNotContainsString("title: 'MCP'", $sidebar);
         $this->assertStringNotContainsString("title: 'Brand Deals'", $sidebar);
         $this->assertStringNotContainsString('InfluencerController', $sidebar);
         $this->assertStringNotContainsString('AgentsController', $sidebar);
+        $this->assertStringNotContainsString("title: 'Backlog'", $sidebar);
     }
 
     public function test_settings_nav_does_not_include_brand_or_winners(): void

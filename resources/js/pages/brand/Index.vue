@@ -16,20 +16,17 @@ defineOptions({
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-2 py-6 sm:px-3 sm:py-8">
+    <div class="px-4 py-6 sm:px-8">
         <Head title="Brand" />
-        <div class="snitch-grain" aria-hidden="true" />
-
-        <div class="relative z-10 mx-auto max-w-3xl">
-            <h1 class="snitch-display text-3xl text-snitch-ink sm:text-4xl">
-                Brand
-            </h1>
-            <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
-                Scrapbook context so Snitch knows who you are - name, description, and your handles.
+        <div class="mb-6 border-b border-neutral-200 pb-4">
+            <h1 class="text-2xl font-semibold tracking-tight">Brand</h1>
+            <p class="mt-1 text-sm text-neutral-500">
+                Context so Snitch knows who you are - name, description, and your handles.
             </p>
+        </div>
 
+        <div class="mx-auto max-w-3xl">
             <BrandProfileForm
-                class="mt-5"
                 :brand="brand"
                 :platforms="platforms"
                 :submit-url="update.url()"

@@ -138,7 +138,7 @@ function seenLabel(iso: string | null): string | null {
                 <Megaphone class="mx-auto size-8 text-snitch-ink/35" aria-hidden="true" />
                 <p class="snitch-display mt-3 text-xl">No library ads yet</p>
                 <p class="mt-2 text-sm text-snitch-ink/65">
-                    Sync Instagram or Facebook accounts to pull Meta Ad Library hits.
+                    Sync Instagram accounts to pull Meta Ad Library hits for pages you track.
                 </p>
                 <Link
                     :href="competitors.url()"

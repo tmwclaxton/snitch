@@ -2,7 +2,10 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Clapperboard, FilterX, Search, X } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
-import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
+import {
+    index as competitors,
+    show as competitorShow,
+} from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feedIndex } from '@/actions/App/Http/Controllers/FeedController';
 import FeedContactCell from '@/components/FeedContactCell.vue';
 import PaperSelect from '@/components/PaperSelect.vue';
@@ -315,7 +318,7 @@ function paginationLabel(label: string): string {
                         Try another search, platform, or type - or clear the filters.
                     </template>
                     <template v-else>
-                        Add snitches and sync to fill the contact sheet.
+                        Track competitors and sync to fill the feed with recent Instagram posts.
                     </template>
                 </p>
                 <button
@@ -327,13 +330,16 @@ function paginationLabel(label: string): string {
                     <FilterX class="relative z-10 size-4 shrink-0" aria-hidden="true" />
                     <span class="relative z-10">Clear filters</span>
                 </button>
-                <p
+                <Link
                     v-else
-                    class="mt-5 inline-flex items-center justify-center gap-2 text-xs uppercase tracking-wide text-snitch-ink/40"
+                    :href="competitors.url()"
+                    class="snitch-btn snitch-btn-spot mt-5"
                 >
-                    <Clapperboard class="size-3.5 shrink-0" aria-hidden="true" />
-                    Waiting for sync
-                </p>
+                    <span class="relative z-10 inline-flex items-center gap-2">
+                        <Clapperboard class="size-3.5 shrink-0" aria-hidden="true" />
+                        Go to Tracking
+                    </span>
+                </Link>
             </div>
 
             <nav

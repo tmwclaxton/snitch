@@ -505,6 +505,7 @@ class CompetitorController extends Controller
         return $user
             ->trackedAccounts()
             ->competitors()
+            ->with(['socialAccount:id,avatar'])
             ->withCount([
                 'posts as posts_count',
                 'posts as reels_count' => fn ($query) => $query->reelLike(),
@@ -515,6 +516,10 @@ class CompetitorController extends Controller
             ->get()
             ->each(function (TrackedAccount $account): void {
                 $account->setAttribute('in_quota', true);
+
+                if (blank($account->avatar) && filled($account->socialAccount?->avatar)) {
+                    $account->setAttribute('avatar', $account->socialAccount->avatar);
+                }
             });
     }
 

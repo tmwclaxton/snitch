@@ -497,6 +497,18 @@
         color: #737373;
     }
 
+    .snitch-app-chrome .snitch-avatar {
+        clip-path: none;
+        border: 1px solid rgb(229 229 229);
+        background: #f5f5f5;
+        overflow: hidden;
+    }
+
+    .snitch-app-chrome .snitch-image-fallback-initials {
+        color: #0a0a0a;
+        background: #e5e5e5;
+    }
+
     .snitch-app-chrome .snitch-filter-bar,
     .snitch-app-chrome .snitch-paper-panel {
         background: #ffffff !important;

@@ -1,8 +1,25 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Activity, CreditCard, LayoutGrid, Settings, Shield, Users } from '@lucide/vue';
+import {
+    Activity,
+    Clapperboard,
+    Compass,
+    CreditCard,
+    LayoutGrid,
+    Megaphone,
+    Settings,
+    Shield,
+    Store,
+    Trophy,
+    Users,
+} from '@lucide/vue';
 import { computed } from 'vue';
+import { index as adsIndex } from '@/actions/App/Http/Controllers/AdsController';
+import { edit as brand } from '@/actions/App/Http/Controllers/BrandProfileController';
 import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
+import { index as explore } from '@/actions/App/Http/Controllers/ExploreController';
+import { index as feed } from '@/actions/App/Http/Controllers/FeedController';
+import { index as winners } from '@/actions/App/Http/Controllers/WinnerController';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -25,6 +42,12 @@ import type { NavItem } from '@/types';
 const page = usePage();
 const isAdmin = computed(() => Boolean(page.props.auth?.user?.is_admin));
 
+/*
+ * Core product nav sold on pricing: Tracking, Feed, Explore, Winners.
+ * Brand + Ad Library round out the marketer loop. Influencers and Backlog
+ * stay off the sidebar (Influencers is still multi-platform discovery;
+ * Backlog is analysis ops, not a primary surface).
+ */
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
@@ -32,9 +55,34 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
+        title: 'Brand',
+        href: brand(),
+        icon: Store,
+    },
+    {
         title: 'Competitors',
         href: competitors(),
         icon: Users,
+    },
+    {
+        title: 'Feed',
+        href: feed(),
+        icon: Clapperboard,
+    },
+    {
+        title: 'Winners',
+        href: winners(),
+        icon: Trophy,
+    },
+    {
+        title: 'Ad Library',
+        href: adsIndex(),
+        icon: Megaphone,
+    },
+    {
+        title: 'Explore',
+        href: explore(),
+        icon: Compass,
     },
 ];
 

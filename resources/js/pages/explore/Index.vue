@@ -3,7 +3,10 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { Compass, FilterX, Search, X } from '@lucide/vue';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { Component } from 'vue';
-import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
+import {
+    index as competitors,
+    show as competitorShow,
+} from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as exploreIndex } from '@/actions/App/Http/Controllers/ExploreController';
 import FeedContactCell from '@/components/FeedContactCell.vue';
 import PaperSelect from '@/components/PaperSelect.vue';
@@ -836,7 +839,7 @@ function paginationLabel(label: string): string {
                         Try another hook, topic, or craft - or clear the filters.
                     </template>
                     <template v-else>
-                        Sync snitches and wait for analysis to fill the catalogue.
+                        Track competitors, sync posts, and wait for analysis to fill the catalogue.
                     </template>
                 </p>
                 <button
@@ -848,13 +851,16 @@ function paginationLabel(label: string): string {
                     <FilterX class="relative z-10 size-4 shrink-0" aria-hidden="true" />
                     <span class="relative z-10">Clear filters</span>
                 </button>
-                <p
+                <Link
                     v-else
-                    class="mt-5 inline-flex items-center justify-center gap-2 text-xs uppercase tracking-wide text-snitch-ink/40"
+                    :href="competitors.url()"
+                    class="snitch-btn snitch-btn-spot mt-5"
                 >
-                    <Compass class="size-3.5 shrink-0" aria-hidden="true" />
-                    Waiting for analysis
-                </p>
+                    <span class="relative z-10 inline-flex items-center gap-2">
+                        <Compass class="size-3.5 shrink-0" aria-hidden="true" />
+                        Go to Tracking
+                    </span>
+                </Link>
             </div>
 
             <nav

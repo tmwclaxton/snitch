@@ -75,7 +75,8 @@ class AdsPageTest extends TestCase
         $this->assertIsString($sidebar);
         $this->assertStringContainsString("title: 'Dashboard'", $sidebar);
         $this->assertStringContainsString("title: 'Competitors'", $sidebar);
-        $this->assertStringNotContainsString("title: 'Ads'", $sidebar);
+        $this->assertStringContainsString("title: 'Ad Library'", $sidebar);
+        $this->assertStringContainsString('AdsController', $sidebar);
     }
 
     public function test_dashboard_insights_preview_caps_active_ads_at_two(): void

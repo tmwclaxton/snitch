@@ -2,7 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { LoaderCircle, RefreshCw, SlidersHorizontal, Trophy } from '@lucide/vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
+import { show as competitorShow, index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import {
     rescore,
@@ -402,15 +402,25 @@ onUnmounted(() => {
                                 : 'Sync posts, wait for analysis, or loosen your rules.'
                         }}
                     </p>
-                    <button
+                    <div
                         v-if="!isRescoring"
-                        type="button"
-                        class="snitch-btn snitch-btn-ghost mt-5"
-                        @click="rulesOpen = true"
+                        class="mt-5 flex flex-wrap items-center justify-center gap-2"
                     >
-                        <SlidersHorizontal class="relative z-10 size-4 shrink-0" aria-hidden="true" />
-                        <span class="relative z-10">Edit rules</span>
-                    </button>
+                        <button
+                            type="button"
+                            class="snitch-btn snitch-btn-ghost"
+                            @click="rulesOpen = true"
+                        >
+                            <SlidersHorizontal class="relative z-10 size-4 shrink-0" aria-hidden="true" />
+                            <span class="relative z-10">Edit rules</span>
+                        </button>
+                        <Link
+                            :href="competitors.url()"
+                            class="snitch-btn snitch-btn-spot"
+                        >
+                            <span class="relative z-10">Go to Tracking</span>
+                        </Link>
+                    </div>
                 </div>
             </div>
         </div>

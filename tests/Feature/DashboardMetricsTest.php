@@ -61,6 +61,29 @@ class DashboardMetricsTest extends TestCase
                 ->where('controls.has_non_instagram_trackers', true)
                 ->where('onboarding.status', 'ok')
                 ->where('onboarding.data.hide', false)
+                ->where('onboarding.data.steps.1.label', 'Add Instagram competitors on Tracking')
+            );
+    }
+
+    public function test_tracked_instagram_rivals_mark_onboarding_rivals_step_done(): void
+    {
+        $user = User::factory()->onTrial()->create();
+        BrandProfile::factory()->for($user)->create();
+        TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'rivalbakery',
+            'avatar' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('rivals', 1)
+                ->where('rivals.0.handle', 'rivalbakery')
+                ->where('onboarding.status', 'ok')
+                ->where('onboarding.data.steps.1.done', true)
+                ->where('onboarding.data.steps.1.label', 'Waiting for denser data (1 rival tracked - need 5+ posts in period)')
             );
     }
 

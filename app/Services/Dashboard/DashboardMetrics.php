@@ -60,9 +60,10 @@ class DashboardMetrics
             'onboarding' => CardResult::ok([
                 'steps' => [
                     ['key' => 'own', 'label' => 'Add your own Instagram', 'done' => false],
-                    ['key' => 'rivals', 'label' => 'Add 3-4 Instagram competitors', 'done' => false, 'suggestions' => $this->suggestedHandles()],
-                    ['key' => 'refresh', 'label' => 'Wait for the first refresh', 'done' => false],
+                    ['key' => 'rivals', 'label' => 'Add Instagram competitors on Tracking', 'done' => false, 'suggestions' => $this->suggestedHandles()],
+                    ['key' => 'refresh', 'label' => 'First refresh running - data after the next sync', 'done' => false],
                 ],
+                'note' => null,
             ], 0),
             'insights' => CardResult::empty('We\'ll write your first insights after the first refresh (need at least 5 posts from 2 accounts).'),
             'kpis' => CardResult::empty('Add Instagram competitors to see KPIs.'),
@@ -88,9 +89,17 @@ class DashboardMetrics
      */
     private function build(User $user, array $selectedHandles, int $periodDays): array
     {
-        $allTrackers = $user->trackedAccounts()->competitors()->orderBy('id')->get();
-        $accounts = $allTrackers->where('platform', Platform::Instagram)->values();
-        $nonIgCount = $allTrackers->reject(fn (TrackedAccount $a): bool => $a->platform === Platform::Instagram)->count();
+        $allTrackers = $user->trackedAccounts()
+            ->competitors()
+            ->with(['socialAccount:id,avatar'])
+            ->orderBy('id')
+            ->get();
+        $accounts = $allTrackers
+            ->filter(fn (TrackedAccount $a): bool => $a->platform === Platform::Instagram)
+            ->values();
+        $nonIgCount = $allTrackers
+            ->reject(fn (TrackedAccount $a): bool => $a->platform === Platform::Instagram)
+            ->count();
 
         $own = $accounts->firstWhere('is_own_account', true);
         $rivals = $accounts->filter(fn (TrackedAccount $a): bool => ! $a->is_own_account)->values();
@@ -329,11 +338,16 @@ class DashboardMetrics
             })
             ->count();
 
+        $avatar = $account->avatar;
+        if (blank($avatar) && filled($account->socialAccount?->avatar)) {
+            $avatar = $account->socialAccount->avatar;
+        }
+
         return [
             'id' => $account->id,
             'handle' => $account->handle,
             'display_name' => $account->display_name,
-            'avatar' => $account->avatar,
+            'avatar' => $avatar,
             'followers' => $account->followers,
             'is_own_account' => (bool) $account->is_own_account,
             'posts_count' => $postsCount,
@@ -495,21 +509,28 @@ class DashboardMetrics
             ],
             [
                 'key' => 'rivals',
+                // Never ask to "Add competitors" when Tracking already has Instagram rivals.
                 'label' => $rivals->isEmpty()
-                    ? 'Add 3-4 Instagram competitors'
-                    : sprintf('Need denser Instagram data (%d rival%s tracked)', $rivals->count(), $rivals->count() === 1 ? '' : 's'),
-                'done' => $rivals->count() >= 3,
-                'suggestions' => $this->suggestedHandles(),
+                    ? 'Add Instagram competitors on Tracking'
+                    : sprintf(
+                        'Waiting for denser data (%d rival%s tracked - need 5+ posts in period)',
+                        $rivals->count(),
+                        $rivals->count() === 1 ? '' : 's',
+                    ),
+                'done' => $rivals->isNotEmpty(),
+                'suggestions' => $rivals->isEmpty() ? $this->suggestedHandles() : [],
             ],
             [
                 'key' => 'refresh',
-                'label' => 'First refresh running - data after the next sync',
-                'done' => $periodPosts->count() > 0,
+                'label' => $periodPosts->isEmpty()
+                    ? 'First refresh running - data after the next sync'
+                    : sprintf('Need 5+ posts in period from at least one rival (%d so far)', $periodPosts->count()),
+                'done' => $periodPosts->count() >= DashboardMath::MIN_SAMPLE,
             ],
         ];
 
         $note = $nonIgCount > 0 && $rivals->isEmpty()
-            ? "You have {$nonIgCount} non-Instagram tracker(s). This dashboard is Instagram-only - add Instagram competitors to unlock it."
+            ? "Tracking lists {$nonIgCount} non-Instagram account".($nonIgCount === 1 ? '' : 's').'. This dashboard is Instagram-only - add Instagram handles on Tracking to unlock it.'
             : null;
 
         return CardResult::ok([
