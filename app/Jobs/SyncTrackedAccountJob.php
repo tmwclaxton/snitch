@@ -18,6 +18,7 @@ use App\Services\SnitchAnalyticsService;
 use App\Services\Tracking\FollowerCountRefresher;
 use App\Services\Tracking\FollowerSnapshotRecorder;
 use App\Services\Tracking\PostCoverHydrator;
+use App\Support\InstagramMetrics;
 use App\Support\InstagramPostId;
 use App\Support\SafeExceptionMessage;
 use App\Support\SyncOptions;
@@ -217,8 +218,9 @@ class SyncTrackedAccountJob implements ShouldQueue
                 $existing = $this->findExistingPost($existingPosts, $externalId, $payload, $account->platform);
 
                 if ($existing instanceof Post) {
+                    $this->refreshExistingPostMetrics($existing, $payload, $account);
                     $covers->persist($existing, fetchRemote: true, mapped: $payload);
-                    $this->dispatchAnalysisIfNeeded($existing, (int) $account->user_id, $recencyDays);
+                    $this->dispatchAnalysisIfNeeded($existing, (int) $account->user_id);
 
                     continue;
                 }
@@ -258,14 +260,17 @@ class SyncTrackedAccountJob implements ShouldQueue
                     'media_availability' => MediaAvailability::Available,
                     'unavailable_at' => null,
                     'unavailable_reason' => null,
-                    'metrics' => $payload['metrics'] ?? [],
+                    'metrics' => InstagramMetrics::normalizeMappedMetrics(
+                        is_array($payload['metrics'] ?? null) ? $payload['metrics'] : [],
+                        is_numeric($account->followers) ? (int) $account->followers : null,
+                    ),
                     'raw_payload' => $payload['raw_payload'] ?? [],
                 ]);
 
                 $analytics->recordPostSynced($account->platform);
                 $covers->persist($post, fetchRemote: true);
 
-                $this->dispatchAnalysisIfNeeded($post->fresh('analysis'), (int) $account->user_id, $recencyDays);
+                $this->dispatchAnalysisIfNeeded($post->fresh('analysis'), (int) $account->user_id);
             }
 
             // Pull both buffers: empty Apify→TikHub fallback and YouTube
@@ -469,11 +474,38 @@ class SyncTrackedAccountJob implements ShouldQueue
         return $withBuffer->greaterThan($floor) ? $withBuffer : $floor;
     }
 
-    private function dispatchAnalysisIfNeeded(Post $post, int $billingUserId, int $recencyDays): void
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function refreshExistingPostMetrics(Post $post, array $payload, TrackedAccount $account): void
+    {
+        $incoming = $payload['metrics'] ?? null;
+
+        if (! is_array($incoming) || $incoming === []) {
+            return;
+        }
+
+        $metrics = InstagramMetrics::normalizeMappedMetrics(
+            $incoming,
+            is_numeric($account->followers) ? (int) $account->followers : null,
+        );
+
+        $current = is_array($post->metrics) ? $post->metrics : [];
+
+        if ($current == $metrics) {
+            return;
+        }
+
+        $post->forceFill(['metrics' => $metrics])->save();
+    }
+
+    private function dispatchAnalysisIfNeeded(Post $post, int $billingUserId): void
     {
         if (! $post->isAnalyzable()) {
             return;
         }
+
+        $recencyDays = SyncOptions::analysisRecencyDays();
 
         if ($post->posted_at !== null) {
             if ($post->posted_at->lt(now()->subDays($recencyDays))) {

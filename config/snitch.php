@@ -145,8 +145,13 @@ return [
         'posts_limit_max' => (int) env('SNITCH_SYNC_POSTS_LIMIT_MAX', 50),
         // First sync of a newly added tracker: longer window so medians have enough posts.
         // Weekly / incremental syncs keep recency_days + posts_limit above.
+        // Analysis eligibility uses max(recency_days, first_sync_recency_days) so backfilled
+        // posts remain analyzable without widening every future scrape.
         'first_sync_recency_days' => (int) env('SNITCH_SYNC_FIRST_RECENCY_DAYS', 90),
         'first_sync_posts_limit' => (int) env('SNITCH_SYNC_FIRST_POSTS_LIMIT', 50),
+        // All-zero likes/comments/views on accounts above this follower count are treated as
+        // unavailable metrics (null likes), not genuine zeros - common on stills/carousels.
+        'hidden_likes_min_followers' => (int) env('SNITCH_SYNC_HIDDEN_LIKES_MIN_FOLLOWERS', 500),
         'min_interval_days' => (int) env('SNITCH_SYNC_MIN_INTERVAL_DAYS', 7),
         // Minutes after which a "running" sync is treated as dead (worker crash/deploy).
         'stale_running_minutes' => (int) env('SNITCH_SYNC_STALE_RUNNING_MINUTES', 180),

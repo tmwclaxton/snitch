@@ -28,7 +28,13 @@ Apify and TikHub Instagram adapters set `external_id` from shortcode/code (via `
 When the gate routes Instagram (or another TikHub platform) to TikHub and resolve/list throws or returns `[]`, retry with the Apify adapter. Cap `0` must not leave sync empty or failed when TikHub cannot actually serve that handle. Charge whichever client ran.
 
 ## Instagram imports the full recent feed (not reels-only)
-TikHub Instagram sync always calls `user_posts` and `user_reels`, merges, and dedupes by shortcode. Store reel (`product_type=clips`), carousel, image, and video with the correct `PostType`. Stills need a resolvable image URL; reel/video still need a video file URL. Hidden like counts (0/-1/null with real views/comments) store `metrics.likes = null` and `like_count_hidden = true` - engagement averages must exclude those, never treat as 0. YouTube stays Shorts-only. Facebook/LinkedIn/TikTok keep their existing import filters. Explore stays reel-like.
+TikHub Instagram sync always calls `user_posts` and `user_reels`, merges, and dedupes by shortcode. Store reel (`product_type=clips`), carousel, image, and video with the correct `PostType`. Stills need a resolvable image URL; reel/video still need a video file URL. Hidden like counts (0/-1/null with real views/comments, or all-zero metrics on accounts above `hidden_likes_min_followers`) store `metrics.likes = null` and `like_count_hidden = true` - engagement averages must exclude those, never treat as 0. YouTube stays Shorts-only. Facebook/LinkedIn/TikTok keep their existing import filters. Explore stays reel-like.
+
+## Analysis eligibility matches first-sync backfill
+`SyncOptions::analysisRecencyDays()` is `max(recency_days, first_sync_recency_days)` (capped by `recency_days_max`). `AnalyzePostJob`, `Post::withinAnalysisRecency`, and sync analysis dispatch use that window so a 90-day first backfill can still be analysed. Weekly / incremental scrape windows stay on `recency_days` (30) unless the job passes an explicit override.
+
+## Known posts refresh engagement metrics on re-sync
+When sync sees a known external_id again, update `metrics` (likes/comments/views/`like_count_hidden`) from the fresh payload. Soft-retry Failed analysis for existing posts with media in-process (no extra Apify run beyond the list scrape). Do not rewrite caption/media_url solely to chase churn.
 
 ## posts.media_url is text, not varchar(255)
 Facebook/TikTok CDN video URLs regularly exceed 255 chars. Keep `posts.media_url` as `text` (same reason `tracked_accounts.avatar` is text).
@@ -40,7 +46,7 @@ Default `snitch.apify.actors.linkedin` is `apimaestro/linkedin-company-posts` (`
 SyncTrackedAccountJob calls resolveProfile only when force=true or external_id / url / display_name is blank. Do not pay for a profile actor run on every weekly sync.
 
 ## New posts only - no Apify metric refresh
-Known external_ids are not updateOrCreate'd. Soft-retry Failed analysis for existing posts with media in-process (no Apify). Do not re-scrape metrics for posts already imported.
+Known external_ids are not updateOrCreate'd for the whole row. Soft-retry Failed analysis for existing posts with media in-process (no Apify). Engagement metrics on known posts are refreshed from the list scrape (see above).
 
 ## TikTok is metadata-first then paid download
 TikTok listRecentPosts sets shouldDownloadVideos=false. hydrateMediaUrls runs a second actor call with postURLs + shouldDownloadVideos=true only for new analysis candidates missing media_url. Do not download videos for the full profile list.

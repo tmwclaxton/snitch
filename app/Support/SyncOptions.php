@@ -49,6 +49,23 @@ final class SyncOptions
     }
 
     /**
+     * Analysis eligibility window - wide enough to cover first-sync backfill
+     * without widening weekly / incremental scrape windows.
+     */
+    public static function analysisRecencyDays(): int
+    {
+        $weekly = max(1, (int) config('snitch.sync.recency_days', 30));
+        $first = max(1, (int) config('snitch.sync.first_sync_recency_days', 90));
+        $max = max(
+            $weekly,
+            $first,
+            (int) config('snitch.sync.recency_days_max', 90),
+        );
+
+        return min(max($weekly, $first), $max);
+    }
+
+    /**
      * @return array{
      *     posts_limit: int,
      *     recency_days: int,

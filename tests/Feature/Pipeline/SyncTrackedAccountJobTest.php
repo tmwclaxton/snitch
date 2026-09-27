@@ -366,7 +366,7 @@ class SyncTrackedAccountJobTest extends TestCase
         $this->assertSame('page_1', $account->fresh()?->external_id);
     }
 
-    public function test_sync_does_not_update_metrics_for_known_posts(): void
+    public function test_sync_updates_metrics_for_known_posts(): void
     {
         Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
 
@@ -378,6 +378,8 @@ class SyncTrackedAccountJobTest extends TestCase
             'external_id' => 'page_1',
             'url' => 'https://facebook.com/rivalbakery',
             'display_name' => 'Rival Bakery',
+            'followers' => 1200,
+            'last_synced_at' => now()->subDays(8),
         ]);
 
         $existing = Post::factory()->forAccount($account)->create([
@@ -393,7 +395,7 @@ class SyncTrackedAccountJobTest extends TestCase
 
         $client = Mockery::mock(ApifyClient::class);
         $client->shouldReceive('pullRunCosts')->andReturn([]);
-        $client->shouldReceive('runActor')->once()->andReturn([
+        $client->shouldReceive('runActor')->atLeast()->once()->andReturn([
             [
                 'pageName' => 'Rival Bakery',
                 'pageId' => 'page_1',
@@ -405,17 +407,92 @@ class SyncTrackedAccountJobTest extends TestCase
                 'videoUrl' => 'https://cdn.example.com/known.mp4',
                 'likes' => 999,
                 'viewsCount' => 5000,
+                'comments' => 12,
             ],
         ]);
         $this->app->instance(ApifyClient::class, $client);
 
-        (new SyncTrackedAccountJob($account->id))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(VendorUsageCharger::class));
+        (new SyncTrackedAccountJob($account->id, force: true))->handle(app(PlatformAdapterManager::class), app(SnitchAnalyticsService::class), app(VendorUsageCharger::class));
 
         $existing->refresh();
-        $this->assertSame(1, $existing->metrics['likes'] ?? null);
-        $this->assertSame(10, $existing->metrics['views'] ?? null);
+        $this->assertSame(999, $existing->metrics['likes'] ?? null);
+        $this->assertSame(5000, $existing->metrics['views'] ?? null);
+        $this->assertSame(12, $existing->metrics['comments'] ?? null);
         $this->assertSame(1, Post::query()->count());
         Queue::assertNotPushed(AnalyzePostJob::class);
+    }
+
+    public function test_sync_dispatches_analysis_for_posts_inside_first_sync_window(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        config([
+            'snitch.sync.recency_days' => 30,
+            'snitch.sync.first_sync_recency_days' => 90,
+            'snitch.sync.recency_days_max' => 90,
+            'snitch.sync.posts_limit' => 12,
+        ]);
+
+        $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Facebook,
+            'handle' => 'offlineclub',
+            'external_id' => 'page_offline',
+            'url' => 'https://facebook.com/offlineclub',
+            'display_name' => 'Offline Club',
+            'last_synced_at' => now()->subDays(8),
+        ]);
+
+        $existing = Post::factory()->forAccount($account)->create([
+            'external_id' => 'day_45',
+            'type' => PostType::Video,
+            'media_url' => 'https://cdn.example.com/day45.mp4',
+            'posted_at' => now()->subDays(45),
+            'metrics' => ['views' => 0, 'likes' => 0, 'comments' => 0],
+        ]);
+
+        $adapter = Mockery::mock(PlatformAdapter::class);
+        $adapter->shouldReceive('platform')->andReturn(Platform::Facebook);
+        $adapter->shouldReceive('resolveProfile')->once()->andReturn([
+            'handle' => 'offlineclub',
+            'url' => 'https://facebook.com/offlineclub',
+            'external_id' => 'page_offline',
+            'display_name' => 'Offline Club',
+            'followers' => 2000,
+        ]);
+        $adapter->shouldReceive('listRecentPosts')->once()->andReturn([
+            [
+                'external_id' => 'day_45',
+                'url' => 'https://facebook.com/offlineclub/videos/1',
+                'posted_at' => now()->subDays(45)->toIso8601String(),
+                'type' => PostType::Video->value,
+                'caption' => 'Older but in backfill',
+                'media_url' => 'https://cdn.example.com/day45.mp4',
+                'metrics' => ['views' => 400, 'likes' => 22, 'comments' => 3, 'shares' => 0, 'clicks' => 0],
+                'raw_payload' => [],
+            ],
+        ]);
+        $adapter->shouldReceive('hydrateMediaUrls')->once()->with([])->andReturn([]);
+
+        $adapters = Mockery::mock(PlatformAdapterManager::class);
+        $adapters->shouldReceive('driverFor')->andReturn('apify');
+        $adapters->shouldReceive('for')->with(Platform::Facebook)->andReturn($adapter);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
+        $this->app->instance(ApifyClient::class, $client);
+
+        (new SyncTrackedAccountJob($account->id, force: true, postsLimit: 50, recencyDays: 90))->handle(
+            $adapters,
+            app(SnitchAnalyticsService::class),
+            app(VendorUsageCharger::class),
+        );
+
+        $existing->refresh();
+        $this->assertSame(22, $existing->metrics['likes'] ?? null);
+        $this->assertSame(400, $existing->metrics['views'] ?? null);
+        Queue::assertPushed(AnalyzePostJob::class, fn (AnalyzePostJob $job) => $job->postId === $existing->id);
     }
 
     public function test_tikhub_failure_falls_back_to_apify_for_instagram(): void

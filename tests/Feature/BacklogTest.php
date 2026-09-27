@@ -100,10 +100,14 @@ class BacklogTest extends TestCase
         BrandProfile::factory()->for($user)->create();
         $account = TrackedAccount::factory()->for($user)->create();
 
-        config(['snitch.sync.recency_days' => 30]);
+        config([
+            'snitch.sync.recency_days' => 30,
+            'snitch.sync.first_sync_recency_days' => 90,
+            'snitch.sync.recency_days_max' => 90,
+        ]);
 
         Post::factory()->forAccount($account)->create([
-            'posted_at' => now()->subDays(60),
+            'posted_at' => now()->subDays(120),
         ]);
 
         $recent = Post::factory()->forAccount($account)->create([
@@ -121,6 +125,18 @@ class BacklogTest extends TestCase
                     ->has('posts.data', 1)
                     ->where('posts.data.0.id', $recent->id)
                 )
+            );
+
+        // Backfill-window posts stay eligible for analysis.
+        Post::factory()->forAccount($account)->create([
+            'posted_at' => now()->subDays(45),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('backlog.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('counts.queue', 2)
             );
     }
 

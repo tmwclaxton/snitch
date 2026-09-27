@@ -313,6 +313,7 @@ class InstagramAdapter extends AbstractTikHubAdapter
             $media,
             (int) ($media['share_count'] ?? $media['shares'] ?? 0),
             $this->clicksFrom(is_array($media) ? $media : []),
+            $this->followerCountFromUser(is_array($media['user'] ?? null) ? $media['user'] : (is_array($item['user'] ?? null) ? $item['user'] : [])),
         );
 
         return [

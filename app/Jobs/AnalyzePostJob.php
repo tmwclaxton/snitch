@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\AnalysisStatus;
 use App\Enums\MediaAvailability;
 use App\Enums\Platform;
+use App\Enums\PostType;
 use App\Exceptions\InsufficientCreditsException;
 use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Models\Post;
@@ -18,6 +19,7 @@ use App\Services\Scraping\YoutubeMediaHydrator;
 use App\Services\Winners\WinnerScorer;
 use App\Support\PostCover;
 use App\Support\PublicDiskMedia;
+use App\Support\SyncOptions;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\Client\RequestException;
@@ -57,7 +59,7 @@ class AnalyzePostJob implements ShouldQueue
             return;
         }
 
-        $recencyDays = max(1, (int) config('snitch.sync.recency_days', 30));
+        $recencyDays = SyncOptions::analysisRecencyDays();
         if ($post->posted_at !== null && $post->posted_at->lt(now()->subDays($recencyDays))) {
             return;
         }

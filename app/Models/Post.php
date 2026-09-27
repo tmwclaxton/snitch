@@ -7,6 +7,7 @@ use App\Enums\MediaAvailability;
 use App\Enums\Platform;
 use App\Enums\PostType;
 use App\Support\PostCover;
+use App\Support\SyncOptions;
 use Database\Factories\PostFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -135,7 +136,7 @@ class Post extends Model
      */
     public function scopeWithinAnalysisRecency(Builder $query): Builder
     {
-        $recencyDays = max(1, (int) config('snitch.sync.recency_days', 30));
+        $recencyDays = SyncOptions::analysisRecencyDays();
         $cutoff = now()->subDays($recencyDays);
 
         return $query->where(function (Builder $query) use ($cutoff): void {
