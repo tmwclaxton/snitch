@@ -23,7 +23,7 @@ class SeoTest extends TestCase
         $response->assertSee('name="description"', false);
         $response->assertSee(e($home['description']), false);
         $response->assertSee('property="og:title"', false);
-        $response->assertSee('Snitch social tracking - Snitch', false);
+        $response->assertSee(e($home['title']).' - Snitch', false);
         $response->assertSee('rel="canonical"', false);
         $response->assertSee($appUrl.'/', false);
         $response->assertSee('application/ld+json', false);
@@ -154,7 +154,7 @@ class SeoTest extends TestCase
                 ->component('Welcome')
                 ->has('seo')
                 ->where('seo.indexable', true)
-                ->where('seo.title', 'Snitch social tracking')
+                ->where('seo.title', config('seo.pages.home.title'))
                 ->where('seo.robots', 'index, follow')
             );
     }

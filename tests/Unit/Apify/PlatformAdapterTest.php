@@ -326,53 +326,65 @@ class PlatformAdapterTest extends TestCase
 
     public function test_instagram_list_input_uses_since_date_and_multiplier(): void
     {
-        $client = $this->createMock(ApifyClient::class);
-        $since = CarbonImmutable::parse('2026-08-01');
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-20 12:00:00'));
 
-        $client->expects($this->once())
-            ->method('runActor')
-            ->with(
-                'apify/instagram-scraper',
-                $this->callback(function (array $input) use ($since): bool {
-                    return ($input['onlyPostsNewerThan'] ?? null) === $since->toDateString()
-                        && ($input['resultsLimit'] ?? 0) >= 30;
-                }),
-            )
-            ->willReturn([]);
+        try {
+            $client = $this->createMock(ApifyClient::class);
+            $since = CarbonImmutable::parse('2026-08-01');
 
-        config([
-            'snitch.apify.actors.instagram' => 'apify/instagram-scraper',
-            'snitch.sync.fetch_multipliers.instagram' => 2.5,
-            'snitch.sync.posts_limit' => 12,
-            'snitch.sync.recency_days' => 30,
-        ]);
+            $client->expects($this->once())
+                ->method('runActor')
+                ->with(
+                    'apify/instagram-scraper',
+                    $this->callback(function (array $input) use ($since): bool {
+                        return ($input['onlyPostsNewerThan'] ?? null) === $since->toDateString()
+                            && ($input['resultsLimit'] ?? 0) >= 30;
+                    }),
+                )
+                ->willReturn([]);
 
-        (new InstagramAdapter($client))->listRecentPosts('rivalbakery', 12, $since);
+            config([
+                'snitch.apify.actors.instagram' => 'apify/instagram-scraper',
+                'snitch.sync.fetch_multipliers.instagram' => 2.5,
+                'snitch.sync.posts_limit' => 12,
+                'snitch.sync.recency_days' => 30,
+            ]);
+
+            (new InstagramAdapter($client))->listRecentPosts('rivalbakery', 12, $since);
+        } finally {
+            CarbonImmutable::setTestNow();
+        }
     }
 
     public function test_youtube_list_input_uses_since_date(): void
     {
-        $client = $this->createMock(ApifyClient::class);
-        $since = CarbonImmutable::parse('2026-08-02');
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-20 12:00:00'));
 
-        $client->expects($this->once())
-            ->method('runActor')
-            ->with(
-                'streamers/youtube-scraper',
-                $this->callback(function (array $input) use ($since): bool {
-                    return ($input['oldestPostDate'] ?? null) === $since->toDateString()
-                        && ($input['maxResultsShorts'] ?? null) === 12;
-                }),
-            )
-            ->willReturn([]);
+        try {
+            $client = $this->createMock(ApifyClient::class);
+            $since = CarbonImmutable::parse('2026-08-02');
 
-        config([
-            'snitch.apify.actors.youtube' => 'streamers/youtube-scraper',
-            'snitch.sync.fetch_multipliers.youtube' => 1.0,
-            'snitch.sync.recency_days' => 30,
-        ]);
+            $client->expects($this->once())
+                ->method('runActor')
+                ->with(
+                    'streamers/youtube-scraper',
+                    $this->callback(function (array $input) use ($since): bool {
+                        return ($input['oldestPostDate'] ?? null) === $since->toDateString()
+                            && ($input['maxResultsShorts'] ?? null) === 12;
+                    }),
+                )
+                ->willReturn([]);
 
-        $this->makeAdapter(YoutubeAdapter::class, $client)->listRecentPosts('rivalbakery', 12, $since);
+            config([
+                'snitch.apify.actors.youtube' => 'streamers/youtube-scraper',
+                'snitch.sync.fetch_multipliers.youtube' => 1.0,
+                'snitch.sync.recency_days' => 30,
+            ]);
+
+            $this->makeAdapter(YoutubeAdapter::class, $client)->listRecentPosts('rivalbakery', 12, $since);
+        } finally {
+            CarbonImmutable::setTestNow();
+        }
     }
 
     public function test_linkedin_rejects_linkedin_page_media_urls(): void
