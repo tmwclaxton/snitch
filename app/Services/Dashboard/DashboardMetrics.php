@@ -1792,7 +1792,7 @@ class DashboardMetrics
             $peerOnly = collect($this->insightRules->top($insightContext, 3))
                 ->map(fn (array $row): array => [
                     'text' => strip_tags(str_replace('**', '', $row['text'])),
-                    'links_to' => $row['links_to'],
+                    'links_to' => $this->insightRules->resolveAnchor((string) $row['links_to']),
                     'n' => $row['n'],
                 ])
                 ->all();
@@ -1811,7 +1811,7 @@ class DashboardMetrics
         if (is_numeric($peerPosts) && is_numeric($youPosts) && (float) $youPosts < 0.5 * (float) $peerPosts) {
             $items[] = [
                 'text' => sprintf('Post %.1f×/week (peers: %.1f)', max(1, round((float) $peerPosts)), (float) $peerPosts),
-                'links_to' => 'kpis',
+                'links_to' => $this->insightRules->resolveAnchor('kpis'),
                 'n' => (int) ($ownRow['posts_n'] ?? 0),
             ];
         }
@@ -1827,7 +1827,7 @@ class DashboardMetrics
 
             $items[] = [
                 'text' => strip_tags(str_replace('**', '', $insight['text'])),
-                'links_to' => $insight['links_to'],
+                'links_to' => $this->insightRules->resolveAnchor((string) $insight['links_to']),
                 'n' => $insight['n'],
             ];
         }

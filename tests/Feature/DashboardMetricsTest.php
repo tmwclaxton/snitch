@@ -338,19 +338,74 @@ class DashboardMetricsTest extends TestCase
 
         $payload = app(DashboardMetrics::class)->forUser($user, [], 30);
         $items = $payload['insights']['data']['items'] ?? [];
+        $actions = $payload['actions']['data']['items'] ?? [];
+        $rendered = $this->dashboardDomAnchors();
+
+        $this->assertNotEmpty($items, 'Rich fixture should produce insights so see-why targets can be checked');
 
         foreach ($items as $item) {
+            $this->assertDashboardLinkTargetExists((string) $item['links_to'], $rendered, 'insight');
+        }
+
+        foreach ($actions as $item) {
+            $this->assertDashboardLinkTargetExists((string) $item['links_to'], $rendered, 'action');
+        }
+
+        foreach (InsightRules::LIVE_ANCHORS as $anchor) {
             $this->assertContains(
-                $item['links_to'],
-                InsightRules::LIVE_ANCHORS,
-                "Insight links_to '{$item['links_to']}' is not a live dashboard anchor",
+                $anchor,
+                $rendered,
+                "LIVE_ANCHORS entry '{$anchor}' is missing from Dashboard.vue id=/anchor= attributes",
             );
         }
 
         $rules = app(InsightRules::class);
+        $this->assertSame('rail', $rules->resolveAnchor('kpis'));
         $this->assertSame('captions', $rules->resolveAnchor('captions'));
         $this->assertSame('themes', $rules->resolveAnchor('themes'));
         $this->assertSame('heatmap', $rules->resolveAnchor('heatmap'));
+        $this->assertSame('/winners', $rules->resolveAnchor('/winners'));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function dashboardDomAnchors(): array
+    {
+        $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
+        $this->assertNotFalse($dashboard);
+
+        preg_match_all('/\bid="([^"]+)"/', $dashboard, $ids);
+        preg_match_all('/\banchor="([^"]+)"/', $dashboard, $anchors);
+
+        return array_values(array_unique(array_merge($ids[1] ?? [], $anchors[1] ?? [])));
+    }
+
+    /**
+     * @param  list<string>  $rendered
+     */
+    private function assertDashboardLinkTargetExists(string $target, array $rendered, string $kind): void
+    {
+        if (str_starts_with($target, '/')) {
+            $this->assertMatchesRegularExpression(
+                '#^/(winners|tracking(?:/\d+)?|feed(?:/\d+)?)(?:\?.*)?$#',
+                $target,
+                ucfirst($kind)." path links_to '{$target}' is not an allowed in-app route",
+            );
+
+            return;
+        }
+
+        $this->assertContains(
+            $target,
+            InsightRules::LIVE_ANCHORS,
+            ucfirst($kind)." links_to '{$target}' is not a live dashboard anchor",
+        );
+        $this->assertContains(
+            $target,
+            $rendered,
+            ucfirst($kind)." links_to '{$target}' has no matching id=/anchor= on Dashboard.vue",
+        );
     }
 
     public function test_inc3_cards_return_shapes_and_hidden_toggle_changes_cache_key(): void

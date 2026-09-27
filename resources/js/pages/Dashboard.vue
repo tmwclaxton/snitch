@@ -429,7 +429,10 @@ const timeOfDayTotal = computed(() =>
                             />
                             <SnitchSkeleton v-else variant="scrap" height="7rem" label="Loading heat map" />
                         </div>
-                        <div class="snitch-scrap snitch-dash-chart-slot relative flex h-full flex-col p-3">
+                        <div
+                            id="growth_series"
+                            class="snitch-scrap snitch-dash-chart-slot relative flex h-full flex-col p-3"
+                        >
                             <div class="mb-1 flex items-baseline justify-between gap-2">
                                 <p class="snitch-ink-label">Followers</p>
                                 <p
@@ -454,7 +457,7 @@ const timeOfDayTotal = computed(() =>
                     </div>
 
                     <div class="mt-3 grid items-start gap-3 lg:grid-cols-3">
-                        <div class="snitch-scrap snitch-dash-chart-slot relative p-3">
+                        <div id="format_mix" class="snitch-scrap snitch-dash-chart-slot relative p-3">
                             <FormatMixChart
                                 v-if="caption_intel"
                                 class="snitch-dash-soft-in"
@@ -804,19 +807,20 @@ const timeOfDayTotal = computed(() =>
                 </div>
 
                 <DashCard
-                    v-if="themes"
                     title="Topics and themes"
                     why="Topic gaps peers win with that you skip."
                     formula="share = posts(theme)/posts · colour = median PI"
                     anchor="themes"
                 >
                     <ThemeMatrix
+                        v-if="themes"
                         :status="themes.status"
                         :reason="themes.reason"
                         :accounts="(themes.data?.accounts as any) || []"
                         :matrix="(themes.data?.matrix as any) || []"
                         :gaps="(themes.data?.gaps as any) || []"
                     />
+                    <SnitchSkeleton v-else variant="scrap" height="8rem" label="Loading themes" />
                 </DashCard>
 
                 <DashCard

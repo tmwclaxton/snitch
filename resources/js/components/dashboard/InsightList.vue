@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import EmptyState from '@/components/dashboard/EmptyState.vue';
 import { useAccountColours } from '@/composables/useAccountColours';
+import { followDashboardLink } from '@/lib/dashboardAnchors';
 
 type Insight = {
     category: string;
@@ -37,20 +38,6 @@ function htmlText(text: string): string {
 
     return escaped.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-slate-900">$1</strong>');
 }
-
-function scrollTo(id: string): void {
-    const el = document.getElementById(id);
-
-    if (!el) {
-        return;
-    }
-
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    el.classList.add('ring-2', 'ring-slate-900', 'ring-offset-2');
-    window.setTimeout(() => {
-        el.classList.remove('ring-2', 'ring-slate-900', 'ring-offset-2');
-    }, 1600);
-}
 </script>
 
 <template>
@@ -71,7 +58,7 @@ function scrollTo(id: string): void {
                 <button
                     type="button"
                     class="ml-1 whitespace-nowrap text-[10px] font-medium text-slate-500 underline-offset-2 hover:text-slate-800 hover:underline"
-                    @click="scrollTo(item.links_to)"
+                    @click="followDashboardLink(item.links_to)"
                 >
                     see why →
                 </button>

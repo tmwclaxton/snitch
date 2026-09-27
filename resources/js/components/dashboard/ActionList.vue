@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import EmptyState from '@/components/dashboard/EmptyState.vue';
+import { followDashboardLink } from '@/lib/dashboardAnchors';
 
 type Item = { text: string; links_to: string; n: number };
 
@@ -9,20 +10,6 @@ defineProps<{
     items?: Item[];
     peerOnly?: boolean;
 }>();
-
-function scrollTo(id: string): void {
-    const el = document.getElementById(id);
-
-    if (!el) {
-        return;
-    }
-
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    el.classList.add('ring-2', 'ring-slate-900', 'ring-offset-2');
-    window.setTimeout(() => {
-        el.classList.remove('ring-2', 'ring-slate-900', 'ring-offset-2');
-    }, 1600);
-}
 </script>
 
 <template>
@@ -43,7 +30,7 @@ function scrollTo(id: string): void {
                     <button
                         type="button"
                         class="mt-0.5 text-[10px] font-medium text-slate-500 underline-offset-2 hover:underline"
-                        @click="scrollTo(item.links_to)"
+                        @click="followDashboardLink(item.links_to)"
                     >
                         see why →
                     </button>

@@ -16,14 +16,22 @@ namespace App\Services\Dashboard;
 class InsightRules
 {
     /**
+     * Legacy / semantic keys mapped onto ids that exist on Dashboard.vue.
+     *
      * @var array<string, string>
      */
-    public const ANCHOR_ALIASES = [];
+    public const ANCHOR_ALIASES = [
+        'kpis' => 'rail',
+    ];
 
-    /** @var list<string> */
+    /**
+     * Every value here must appear as `id="…"` or `anchor="…"` on Dashboard.vue.
+     * Path-style targets (`/winners`, `/tracking/1`) skip this list and navigate.
+     *
+     * @var list<string>
+     */
     public const LIVE_ANCHORS = [
         'onboarding',
-        'kpis',
         'rail',
         'insights',
         'leaderboard',
@@ -46,6 +54,10 @@ class InsightRules
 
     public function resolveAnchor(string $linksTo): string
     {
+        if (str_starts_with($linksTo, '/')) {
+            return $linksTo;
+        }
+
         $target = self::ANCHOR_ALIASES[$linksTo] ?? $linksTo;
 
         return in_array($target, self::LIVE_ANCHORS, true) ? $target : 'insights';
@@ -355,7 +367,7 @@ class InsightRules
             ),
             'score' => (((float) $peerPostsWk / max($ownWk, 0.1)) - 1) * min(1, $n / 20),
             'n' => $n,
-            'links_to' => 'kpis',
+            'links_to' => 'rail',
         ]];
     }
 
