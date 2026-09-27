@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Info } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import EmptyState from '@/components/dashboard/EmptyState.vue';
 
 type Gap = {
     type: 'pp' | 'x';
@@ -33,7 +32,7 @@ const youLabel = computed(() => {
             : String(props.youDisplay);
     }
 
-    if (props.you == null) {
+    if (props.status !== 'ok' || props.you == null) {
         return null;
     }
 
@@ -90,41 +89,44 @@ const gapClass = computed(() => {
 </script>
 
 <template>
-    <div class="rounded-xl border border-slate-200 bg-white p-4">
-        <div class="flex items-start justify-between gap-2">
-            <div class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ label }}</div>
+    <div class="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
+        <div class="flex items-center justify-between gap-1">
+            <div class="truncate text-[10px] font-medium uppercase tracking-wide text-slate-500">{{ label }}</div>
             <button
                 type="button"
                 class="relative rounded p-0.5 text-slate-400 hover:text-slate-700"
+                :aria-label="'About ' + label"
                 @click="open = !open"
                 @blur="open = false"
             >
-                <Info class="h-3.5 w-3.5" />
+                <Info class="h-3 w-3" />
                 <div
                     v-if="open"
-                    class="absolute right-0 z-20 mt-2 w-56 rounded-lg border border-slate-200 bg-white p-2 text-left text-[11px] text-slate-600 shadow-sm"
+                    class="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-slate-200 bg-white p-2 text-left text-[11px] text-slate-600 shadow-sm"
                 >
-                    {{ formula }}
+                    <p class="mb-1 text-slate-700">{{ why }}</p>
+                    <p class="text-slate-500">{{ formula }}</p>
                 </div>
             </button>
         </div>
-        <p class="mt-1 text-[11px] leading-snug text-slate-400">{{ why }}</p>
 
-        <EmptyState v-if="status !== 'ok' || youLabel == null" :reason="reason" compact class="mt-3" />
-        <template v-else>
-            <div class="mt-3 text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">
+        <template v-if="youLabel != null">
+            <div class="mt-0.5 text-lg font-semibold tracking-tight text-slate-900 tabular-nums leading-tight">
                 {{ youLabel }}
             </div>
-            <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <span>Peer median: {{ peerLabel }}</span>
+            <div class="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
+                <span>Peer {{ peerLabel }}</span>
                 <span
                     v-if="gapLabel"
-                    class="rounded-md px-1.5 py-0.5 font-medium tabular-nums"
+                    class="rounded px-1 py-0.5 font-medium tabular-nums"
                     :class="gapClass"
                 >
                     {{ gapLabel }}
                 </span>
             </div>
         </template>
+        <div v-else class="mt-1 text-[11px] text-slate-400">
+            {{ reason || '—' }}
+        </div>
     </div>
 </template>

@@ -46,21 +46,20 @@ function num(value: number | null): string {
 </script>
 
 <template>
-    <EmptyState v-if="status !== 'ok' || !rows?.length" :reason="reason" />
+    <EmptyState v-if="status !== 'ok' || !rows?.length" :reason="reason" compact />
     <div v-else class="overflow-x-auto">
-        <table class="w-full min-w-[880px] text-left text-sm">
+        <table class="w-full text-left text-[11px]">
             <thead>
-                <tr class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                    <th class="py-2 pr-3 font-medium">Account</th>
-                    <th class="px-2 py-2 font-medium">Followers</th>
-                    <th class="px-2 py-2 font-medium">30d growth</th>
-                    <th class="px-2 py-2 font-medium">Posts/wk</th>
-                    <th class="px-2 py-2 font-medium">Consistency</th>
-                    <th class="px-2 py-2 font-medium">ER / follower</th>
-                    <th class="px-2 py-2 font-medium">Comments/post</th>
-                    <th class="px-2 py-2 font-medium">Top format</th>
-                    <th class="px-2 py-2 font-medium">Winners</th>
-                    <th class="px-2 py-2 font-medium">Eng. share</th>
+                <tr class="border-b border-slate-200 text-[10px] uppercase tracking-wide text-slate-500">
+                    <th class="py-1 pr-1.5 font-medium">Account</th>
+                    <th class="px-1 py-1 font-medium">Followers</th>
+                    <th class="px-1 py-1 font-medium">Growth</th>
+                    <th class="px-1 py-1 font-medium">Posts/wk</th>
+                    <th class="px-1 py-1 font-medium">Cons.</th>
+                    <th class="px-1 py-1 font-medium">ER</th>
+                    <th class="px-1 py-1 font-medium">Format</th>
+                    <th class="px-1 py-1 font-medium">Win</th>
+                    <th class="px-1 py-1 font-medium">Share</th>
                 </tr>
             </thead>
             <tbody>
@@ -70,36 +69,32 @@ function num(value: number | null): string {
                     class="border-b border-slate-100"
                     :class="row.is_own_account ? 'bg-slate-50' : ''"
                 >
-                    <td class="py-3 pr-3">
-                        <div class="flex items-center gap-2">
+                    <td class="py-1.5 pr-1.5">
+                        <div class="flex items-center gap-1.5">
                             <SnitchAvatar
                                 :src="row.avatar"
                                 :name="row.display_name"
                                 :handle="row.handle"
                                 size="sm"
+                                class="!size-5"
                             />
-                            <div>
-                                <div class="font-medium text-slate-900">
-                                    @{{ row.handle }}
-                                    <span
-                                        v-if="row.is_own_account"
-                                        class="ml-1 rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
-                                    >
-                                        You
-                                    </span>
+                            <div class="min-w-0">
+                                <div class="truncate font-medium text-slate-900">
+                                    <span v-if="row.is_own_account">You</span>
+                                    <span v-else>@{{ row.handle }}</span>
                                 </div>
-                                <div v-if="row.row_note" class="text-[11px] text-slate-400">{{ row.row_note }}</div>
+                                <div v-if="row.row_note" class="text-[10px] text-slate-400">{{ row.row_note }}</div>
                             </div>
                         </div>
                     </td>
-                    <td class="px-2 py-3 tabular-nums text-slate-700">{{ followers(row.followers) }}</td>
-                    <td class="px-2 py-3 tabular-nums text-slate-700">
+                    <td class="px-1 py-1.5 tabular-nums text-slate-700">{{ followers(row.followers) }}</td>
+                    <td class="px-1 py-1.5 tabular-nums text-slate-700">
                         {{ row.no_posts_in_period ? '—' : pct(row.growth_pct) }}
                     </td>
-                    <td class="px-2 py-3 tabular-nums text-slate-700">
+                    <td class="px-1 py-1.5 tabular-nums text-slate-700">
                         {{ row.no_posts_in_period ? '—' : num(row.posts_per_week) }}
                     </td>
-                    <td class="px-2 py-3">
+                    <td class="px-1 py-1.5">
                         <div
                             v-if="!row.no_posts_in_period"
                             class="flex items-center gap-0.5"
@@ -108,35 +103,31 @@ function num(value: number | null): string {
                             <span
                                 v-for="(filled, idx) in row.consistency.weeks"
                                 :key="idx"
-                                class="h-2 w-2 rounded-full"
+                                class="h-1.5 w-1.5 rounded-full"
                                 :class="filled ? 'bg-slate-800' : 'bg-slate-200'"
                             />
                         </div>
-                        <span v-else class="text-xs text-slate-400">—</span>
+                        <span v-else class="text-slate-400">—</span>
                     </td>
-                    <td class="px-2 py-3 tabular-nums text-slate-700">
-                        <span v-if="row.no_posts_in_period" class="text-xs text-slate-400">No posts imported yet</span>
-                        <span v-else-if="row.er != null">{{ row.er.toFixed(2) }}%</span>
-                        <span v-else class="text-xs text-slate-400">{{ row.er_reason || '—' }}</span>
+                    <td class="px-1 py-1.5 tabular-nums text-slate-700">
+                        <span v-if="row.no_posts_in_period || row.er == null" class="text-slate-400">—</span>
+                        <span v-else>{{ row.er.toFixed(2) }}%</span>
                     </td>
-                    <td class="px-2 py-3 tabular-nums text-slate-700">
-                        {{ row.no_posts_in_period ? '—' : num(row.comments_per_post) }}
-                    </td>
-                    <td class="px-2 py-3 text-slate-700">
+                    <td class="px-1 py-1.5 text-slate-700">
                         {{ row.no_posts_in_period ? '—' : row.top_format || '—' }}
                     </td>
-                    <td class="px-2 py-3 tabular-nums text-slate-700">
+                    <td class="px-1 py-1.5 tabular-nums text-slate-700">
                         {{ row.no_posts_in_period ? '—' : row.winners }}
                     </td>
-                    <td class="px-2 py-3">
-                        <template v-if="row.no_posts_in_period">
-                            <span class="text-xs text-slate-400">—</span>
+                    <td class="px-1 py-1.5">
+                        <template v-if="row.no_posts_in_period || row.engagement_share == null">
+                            <span class="text-slate-400">—</span>
                         </template>
-                        <div v-else class="flex items-center gap-2">
-                            <div class="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
+                        <div v-else class="flex items-center gap-1">
+                            <div class="h-1 w-8 overflow-hidden rounded-full bg-slate-100">
                                 <div
                                     class="h-full rounded-full bg-slate-700"
-                                    :style="{ width: `${Math.min(100, row.engagement_share ?? 0)}%` }"
+                                    :style="{ width: `${Math.min(100, row.engagement_share)}%` }"
                                 />
                             </div>
                             <span class="tabular-nums text-slate-700">{{ pct(row.engagement_share) }}</span>

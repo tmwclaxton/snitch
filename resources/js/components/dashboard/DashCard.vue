@@ -2,11 +2,12 @@
 import { Info } from '@lucide/vue';
 import { ref } from 'vue';
 
-defineProps<{
+const props = defineProps<{
     title: string;
     why?: string | null;
     formula?: string | null;
     anchor?: string | null;
+    class?: string | null;
 }>();
 
 const open = ref(false);
@@ -15,32 +16,29 @@ const open = ref(false);
 <template>
     <section
         :id="anchor || undefined"
-        class="scroll-mt-24 rounded-xl border border-slate-200 bg-white p-5"
+        class="scroll-mt-16 rounded-lg border border-slate-200 bg-white p-3 transition-shadow duration-500"
+        :class="props.class"
     >
-        <div class="mb-1 flex items-start justify-between gap-3">
-            <div class="min-w-0">
-                <h2 class="text-base font-semibold text-slate-900">{{ title }}</h2>
-                <p v-if="why" class="mt-0.5 text-sm text-slate-500">{{ why }}</p>
-            </div>
+        <div class="mb-2 flex h-7 items-center justify-between gap-2">
+            <h2 class="truncate text-[11px] font-semibold uppercase tracking-wide text-slate-900">{{ title }}</h2>
             <button
-                v-if="formula"
+                v-if="formula || why"
                 type="button"
-                class="relative shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
-                :aria-label="'Formula for ' + title"
+                class="relative shrink-0 rounded p-0.5 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
+                :aria-label="'About ' + title"
                 @click="open = !open"
                 @blur="open = false"
             >
-                <Info class="h-4 w-4" />
+                <Info class="h-3.5 w-3.5" />
                 <div
                     v-if="open"
-                    class="absolute right-0 z-20 mt-2 w-64 rounded-lg border border-slate-200 bg-white p-3 text-left text-xs leading-relaxed text-slate-600 shadow-sm"
+                    class="absolute right-0 z-20 mt-2 w-64 rounded-lg border border-slate-200 bg-white p-2.5 text-left text-[11px] leading-relaxed text-slate-600 shadow-sm"
                 >
-                    {{ formula }}
+                    <p v-if="why" class="mb-1.5 text-slate-700">{{ why }}</p>
+                    <p v-if="formula" class="text-slate-500">{{ formula }}</p>
                 </div>
             </button>
         </div>
-        <div class="mt-4">
-            <slot />
-        </div>
+        <slot />
     </section>
 </template>

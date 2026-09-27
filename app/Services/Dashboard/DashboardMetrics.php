@@ -154,6 +154,11 @@ class DashboardMetrics
         $kpis = $this->kpisCard($ownRow, $peerRows, $enrichedAll, $periodDays);
         $leaderboard = $this->leaderboardCard($accountRows, $periodPosts);
         $winners = $this->winnersCard($periodPosts);
+        $growthSeries = $this->growthSeriesCard($visibleAccounts, $snapshots);
+        $efficiency = $this->efficiencyCard($accountRows);
+        $formatMix = $this->formatMixCard($accountRows, $periodPosts);
+        $formatLift = $this->formatLiftCard($accountRows, $periodPosts);
+        $heatmap = $this->heatmapCard($periodPosts);
 
         $lastSynced = $accounts
             ->map(fn (TrackedAccount $a) => $a->last_synced_at)
@@ -190,11 +195,11 @@ class DashboardMetrics
             'kpis' => $kpis,
             'leaderboard' => $leaderboard,
             'winners' => $winners,
-            'growth_series' => CardResult::empty('Follower growth chart arrives in the next update.'),
-            'efficiency' => CardResult::empty('Efficiency map arrives in the next update.'),
-            'format_mix' => CardResult::empty('Format mix arrives in the next update.'),
-            'format_lift' => CardResult::empty('Format lift arrives in the next update.'),
-            'heatmap' => CardResult::empty('Timing heatmap arrives in the next update.'),
+            'growth_series' => $growthSeries,
+            'efficiency' => $efficiency,
+            'format_mix' => $formatMix,
+            'format_lift' => $formatLift,
+            'heatmap' => $heatmap,
             'captions' => CardResult::empty('Caption panels arrive later.'),
             'themes' => CardResult::empty('Theme matrix arrives later.'),
             'weekly' => CardResult::empty('Week-over-week trends arrive later.'),
@@ -826,6 +831,11 @@ class DashboardMetrics
         } elseif ($reelEmpty && $youValue === null && $youN > 0) {
             $status = 'empty';
             $reason = 'No Reels in this period.';
+        } elseif ($key === 'posts_per_week' && $you !== null && $youN === 0) {
+            $status = 'insufficient';
+            $reason = 'No posts imported yet';
+            $youValue = null;
+            $display = null;
         } elseif ($requireN && $you !== null && $youN < DashboardMath::MIN_SAMPLE) {
             $status = 'insufficient';
             $reason = $this->math->insufficientReason($youN);
@@ -1008,5 +1018,276 @@ class DashboardMetrics
             'thumbnail_url' => $row['thumbnail_url'],
             'url' => $row['url'],
         ];
+    }
+
+    /**
+     * @param  Collection<int, TrackedAccount>  $accounts
+     * @param  Collection<int, Collection<int, array{captured_on: string, followers: int}>>  $snapshots
+     * @return array{status: string, n: int, data: mixed, reason: string|null}
+     */
+    private function growthSeriesCard(Collection $accounts, Collection $snapshots): array
+    {
+        $series = [];
+        $pointCount = 0;
+
+        foreach ($accounts as $account) {
+            $rows = $snapshots->get($account->social_account_id, collect())
+                ->sortBy('captured_on')
+                ->values();
+
+            if ($rows->isEmpty()) {
+                continue;
+            }
+
+            $start = (int) $rows->first()['followers'];
+            $points = $rows->map(function (array $row) use ($start): array {
+                $followers = (int) $row['followers'];
+                $pct = $start > 0 ? (($followers / $start) - 1) * 100 : null;
+
+                return [
+                    'date' => $row['captured_on'],
+                    'followers' => $followers,
+                    'pct_change' => $pct === null ? null : round($pct, 2),
+                ];
+            })->all();
+
+            $pointCount += count($points);
+            $series[] = [
+                'handle' => $account->handle,
+                'is_own_account' => (bool) $account->is_own_account,
+                'points' => $points,
+            ];
+        }
+
+        if ($series === []) {
+            return CardResult::empty(
+                'Growth history starts when tracking begins. Check back after the next weekly refresh.',
+            );
+        }
+
+        $maxPoints = collect($series)->max(fn (array $row): int => count($row['points']));
+
+        if ($maxPoints < 2) {
+            return CardResult::insufficient(
+                'Tracking started recently. Growth appears after 2 weekly snapshots.',
+                $pointCount,
+                ['series' => $series, 'mode' => 'pct'],
+            );
+        }
+
+        return CardResult::ok(['series' => $series, 'mode' => 'pct'], $pointCount);
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $accountRows
+     * @return array{status: string, n: int, data: mixed, reason: string|null}
+     */
+    private function efficiencyCard(Collection $accountRows): array
+    {
+        $usable = $accountRows
+            ->filter(fn (array $row): bool => ($row['posts_n'] ?? 0) >= DashboardMath::MIN_SAMPLE && $row['er'] !== null)
+            ->values();
+
+        if ($usable->count() < 2) {
+            return CardResult::insufficient(
+                'Add another competitor to compare posting strategies (need 2+ accounts with n≥5).',
+                $usable->count(),
+            );
+        }
+
+        $points = $usable->map(fn (array $row): array => [
+            'handle' => $row['handle'],
+            'is_own_account' => $row['is_own_account'],
+            'x' => $this->math->round2((float) $row['posts_per_week']),
+            'y' => $this->math->round2((float) $row['er']),
+            'followers' => $row['followers'],
+            'n' => $row['posts_n'],
+        ])->all();
+
+        $peer = $usable->where('is_own_account', false);
+
+        return CardResult::ok([
+            'points' => $points,
+            'median_x' => $this->math->round2($this->math->median($peer->pluck('posts_per_week'))),
+            'median_y' => $this->math->round2($this->math->median($peer->pluck('er')->filter(fn ($v) => $v !== null)->values())),
+        ], $usable->count());
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $accountRows
+     * @param  Collection<int, array<string, mixed>>  $periodPosts
+     * @return array{status: string, n: int, data: mixed, reason: string|null}
+     */
+    private function formatMixCard(Collection $accountRows, Collection $periodPosts): array
+    {
+        $rows = $accountRows
+            ->filter(fn (array $row): bool => ($row['posts_n'] ?? 0) > 0)
+            ->map(fn (array $row): array => [
+                'handle' => $row['handle'],
+                'is_own_account' => $row['is_own_account'],
+                'n' => $row['posts_n'],
+                'shares' => [
+                    'Reel' => $this->math->round1((float) ($row['format_share']['Reel'] ?? 0)),
+                    'Carousel' => $this->math->round1((float) ($row['format_share']['Carousel'] ?? 0)),
+                    'Image' => $this->math->round1((float) ($row['format_share']['Image'] ?? 0)),
+                    'Video' => $this->math->round1((float) ($row['format_share']['Video'] ?? 0)),
+                ],
+            ])
+            ->values();
+
+        if ($rows->isEmpty()) {
+            return CardResult::empty('No posts in this period to show format mix.', $periodPosts->count());
+        }
+
+        $formatsSeen = $rows->flatMap(fn (array $row) => collect($row['shares'])->filter(fn ($v) => $v > 0)->keys())->unique()->count();
+
+        if ($formatsSeen < 2) {
+            return CardResult::insufficient('Only 1 format seen so far.', $periodPosts->count(), ['rows' => $rows->all()]);
+        }
+
+        return CardResult::ok(['rows' => $rows->all()], $periodPosts->count());
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $accountRows
+     * @param  Collection<int, array<string, mixed>>  $periodPosts
+     * @return array{status: string, n: int, data: mixed, reason: string|null}
+     */
+    private function formatLiftCard(Collection $accountRows, Collection $periodPosts): array
+    {
+        $formats = ['Reel', 'Carousel', 'Image', 'Video'];
+        $rows = [];
+
+        foreach ($accountRows as $account) {
+            $lifts = [];
+
+            foreach ($formats as $format) {
+                if (! isset($account['format_lift'][$format])) {
+                    continue;
+                }
+
+                $n = $periodPosts
+                    ->filter(fn (array $row): bool => $row['handle'] === $account['handle'] && $row['format'] === $format)
+                    ->count();
+
+                if ($n < 3) {
+                    continue;
+                }
+
+                $lifts[$format] = [
+                    'lift' => $this->math->round2((float) $account['format_lift'][$format]),
+                    'n' => $n,
+                ];
+            }
+
+            if ($lifts === []) {
+                continue;
+            }
+
+            $rows[] = [
+                'handle' => $account['handle'],
+                'is_own_account' => $account['is_own_account'],
+                'lifts' => $lifts,
+            ];
+        }
+
+        if ($rows === []) {
+            return CardResult::insufficient(
+                'Not enough posts per format (need 3).',
+                $periodPosts->count(),
+            );
+        }
+
+        $peerLift = [];
+
+        foreach ($formats as $format) {
+            $values = collect($rows)
+                ->where('is_own_account', false)
+                ->map(fn (array $row) => $row['lifts'][$format]['lift'] ?? null)
+                ->filter(fn ($v) => $v !== null)
+                ->values();
+
+            if ($values->isNotEmpty()) {
+                $peerLift[$format] = $this->math->round2($this->math->median($values));
+            }
+        }
+
+        return CardResult::ok([
+            'rows' => $rows,
+            'peer_median_lift' => $peerLift,
+        ], $periodPosts->count());
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $periodPosts
+     * @return array{status: string, n: int, data: mixed, reason: string|null}
+     */
+    private function heatmapCard(Collection $periodPosts): array
+    {
+        $rivalPosts = $periodPosts
+            ->filter(fn (array $row): bool => ! $row['is_own_account'] && $row['dow'] !== null && $row['block'] !== null)
+            ->values();
+
+        $cells = [];
+
+        for ($dow = 0; $dow < 7; $dow++) {
+            for ($block = 0; $block < 6; $block++) {
+                $cells[$dow][$block] = ['pi' => null, 'n' => 0, 'count' => 0];
+            }
+        }
+
+        $piBuckets = [];
+
+        foreach ($rivalPosts as $row) {
+            $dow = (int) $row['dow'];
+            $block = (int) $row['block'];
+            $cells[$dow][$block]['count']++;
+
+            if (is_numeric($row['pi'])) {
+                $piBuckets[$dow][$block][] = (float) $row['pi'];
+            }
+        }
+
+        foreach ($piBuckets as $dow => $blocks) {
+            foreach ($blocks as $block => $values) {
+                $cells[$dow][$block]['n'] = count($values);
+                $cells[$dow][$block]['pi'] = count($values) >= 3
+                    ? $this->math->round2($this->math->median($values))
+                    : null;
+            }
+        }
+
+        $ownDots = $periodPosts
+            ->filter(fn (array $row): bool => $row['is_own_account'] && $row['dow'] !== null && $row['block'] !== null)
+            ->map(fn (array $row): array => [
+                'dow' => $row['dow'],
+                'block' => $row['block'],
+            ])
+            ->values()
+            ->all();
+
+        $n = $rivalPosts->count();
+
+        if ($n < 14) {
+            return CardResult::insufficient(
+                "We need ~30 posts across your competitors to find reliable time slots (have {$n}).",
+                $n,
+                [
+                    'mode' => 'count',
+                    'days' => DashboardMath::DAYS,
+                    'blocks' => array_column(DashboardMath::HOUR_BLOCKS, 'label'),
+                    'cells' => $cells,
+                    'own_dots' => $ownDots,
+                ],
+            );
+        }
+
+        return CardResult::ok([
+            'mode' => 'pi',
+            'days' => DashboardMath::DAYS,
+            'blocks' => array_column(DashboardMath::HOUR_BLOCKS, 'label'),
+            'cells' => $cells,
+            'own_dots' => $ownDots,
+        ], $n);
     }
 }

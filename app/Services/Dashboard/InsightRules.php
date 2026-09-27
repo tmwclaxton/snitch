@@ -16,6 +16,42 @@ namespace App\Services\Dashboard;
 class InsightRules
 {
     /**
+     * Card anchors currently rendered on /dashboard.
+     * Deferred cards (captions/themes/weekly/…) map to the nearest live section.
+     *
+     * @var array<string, string>
+     */
+    public const ANCHOR_ALIASES = [
+        'captions' => 'winners',
+        'themes' => 'format_lift',
+        'weekly' => 'growth_series',
+        'attention' => 'leaderboard',
+        'actions' => 'insights',
+        'data_notes' => 'kpis',
+    ];
+
+    /** @var list<string> */
+    public const LIVE_ANCHORS = [
+        'onboarding',
+        'kpis',
+        'insights',
+        'leaderboard',
+        'winners',
+        'growth_series',
+        'efficiency',
+        'format_mix',
+        'format_lift',
+        'heatmap',
+    ];
+
+    public function resolveAnchor(string $linksTo): string
+    {
+        $target = self::ANCHOR_ALIASES[$linksTo] ?? $linksTo;
+
+        return in_array($target, self::LIVE_ANCHORS, true) ? $target : 'insights';
+    }
+
+    /**
      * @param  array<string, mixed>  $context  Precomputed metrics from DashboardMetrics
      * @return list<InsightCandidate>
      */
@@ -96,6 +132,7 @@ class InsightRules
             }
 
             $seen[$row['category']] = true;
+            $row['links_to'] = $this->resolveAnchor((string) $row['links_to']);
             $picked[] = $row;
 
             if (count($picked) >= $limit) {

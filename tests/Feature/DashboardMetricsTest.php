@@ -11,6 +11,8 @@ use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Dashboard\DashboardMath;
 use App\Services\Dashboard\DashboardMetrics;
+use App\Services\Dashboard\InsightRules;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -244,6 +246,57 @@ class DashboardMetricsTest extends TestCase
         $this->assertTrue($emptyChip['no_posts_in_period']);
 
         unset($empty);
+    }
+
+    public function test_growth_efficiency_format_and_heatmap_cards_return_shapes(): void
+    {
+        [$user] = $this->seedRichFixture();
+
+        $payload = app(DashboardMetrics::class)->forUser($user, [], 30);
+
+        $this->assertContains($payload['growth_series']['status'], ['ok', 'insufficient']);
+        $this->assertIsArray($payload['growth_series']['data']['series'] ?? null);
+
+        $this->assertSame('ok', $payload['efficiency']['status']);
+        $this->assertGreaterThanOrEqual(2, count($payload['efficiency']['data']['points']));
+
+        $this->assertSame('ok', $payload['format_mix']['status']);
+        $this->assertNotEmpty($payload['format_mix']['data']['rows']);
+
+        $this->assertContains($payload['format_lift']['status'], ['ok', 'insufficient']);
+        $this->assertContains($payload['heatmap']['status'], ['ok', 'insufficient']);
+        $this->assertCount(7, $payload['heatmap']['data']['days']);
+        $this->assertCount(6, $payload['heatmap']['data']['blocks']);
+    }
+
+    public function test_insight_links_to_resolve_to_live_dashboard_anchors(): void
+    {
+        [$user] = $this->seedRichFixture();
+
+        $payload = app(DashboardMetrics::class)->forUser($user, [], 30);
+        $items = $payload['insights']['data']['items'] ?? [];
+
+        foreach ($items as $item) {
+            $this->assertContains(
+                $item['links_to'],
+                InsightRules::LIVE_ANCHORS,
+                "Insight links_to '{$item['links_to']}' is not a live dashboard anchor",
+            );
+        }
+
+        $rules = app(InsightRules::class);
+        $this->assertSame('winners', $rules->resolveAnchor('captions'));
+        $this->assertSame('format_lift', $rules->resolveAnchor('themes'));
+        $this->assertSame('heatmap', $rules->resolveAnchor('heatmap'));
+    }
+
+    public function test_heatmap_cells_are_europe_london_blocks(): void
+    {
+        $math = app(DashboardMath::class);
+        $bucket = $math->londonBucket(CarbonImmutable::parse('2025-03-30 01:30:00', 'UTC'));
+
+        $this->assertSame(6, $bucket['dow']);
+        $this->assertSame(0, $bucket['block']);
     }
 
     public function test_growth_uses_real_snapshots_only(): void
