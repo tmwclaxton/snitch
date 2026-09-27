@@ -14,8 +14,8 @@ class GenerateBlogPostCommandTest extends TestCase
     {
         $exit = Artisan::call('blog:generate', [
             '--dry-run' => true,
-            '--topic' => 'How to remake winning TikTok hooks',
-            '--cluster' => 'tiktok-hooks',
+            '--topic' => 'How to remake winning Instagram hooks',
+            '--cluster' => 'instagram-hooks',
             '--skip-image' => true,
         ]);
 

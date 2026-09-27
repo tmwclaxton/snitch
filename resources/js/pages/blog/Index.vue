@@ -46,33 +46,28 @@ function formatDate(date: string): string {
 </script>
 
 <template>
-    <div class="px-5 py-14 sm:px-8 sm:py-20">
+    <div class="px-4 py-14 sm:px-8 sm:py-20">
         <div class="mx-auto max-w-6xl">
             <header>
-                <p class="snitch-ink-label">Blog</p>
-                <h1
-                    class="snitch-display relative z-10 mt-2 text-pretty text-4xl text-snitch-ink sm:text-5xl"
-                >
-                    Snitch social notes worth keeping.
+                <p class="text-xs font-medium uppercase tracking-wide text-neutral-500">Blog</p>
+                <h1 class="mt-2 text-pretty text-4xl font-semibold tracking-tight text-neutral-950 sm:text-5xl">
+                    Instagram competitor notes worth keeping.
                 </h1>
-                <p
-                    class="mt-4 max-w-2xl text-base leading-relaxed text-snitch-ink/80"
-                >
+                <p class="mt-4 max-w-2xl text-base leading-relaxed text-neutral-600">
                     Hooks, remakes, and tracking workflows for brands and
-                    agencies who watch rivals across TikTok, Instagram, YouTube,
-                    and more.
+                    agencies who watch rivals on Instagram.
                 </p>
             </header>
 
             <div
                 v-if="posts.data.length > 0"
-                class="snitch-contact-sheet mt-10 grid gap-6 sm:grid-cols-2"
+                class="mt-10 grid gap-6 sm:grid-cols-2"
             >
                 <Link
                     v-for="post in posts.data"
                     :key="post.id"
                     :href="show(post.slug)"
-                    class="snitch-scrap group relative flex flex-col overflow-hidden p-0 transition hover:-translate-y-0.5"
+                    class="group flex flex-col overflow-hidden border border-neutral-200 bg-white shadow-[0_20px_50px_-15px_rgba(0,0,0,0.10)] transition hover:-translate-y-0.5"
                     prefetch
                 >
                     <SnitchImage
@@ -83,7 +78,7 @@ function formatDate(date: string): string {
                         img-class="h-full w-full object-cover"
                         fallback="paper"
                     />
-                    <div class="relative z-10 space-y-3 p-5 sm:p-6">
+                    <div class="space-y-3 p-5 sm:p-6">
                         <div
                             v-if="post.tags.length > 0"
                             class="flex flex-wrap gap-2"
@@ -91,21 +86,19 @@ function formatDate(date: string): string {
                             <span
                                 v-for="tag in post.tags.slice(0, 3)"
                                 :key="tag"
-                                class="snitch-ink-label text-[0.65rem]"
+                                class="text-[0.65rem] font-medium uppercase tracking-wide text-neutral-500"
                             >
                                 {{ tag }}
                             </span>
                         </div>
-                        <h2
-                            class="snitch-display text-xl text-snitch-ink group-hover:underline sm:text-2xl"
-                        >
+                        <h2 class="text-xl font-semibold tracking-tight text-neutral-950 group-hover:underline sm:text-2xl">
                             {{ post.title }}
                         </h2>
-                        <p class="text-sm leading-relaxed text-snitch-ink/75">
+                        <p class="text-sm leading-relaxed text-neutral-600">
                             {{ post.excerpt }}
                         </p>
                         <div
-                            class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-snitch-ink/60"
+                            class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500"
                         >
                             <span class="inline-flex items-center gap-1.5">
                                 <CalendarDays
@@ -127,13 +120,13 @@ function formatDate(date: string): string {
 
             <div
                 v-else
-                class="snitch-scrap relative mx-auto mt-10 max-w-xl p-8 text-center"
+                class="mx-auto mt-10 max-w-xl border border-neutral-200 bg-neutral-50 p-8 text-center"
             >
-                <p class="snitch-display text-2xl text-snitch-ink">
-                    No posts on the board yet.
+                <p class="text-2xl font-semibold tracking-tight text-neutral-950">
+                    No posts yet.
                 </p>
-                <p class="mt-2 text-sm text-snitch-ink/70">
-                    Check back soon for competitor tracking notes and remake
+                <p class="mt-2 text-sm text-neutral-600">
+                    Check back soon for Instagram competitor tracking notes and remake
                     ideas.
                 </p>
             </div>
@@ -147,27 +140,21 @@ function formatDate(date: string): string {
                     <Link
                         v-if="link.url"
                         :href="link.url"
-                        class="snitch-btn"
+                        class="inline-flex px-3 py-2 text-sm font-medium"
                         :class="
                             link.active
-                                ? 'snitch-btn-spot'
-                                : 'snitch-btn-ghost'
+                                ? 'bg-[#F0C400] text-neutral-950'
+                                : 'border border-neutral-200 text-neutral-700 hover:border-neutral-400'
                         "
                         prefetch
                     >
-                        <span
-                            class="relative z-10"
-                            v-html="link.label"
-                        />
+                        <span v-html="link.label" />
                     </Link>
                     <span
                         v-else
-                        class="snitch-btn snitch-btn-ghost pointer-events-none opacity-40"
+                        class="inline-flex pointer-events-none border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-400 opacity-40"
                     >
-                        <span
-                            class="relative z-10"
-                            v-html="link.label"
-                        />
+                        <span v-html="link.label" />
                     </span>
                 </template>
             </nav>

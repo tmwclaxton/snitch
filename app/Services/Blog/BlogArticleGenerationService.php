@@ -139,7 +139,7 @@ class BlogArticleGenerationService
 
         $system = <<<PROMPT
 You plan long-form search-intent SEO blog articles for Snitch (snitchsocial.net).
-Snitch tracks competitor social posts across TikTok, Instagram, YouTube, Facebook, and LinkedIn, explains why they work (hooks, craft, SFX), and surfaces winners worth remaking.
+Snitch tracks competitor Instagram posts, explains why they work (hooks, craft, SFX), and surfaces winners worth remaking. Instagram only - do not frame Snitch as a multi-platform TikTok/YouTube/Facebook/LinkedIn tracker.
 Return JSON only with keys:
 - title, excerpt
 - tags (array of 3-6 lowercase strings)
@@ -225,8 +225,8 @@ PROMPT;
 You write one section of a long-form search-intent SEO blog article for Snitch.
 Write ONLY this section's Markdown body in JSON field "content".
 Do NOT repeat the section heading as ## at the start. You may use ### subheadings with different wording.
-Audience: local brands, creators, and agencies. Specific, practical tone. ~{$wordRange['min']}-{$wordRange['max']} words.
-Lead with useful advice; mention Snitch only where natural.
+Audience: local brands, creators, and agencies watching Instagram competitors. Specific, practical tone. ~{$wordRange['min']}-{$wordRange['max']} words.
+Lead with useful advice; mention Snitch only where natural. Stay Instagram-focused - do not pitch multi-platform tracking.
 Product URLs only on {$site} - never localhost.
 Do not invent product features beyond the research brief.
 PROMPT;

@@ -14,7 +14,7 @@ defineOptions({
                 These terms govern use of Snitch at www.snitchsocial.net.
             </p>
 
-            <h2 class="snitch-display text-xl text-snitch-ink">
+            <h2>
                 The service
             </h2>
             <p>
@@ -26,7 +26,7 @@ defineOptions({
                 trial and £5 to spend.
             </p>
 
-            <h2 class="snitch-display text-xl text-snitch-ink">
+            <h2>
                 Trials and billing
             </h2>
             <p>
@@ -40,7 +40,7 @@ defineOptions({
                 reflected on the Pricing page.
             </p>
 
-            <h2 class="snitch-display text-xl text-snitch-ink">
+            <h2>
                 Acceptable use
             </h2>
             <p>
@@ -51,7 +51,7 @@ defineOptions({
                 allowed to collect.
             </p>
 
-            <h2 class="snitch-display text-xl text-snitch-ink">
+            <h2>
                 Public data only
             </h2>
             <p>
@@ -60,7 +60,7 @@ defineOptions({
                 authenticated-gated content on your behalf.
             </p>
 
-            <h2 class="snitch-display text-xl text-snitch-ink">
+            <h2>
                 AI disclaimer
             </h2>
             <p>
@@ -70,7 +70,7 @@ defineOptions({
                 performance or legal clearance for remakes.
             </p>
 
-            <h2 class="snitch-display text-xl text-snitch-ink">
+            <h2>
                 Accounts
             </h2>
             <p>
