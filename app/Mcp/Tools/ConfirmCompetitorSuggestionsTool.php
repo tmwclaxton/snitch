@@ -78,7 +78,7 @@ class ConfirmCompetitorSuggestionsTool extends Tool
                 continue;
             }
 
-            $account = TrackedAccount::query()->updateOrCreate(
+            $account = TrackedAccount::updateOrRestore(
                 [
                     'user_id' => $user->id,
                     'platform' => $platform,

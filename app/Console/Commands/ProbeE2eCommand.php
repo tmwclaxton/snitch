@@ -76,7 +76,7 @@ class ProbeE2eCommand extends Command
             ],
         );
 
-        $account = TrackedAccount::query()->updateOrCreate(
+        $account = TrackedAccount::updateOrRestore(
             [
                 'user_id' => $user->id,
                 'platform' => $platform,

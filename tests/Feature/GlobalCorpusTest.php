@@ -55,7 +55,7 @@ class GlobalCorpusTest extends TestCase
 
         $account->delete();
 
-        $this->assertDatabaseMissing('tracked_accounts', ['id' => $account->id]);
+        $this->assertSoftDeleted('tracked_accounts', ['id' => $account->id]);
         $this->assertDatabaseHas('social_accounts', ['id' => $socialId]);
         $this->assertDatabaseHas('posts', [
             'id' => $post->id,
@@ -125,13 +125,20 @@ class GlobalCorpusTest extends TestCase
 
         $account->delete();
 
-        $readded = TrackedAccount::factory()->for($user)->create([
-            'platform' => Platform::Instagram,
-            'handle' => 'reattach_me',
-            'external_id' => 'ext-reattach',
-            'kind' => TrackedAccountKind::Competitor,
-        ]);
+        $readded = TrackedAccount::updateOrRestore(
+            [
+                'user_id' => $user->id,
+                'platform' => Platform::Instagram,
+                'handle' => 'reattach_me',
+            ],
+            [
+                'external_id' => 'ext-reattach',
+                'kind' => TrackedAccountKind::Competitor,
+            ],
+        );
 
+        $this->assertSame($account->id, $readded->id);
+        $this->assertNull($readded->deleted_at);
         $this->assertSame($socialId, (int) $readded->social_account_id);
         $this->assertTrue(Post::query()->forUser($user)->whereKey($post->id)->exists());
 

@@ -108,9 +108,9 @@ class CompetitorsBatchActionsTest extends TestCase
             ])
             ->assertRedirect(route('competitors.index'));
 
-        $this->assertDatabaseMissing('tracked_accounts', ['id' => $first->id]);
-        $this->assertDatabaseMissing('tracked_accounts', ['id' => $second->id]);
-        $this->assertDatabaseHas('tracked_accounts', ['id' => $other->id]);
+        $this->assertSoftDeleted('tracked_accounts', ['id' => $first->id]);
+        $this->assertSoftDeleted('tracked_accounts', ['id' => $second->id]);
+        $this->assertNotSoftDeleted('tracked_accounts', ['id' => $other->id]);
     }
 
     public function test_dismiss_suggestions_can_prune_selected_rows(): void

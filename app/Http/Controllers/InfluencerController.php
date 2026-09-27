@@ -689,7 +689,7 @@ class InfluencerController extends Controller
             $attributes['followers'] = $followers;
         }
 
-        $account = TrackedAccount::query()->updateOrCreate(
+        $account = TrackedAccount::updateOrRestore(
             [
                 'user_id' => $user->id,
                 'platform' => $platform,

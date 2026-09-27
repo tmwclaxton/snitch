@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'user_id',
@@ -36,6 +37,28 @@ class TrackedAccount extends Model
 {
     /** @use HasFactory<TrackedAccountFactory> */
     use HasFactory;
+
+    use SoftDeletes;
+
+    /**
+     * Upsert including soft-deleted rows, restoring when the match was trashed.
+     *
+     * Re-adding a removed handle must not collide with the unique
+     * (user_id, platform, handle) index.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @param  array<string, mixed>  $values
+     */
+    public static function updateOrRestore(array $attributes, array $values = []): static
+    {
+        $account = static::withTrashed()->updateOrCreate($attributes, $values);
+
+        if ($account->trashed()) {
+            $account->restore();
+        }
+
+        return $account;
+    }
 
     protected static function booted(): void
     {

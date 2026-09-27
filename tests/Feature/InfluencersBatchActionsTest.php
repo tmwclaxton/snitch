@@ -189,11 +189,11 @@ class InfluencersBatchActionsTest extends TestCase
             ])
             ->assertRedirect(route('influencers.index'));
 
-        $this->assertDatabaseHas('tracked_accounts', ['id' => $keep->id]);
-        $this->assertDatabaseMissing('tracked_accounts', ['id' => $removeA->id]);
-        $this->assertDatabaseMissing('tracked_accounts', ['id' => $removeB->id]);
-        $this->assertDatabaseHas('tracked_accounts', ['id' => $competitor->id]);
-        $this->assertDatabaseHas('tracked_accounts', ['id' => $foreign->id]);
+        $this->assertNotSoftDeleted('tracked_accounts', ['id' => $keep->id]);
+        $this->assertSoftDeleted('tracked_accounts', ['id' => $removeA->id]);
+        $this->assertSoftDeleted('tracked_accounts', ['id' => $removeB->id]);
+        $this->assertNotSoftDeleted('tracked_accounts', ['id' => $competitor->id]);
+        $this->assertNotSoftDeleted('tracked_accounts', ['id' => $foreign->id]);
     }
 
     public function test_influencers_page_exposes_kept_profile_urls(): void

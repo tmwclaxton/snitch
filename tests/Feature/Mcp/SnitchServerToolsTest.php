@@ -77,7 +77,7 @@ class SnitchServerToolsTest extends TestCase
             'competitor_id' => $account->id,
         ])->assertOk()->assertSee('"deleted":true');
 
-        $this->assertDatabaseMissing('tracked_accounts', ['id' => $account->id]);
+        $this->assertSoftDeleted('tracked_accounts', ['id' => $account->id]);
     }
 
     public function test_sync_competitor_accepts_id_alias(): void

@@ -31,7 +31,7 @@ class AddCompetitorTool extends Tool
             'sync' => ['nullable', 'boolean'],
         ]);
 
-        $account = TrackedAccount::query()->updateOrCreate(
+        $account = TrackedAccount::updateOrRestore(
             [
                 'user_id' => $user->id,
                 'platform' => $data['platform'],

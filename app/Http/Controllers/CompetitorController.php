@@ -138,7 +138,7 @@ class CompetitorController extends Controller
 
         $user = $request->user();
 
-        $account = TrackedAccount::query()->updateOrCreate(
+        $account = TrackedAccount::updateOrRestore(
             [
                 'user_id' => $user->id,
                 'platform' => $platform,
@@ -302,7 +302,7 @@ class CompetitorController extends Controller
             $handle = ltrim($suggestion['handle'], '@');
             $platform = Platform::from($suggestion['platform'] instanceof Platform ? $suggestion['platform']->value : $suggestion['platform']);
 
-            $account = TrackedAccount::query()->updateOrCreate(
+            $account = TrackedAccount::updateOrRestore(
                 [
                     'user_id' => $user->id,
                     'platform' => $platform,

@@ -139,7 +139,7 @@ class CompetitorsTest extends TestCase
             ->delete(route('competitors.destroy', $account))
             ->assertRedirect(route('competitors.index'));
 
-        $this->assertDatabaseMissing('tracked_accounts', ['id' => $account->id]);
+        $this->assertSoftDeleted('tracked_accounts', ['id' => $account->id]);
     }
 
     public function test_manual_sync_accepts_posts_limit_and_recency_days(): void

@@ -55,7 +55,7 @@ class ListInfluencersToolTest extends TestCase
             'influencer_id' => $account->id,
         ])->assertOk()->assertSee('"deleted":true');
 
-        $this->assertDatabaseMissing('tracked_accounts', ['id' => $account->id]);
+        $this->assertSoftDeleted('tracked_accounts', ['id' => $account->id]);
     }
 
     public function test_influencer_search_status_exposes_fit_reason_on_suggestions(): void
