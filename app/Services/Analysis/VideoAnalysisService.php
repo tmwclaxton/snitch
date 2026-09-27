@@ -20,6 +20,8 @@ use Throwable;
 
 class VideoAnalysisService
 {
+    public const CAPTION_ECHO_FAILURE = 'analysis echoes caption/script too closely';
+
     public function __construct(
         private NanoGptClient $client,
         private VideoAnalysisSuccessEvaluator $evaluator,
@@ -38,10 +40,11 @@ class VideoAnalysisService
         string $mediaKind = 'video',
         ?string $caption = null,
         ?array $platformMusic = null,
+        ?VideoAnalysisResult $rejectedExample = null,
     ): VideoAnalysisResult {
         $model = (string) config('snitch.video_analysis.model');
         $maxTokens = (int) config('snitch.video_analysis.max_tokens', 32768);
-        $prompt = $this->buildPrompt($mediaKind, $caption, $platformMusic);
+        $prompt = $this->buildPrompt($mediaKind, $caption, $platformMusic, $rejectedExample);
 
         [$payload, $promptTokens, $completionTokens, $finishReason] = $this->requestAnalysisPayload(
             prompt: $prompt,
@@ -51,6 +54,7 @@ class VideoAnalysisService
                 'type' => 'video_url',
                 'video_url' => ['url' => $mediaUrl],
             ]],
+            antiEchoRetry: $rejectedExample !== null,
         );
 
         $outputTruncated = $finishReason === 'length';
@@ -115,35 +119,13 @@ class VideoAnalysisService
                 throw new RuntimeException('Post type is missing; analysis skipped.');
             }
 
-            if ($post->type->isStill()) {
-                $recognizedMusic = $this->musicExtractor->fromPost($post);
-                $result = $this->analyzeStill($post, $recognizedMusic);
-            } else {
-                $mediaUrl = (string) $post->media_url;
+            [$result, $recognizedMusic, $attempt] = $this->analyzePostWithOptionalCaptionEchoRetry($post);
 
-                if ($mediaUrl === '') {
-                    throw new RuntimeException('Post has no media_url to analyze.');
-                }
-
-                if (! $post->type->isReelLike()) {
-                    throw new RuntimeException('Post type is not reel/video; analysis skipped.');
-                }
-
-                $recognizedMusic = $this->resolveAuthoritativeMusic($post);
-
-                // Local APP_URL storage links are not fetchable by NanoGPT; inline bytes.
-                $result = $this->analyzeUrl(
-                    PublicDiskMedia::analyzableUrl($mediaUrl),
-                    'video',
-                    $post->caption,
-                    $recognizedMusic,
-                );
-            }
-            $evaluation = $this->evaluator->evaluate($result, $post->caption);
-
-            if (! $evaluation['passed']) {
-                throw new RuntimeException('Analysis failed checklist: '.implode(', ', $evaluation['failures']));
-            }
+            Log::info('Post analysis succeeded', [
+                'post_id' => $post->id,
+                'attempt' => $attempt,
+                'caption_echo_retry' => $attempt === 2,
+            ]);
 
             // Models often write freeform "myth-busting" topics but omit catalogue slugs;
             // infer missing taxonomy so Explore filters stay useful.
@@ -202,6 +184,7 @@ class VideoAnalysisService
                 'analysis' => $analysis->refresh()->load('terms'),
                 'prompt_tokens' => $result->promptTokens,
                 'completion_tokens' => $result->completionTokens,
+                'attempt' => $attempt,
             ];
         } catch (Throwable $e) {
             Log::warning('Post analysis failed', [
@@ -217,6 +200,81 @@ class VideoAnalysisService
 
             throw $e;
         }
+    }
+
+    /**
+     * Run the model once, and if the only soft recoverable failure is caption echo,
+     * retry once with a stricter anti-echo prompt. Tokens from a failed attempt are
+     * discarded so billing only sees the passing attempt.
+     *
+     * @return array{0: VideoAnalysisResult, 1: array<string, mixed>|null, 2: int}
+     */
+    private function analyzePostWithOptionalCaptionEchoRetry(Post $post): array
+    {
+        $recognizedMusic = $post->type->isStill()
+            ? $this->musicExtractor->fromPost($post)
+            : $this->resolveAuthoritativeMusic($post);
+
+        $result = $this->generateAnalysisResult($post, $recognizedMusic);
+        $evaluation = $this->evaluator->evaluate($result, $post->caption);
+        $attempt = 1;
+
+        if (! $evaluation['passed'] && $this->isCaptionEchoFailure($evaluation['failures'])) {
+            Log::info('Post analysis rejected for caption echo; retrying with anti-echo prompt', [
+                'post_id' => $post->id,
+                'failures' => $evaluation['failures'],
+            ]);
+
+            $result = $this->generateAnalysisResult($post, $recognizedMusic, $result);
+            $evaluation = $this->evaluator->evaluate($result, $post->caption);
+            $attempt = 2;
+        }
+
+        if (! $evaluation['passed']) {
+            throw new RuntimeException('Analysis failed checklist: '.implode(', ', $evaluation['failures']));
+        }
+
+        return [$result, $recognizedMusic, $attempt];
+    }
+
+    /**
+     * @param  list<string>  $failures
+     */
+    private function isCaptionEchoFailure(array $failures): bool
+    {
+        return in_array(self::CAPTION_ECHO_FAILURE, $failures, true);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $platformMusic
+     */
+    private function generateAnalysisResult(
+        Post $post,
+        ?array $platformMusic,
+        ?VideoAnalysisResult $rejectedExample = null,
+    ): VideoAnalysisResult {
+        if ($post->type->isStill()) {
+            return $this->analyzeStill($post, $platformMusic, $rejectedExample);
+        }
+
+        $mediaUrl = (string) $post->media_url;
+
+        if ($mediaUrl === '') {
+            throw new RuntimeException('Post has no media_url to analyze.');
+        }
+
+        if (! $post->type->isReelLike()) {
+            throw new RuntimeException('Post type is not reel/video; analysis skipped.');
+        }
+
+        // Local APP_URL storage links are not fetchable by NanoGPT; inline bytes.
+        return $this->analyzeUrl(
+            PublicDiskMedia::analyzableUrl($mediaUrl),
+            'video',
+            $post->caption,
+            $platformMusic,
+            $rejectedExample,
+        );
     }
 
     /**
@@ -243,16 +301,24 @@ class VideoAnalysisService
     /**
      * @param  array<string, mixed>|null  $platformMusic
      */
-    private function buildPrompt(string $mediaKind, ?string $caption, ?array $platformMusic = null): string
-    {
+    private function buildPrompt(
+        string $mediaKind,
+        ?string $caption,
+        ?array $platformMusic = null,
+        ?VideoAnalysisResult $rejectedExample = null,
+    ): string {
         $captionLine = $caption ? "Caption (context only, do not paraphrase as the analysis): {$caption}" : 'Caption: (none)';
         $catalogueBlock = $this->catalogue->promptBlock();
         $musicLine = $this->platformMusicLine($platformMusic);
+        $antiEcho = $rejectedExample !== null
+            ? $this->antiEchoRetryAddon($rejectedExample)
+            : '';
 
         return <<<PROMPT
 Analyse this {$mediaKind} short-form social post. Focus on craft concepts a creator can reuse.
 {$captionLine}
 {$musicLine}
+{$antiEcho}
 
 Rules:
 - Language = English (UK) only for all JSON string values (concept, idea, topics, how_to_copy, visual_summary, cta, sfx labels, custom_tags). No Chinese or mixed-language prose.
@@ -297,6 +363,36 @@ Return JSON with keys:
 PROMPT;
     }
 
+    private function antiEchoRetryAddon(VideoAnalysisResult $rejected): string
+    {
+        $example = json_encode([
+            'concept' => $rejected->concept,
+            'hook' => $rejected->hook,
+            'idea' => $rejected->idea,
+            'visual_summary' => $rejected->visualSummary,
+            'how_to_copy' => $rejected->howToCopy,
+            'cta' => $rejected->cta,
+            'topics' => $rejected->topics,
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        if (! is_string($example)) {
+            $example = '{}';
+        }
+
+        return <<<ADDON
+
+SECOND ATTEMPT - previous output failed quality check: analysis echoes caption/script too closely.
+Strict anti-echo rules for this retry:
+- Do NOT reuse caption or spoken-script phrasing in hook, concept, idea, visual_summary, how_to_copy, cta, or topics.
+- Describe the hook, format, angle, structure, and CTA in your own craft words (mechanics and remake steps, not a paraphrase).
+- Treat the caption as context only; invent no new facts, but rewrite every craft field from scratch.
+- Transcript stays verbatim spoken words when present (that field is exempt from the echo rule).
+
+Rejected output (negative example - do not imitate its wording):
+{$example}
+ADDON;
+    }
+
     /**
      * @param  array<string, mixed>|null  $platformMusic
      */
@@ -328,8 +424,11 @@ PROMPT;
      *
      * @param  array<string, mixed>|null  $platformMusic
      */
-    private function analyzeStill(Post $post, ?array $platformMusic): VideoAnalysisResult
-    {
+    private function analyzeStill(
+        Post $post,
+        ?array $platformMusic,
+        ?VideoAnalysisResult $rejectedExample = null,
+    ): VideoAnalysisResult {
         $mediaParts = $this->stillImageParts($post);
         $caption = trim((string) $post->caption);
 
@@ -344,7 +443,7 @@ PROMPT;
         };
         $model = (string) config('snitch.video_analysis.model');
         $maxTokens = (int) config('snitch.video_analysis.max_tokens', 32768);
-        $prompt = $this->buildPrompt($mediaKind, $caption === '' ? null : $caption, $platformMusic);
+        $prompt = $this->buildPrompt($mediaKind, $caption === '' ? null : $caption, $platformMusic, $rejectedExample);
         $prompt .= "\nThis is a still ".$mediaKind.' post, not a video. transcript must be "". sfx must be []. Describe the attached images in order inside visual_summary. Do not invent cuts, camera moves, or sound.';
 
         [$payload, $promptTokens, $completionTokens, $finishReason] = $this->requestAnalysisPayload(
@@ -352,6 +451,7 @@ PROMPT;
             model: $model,
             maxTokens: $maxTokens,
             mediaParts: $mediaParts,
+            antiEchoRetry: $rejectedExample !== null,
         );
 
         return VideoAnalysisResult::fromModelPayload(
@@ -541,12 +641,13 @@ PROMPT;
         string $model,
         int $maxTokens,
         array $mediaParts,
+        bool $antiEchoRetry = false,
     ): array {
         $response = $this->client->chat(
             messages: [
                 [
                     'role' => 'system',
-                    'content' => $this->analysisSystemPrompt(),
+                    'content' => $this->analysisSystemPrompt($antiEchoRetry),
                 ],
                 [
                     'role' => 'user',
@@ -691,9 +792,9 @@ SYSTEM,
         return [$payload, $usage['prompt_tokens'], $usage['completion_tokens'], $finishReason];
     }
 
-    private function analysisSystemPrompt(): string
+    private function analysisSystemPrompt(bool $antiEchoRetry = false): string
     {
-        return <<<'SYSTEM'
+        $base = <<<'SYSTEM'
 You analyse short-form social videos for creators who will remake the craft, not quote the script.
 Return ONLY valid JSON matching the schema.
 Write every string value in English (UK), including concept, idea, topics, how_to_copy, visual_summary, cta, and labels.
@@ -706,6 +807,15 @@ Reject vague filler ("engaging", "relatable vibe", "great energy") - name the me
 Always fill hook_type_slugs, topic_slugs, and visual_craft_slugs from the controlled catalogue when they fit (e.g. myth_bust for myth-busting opens). Use custom_tags only when nothing fits.
 When you see real VFX (particles, glitch/VHS, greenscreen keying, sticker packs, motion graphics, screen warp, light leaks, CapCut template FX, AI face filters), emit the matching Grade & effects visual_craft slugs. Do not call ordinary jump cuts, fades, or colour grade "VFX".
 For how_to_copy, always use a Markdown numbered list with a real newline before each step (1. / 2. / 3.). Never write steps inline on one line. Keep cta as the post's ask only - not inside how_to_copy.
+SYSTEM;
+
+        if (! $antiEchoRetry) {
+            return $base;
+        }
+
+        return $base.<<<'SYSTEM'
+
+This is a retry after a caption/script echo rejection. Forbidden: reusing caption or spoken-script phrasing in craft fields. Required: describe hook, format, angle, structure, and CTA in fresh craft language. Treat any rejected example in the user prompt as what NOT to write.
 SYSTEM;
     }
 

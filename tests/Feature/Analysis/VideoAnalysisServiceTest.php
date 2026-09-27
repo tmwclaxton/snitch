@@ -848,4 +848,182 @@ class VideoAnalysisServiceTest extends TestCase
                     && isset($context['json_error']);
             }));
     }
+
+    public function test_caption_echo_triggers_one_anti_echo_retry_and_charges_passing_tokens_only(): void
+    {
+        $this->seed(AnalysisTermSeeder::class);
+
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+        ]);
+
+        $caption = 'Steam hits the bakery counter then hands shape the dough before the boxed loaf appears for preorder tomorrow and curious bakers lean in for the final reveal';
+
+        $echoPayload = [
+            'concept' => $caption,
+            'hook' => $caption,
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+            'visual_summary' => $caption.' with soft light and flour dust in the air over the counter.',
+            'idea' => $caption,
+            'topics' => ['bakery steam', 'boxed loaf', 'preorder tomorrow'],
+            'hook_type_slugs' => ['silent_visual_hook'],
+            'topic_slugs' => ['content_strategy'],
+            'visual_craft_slugs' => ['broll_overlay'],
+            'custom_tags' => [],
+            'cta' => 'Preorder tomorrow',
+            'how_to_copy' => '1. Steam hits the bakery counter then hands shape the dough\n2. Boxed loaf appears for preorder tomorrow\n3. Curious bakers lean in for the final reveal',
+            'transcript' => '',
+            'sfx' => [],
+            'music_title' => null,
+            'music_artist' => null,
+            'is_original_audio' => true,
+        ];
+
+        $craftPayload = [
+            'concept' => 'Steam tease before product payoff',
+            'hook' => 'Lens fog as the scroll stop',
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+            'visual_summary' => str_repeat('Matte bakery counter with torn paper overlays and soft fade into boxed loaf. ', 2),
+            'idea' => 'Curiosity gap then proof via finished product',
+            'topics' => ['process reveal'],
+            'hook_type_slugs' => ['silent_visual_hook'],
+            'topic_slugs' => ['content_strategy'],
+            'visual_craft_slugs' => ['broll_overlay'],
+            'custom_tags' => [],
+            'cta' => 'Preorder tomorrow',
+            'how_to_copy' => "1. Open on atmospheric process detail\n2. Cut to hands shaping product\n3. End on the packaged offer ask",
+            'transcript' => '',
+            'sfx' => [],
+            'music_title' => null,
+            'music_artist' => null,
+            'is_original_audio' => true,
+        ];
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::sequence()
+                ->push([
+                    'choices' => [['message' => ['content' => json_encode($echoPayload)]]],
+                    'usage' => ['prompt_tokens' => 111, 'completion_tokens' => 55],
+                ])
+                ->push([
+                    'choices' => [['message' => ['content' => json_encode($craftPayload)]]],
+                    'usage' => ['prompt_tokens' => 222, 'completion_tokens' => 88],
+                ]),
+            '*' => Http::response(['error' => 'unused'], 404),
+        ]);
+
+        Log::spy();
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+            'media_url' => 'https://cdn.example.com/reel.mp4',
+            'caption' => $caption,
+        ]);
+
+        $outcome = app(VideoAnalysisService::class)->analyzePost($post);
+
+        $this->assertSame(AnalysisStatus::Completed, $outcome['analysis']->status);
+        $this->assertSame(2, $outcome['attempt']);
+        $this->assertSame(222, $outcome['prompt_tokens']);
+        $this->assertSame(88, $outcome['completion_tokens']);
+        $this->assertSame('Steam tease before product payoff', $outcome['analysis']->concept);
+
+        $chatCalls = collect(Http::recorded())
+            ->filter(fn (array $pair): bool => str_contains($pair[0]->url(), 'chat/completions'));
+        $this->assertCount(2, $chatCalls);
+        Http::assertSent(function ($request): bool {
+            if (! str_contains($request->url(), 'chat/completions')) {
+                return false;
+            }
+
+            $encoded = json_encode($request->data());
+
+            return is_string($encoded)
+                && str_contains($encoded, 'SECOND ATTEMPT')
+                && str_contains($encoded, 'negative example')
+                && str_contains($encoded, 'Describe the hook, format, angle, structure');
+        });
+
+        Log::shouldHaveReceived('info')
+            ->withArgs(function (string $message, array $context): bool {
+                return $message === 'Post analysis succeeded'
+                    && ($context['attempt'] ?? null) === 2
+                    && ($context['caption_echo_retry'] ?? null) === true;
+            });
+    }
+
+    public function test_caption_echo_retry_failure_marks_failed_without_passing_tokens(): void
+    {
+        $this->seed(AnalysisTermSeeder::class);
+
+        config([
+            'snitch.nanogpt.api_key' => 'test-key',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+        ]);
+
+        $caption = 'Steam hits the bakery counter then hands shape the dough before the boxed loaf appears for preorder tomorrow and curious bakers lean in for the final reveal';
+
+        $echoPayload = [
+            'concept' => $caption,
+            'hook' => $caption,
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+            'visual_summary' => $caption.' with soft light and flour dust in the air over the counter.',
+            'idea' => $caption,
+            'topics' => ['bakery steam', 'boxed loaf', 'preorder tomorrow'],
+            'hook_type_slugs' => ['silent_visual_hook'],
+            'topic_slugs' => ['content_strategy'],
+            'visual_craft_slugs' => ['broll_overlay'],
+            'custom_tags' => [],
+            'cta' => 'Preorder tomorrow',
+            'how_to_copy' => '1. Steam hits the bakery counter then hands shape the dough\n2. Boxed loaf appears for preorder tomorrow\n3. Curious bakers lean in for the final reveal',
+            'transcript' => '',
+            'sfx' => [],
+            'is_original_audio' => true,
+        ];
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::sequence()
+                ->push([
+                    'choices' => [['message' => ['content' => json_encode($echoPayload)]]],
+                    'usage' => ['prompt_tokens' => 111, 'completion_tokens' => 55],
+                ])
+                ->push([
+                    'choices' => [['message' => ['content' => json_encode($echoPayload)]]],
+                    'usage' => ['prompt_tokens' => 222, 'completion_tokens' => 88],
+                ]),
+            '*' => Http::response(['error' => 'unused'], 404),
+        ]);
+
+        $user = User::factory()->create();
+        $account = TrackedAccount::factory()->for($user)->create();
+        $post = Post::factory()->forAccount($account)->create([
+            'type' => PostType::Reel,
+            'media_url' => 'https://cdn.example.com/reel.mp4',
+            'caption' => $caption,
+        ]);
+
+        try {
+            app(VideoAnalysisService::class)->analyzePost($post);
+            $this->fail('Expected checklist failure after anti-echo retry.');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString(
+                VideoAnalysisService::CAPTION_ECHO_FAILURE,
+                $e->getMessage(),
+            );
+        }
+
+        $analysis = $post->fresh('analysis')?->analysis;
+        $this->assertNotNull($analysis);
+        $this->assertSame(AnalysisStatus::Failed, $analysis->status);
+        $this->assertStringContainsString(
+            VideoAnalysisService::CAPTION_ECHO_FAILURE,
+            (string) $analysis->error_message,
+        );
+        $chatCalls = collect(Http::recorded())
+            ->filter(fn (array $pair): bool => str_contains($pair[0]->url(), 'chat/completions'));
+        $this->assertCount(2, $chatCalls);
+    }
 }
