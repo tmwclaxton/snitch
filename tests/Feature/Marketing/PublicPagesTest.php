@@ -126,7 +126,7 @@ class PublicPagesTest extends TestCase
         }
     }
 
-    public function test_beta_landing_page_is_standalone(): void
+    public function test_beta_landing_page_uses_public_layout_and_calendly(): void
     {
         $this->get(route('beta'))
             ->assertOk()
@@ -135,8 +135,11 @@ class PublicPagesTest extends TestCase
             );
 
         $contents = file_get_contents(resource_path('js/pages/marketing/Beta.vue'));
+        $footer = file_get_contents(resource_path('js/components/marketing/PublicFooter.vue'));
 
         $this->assertNotFalse($contents, 'Missing Beta.vue source');
+        $this->assertNotFalse($footer, 'Missing PublicFooter.vue source');
+        $this->assertStringContainsString('PublicLayout', $contents);
         $this->assertStringContainsString('https://calendly.com/dan-olympuslab/30min', $contents);
         $this->assertStringContainsString('Book a free intro call', $contents);
         $this->assertStringContainsString('£19', $contents);
@@ -144,6 +147,8 @@ class PublicPagesTest extends TestCase
         $this->assertStringContainsString('usage credits', $contents);
         $this->assertStringNotContainsString('Full Access', $contents);
         $this->assertStringNotContainsString('£50/mo', $contents);
+        $this->assertStringNotContainsString('snitch377@gmail.com', $contents);
+        $this->assertStringContainsString('hello@snitchsocial.net', $footer);
         $this->assertStringContainsString('snitch-hero-mascot-peek', $contents,
             'Beta hero must reuse the main landing page mascot peek animation');
         $this->assertStringContainsString('snitch-hero-copy', $contents);
@@ -152,11 +157,6 @@ class PublicPagesTest extends TestCase
         $this->assertStringContainsString('/images/marketing/hero/platforms-front.png', $contents);
         $this->assertStringContainsString('heroBackdropReady', $contents,
             'Beta hero wall must wait for decode before reveal');
-        $this->assertStringNotContainsString('PublicLayout', $contents);
-        $this->assertStringNotContainsString('PublicNav', $contents);
-        $this->assertStringNotContainsString('PublicFooter', $contents);
-        $this->assertStringNotContainsString('@/routes', $contents,
-            'Beta landing must not import route helpers - no links into the rest of the site');
     }
 
     public function test_beta_landing_page_stays_out_of_sitemap(): void
@@ -415,11 +415,16 @@ class PublicPagesTest extends TestCase
     public function test_blog_index_copy_is_instagram_only(): void
     {
         $index = file_get_contents(resource_path('js/pages/blog/Index.vue'));
+        $seoDescription = (string) (config('seo.pages')['blog.index']['description'] ?? '');
 
         $this->assertNotFalse($index, 'Missing blog/Index.vue source');
         $this->assertStringContainsString('Instagram', $index);
         $this->assertStringNotContainsString('TikTok', $index);
         $this->assertStringNotContainsString('YouTube', $index);
+        $this->assertStringContainsString('Instagram', $seoDescription);
+        $this->assertStringNotContainsString('cross-platform', $seoDescription);
+        $this->assertStringNotContainsString('TikTok', $seoDescription);
+        $this->assertStringNotContainsString('YouTube', $seoDescription);
     }
 
     public function test_landing_page_does_not_push_open_source_section(): void

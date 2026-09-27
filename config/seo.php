@@ -120,7 +120,7 @@ return [
 
         'blog.index' => [
             'title' => 'Blog',
-            'description' => 'Snitch social tracking notes: hooks, remakes, and cross-platform workflows for brands and agencies.',
+            'description' => 'Snitch Instagram tracking notes: hooks, remakes, and weekly competitor insights for brands and agencies.',
             'json_ld' => 'webpage',
             'sitemap' => [
                 'changefreq' => 'daily',

@@ -85,7 +85,10 @@ class BlogControllerTest extends TestCase
 
     public function test_blog_index_html_includes_seo_description(): void
     {
-        $description = config('seo.pages.blog.index.description');
+        $description = config('seo.pages')['blog.index']['description'] ?? null;
+
+        $this->assertIsString($description);
+        $this->assertNotSame('', $description);
 
         $this->get(route('blog.index'))
             ->assertOk()

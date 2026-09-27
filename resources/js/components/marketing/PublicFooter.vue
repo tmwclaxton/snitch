@@ -9,7 +9,7 @@ const page = usePage();
 const isHome = computed(() => {
     const path = page.url.split('?')[0] ?? '';
 
-    return path === '/';
+    return path === '/' || path === '/beta';
 });
 </script>
 

@@ -235,7 +235,7 @@ function onKickOff(): void {
                             </button>
                         </div>
                         <p class="mt-1.5 text-xs text-snitch-ink/55">
-                            Pick TikTok / Instagram when you want reel-like posts in the feed.
+                            Pick Instagram when you want reel-like posts in the feed.
                         </p>
                     </div>
 
@@ -265,7 +265,7 @@ function onKickOff(): void {
                             v-model="briefText"
                             rows="4"
                             class="snitch-field mt-2 w-full resize-y text-sm"
-                            placeholder="Describe who to track - rivals or creators whose style you want to copy. e.g. social listening SaaS on TikTok and Instagram."
+                            placeholder="Describe who to track - rivals or creators whose style you want to copy. e.g. social listening SaaS on Instagram."
                             :disabled="busy || generatingBrief"
                             @input="scheduleBriefSave"
                         />

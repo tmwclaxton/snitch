@@ -48,7 +48,7 @@ Route::permanentRedirect('/for-agents', '/agents')->name('mcp');
 Route::inertia('/privacy', 'marketing/Privacy')->name('privacy');
 Route::inertia('/terms', 'marketing/Terms')->name('terms');
 Route::inertia('/cookies', 'marketing/Cookies')->name('cookies');
-// Standalone special landing page - deliberately no nav/footer links into the app.
+// Special Calendly landing page (shared PublicLayout chrome; stays out of the sitemap).
 Route::inertia('/beta', 'marketing/Beta')->name('beta');
 Route::view('/pitch', 'pitch')->name('pitch');
 Route::permanentRedirect('/ads', '/ad-library');
