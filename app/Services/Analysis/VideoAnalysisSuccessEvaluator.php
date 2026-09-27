@@ -107,7 +107,9 @@ class VideoAnalysisSuccessEvaluator
     /**
      * Bag-of-words echo check over analytical craft fields only (not transcript /
      * quoted speech). Ignores stopwords, handles, hashtags, and proper nouns, and
-     * raises the fail threshold for long recap captions.
+     * raises the fail threshold for long recap captions. A short hook that quotes
+     * the caption opening line / on-screen text is exempt (hooks are meant to
+     * name the device).
      *
      * @return array{
      *     echoed: bool,
@@ -139,7 +141,13 @@ class VideoAnalysisSuccessEvaluator
             return $empty;
         }
 
+        $hookIsAllowedQuote = $this->isAllowedShortHookQuote($result->hook, $caption);
+
         foreach (['hook' => $result->hook, 'idea' => $result->idea, 'concept' => $result->concept] as $fieldName => $field) {
+            if ($fieldName === 'hook' && $hookIsAllowedQuote) {
+                continue;
+            }
+
             $fieldAssessment = $this->fieldEchoAssessment($field, $captionTokens, $threshold);
 
             if ($fieldAssessment['echoed']) {
@@ -155,7 +163,7 @@ class VideoAnalysisSuccessEvaluator
         }
 
         $analysisTokens = $this->contentTokenSet(
-            $this->analyticalText($result),
+            $this->analyticalText($result, $hookIsAllowedQuote),
             preserveProperNounsFrom: $caption,
         );
 
@@ -273,12 +281,12 @@ class VideoAnalysisSuccessEvaluator
 
     /**
      * Craft fields only - transcript and quoted spoken lines are excluded so a
-     * long recap caption does not fail a genuine analytical writeup.
+     * long recap caption does not fail a genuine analytical writeup. When the
+     * hook is an allowed short opening-line / on-screen quote, omit it entirely.
      */
-    private function analyticalText(VideoAnalysisResult $result): string
+    private function analyticalText(VideoAnalysisResult $result, bool $omitAllowedHookQuote = false): string
     {
         $parts = [
-            $result->hook,
             $result->idea,
             $result->concept,
             $result->visualSummary,
@@ -287,10 +295,86 @@ class VideoAnalysisSuccessEvaluator
             ...$result->topics,
         ];
 
+        if (! $omitAllowedHookQuote) {
+            array_unshift($parts, $result->hook);
+        }
+
         return implode(' ', array_map(
             fn (string $part): string => $this->stripQuotedText($part),
             $parts,
         ));
+    }
+
+    /**
+     * Hooks are allowed to quote a short on-screen text / caption opening line
+     * (roughly one line, <=20 words). Longer hook dumps still count as echo.
+     */
+    private function isAllowedShortHookQuote(string $hook, string $caption): bool
+    {
+        $config = config('snitch.video_analysis.success');
+        $maxWords = (int) ($config['max_allowed_hook_quote_words'] ?? 20);
+        $hook = trim($hook);
+
+        if ($hook === '' || $this->rawWordCount($hook) > $maxWords) {
+            return false;
+        }
+
+        $hookNorm = $this->normalizeForQuoteMatch($hook);
+        $openingNorm = $this->normalizeForQuoteMatch($this->captionOpeningLine($caption));
+        $captionNorm = $this->normalizeForQuoteMatch($caption);
+
+        if ($hookNorm === '' || $captionNorm === '') {
+            return false;
+        }
+
+        if ($openingNorm !== '' && ($hookNorm === $openingNorm
+            || str_starts_with($openingNorm, $hookNorm)
+            || str_starts_with($hookNorm, $openingNorm))) {
+            return true;
+        }
+
+        // On-screen text often leads the caption before a blank line / recap body.
+        return str_starts_with($captionNorm, $hookNorm);
+    }
+
+    private function captionOpeningLine(string $caption): string
+    {
+        $trimmed = trim($caption);
+
+        if ($trimmed === '') {
+            return '';
+        }
+
+        $lines = preg_split('/\R+/u', $trimmed) ?: [];
+        $firstLine = trim((string) ($lines[0] ?? ''));
+
+        if ($firstLine !== '') {
+            return $firstLine;
+        }
+
+        if (preg_match('/^(.+?[.!?])(?:\s|$)/u', $trimmed, $matches) === 1) {
+            return trim($matches[1]);
+        }
+
+        return $trimmed;
+    }
+
+    private function normalizeForQuoteMatch(string $text): string
+    {
+        $normalized = strtolower(preg_replace('/[^a-z0-9\s]/i', ' ', $text) ?? '');
+        $normalized = preg_replace('/\s+/', ' ', trim($normalized)) ?? '';
+
+        return $normalized;
+    }
+
+    private function rawWordCount(string $text): int
+    {
+        $parts = preg_split('/\s+/u', trim($text)) ?: [];
+
+        return count(array_values(array_filter(
+            $parts,
+            static fn (string $word): bool => $word !== '',
+        )));
     }
 
     private function stripQuotedText(string $text): string

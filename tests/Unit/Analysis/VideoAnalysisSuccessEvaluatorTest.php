@@ -284,4 +284,58 @@ class VideoAnalysisSuccessEvaluatorTest extends TestCase
         $this->assertTrue($evaluation['passed'], implode(', ', $evaluation['failures']).' / '.json_encode($evaluation['caption_echo']));
         $this->assertNotContains('analysis echoes caption/script too closely', $evaluation['failures']);
     }
+
+    public function test_short_onscreen_hook_matching_caption_open_is_allowed_for_post_159(): void
+    {
+        /** @var array{158: string, 159: string} $captions */
+        $captions = require base_path('tests/Fixtures/Analysis/great_friendship_recap_captions.php');
+        $caption = $captions[159];
+        $onscreenHook = 'POV: Adult life gets a lot better when your weekends look like this';
+
+        $this->assertStringStartsWith($onscreenHook, trim($caption));
+
+        $analytical = VideoAnalysisResult::fromModelPayload([
+            'concept' => 'Lifestyle POV title card that sells belonging before the event recap',
+            'hook' => $onscreenHook,
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+            'visual_summary' => str_repeat('Bold text overlay over packed board-game tables, then handheld cuts of first-timers finding seats. ', 2),
+            'idea' => 'Aspiration then proof: the on-screen claim frames the montage so ticket CTA feels like upgrading your weekends.',
+            'cta' => 'Follow for the next Friday social',
+            'how_to_copy' => "1. Lock a one-line lifestyle POV as the open.\n2. Cut to proof moments of strangers bonding.\n3. Land on the soft ticket ask.",
+            'transcript' => '',
+            'sfx' => [],
+            'topics' => ['pov title card', 'belonging proof'],
+        ], 'qwen3.7-flash');
+
+        $evaluation = app(VideoAnalysisSuccessEvaluator::class)->evaluate($analytical, $caption);
+
+        $this->assertTrue(
+            $evaluation['passed'],
+            implode(', ', $evaluation['failures']).' / '.json_encode($evaluation['caption_echo']),
+        );
+        $this->assertNotContains('analysis echoes caption/script too closely', $evaluation['failures']);
+        $this->assertFalse($evaluation['caption_echo']['echoed'] ?? true);
+
+        // Same short hook, but other fields paraphrase the caption body - must still fail.
+        $echo = preg_replace('/\s+/', ' ', $caption) ?? $caption;
+        $paraphrase = VideoAnalysisResult::fromModelPayload([
+            'concept' => $echo,
+            'hook' => $onscreenHook,
+            'hook_window' => ['start_sec' => 0, 'end_sec' => 3],
+            'visual_summary' => $echo.' Warm lamps over packed tables fill every cut.',
+            'idea' => $echo,
+            'cta' => 'Follow for the next meetup drop',
+            'how_to_copy' => '1. '.$echo."\n2. Keep thanking volunteers.\n3. End on the ticket ask.",
+            'transcript' => '',
+            'sfx' => [],
+            'topics' => ['board games', 'london meetup'],
+        ], 'qwen3.7-flash');
+
+        $failed = app(VideoAnalysisSuccessEvaluator::class)->evaluate($paraphrase, $caption);
+
+        $this->assertFalse($failed['passed']);
+        $this->assertContains('analysis echoes caption/script too closely', $failed['failures']);
+        $this->assertTrue($failed['caption_echo']['echoed'] ?? false);
+        $this->assertStringNotContainsString('near-verbatim dump in hook', (string) ($failed['caption_echo']['reason'] ?? ''));
+    }
 }

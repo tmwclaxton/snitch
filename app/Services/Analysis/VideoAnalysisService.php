@@ -223,22 +223,24 @@ class VideoAnalysisService
         $result = $this->generateAnalysisResult($post, $recognizedMusic);
         $evaluation = $this->evaluator->evaluate($result, $post->caption);
         $attempt = 1;
-        $echoDiagnostics = null;
+        /** @var list<array<string, mixed>> $echoDiagnostics */
+        $echoDiagnostics = [];
 
         if (! $evaluation['passed'] && $this->isCaptionEchoFailure($evaluation['failures'])) {
-            $echoDiagnostics = $this->captionEchoDiagnosticsPayload(1, $result, $evaluation['caption_echo'] ?? null);
+            $echoDiagnostics[] = $this->captionEchoDiagnosticsPayload(1, $result, $evaluation['caption_echo'] ?? null);
             $analysis->fill([
                 'analysis_attempt' => 1,
                 'caption_echo_diagnostics' => $echoDiagnostics,
             ]);
             $analysis->save();
 
+            $latest = $echoDiagnostics[array_key_last($echoDiagnostics)];
             Log::warning('Post analysis rejected for caption echo; retrying with anti-echo prompt', [
                 'post_id' => $post->id,
                 'attempt' => 1,
                 'failures' => $evaluation['failures'],
-                'caption_echo_score' => $echoDiagnostics['score'] ?? null,
-                'caption_echo_reason' => $echoDiagnostics['reason'] ?? null,
+                'caption_echo_score' => $latest['score'] ?? null,
+                'caption_echo_reason' => $latest['reason'] ?? null,
             ]);
 
             $result = $this->generateAnalysisResult($post, $recognizedMusic, $result);
@@ -246,13 +248,13 @@ class VideoAnalysisService
             $attempt = 2;
 
             if (! $evaluation['passed'] && $this->isCaptionEchoFailure($evaluation['failures'])) {
-                $echoDiagnostics = $this->captionEchoDiagnosticsPayload(2, $result, $evaluation['caption_echo'] ?? null);
+                $echoDiagnostics[] = $this->captionEchoDiagnosticsPayload(2, $result, $evaluation['caption_echo'] ?? null);
             }
         }
 
         $analysis->fill([
             'analysis_attempt' => $attempt,
-            'caption_echo_diagnostics' => $echoDiagnostics,
+            'caption_echo_diagnostics' => $echoDiagnostics === [] ? null : $echoDiagnostics,
         ]);
         $analysis->save();
 
@@ -260,7 +262,7 @@ class VideoAnalysisService
             throw new RuntimeException('Analysis failed checklist: '.implode(', ', $evaluation['failures']));
         }
 
-        return [$result, $recognizedMusic, $attempt, $echoDiagnostics];
+        return [$result, $recognizedMusic, $attempt, $echoDiagnostics === [] ? null : $echoDiagnostics];
     }
 
     /**

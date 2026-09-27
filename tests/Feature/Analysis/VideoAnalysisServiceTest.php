@@ -963,10 +963,11 @@ class VideoAnalysisServiceTest extends TestCase
 
         $this->assertSame(2, $outcome['analysis']->analysis_attempt);
         $this->assertIsArray($outcome['analysis']->caption_echo_diagnostics);
-        $this->assertSame(1, $outcome['analysis']->caption_echo_diagnostics['rejected_attempt'] ?? null);
-        $this->assertArrayHasKey('rejected_output', $outcome['analysis']->caption_echo_diagnostics);
-        $this->assertArrayHasKey('score', $outcome['analysis']->caption_echo_diagnostics);
-        $this->assertArrayHasKey('reason', $outcome['analysis']->caption_echo_diagnostics);
+        $this->assertCount(1, $outcome['analysis']->caption_echo_diagnostics);
+        $this->assertSame(1, $outcome['analysis']->caption_echo_diagnostics[0]['rejected_attempt'] ?? null);
+        $this->assertArrayHasKey('rejected_output', $outcome['analysis']->caption_echo_diagnostics[0]);
+        $this->assertArrayHasKey('score', $outcome['analysis']->caption_echo_diagnostics[0]);
+        $this->assertArrayHasKey('reason', $outcome['analysis']->caption_echo_diagnostics[0]);
     }
 
     public function test_caption_echo_retry_failure_marks_failed_without_passing_tokens(): void
@@ -1038,10 +1039,12 @@ class VideoAnalysisServiceTest extends TestCase
         );
         $this->assertSame(2, $analysis->analysis_attempt);
         $this->assertIsArray($analysis->caption_echo_diagnostics);
-        $this->assertSame(2, $analysis->caption_echo_diagnostics['rejected_attempt'] ?? null);
-        $this->assertNotNull($analysis->caption_echo_diagnostics['rejected_output'] ?? null);
-        $this->assertNotNull($analysis->caption_echo_diagnostics['score'] ?? null);
-        $this->assertNotNull($analysis->caption_echo_diagnostics['reason'] ?? null);
+        $this->assertCount(2, $analysis->caption_echo_diagnostics);
+        $this->assertSame(1, $analysis->caption_echo_diagnostics[0]['rejected_attempt'] ?? null);
+        $this->assertSame(2, $analysis->caption_echo_diagnostics[1]['rejected_attempt'] ?? null);
+        $this->assertNotNull($analysis->caption_echo_diagnostics[1]['rejected_output'] ?? null);
+        $this->assertNotNull($analysis->caption_echo_diagnostics[1]['score'] ?? null);
+        $this->assertNotNull($analysis->caption_echo_diagnostics[1]['reason'] ?? null);
         $chatCalls = collect(Http::recorded())
             ->filter(fn (array $pair): bool => str_contains($pair[0]->url(), 'chat/completions'));
         $this->assertCount(2, $chatCalls);

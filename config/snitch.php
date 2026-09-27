@@ -247,6 +247,8 @@ return [
             'long_caption_chars' => 300,
             'long_caption_max_overlap_ratio' => 0.85,
             'long_caption_scale_span_chars' => 700,
+            // Short on-screen / caption-opening hooks are meant to quote the device.
+            'max_allowed_hook_quote_words' => 20,
         ],
     ],
 
