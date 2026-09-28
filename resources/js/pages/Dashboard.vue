@@ -478,9 +478,9 @@ const trackerIdsByHandle = computed(() => {
                     </template>
                 </div>
 
-                <div class="grid items-start gap-2 lg:grid-cols-2">
+                <div class="grid items-stretch gap-2 lg:grid-cols-2">
                     <DashCard
-                        class="flex min-h-0 flex-col"
+                        class="flex h-full min-h-0 flex-col"
                         title="This week in 30 seconds"
                         why="Do-this-next lines from peer gaps for a busy organiser."
                         formula="score = |effect| × min(1, n/20); top 6, max 1 per category; n ≥ 5."
@@ -520,7 +520,7 @@ const trackerIdsByHandle = computed(() => {
                         </div>
                     </DashCard>
 
-                    <div class="flex min-w-0 flex-col gap-1.5">
+                    <div class="flex h-full min-w-0 flex-col gap-1.5">
                         <DashCard
                             title="Leaderboard"
                             why="One glance shows who is ahead, and on what."
@@ -549,8 +549,8 @@ const trackerIdsByHandle = computed(() => {
                 </div>
 
                 <div class="grid items-stretch gap-2 lg:grid-cols-2">
-                    <section id="activity" class="snitch-scrap relative flex h-full min-w-0 flex-col p-2">
-                        <div class="mb-0.5 flex shrink-0 items-baseline justify-between gap-2">
+                    <section id="activity" class="snitch-scrap snitch-dash-heatmap-panel relative flex h-full min-w-0 flex-col p-1.5">
+                        <div class="mb-0 flex shrink-0 items-baseline justify-between gap-2">
                             <p class="snitch-ink-label">Posting heat map</p>
                             <p class="tabular-nums text-xs text-slate-500">16 wks</p>
                         </div>

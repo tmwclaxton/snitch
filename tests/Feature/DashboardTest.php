@@ -94,7 +94,8 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString(':tracker-ids="trackerIdsByHandle"', $dashboard);
         $this->assertStringContainsString('weekly_brief.ideas', $dashboard);
         $this->assertStringContainsString('Post this next', $dashboard);
-        $this->assertStringContainsString('items-start', $dashboard);
+        $this->assertStringContainsString('items-stretch', $dashboard);
+        $this->assertStringContainsString('snitch-dash-heatmap-panel', $dashboard);
         $this->assertStringNotContainsString('mt-auto p-2', $dashboard);
 
         $insightList = file_get_contents(resource_path('js/components/dashboard/InsightList.vue'));

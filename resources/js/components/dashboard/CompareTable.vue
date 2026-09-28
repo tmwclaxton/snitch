@@ -59,33 +59,33 @@ function formatCell(value: string | null): string {
 
 <template>
     <EmptyState v-if="status !== 'ok' || !rows?.length" :reason="reason" compact />
-    <table v-else class="w-full table-fixed text-left text-sm">
+    <table v-else class="w-full table-fixed border-separate border-spacing-0 text-left text-sm">
         <colgroup>
-            <col style="width: 34%">
-            <col style="width: 13%">
-            <col style="width: 11%">
-            <col style="width: 12%">
-            <col style="width: 12%">
-            <col style="width: 10%">
-            <col style="width: 8%">
+            <col class="w-[42%]">
+            <col class="w-[12%]">
+            <col class="w-[10%]">
+            <col class="w-[11%]">
+            <col class="w-[11%]">
+            <col class="w-[8%]">
+            <col class="w-[6%]">
         </colgroup>
         <thead>
             <tr class="border-b border-slate-200 text-xs text-slate-500">
-                <th class="py-1 pr-2 text-left font-medium">Account</th>
-                <th class="px-1.5 py-1 text-right font-medium leading-tight">Followers</th>
-                <th class="px-1.5 py-1 text-right font-medium leading-tight">Growth</th>
-                <th class="px-1.5 py-1 text-right font-medium leading-tight">
+                <th class="py-1 pr-3 text-left font-medium">Account</th>
+                <th class="border-l border-transparent py-1 pl-2 pr-1 text-right font-medium leading-tight">Followers</th>
+                <th class="py-1 pl-2 pr-1 text-right font-medium leading-tight">Growth</th>
+                <th class="py-1 pl-2 pr-1 text-right font-medium leading-tight">
                     Posts
                     <br>
                     / wk
                 </th>
-                <th class="px-1.5 py-1 text-right font-medium leading-tight">
+                <th class="py-1 pl-2 pr-1 text-right font-medium leading-tight">
                     Eng.
                     <br>
                     rate
                 </th>
-                <th class="px-1.5 py-1 text-right font-medium leading-tight">Format</th>
-                <th class="pl-1.5 py-1 text-right font-medium leading-tight">Win</th>
+                <th class="py-1 pl-2 pr-1 text-right font-medium leading-tight">Format</th>
+                <th class="py-1 pl-2 text-right font-medium leading-tight">Win</th>
             </tr>
         </thead>
         <tbody>
@@ -95,7 +95,7 @@ function formatCell(value: string | null): string {
                 class="border-b border-slate-100"
                 :class="row.is_own_account ? 'bg-slate-50' : ''"
             >
-                <td class="py-0.5 pr-2 align-top">
+                <td class="py-0.5 pr-3 align-top">
                     <div class="flex min-w-0 items-start gap-1" :title="row.row_note || undefined">
                         <SnitchAvatar
                             :src="row.avatar"
@@ -118,16 +118,16 @@ function formatCell(value: string | null): string {
                         </span>
                     </div>
                 </td>
-                <td class="px-1.5 py-0.5 text-right align-top tabular-nums text-slate-700">
+                <td class="py-0.5 pl-2 pr-1 text-right align-top tabular-nums text-slate-700">
                     {{ followers(row.followers) }}
                 </td>
-                <td class="px-1.5 py-0.5 text-right align-top tabular-nums text-slate-700">
+                <td class="py-0.5 pl-2 pr-1 text-right align-top tabular-nums text-slate-700">
                     {{ row.no_posts_in_period ? '-' : pct(row.growth_pct) }}
                 </td>
-                <td class="px-1.5 py-0.5 text-right align-top tabular-nums text-slate-700">
+                <td class="py-0.5 pl-2 pr-1 text-right align-top tabular-nums text-slate-700">
                     {{ row.no_posts_in_period ? '-' : num(row.posts_per_week) }}
                 </td>
-                <td class="px-1.5 py-0.5 text-right align-top tabular-nums text-slate-700">
+                <td class="py-0.5 pl-2 pr-1 text-right align-top tabular-nums text-slate-700">
                     <span
                         v-if="row.no_posts_in_period || row.er == null"
                         class="text-slate-400"
@@ -136,12 +136,12 @@ function formatCell(value: string | null): string {
                     <span v-else>{{ row.er.toFixed(2) }}%</span>
                 </td>
                 <td
-                    class="px-1.5 py-0.5 text-right align-top text-slate-700"
+                    class="py-0.5 pl-2 pr-1 text-right align-top text-slate-700"
                     :title="row.top_format ? postTypeLabel(row.top_format) : undefined"
                 >
                     {{ row.no_posts_in_period || row.er == null ? '-' : formatCell(row.top_format) }}
                 </td>
-                <td class="py-0.5 pl-1.5 text-right align-top tabular-nums text-slate-700">
+                <td class="py-0.5 pl-2 text-right align-top tabular-nums text-slate-700">
                     {{ row.no_posts_in_period ? '-' : row.winners }}
                 </td>
             </tr>

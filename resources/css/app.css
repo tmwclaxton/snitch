@@ -2531,18 +2531,24 @@
     }
 
     /* Dashboard half-width heat map: fill the panel height next to Hashtags + CTA. */
+    .snitch-dash-heatmap-panel {
+        justify-content: flex-start;
+    }
+
     .snitch-heatmap--dash {
         display: flex;
         flex-direction: column;
+        justify-content: flex-start;
+        gap: 0.15rem;
         min-height: 0;
-        height: 100%;
+        flex: 1 1 auto;
     }
 
     .snitch-heatmap--dash .snitch-heatmap-months {
         grid-template-columns: 1rem repeat(16, minmax(0, 1fr));
-        margin-bottom: 0.15rem;
-        min-height: 0.85rem;
-        flex-shrink: 0;
+        margin-bottom: 0;
+        min-height: 0.8rem;
+        flex: 0 0 auto;
     }
 
     .snitch-heatmap--dash .snitch-heatmap-month {
@@ -2551,18 +2557,20 @@
     }
 
     .snitch-heatmap--dash .snitch-heatmap-body {
+        display: grid;
         grid-template-columns: 1rem minmax(0, 1fr);
         gap: 0.28rem;
         flex: 1 1 auto;
-        min-height: 0;
+        min-height: 7.5rem;
         align-items: stretch;
     }
 
     .snitch-heatmap--dash .snitch-heatmap-weekdays,
     .snitch-heatmap--dash .snitch-heatmap-week {
-        grid-template-rows: repeat(7, minmax(0.7rem, 1fr));
-        gap: 3px;
+        grid-template-rows: repeat(7, minmax(0, 1fr));
+        gap: 2px;
         height: 100%;
+        min-height: 0;
     }
 
     .snitch-heatmap--dash .snitch-heatmap-weekday {
@@ -2573,24 +2581,24 @@
     }
 
     .snitch-heatmap--dash .snitch-heatmap-grid {
-        gap: 3px;
-        padding-block: 0;
-        padding-inline: 2%;
+        gap: 2px;
+        padding: 0;
         height: 100%;
+        min-height: 0;
         align-items: stretch;
     }
 
     .snitch-heatmap--dash .snitch-heatmap-cell {
         height: 100%;
-        min-height: 0.7rem;
+        min-height: 0;
         min-width: 0;
     }
 
     .snitch-heatmap--dash .snitch-heatmap-legend {
-        margin-top: 0.25rem;
+        margin-top: 0;
         gap: 0.25rem;
         font-size: 0.75rem; /* 12px meta floor */
-        flex-shrink: 0;
+        flex: 0 0 auto;
     }
 
     .snitch-heatmap--dash .snitch-heatmap-legend .snitch-heatmap-cell {
