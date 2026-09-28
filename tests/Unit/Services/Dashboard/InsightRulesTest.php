@@ -110,6 +110,6 @@ class InsightRulesTest extends TestCase
 
         $categories = array_column($items, 'category');
         $this->assertSame($categories, array_values(array_unique($categories)));
-        $this->assertLessThanOrEqual(5, count($items));
+        $this->assertLessThanOrEqual(6, count($items));
     }
 }

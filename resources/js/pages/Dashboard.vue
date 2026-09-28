@@ -240,6 +240,9 @@ const hiddenSpotlight = computed(() => {
 
 const followerPoints = computed(() => props.follower_series ?? []);
 const hasFollowerHistory = computed(() => followerPoints.value.length >= 2);
+const showFollowerNote = computed(
+    () => props.follower_series != null && !hasFollowerHistory.value,
+);
 
 const recentThumbs = computed(() => (props.recent_posts ?? []).slice(0, 6));
 
@@ -420,23 +423,49 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                     </template>
                 </div>
 
-                <div class="grid items-start gap-2 lg:grid-cols-2">
+                <div class="grid items-stretch gap-2 lg:grid-cols-2">
                     <DashCard
+                        class="flex h-full flex-col"
                         title="This week in 30 seconds"
                         why="Do-this-next lines from peer gaps for a busy organiser."
-                        formula="score = |effect| × min(1, n/20); top 5, max 1 per category; n ≥ 5."
+                        formula="score = |effect| × min(1, n/20); top 6, max 1 per category; n ≥ 5."
                         anchor="insights"
                     >
-                        <InsightList
-                            v-if="insights"
-                            :status="insights.status"
-                            :reason="insights.reason"
-                            :items="insights.data?.items"
-                        />
-                        <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading insights" />
+                        <div class="flex min-h-0 flex-1 flex-col gap-1.5">
+                            <InsightList
+                                v-if="insights"
+                                :status="insights.status"
+                                :reason="insights.reason"
+                                :items="insights.data?.items"
+                            />
+                            <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading insights" />
+
+                            <p
+                                v-if="showFollowerNote"
+                                id="growth_series"
+                                class="mt-auto border-t border-slate-100 pt-1.5 text-[11px] leading-snug text-slate-600"
+                            >
+                                <span class="font-medium text-slate-800">Followers</span>
+                                ·
+                                <template v-if="followerPoints.length === 1">
+                                    {{ new Intl.NumberFormat('en-GB').format(followerPoints[0].followers) }}
+                                    first snapshot only - growth chart after the next weekly count.
+                                </template>
+                                <template v-else>
+                                    No follower snapshots yet.
+                                </template>
+                            </p>
+                            <p
+                                v-else-if="!follower_series"
+                                id="growth_series"
+                                class="mt-auto"
+                            >
+                                <SnitchSkeleton variant="scrap" height="1.25rem" label="Loading follower note" />
+                            </p>
+                        </div>
                     </DashCard>
 
-                    <div class="flex min-w-0 flex-col gap-1.5">
+                    <div class="flex h-full min-w-0 flex-col gap-1.5">
                         <DashCard
                             title="Leaderboard"
                             why="One glance shows who is ahead, and on what."
@@ -452,7 +481,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                             <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading leaderboard" />
                         </DashCard>
 
-                        <div id="format_mix" class="snitch-scrap relative p-2">
+                        <div id="format_mix" class="snitch-scrap relative mt-auto p-2">
                             <FormatMixChart
                                 v-if="caption_intel"
                                 class="snitch-dash-soft-in"
@@ -505,50 +534,34 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                     </div>
                 </section>
 
-                <div id="growth_series">
-                    <p
-                        v-if="follower_series && !hasFollowerHistory"
-                        class="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-600"
-                    >
-                        <span class="font-medium text-slate-800">Followers</span>
-                        ·
-                        <template v-if="followerPoints.length === 1">
-                            {{ new Intl.NumberFormat('en-GB').format(followerPoints[0].followers) }}
-                            first snapshot only - growth chart after the next weekly count.
-                        </template>
-                        <template v-else>
-                            No follower snapshots yet.
-                        </template>
-                    </p>
-                    <div
-                        v-else-if="follower_series"
-                        class="snitch-scrap relative max-h-44 p-2"
-                    >
-                        <div class="mb-0.5 flex items-baseline justify-between gap-2">
-                            <p class="snitch-ink-label">Followers</p>
-                            <p
-                                v-if="growth_delta?.week_delta != null"
-                                class="tabular-nums text-[10px] text-slate-500"
-                            >
-                                {{ growth_delta.week_delta > 0 ? '+' : '' }}{{ growth_delta.week_delta }}
-                                this week
-                                <template v-if="growth_delta.week_pct != null">
-                                    ({{ growth_delta.week_pct > 0 ? '+' : '' }}{{ growth_delta.week_pct }}%)
-                                </template>
-                            </p>
-                            <p v-else class="text-[10px] text-slate-400">
-                                {{ followerPoints.length }} counts
-                            </p>
-                        </div>
-                        <FollowerHistoryChart
-                            class="snitch-dash-soft-in"
-                            scope="corpus"
-                            hide-title
-                            compact
-                            :points="followerPoints"
-                        />
+                <div
+                    v-if="hasFollowerHistory"
+                    id="growth_series"
+                    class="snitch-scrap relative max-h-44 p-2"
+                >
+                    <div class="mb-0.5 flex items-baseline justify-between gap-2">
+                        <p class="snitch-ink-label">Followers</p>
+                        <p
+                            v-if="growth_delta?.week_delta != null"
+                            class="tabular-nums text-[10px] text-slate-500"
+                        >
+                            {{ growth_delta.week_delta > 0 ? '+' : '' }}{{ growth_delta.week_delta }}
+                            this week
+                            <template v-if="growth_delta.week_pct != null">
+                                ({{ growth_delta.week_pct > 0 ? '+' : '' }}{{ growth_delta.week_pct }}%)
+                            </template>
+                        </p>
+                        <p v-else class="text-[10px] text-slate-400">
+                            {{ followerPoints.length }} counts
+                        </p>
                     </div>
-                    <SnitchSkeleton v-else variant="scrap" height="2.5rem" label="Loading follower history" />
+                    <FollowerHistoryChart
+                        class="snitch-dash-soft-in"
+                        scope="corpus"
+                        hide-title
+                        compact
+                        :points="followerPoints"
+                    />
                 </div>
 
                 <DashCard

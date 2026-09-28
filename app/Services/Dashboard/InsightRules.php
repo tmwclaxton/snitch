@@ -125,12 +125,12 @@ class InsightRules
     }
 
     /**
-     * Top insights: max 5, at most 1 per category, n≥5 and effect threshold already applied.
+     * Top insights: max 6, at most 1 per category, n≥5 and effect threshold already applied.
      *
      * @param  array<string, mixed>  $context
      * @return list<InsightCandidate>
      */
-    public function top(array $context, int $limit = 5): array
+    public function top(array $context, int $limit = 6): array
     {
         $ranked = collect($this->candidates($context))
             ->filter(fn (array $row): bool => $row['n'] >= DashboardMath::MIN_SAMPLE && $row['score'] > 0)

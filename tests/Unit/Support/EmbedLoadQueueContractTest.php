@@ -135,7 +135,9 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('id="recent_posts"', $dashboard);
         $this->assertStringContainsString('id="format_mix"', $dashboard);
         $this->assertStringContainsString('id="caption_intel"', $dashboard);
-        $this->assertStringContainsString('items-start gap-2 lg:grid-cols-2', $dashboard);
+        $this->assertStringContainsString('items-stretch gap-2 lg:grid-cols-2', $dashboard);
+        $this->assertStringContainsString('showFollowerNote', $dashboard);
+        $this->assertStringContainsString('first snapshot only', $dashboard);
         $this->assertStringContainsString('anchor="winners"', $dashboard);
         $this->assertStringContainsString('anchor="insights"', $dashboard);
         $this->assertStringContainsString('followDashboardLink', file_get_contents(base_path('resources/js/components/dashboard/InsightList.vue')) ?: '');
