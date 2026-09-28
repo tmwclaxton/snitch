@@ -64,6 +64,7 @@ type RecentPost = {
 type WinnerPost = {
     id: number;
     handle: string | null;
+    avatar?: string | null;
     tracked_account_id?: number | null;
     is_own_account?: boolean;
     format: string;
@@ -620,12 +621,11 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                         :reason="winners.reason || 'No posts in this tab.'"
                         compact
                     />
-                    <div v-else-if="winnerItems.length" class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-6">
+                    <div v-else-if="winnerItems.length" class="grid grid-cols-2 items-stretch gap-1.5 sm:grid-cols-3 xl:grid-cols-6">
                         <WinnerCard
                             v-for="post in winnerItems"
                             :key="String(post.id)"
                             :post="post as any"
-                            compact
                         />
                     </div>
                     <div
@@ -635,12 +635,11 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                         <p class="mb-1 text-[10px] font-medium uppercase tracking-wide text-amber-800/80">
                             Hidden-likes spotlight (comments+views)
                         </p>
-                        <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                        <div class="grid grid-cols-2 items-stretch gap-1.5 sm:grid-cols-3 xl:grid-cols-6">
                             <WinnerCard
                                 v-for="post in hiddenSpotlight"
                                 :key="`hidden-${post.id}`"
                                 :post="post as any"
-                                compact
                             />
                         </div>
                     </div>

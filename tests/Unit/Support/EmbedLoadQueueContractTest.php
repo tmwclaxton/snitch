@@ -162,9 +162,12 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('followDashboardLink', file_get_contents(base_path('resources/js/components/dashboard/InsightList.vue')) ?: '');
         $winnerCard = file_get_contents(base_path('resources/js/components/dashboard/WinnerCard.vue'));
         $this->assertIsString($winnerCard);
-        $this->assertStringContainsString('flex flex-col', $winnerCard);
-        $this->assertStringContainsString('line-clamp-2', $winnerCard);
+        $this->assertStringContainsString('flex h-full flex-col', $winnerCard);
+        $this->assertStringContainsString('their usual', $winnerCard);
+        $this->assertStringContainsString('Open on Instagram', $winnerCard);
+        $this->assertStringContainsString('early estimate', $winnerCard);
         $this->assertStringContainsString('break-words', $winnerCard);
+        $this->assertStringNotContainsString('line-clamp-', $winnerCard);
         $captions = file_get_contents(base_path('resources/js/components/dashboard/CaptionPanels.vue'));
         $this->assertIsString($captions);
         $this->assertStringContainsString('auto-fit,minmax(9.5rem,1fr)', $captions);

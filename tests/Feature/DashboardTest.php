@@ -82,8 +82,14 @@ class DashboardTest extends TestCase
         $this->assertNotFalse($winnerCard);
         $this->assertStringContainsString('feedShow.url(post.id)', $dashboard);
         $this->assertStringContainsString('competitorShow.url(rival.id)', $dashboard);
+        $this->assertStringContainsString('xl:grid-cols-6', $dashboard);
         $this->assertStringContainsString('feedShow.url(post.id)', $winnerCard);
         $this->assertStringContainsString('competitorShow.url(props.post.tracked_account_id)', $winnerCard);
+        $this->assertStringContainsString('their usual', $winnerCard);
+        $this->assertStringContainsString('Open on Instagram', $winnerCard);
+        $this->assertStringContainsString('aspect-[4/5]', $winnerCard);
+        $this->assertStringNotContainsString('…', $winnerCard);
+        $this->assertStringNotContainsString('...', $winnerCard);
     }
 
     public function test_dashboard_hidden_likes_query_persists_toggle(): void

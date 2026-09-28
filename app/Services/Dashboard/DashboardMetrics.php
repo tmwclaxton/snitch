@@ -375,6 +375,7 @@ class DashboardMetrics
                 'social_account_id' => (int) $post->social_account_id,
                 'tracked_account_id' => $account?->id,
                 'handle' => $account?->handle,
+                'avatar' => $account?->avatar,
                 'is_own_account' => (bool) ($account?->is_own_account),
                 'posted_at' => $post->posted_at,
                 'london_at' => $london,
@@ -1243,6 +1244,7 @@ class DashboardMetrics
         return [
             'id' => $row['id'],
             'handle' => $row['handle'],
+            'avatar' => $row['avatar'] ?? null,
             'tracked_account_id' => $row['tracked_account_id'] ?? null,
             'is_own_account' => $row['is_own_account'],
             'format' => $row['format'],
