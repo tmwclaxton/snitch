@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\WinnerInsight;
 use App\Models\WinnerRule;
 use App\Services\Winners\WinnerScorer;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -58,16 +59,27 @@ class WinnersTest extends TestCase
         ]);
 
         WinnerRule::factory()->for($user)->create([
-            'preset' => 'aggressive',
-            ...(array) config('snitch.winners.presets.aggressive'),
-            'advanced' => ['require_hook' => true, 'require_sfx' => false, 'min_score' => 5],
+            'preset' => 'balanced',
+            ...(array) config('snitch.winners.presets.balanced'),
+            'recency_days' => 90,
+            'advanced' => ['require_hook' => true, 'require_sfx' => false, 'min_score' => 0],
         ]);
+
+        $base = CarbonImmutable::now()->subDays(40);
+
+        for ($i = 0; $i < 12; $i++) {
+            Post::factory()->forAccount($account)->create([
+                'platform' => Platform::TikTok,
+                'posted_at' => $base->addDays($i),
+                'metrics' => ['views' => 1000, 'likes' => 50, 'comments' => 5, 'shares' => 0],
+            ]);
+        }
 
         $winnerPost = Post::factory()->forAccount($account)->create([
             'platform' => Platform::TikTok,
             'url' => 'https://www.tiktok.com/@demo/video/6718335390845095173',
             'media_url' => 'https://cdn.example.com/winner.mp4',
-            'posted_at' => now()->subDay(),
+            'posted_at' => $base->addDays(20),
             'metrics' => ['views' => 5000, 'likes' => 400, 'comments' => 40, 'shares' => 10],
         ]);
         PostAnalysis::factory()->for($winnerPost)->create([
@@ -78,7 +90,7 @@ class WinnersTest extends TestCase
         ]);
 
         $loserPost = Post::factory()->forAccount($account)->create([
-            'posted_at' => now()->subDay(),
+            'posted_at' => $base->addDays(21),
             'metrics' => ['views' => 10, 'likes' => 1, 'comments' => 0, 'shares' => 0],
         ]);
         PostAnalysis::factory()->for($loserPost)->create([
@@ -103,7 +115,10 @@ class WinnersTest extends TestCase
                 ->missing('winners')
                 ->has('presets')
                 ->has('presets.balanced')
+                ->has('presets.gentle')
+                ->has('presets.strict')
                 ->has('rule.preset')
+                ->has('rule.min_multiplier')
                 ->has('rule.min_views')
                 ->has('rule.min_likes')
                 ->has('rule.min_engagement_rate')
@@ -113,6 +128,7 @@ class WinnersTest extends TestCase
                     ->where('winners.0.post.id', $winnerPost->id)
                     ->where('winners.0.post.metrics.views', 5000)
                     ->where('winners.0.post.metrics.likes', 400)
+                    ->where('winners.0.performance_multiplier', fn ($m): bool => is_numeric($m) && (float) $m >= 2.0)
                     ->where('winners.0.post.analysis.hook', 'Strong opening line here')
                     ->where('winners.0.post.analysis.concept', 'Pattern interrupt with proof')
                     ->where('winners.0.post.analysis.topics.0', 'social proof with receipts')
@@ -146,24 +162,24 @@ class WinnersTest extends TestCase
 
         $this->actingAs($user)
             ->put(route('winners.rules.update'), [
-                'preset' => 'aggressive',
-                'min_views' => 200,
-                'min_likes' => 20,
-                'min_engagement_rate' => 1,
-                'recency_days' => 60,
+                'preset' => 'strict',
+                'min_multiplier' => 3,
+                'min_views' => 0,
+                'min_likes' => 0,
+                'min_engagement_rate' => 0,
+                'recency_days' => 30,
                 'advanced' => [
                     'require_hook' => true,
                     'require_sfx' => false,
-                    'min_score' => 40,
+                    'min_score' => 0,
                 ],
             ])
             ->assertRedirect();
 
         $this->assertDatabaseHas('winner_rules', [
             'user_id' => $user->id,
-            'preset' => 'aggressive',
-            'min_views' => 200,
-            'min_likes' => 20,
+            'preset' => 'strict',
+            'min_multiplier' => 3,
         ]);
 
         Queue::assertPushed(ScoreWinnersJob::class, fn (ScoreWinnersJob $job) => $job->userId === $user->id);
@@ -225,13 +241,23 @@ class WinnersTest extends TestCase
         $account = TrackedAccount::factory()->for($user)->create();
 
         WinnerRule::factory()->for($user)->create([
-            'preset' => 'aggressive',
-            ...(array) config('snitch.winners.presets.aggressive'),
-            'advanced' => ['require_hook' => true, 'require_sfx' => false, 'min_score' => 5],
+            'preset' => 'balanced',
+            ...(array) config('snitch.winners.presets.balanced'),
+            'recency_days' => 90,
+            'advanced' => ['require_hook' => true, 'require_sfx' => false, 'min_score' => 0],
         ]);
 
+        $base = CarbonImmutable::now()->subDays(40);
+
+        for ($i = 0; $i < 12; $i++) {
+            Post::factory()->forAccount($account)->create([
+                'posted_at' => $base->addDays($i),
+                'metrics' => ['views' => 1000, 'likes' => 50, 'comments' => 5, 'shares' => 0],
+            ]);
+        }
+
         $post = Post::factory()->forAccount($account)->create([
-            'posted_at' => now()->subDay(),
+            'posted_at' => $base->addDays(20),
             'metrics' => ['views' => 5000, 'likes' => 400, 'comments' => 40, 'shares' => 10],
         ]);
         PostAnalysis::factory()->for($post)->create([

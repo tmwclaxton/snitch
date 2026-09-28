@@ -28,14 +28,15 @@ class SnitchServerToolsTest extends TestCase
         $this->actingAs($user);
 
         $response = SnitchServer::tool(UpdateWinnerRulesTool::class, [
-            'preset' => 'aggressive',
+            'preset' => 'strict',
         ]);
 
         $response->assertOk();
 
         $this->assertDatabaseHas('winner_rules', [
             'user_id' => $user->id,
-            'preset' => 'aggressive',
+            'preset' => 'strict',
+            'min_multiplier' => 3,
         ]);
     }
 
@@ -174,11 +175,11 @@ class SnitchServerToolsTest extends TestCase
 
         SnitchServer::tool(UpdateWinnerRulesTool::class, [
             'preset' => 'balanced',
-            'min_views' => 2500,
+            'min_multiplier' => 2.5,
         ])->assertOk();
 
         $rule = WinnerRule::query()->where('user_id', $user->id)->first();
         $this->assertNotNull($rule);
-        $this->assertSame(2500, $rule->min_views);
+        $this->assertSame(2.5, (float) $rule->min_multiplier);
     }
 }

@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Info } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import { index as briefIndex } from '@/actions/App/Http/Controllers/BriefController';
 import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import CtaLanguage from '@/components/CtaLanguage.vue';
@@ -257,6 +258,23 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
         <Head title="Dashboard" />
 
         <div class="mx-auto max-w-none space-y-2">
+            <div class="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+                <div class="min-w-0">
+                    <p class="text-[11px] font-semibold text-slate-900">
+                        Post this next
+                    </p>
+                    <p class="truncate text-[10px] text-slate-500">
+                        Three weekly ideas from competitor winners
+                    </p>
+                </div>
+                <Link
+                    :href="briefIndex.url()"
+                    class="shrink-0 rounded bg-slate-900 px-2 py-1 text-[10px] font-medium text-white hover:bg-slate-800"
+                >
+                    This week
+                </Link>
+            </div>
+
             <div class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 border-b border-slate-200 pb-1.5">
                 <h1 class="hidden shrink-0 text-sm font-semibold tracking-tight text-slate-900 sm:block">
                     Dashboard

@@ -10,6 +10,7 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\BacklogController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\BrandProfileController;
+use App\Http\Controllers\BriefController;
 use App\Http\Controllers\CompetitorController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExploreController;
@@ -176,6 +177,13 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::get('/backlog', [BacklogController::class, 'index'])->name('backlog.index');
 
         Route::get('/explore', [ExploreController::class, 'index'])->name('explore.index');
+
+        Route::get('/brief', [BriefController::class, 'index'])->name('brief.index');
+        Route::post('/brief/generate', [BriefController::class, 'generate'])
+            ->middleware('throttle:10,1')
+            ->name('brief.generate');
+        Route::post('/brief/ideas/{idea}/used', [BriefController::class, 'markUsed'])
+            ->name('brief.ideas.used');
 
         Route::get('/winners', [WinnerController::class, 'index'])->name('winners.index');
         Route::post('/winners/rescore', [WinnerController::class, 'rescore'])->name('winners.rescore');

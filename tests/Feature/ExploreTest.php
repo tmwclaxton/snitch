@@ -75,7 +75,7 @@ class ExploreTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('explore.index'))
+            ->get(route('explore.index', ['platform' => 'all']))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('explore/Index')

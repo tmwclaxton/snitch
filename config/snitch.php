@@ -252,6 +252,11 @@ return [
         ],
     ],
 
+    'brief' => [
+        'model' => env('SNITCH_BRIEF_MODEL', env('SNITCH_WINNER_COPY_MODEL', 'deepseek/deepseek-v4-flash')),
+        'credit_pence' => 5,
+    ],
+
     'winners' => [
         'copy_model' => env('SNITCH_WINNER_COPY_MODEL', 'deepseek/deepseek-v4-flash'),
         'presets' => [

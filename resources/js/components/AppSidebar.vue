@@ -2,6 +2,7 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     Activity,
+    CalendarDays,
     Clapperboard,
     Compass,
     CreditCard,
@@ -14,6 +15,7 @@ import {
 } from '@lucide/vue';
 import { computed } from 'vue';
 import { edit as brand } from '@/actions/App/Http/Controllers/BrandProfileController';
+import { index as brief } from '@/actions/App/Http/Controllers/BriefController';
 import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as explore } from '@/actions/App/Http/Controllers/ExploreController';
 import { index as feed } from '@/actions/App/Http/Controllers/FeedController';
@@ -71,6 +73,11 @@ const mainNavItems: NavItem[] = [
         title: 'Winners',
         href: winners(),
         icon: Trophy,
+    },
+    {
+        title: 'This week',
+        href: brief(),
+        icon: CalendarDays,
     },
     {
         title: 'Explore',

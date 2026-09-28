@@ -179,6 +179,8 @@ return [
         // Proportional to result count (linear up to max_pence at results_for_max_pence); 0 results = 0p.
         'explore.search' => ['vendor' => 'snitch', 'max_pence' => 0.5, 'results_for_max_pence' => 24],
         'explore.view' => ['vendor' => 'snitch', 'fixed_pence' => 0.1],
+        // Weekly "Post this next" brief: small fixed credit fee on regenerate (first of week is free).
+        'brief.weekly' => ['vendor' => 'snitch', 'fixed_pence' => 5],
     ],
 
 ];

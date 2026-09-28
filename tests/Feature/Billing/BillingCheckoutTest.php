@@ -36,32 +36,31 @@ class BillingCheckoutTest extends TestCase
                 ->component('billing/Index')
                 ->has('subscription')
                 ->has('usage')
-                ->missing('spendSeries')
+                ->where('spendSeries', null)
+                ->where('isAdmin', false)
                 ->has('creditPacks')
                 ->has('platform')
                 ->where('subscription.subscribed', false)
                 ->where('usage.balance_pence', 500)
                 ->where('platform.fee_pence', 1900)
                 ->where('platform.bonus_pence', 3000)
-                ->loadDeferredProps('chart', fn (Assert $chart) => $chart
-                    ->has('spendSeries')
-                    ->has('spendSeries.points')
-                    ->where('spendSeries.grain', 'day')
-                    ->where('spendSeries.period_count', 30)
-                )
             );
     }
 
-    public function test_billing_page_accepts_spend_grain(): void
+    public function test_admin_billing_page_accepts_spend_grain(): void
     {
-        $user = User::factory()->create();
+        config(['snitch.admin_emails' => ['admin@snitch.test']]);
+
+        $user = User::factory()->create([
+            'email' => 'admin@snitch.test',
+        ]);
 
         $this->actingAs($user)
             ->get(route('billing.edit', ['grain' => 'week']))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('billing/Index')
-                ->missing('spendSeries')
+                ->where('isAdmin', true)
                 ->loadDeferredProps('chart', fn (Assert $chart) => $chart
                     ->where('spendSeries.grain', 'week')
                     ->where('spendSeries.period_count', 12)
@@ -73,7 +72,7 @@ class BillingCheckoutTest extends TestCase
             ->get(route('billing.edit', ['grain' => 'month']))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->missing('spendSeries')
+                ->where('isAdmin', true)
                 ->loadDeferredProps('chart', fn (Assert $chart) => $chart
                     ->where('spendSeries.grain', 'month')
                     ->where('spendSeries.period_count', 12)

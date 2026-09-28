@@ -844,16 +844,16 @@ class UsageBillingService
         $total = count($lines);
         $slice = array_slice($lines, ($page - 1) * $perPage, $perPage);
 
-        return new \Illuminate\Pagination\LengthAwarePaginator(
+        return (new \Illuminate\Pagination\LengthAwarePaginator(
             $slice,
             $total,
             $perPage,
             $page,
             [
-                'path' => request()->url(),
+                'path' => route('billing.charges', absolute: false),
                 'query' => request()->query(),
             ],
-        );
+        ))->withQueryString();
     }
 
     /**

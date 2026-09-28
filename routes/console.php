@@ -24,3 +24,9 @@ Schedule::command('snitch:sync-accounts')
     ->weeklyOn(1, '7:00')
     ->withoutOverlapping()
     ->onOneServer();
+
+// After Monday sync: free weekly "Post this next" brief when missing.
+Schedule::command('snitch:generate-weekly-briefs')
+    ->weeklyOn(1, '8:00')
+    ->withoutOverlapping()
+    ->onOneServer();

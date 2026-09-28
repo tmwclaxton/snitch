@@ -30,6 +30,7 @@ class BillingChargesTest extends TestCase
             'billing.price_multiplier' => 1.3,
             'billing.usd_to_gbp' => 1.0,
             'billing.min_run_balance_pence' => 20,
+            'snitch.admin_emails' => ['admin@snitch.test'],
         ]);
 
         $this->billing = app(UsageBillingService::class);
@@ -42,7 +43,7 @@ class BillingChargesTest extends TestCase
 
     public function test_charges_page_is_paginated(): void
     {
-        $user = User::factory()->withoutStarterCredit()->create();
+        $user = $this->adminUser();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 50_000, 'topup:charges-page');
 
@@ -59,6 +60,7 @@ class BillingChargesTest extends TestCase
                 ->has('filters')
                 ->has('vendors')
                 ->has('actions')
+                ->where('isAdmin', true)
                 ->where('usage.balance_pence', fn ($balance) => (float) $balance === $this->billing->balancePence($user))
                 ->loadDeferredProps('default', fn (Assert $page) => $page
                     ->has('charges.data', UsageBillingService::CHARGES_PER_PAGE)
@@ -84,7 +86,7 @@ class BillingChargesTest extends TestCase
 
     public function test_charges_pagination_links_stay_path_only_when_forwarded_proto_is_http(): void
     {
-        $user = User::factory()->withoutStarterCredit()->create();
+        $user = $this->adminUser();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 50_000, 'topup:charges-http-proto');
 
@@ -118,7 +120,7 @@ class BillingChargesTest extends TestCase
 
     public function test_charges_page_filters_by_vendor_action_and_days(): void
     {
-        $user = User::factory()->withoutStarterCredit()->create();
+        $user = $this->adminUser();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 10_000, 'topup:filters');
 
@@ -186,7 +188,7 @@ class BillingChargesTest extends TestCase
             'billing.actions.analyze.post.floor_usd' => 0.0005,
         ]);
 
-        $user = User::factory()->withoutStarterCredit()->create();
+        $user = $this->adminUser();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 1000, 'topup:nanogpt-display');
         // 0.0005 * 0.79 * 1.3 * 100 = 0.05135p → 0.05p
@@ -207,7 +209,7 @@ class BillingChargesTest extends TestCase
 
     public function test_billing_index_recent_charges_are_preview_only(): void
     {
-        $user = User::factory()->withoutStarterCredit()->create();
+        $user = $this->adminUser();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 50_000, 'topup:preview');
 
@@ -229,7 +231,7 @@ class BillingChargesTest extends TestCase
 
     public function test_charges_include_description_and_link_from_meta(): void
     {
-        $user = User::factory()->withoutStarterCredit()->create();
+        $user = $this->adminUser();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 10_000, 'topup:desc-link');
 
@@ -299,7 +301,7 @@ class BillingChargesTest extends TestCase
 
     public function test_legacy_charges_fall_back_to_action_description(): void
     {
-        $user = User::factory()->withoutStarterCredit()->create();
+        $user = $this->adminUser();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 1000, 'topup:legacy-desc');
 
@@ -320,7 +322,7 @@ class BillingChargesTest extends TestCase
 
     public function test_legacy_embed_analysis_links_via_post_analysis_id(): void
     {
-        $user = User::factory()->withoutStarterCredit()->create();
+        $user = $this->adminUser();
         $this->subscribe($user);
         $this->billing->creditFromTopUp($user, 1000, 'topup:legacy-embed');
 
@@ -405,6 +407,13 @@ class BillingChargesTest extends TestCase
                 $this->assertStringContainsString($requiredQuery, $url);
             }
         }
+    }
+
+    private function adminUser(): User
+    {
+        return User::factory()->withoutStarterCredit()->create([
+            'email' => 'admin@snitch.test',
+        ]);
     }
 
     private function subscribe(User $user): void
