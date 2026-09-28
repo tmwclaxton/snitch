@@ -190,7 +190,7 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('competitorShow.url(id)', $insightList);
         $this->assertStringContainsString('collapsedCount: 5', $insightList);
         $this->assertStringNotContainsString('fitHeight', $insightList);
-        $this->assertStringContainsString('items-start gap-2 lg:grid-cols-2', $dashboard);
+        $this->assertStringContainsString('items-stretch gap-2 lg:grid-cols-2', $dashboard);
         $this->assertStringNotContainsString('overflow-y-auto', $dashboard);
         $this->assertStringNotContainsString('Length vs PI', $captions);
         $this->assertStringNotContainsString('>CTAs<', $captions);

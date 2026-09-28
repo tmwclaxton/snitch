@@ -101,7 +101,7 @@ class DashboardTest extends TestCase
         $this->assertStringNotContainsString('overflow-y-auto', $dashboard);
         $this->assertStringNotContainsString('fit-height', $dashboard);
         $this->assertStringNotContainsString('mt-auto shrink-0', $dashboard);
-        $this->assertStringContainsString('items-start gap-2 lg:grid-cols-2', $dashboard);
+        $this->assertStringContainsString('items-stretch gap-2 lg:grid-cols-2', $dashboard);
         $this->assertStringContainsString('id="format_mix"', $dashboard);
         $this->assertStringContainsString(':collapsed-count="5"', $dashboard);
         // Format mix sits under insights on the left, not under the leaderboard.
