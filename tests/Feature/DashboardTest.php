@@ -100,6 +100,7 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('snitch-dash-heatmap-panel', $dashboard);
         $this->assertStringNotContainsString('mt-auto p-2', $dashboard);
         $this->assertStringNotContainsString('overflow-y-auto', $dashboard);
+        $this->assertStringContainsString('overflow-hidden lg:h-0 lg:min-h-full', $dashboard);
         $this->assertStringContainsString('mt-auto shrink-0 border-t', $dashboard);
         $this->assertStringContainsString(':collapsed-count="5"', $dashboard);
         $this->assertStringContainsString('fit-height', $dashboard);

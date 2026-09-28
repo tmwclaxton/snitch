@@ -482,12 +482,13 @@ const trackerIdsByHandle = computed(() => {
 
                 <div class="grid items-stretch gap-2 lg:grid-cols-2">
                     <!--
-                      h-0 + min-h-full: row height comes from the right stack
-                      (Leaderboard + Format mix). Insights fill that height with
-                      up to 5 bullets (no inner scroll); Followers note pins to
-                      the bottom when bullets fall short.
+                      overflow-hidden + h-0 + min-h-full: left grid item must not
+                      contribute min-content height, so the row is sized by the
+                      right stack (Leaderboard + Format mix). Insights fill that
+                      height with up to 5 bullets (no inner scroll); Followers
+                      note pins to the bottom when bullets fall short.
                     -->
-                    <div class="flex min-h-[14rem] flex-col lg:h-0 lg:min-h-full">
+                    <div class="flex min-h-[14rem] flex-col overflow-hidden lg:h-0 lg:min-h-full">
                         <DashCard
                             class="flex h-full min-h-0 flex-1 flex-col overflow-hidden"
                             title="This week in 30 seconds"
