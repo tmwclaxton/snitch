@@ -2216,6 +2216,23 @@
         text-align: center;
     }
 
+    .snitch-platform-embed-play {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        z-index: 2;
+        transform: translate(-50%, -50%);
+        padding: 0.35rem 0.65rem;
+        background: color-mix(in oklab, var(--snitch-ink) 78%, transparent);
+        color: var(--snitch-paper);
+        font-family: var(--font-display, 'Young Serif', serif);
+        font-size: 0.7rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        pointer-events: none;
+        box-shadow: 2px 2px 0 color-mix(in oklab, var(--snitch-spot) 70%, transparent);
+    }
+
     .snitch-platform-embed-open {
         position: absolute;
         right: 0.45rem;

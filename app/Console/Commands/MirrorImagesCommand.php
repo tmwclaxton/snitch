@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\AnalysisStatus;
 use App\Models\Post;
 use App\Models\SocialAccount;
 use App\Models\TrackedAccount;
@@ -21,7 +22,8 @@ use Throwable;
     {--user= : Restrict to a user id (their tracked accounts + posts)}
     {--posts : Mirror post covers}
     {--avatars : Mirror social / tracked avatars}
-    {--fetch : Refresh remote sources when the stored URL 403s (covers via platform fallbacks; avatars via profile resolve)}
+    {--explore : Mirror covers for Explore catalogue candidates (completed reel-like posts, including untracked / soft-deleted memberships)}
+    {--fetch : Refresh remote sources when the stored URL 403s (covers via TikHub post lookup / platform fallbacks; avatars via profile resolve)}
     {--limit=0 : Max rows per resource (0 = all)}
     {--dry-run : Report matches without writing}')]
 #[Description('Copy post covers and account avatars onto the public disk so signed CDN links cannot expire in the UI')]
@@ -35,6 +37,11 @@ class MirrorImagesCommand extends Command
     ): int {
         $doPosts = (bool) $this->option('posts');
         $doAvatars = (bool) $this->option('avatars');
+        $explore = (bool) $this->option('explore');
+
+        if ($explore) {
+            $doPosts = true;
+        }
 
         if (! $doPosts && ! $doAvatars) {
             $doPosts = true;
@@ -48,7 +55,7 @@ class MirrorImagesCommand extends Command
         $exit = self::SUCCESS;
 
         if ($doPosts) {
-            $exit = $this->mirrorPosts($covers, $fetch, $dryRun, $limit) === self::SUCCESS
+            $exit = $this->mirrorPosts($covers, $fetch, $dryRun, $limit, $explore) === self::SUCCESS
                 ? $exit
                 : self::FAILURE;
         }
@@ -62,10 +69,15 @@ class MirrorImagesCommand extends Command
         return $exit;
     }
 
-    private function mirrorPosts(PostCoverHydrator $covers, bool $fetch, bool $dryRun, int $limit): int
-    {
+    private function mirrorPosts(
+        PostCoverHydrator $covers,
+        bool $fetch,
+        bool $dryRun,
+        int $limit,
+        bool $explore,
+    ): int {
         $query = Post::query()->orderBy('id');
-        $this->constrainPosts($query);
+        $this->constrainPosts($query, $explore);
 
         $scanned = 0;
         $mirrored = 0;
@@ -318,8 +330,19 @@ class MirrorImagesCommand extends Command
     /**
      * @param  Builder<Post>  $query
      */
-    private function constrainPosts(Builder $query): void
+    private function constrainPosts(Builder $query, bool $explore = false): void
     {
+        if ($explore) {
+            // Same corpus Explore lists: completed reel-like analyses across the
+            // shared platform identity - not limited to active tracked memberships.
+            $query->reelLike()
+                ->whereHas('analysis', function (Builder $analysis): void {
+                    $analysis->where('status', AnalysisStatus::Completed);
+                });
+
+            return;
+        }
+
         $trackedIds = $this->trackedIds();
         $userId = $this->option('user');
 

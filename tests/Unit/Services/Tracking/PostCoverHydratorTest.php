@@ -102,6 +102,10 @@ class PostCoverHydratorTest extends TestCase
     public function test_persist_uses_instagram_media_when_the_signed_still_is_gone(): void
     {
         Storage::fake('public');
+        config([
+            'snitch.tikhub.api_key' => '',
+            'snitch.tikhub.endpoints.instagram.post_info_by_code' => '/api/v1/instagram/v3/get_post_info_by_code',
+        ]);
         Http::fake([
             'https://cdn.example.com/expired.jpg' => Http::response('URL signature expired', 403),
             'https://www.instagram.com/reel/CxYz123AbCd/media/*' => Http::response(self::JPEG, 200, ['Content-Type' => 'image/jpeg']),
@@ -113,6 +117,61 @@ class PostCoverHydratorTest extends TestCase
 
         $this->assertSame('/storage/post-covers/'.$post->id.'.jpg', $url);
         Storage::disk('public')->assertExists('post-covers/'.$post->id.'.jpg');
+    }
+
+    public function test_persist_uses_tikhub_post_by_code_when_signed_still_is_gone(): void
+    {
+        Storage::fake('public');
+        config([
+            'snitch.tikhub.api_key' => 'test-key',
+            'snitch.tikhub.base_url' => 'https://api.tikhub.test',
+            'snitch.tikhub.endpoints.instagram.post_info_by_code' => '/api/v1/instagram/v3/get_post_info_by_code',
+        ]);
+        Http::fake([
+            'https://cdn.example.com/expired.jpg' => Http::response('URL signature expired', 403),
+            'https://api.tikhub.test/api/v1/instagram/v3/get_post_info_by_code*' => Http::response([
+                'code' => 200,
+                'data' => [
+                    'items' => [[
+                        'code' => 'CxYz123AbCd',
+                        'image_versions2' => [
+                            'candidates' => [
+                                ['url' => 'https://cdn.example.com/fresh-tikhub.jpg'],
+                            ],
+                        ],
+                    ]],
+                ],
+            ], 200),
+            'https://cdn.example.com/fresh-tikhub.jpg' => Http::response(self::JPEG, 200, ['Content-Type' => 'image/jpeg']),
+        ]);
+
+        $post = $this->instagramPost('https://cdn.example.com/expired.jpg');
+
+        $url = app(PostCoverHydrator::class)->persist($post, fetchRemote: true);
+
+        $this->assertSame('/storage/post-covers/'.$post->id.'.jpg', $url);
+        Storage::disk('public')->assertExists('post-covers/'.$post->id.'.jpg');
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), 'get_post_info_by_code')
+            && ($request['code'] ?? null) === 'CxYz123AbCd');
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://cdn.example.com/fresh-tikhub.jpg');
+    }
+
+    public function test_persist_does_not_store_expired_cdn_as_cover_url(): void
+    {
+        Storage::fake('public');
+        config(['snitch.tikhub.api_key' => '']);
+        Http::fake([
+            'https://cdn.example.com/expired.jpg' => Http::response('gone', 403),
+            'https://www.instagram.com/*' => Http::response('gone', 403),
+        ]);
+
+        $post = $this->instagramPost('https://cdn.example.com/expired.jpg');
+
+        $url = app(PostCoverHydrator::class)->persist($post, fetchRemote: true);
+
+        $this->assertNull($url);
+        $this->assertNull($post->fresh()?->getRawOriginal('cover_url'));
+        $this->assertSame('https://www.instagram.com/reel/CxYz123AbCd/media/?size=l', $post->fresh()?->cover_source_url);
     }
 
     public function test_persist_uses_a_fresh_mapped_still_from_sync(): void

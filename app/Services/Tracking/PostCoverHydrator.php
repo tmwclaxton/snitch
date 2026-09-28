@@ -4,6 +4,8 @@ namespace App\Services\Tracking;
 
 use App\Enums\Platform;
 use App\Models\Post;
+use App\Services\TikHub\TikHubClient;
+use App\Support\InstagramPostId;
 use App\Support\PostCover;
 use App\Support\PublicDiskMedia;
 use Illuminate\Support\Facades\Http;
@@ -13,7 +15,10 @@ use Throwable;
 
 class PostCoverHydrator
 {
-    public function __construct(private PostCoverArchive $archive = new PostCoverArchive) {}
+    public function __construct(
+        private PostCoverArchive $archive = new PostCoverArchive,
+        private ?TikHubClient $tikhub = null,
+    ) {}
 
     public function discover(Post $post, bool $fetchRemote = false): ?string
     {
@@ -51,7 +56,7 @@ class PostCoverHydrator
             return $this->stored($post);
         }
 
-        // Feature requests must not block the suite / CI on outbound CDN downloads.
+        // Viewer requests must not block the suite / CI on outbound CDN downloads.
         if (app()->runningUnitTests()) {
             return $this->stored($post);
         }
@@ -105,14 +110,16 @@ class PostCoverHydrator
             }
         }
 
-        // Temporary remote fallback only when nothing durable exists yet.
-        // Always record cover_source_url so backfill can retry the download.
-        if ($stored === null && is_string($remote) && $remote !== '') {
-            return $this->save($post, $remote, $remote);
-        }
-
+        // Never persist an expiring CDN URL as cover_url - only keep the source
+        // for a later --fetch retry. Grids must see null / local / ytimg only.
         if (is_string($remote) && $remote !== '' && $this->sourceUrl($post) !== $remote) {
             $post->forceFill(['cover_source_url' => $remote])->save();
+        }
+
+        if ($stored !== null && PostCover::isDisplayableStill($stored) && ! $this->archive->isDurable($stored)
+            && (str_starts_with($stored, 'http://') || str_starts_with($stored, 'https://'))) {
+            $post->forceFill(['cover_url' => null])->save();
+            $stored = null;
         }
 
         $poster = $this->posterFromMedia($post);
@@ -127,7 +134,7 @@ class PostCoverHydrator
             return null;
         }
 
-        return $stored;
+        return $this->archive->isDurable($stored) ? $stored : null;
     }
 
     /**
@@ -216,9 +223,9 @@ class PostCoverHydrator
             : Platform::tryFrom((string) $post->platform);
 
         return match ($platform) {
-            Platform::Instagram => $this->instagramMediaUrl($pageUrl),
+            Platform::Instagram => $this->instagramFreshStill($post, $pageUrl),
             Platform::Facebook => $this->facebookOgImage($pageUrl),
-            Platform::TikTok => $this->tikTokOembed($pageUrl),
+            Platform::TikTok => $this->tikTokFreshStill($post, $pageUrl),
             default => null,
         };
     }
@@ -302,6 +309,140 @@ class PostCoverHydrator
         $source = trim($source);
 
         return $source === '' ? null : $source;
+    }
+
+    private function instagramFreshStill(Post $post, string $pageUrl): ?string
+    {
+        $fromTikHub = $this->instagramTikHubStill($post, $pageUrl);
+
+        if ($fromTikHub !== null) {
+            return $fromTikHub;
+        }
+
+        return $this->instagramMediaUrl($pageUrl);
+    }
+
+    private function instagramTikHubStill(Post $post, string $pageUrl): ?string
+    {
+        $client = $this->tikhubClient();
+
+        if ($client === null || ! $client->configured()) {
+            return null;
+        }
+
+        $code = InstagramPostId::fromUrl($pageUrl)
+            ?? InstagramPostId::fromPayload(is_array($post->raw_payload) ? $post->raw_payload : [])
+            ?? (is_string($post->external_id) ? $post->external_id : null);
+
+        if (! is_string($code) || $code === '' || preg_match('/^[A-Za-z0-9_-]+$/', $code) !== 1) {
+            return null;
+        }
+
+        $path = (string) config('snitch.tikhub.endpoints.instagram.post_info_by_code', '');
+
+        if ($path === '') {
+            return null;
+        }
+
+        try {
+            $payload = $client->get($path, ['code' => $code], 'instagram');
+        } catch (Throwable) {
+            return null;
+        }
+
+        $item = data_get($payload, 'data.items.0');
+
+        if (! is_array($item)) {
+            $item = data_get($payload, 'data.data');
+        }
+
+        if (! is_array($item)) {
+            $item = data_get($payload, 'data');
+        }
+
+        if (! is_array($item)) {
+            return null;
+        }
+
+        $shadow = $post->replicate();
+        $shadow->id = $post->id;
+        $shadow->raw_payload = $item;
+        $shadow->media_url = null;
+        $shadow->url = $pageUrl;
+
+        return PostCover::resolve($shadow);
+    }
+
+    private function tikTokFreshStill(Post $post, string $pageUrl): ?string
+    {
+        $fromTikHub = $this->tikTokTikHubStill($post);
+
+        if ($fromTikHub !== null) {
+            return $fromTikHub;
+        }
+
+        return $this->tikTokOembed($pageUrl);
+    }
+
+    private function tikTokTikHubStill(Post $post): ?string
+    {
+        $client = $this->tikhubClient();
+
+        if ($client === null || ! $client->configured()) {
+            return null;
+        }
+
+        $awemeId = is_string($post->external_id) ? trim($post->external_id) : '';
+
+        if ($awemeId === '' || ! ctype_digit($awemeId)) {
+            return null;
+        }
+
+        $path = (string) config('snitch.tikhub.endpoints.tiktok.one_video', '');
+
+        if ($path === '') {
+            return null;
+        }
+
+        try {
+            $payload = $client->get($path, ['aweme_id' => $awemeId], 'tiktok');
+        } catch (Throwable) {
+            return null;
+        }
+
+        $item = data_get($payload, 'data.aweme_detail');
+
+        if (! is_array($item)) {
+            $item = data_get($payload, 'aweme_detail');
+        }
+
+        if (! is_array($item)) {
+            $item = data_get($payload, 'data');
+        }
+
+        if (! is_array($item)) {
+            return null;
+        }
+
+        $shadow = $post->replicate();
+        $shadow->id = $post->id;
+        $shadow->raw_payload = $item;
+        $shadow->media_url = null;
+
+        return PostCover::resolve($shadow);
+    }
+
+    private function tikhubClient(): ?TikHubClient
+    {
+        if ($this->tikhub instanceof TikHubClient) {
+            return $this->tikhub;
+        }
+
+        try {
+            return app(TikHubClient::class);
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function instagramMediaUrl(string $pageUrl): ?string

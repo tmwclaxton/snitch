@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import SnitchImage from '@/components/SnitchImage.vue';
 import { isDisplayableImageSrc, isDurableMediaSrc } from '@/lib/mediaSrc';
-import { openOnPlatformLabel, productPlatformLabel } from '@/lib/platforms';
+import { openOnPlatformLabel } from '@/lib/platforms';
 
 export type EmbedConfig = {
     provider: string;
@@ -58,7 +58,8 @@ const usableCoverUrl = computed(() => {
 });
 
 const usableStillMediaUrl = computed(() => {
-    if (mediaFailed.value || !props.mediaUrl) {
+    // Compact proof sheets are cover-only - never lean on media_url (often CDN).
+    if (props.compact || mediaFailed.value || !props.mediaUrl) {
         return null;
     }
 
@@ -70,7 +71,14 @@ const usableStillMediaUrl = computed(() => {
 });
 
 const usableVideoMediaUrl = computed(() => {
-    if (mediaFailed.value || !props.mediaUrl || usableCoverUrl.value || usableStillMediaUrl.value) {
+    // Never use a CDN reel as the preview. Compact cells stay stills only.
+    if (
+        props.compact
+        || mediaFailed.value
+        || !props.mediaUrl
+        || usableCoverUrl.value
+        || usableStillMediaUrl.value
+    ) {
         return null;
     }
 
@@ -80,13 +88,20 @@ const usableVideoMediaUrl = computed(() => {
         return null;
     }
 
-    // Only play locally stored video - never expiring CDN mp4 as a preview.
     if (!isDurableMediaSrc(props.mediaUrl)) {
         return null;
     }
 
     return props.mediaUrl;
 });
+
+const showPlayHint = computed(
+    () =>
+        props.compact
+        && !interactiveSrc.value
+        && Boolean(props.postUrl)
+        && (Boolean(usableCoverUrl.value) || Boolean(usableStillMediaUrl.value)),
+);
 
 function onMediaError(): void {
     mediaFailed.value = true;
@@ -147,18 +162,23 @@ watch(interactiveSrc, () => {
                 preload="metadata"
                 @error="onMediaError"
             />
-            <div
+            <SnitchImage
                 v-else
-                class="snitch-platform-embed-fallback-empty"
-            >
-                <p class="text-xs font-medium text-neutral-500">
-                    Preview unavailable
-                </p>
-                <p class="mt-1 text-[11px] text-neutral-400">
-                    {{ productPlatformLabel(platform) }} media link expired
-                </p>
-            </div>
+                :src="null"
+                alt=""
+                class="snitch-platform-embed-fallback-img size-full"
+                img-class="size-full object-cover"
+                fallback="paper"
+            />
         </div>
+
+        <span
+            v-if="showPlayHint"
+            class="snitch-platform-embed-play"
+            aria-hidden="true"
+        >
+            Play
+        </span>
 
         <a
             v-if="postUrl && !interactiveSrc"

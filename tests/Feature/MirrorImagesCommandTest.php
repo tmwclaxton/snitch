@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AnalysisStatus;
 use App\Enums\Platform;
+use App\Enums\PostType;
 use App\Models\Post;
+use App\Models\PostAnalysis;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Apify\Contracts\PlatformAdapter;
@@ -187,5 +190,41 @@ class MirrorImagesCommandTest extends TestCase
         $this->assertSame(0, $exit);
         $this->assertSame($local, $stale->fresh()?->avatar);
         Http::assertNothingSent();
+    }
+
+    public function test_explore_mirrors_completed_reel_covers_for_untracked_accounts(): void
+    {
+        Storage::fake('public');
+        Http::fake([
+            'https://cdn.example.com/explore-cover.jpg' => Http::response(self::JPEG, 200, ['Content-Type' => 'image/jpeg']),
+        ]);
+
+        $owner = User::factory()->create();
+        $account = TrackedAccount::factory()->for($owner)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'nonprofitlauncher',
+        ]);
+        $post = Post::factory()->forAccount($account)->create([
+            'platform' => Platform::Instagram,
+            'type' => PostType::Reel,
+            'url' => 'https://www.instagram.com/reel/ExploreCode1/',
+            'cover_url' => 'https://cdn.example.com/explore-cover.jpg',
+            'raw_payload' => ['displayUrl' => 'https://cdn.example.com/explore-cover.jpg'],
+        ]);
+        PostAnalysis::factory()->for($post)->create([
+            'status' => AnalysisStatus::Completed,
+        ]);
+
+        // Soft-delete the membership so tracked-only backfill would miss it.
+        $account->delete();
+
+        $exit = Artisan::call('snitch:mirror-images', [
+            '--explore' => true,
+            '--fetch' => true,
+        ]);
+
+        $this->assertSame(0, $exit);
+        $this->assertSame('/storage/post-covers/'.$post->id.'.jpg', $post->fresh()?->getRawOriginal('cover_url'));
+        Storage::disk('public')->assertExists('post-covers/'.$post->id.'.jpg');
     }
 }

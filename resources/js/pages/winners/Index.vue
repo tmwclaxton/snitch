@@ -319,7 +319,6 @@ onUnmounted(() => {
                                     <PlatformEmbed
                                         :embed="winner.post.embed"
                                         :cover-url="winner.post.cover_url"
-                                        :media-url="winner.post.media_url"
                                         :post-url="winner.post.url"
                                         :platform="winner.post.platform"
                                         compact

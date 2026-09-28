@@ -323,6 +323,7 @@ return [
                 'user_posts' => '/api/v1/instagram/v2/fetch_user_posts',
                 'user_reels' => '/api/v1/instagram/v2/fetch_user_reels',
                 'search_users' => '/api/v1/instagram/v2/search_users',
+                'post_info_by_code' => '/api/v1/instagram/v3/get_post_info_by_code',
             ],
             'tiktok' => [
                 'user_profile' => '/api/v1/tiktok/web/fetch_user_profile',

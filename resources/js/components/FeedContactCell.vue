@@ -175,7 +175,6 @@ const winnerScore = computed(() => {
                 <PlatformEmbed
                     :embed="post.embed"
                     :cover-url="post.cover_url"
-                    :media-url="post.media_url"
                     :post-url="post.url"
                     :platform="post.platform"
                     compact

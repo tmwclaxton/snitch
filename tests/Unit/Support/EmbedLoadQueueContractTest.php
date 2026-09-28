@@ -102,7 +102,21 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('v-if="interactiveSrc"', $source);
         $this->assertStringContainsString("'/embed/captioned/'", $source);
         $this->assertStringContainsString("'/embed/'", $source);
+        $this->assertStringContainsString('fallback="paper"', $source);
+        $this->assertStringNotContainsString('Preview unavailable', $source);
+        $this->assertStringNotContainsString('media link expired', $source);
         $this->assertStringNotContainsString('acquireEmbedSlot', $source);
+        $this->assertStringContainsString('props.compact', $source);
+    }
+
+    #[Test]
+    public function feed_contact_cell_does_not_pass_cdn_media_url_to_compact_embeds(): void
+    {
+        $source = file_get_contents(base_path('resources/js/components/FeedContactCell.vue'));
+
+        $this->assertIsString($source);
+        $this->assertStringContainsString(':cover-url="post.cover_url"', $source);
+        $this->assertStringNotContainsString(':media-url="post.media_url"', $source);
     }
 
     #[Test]
