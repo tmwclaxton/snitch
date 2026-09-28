@@ -227,7 +227,7 @@ function regenerate(): void {
                     </p>
                 </div>
 
-                <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] lg:items-stretch">
+                <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(11rem,13rem)_minmax(0,1fr)] lg:items-start">
                     <ol
                         v-if="brief.best_times.length"
                         class="flex flex-col gap-2"
@@ -257,17 +257,17 @@ function regenerate(): void {
 
                     <div
                         v-if="brief.heat_grid?.length"
-                        class="min-w-0 overflow-x-auto"
+                        class="w-full min-w-0"
                     >
                         <div
-                            class="inline-grid min-w-full gap-0.5"
-                            :style="{ gridTemplateColumns: `2.25rem repeat(24, minmax(0.7rem, 1fr))` }"
+                            class="grid w-full gap-0.5"
+                            :style="{ gridTemplateColumns: `2.25rem repeat(24, minmax(0, 1fr))` }"
                         >
                             <span />
                             <span
                                 v-for="hour in 24"
                                 :key="`h-${hour}`"
-                                class="text-center text-[11px] leading-none text-snitch-ink/45"
+                                class="text-center text-xs leading-none text-snitch-ink/45"
                             >
                                 {{ hourLabel(hour - 1) }}
                             </span>
@@ -281,7 +281,7 @@ function regenerate(): void {
                                 <span
                                     v-for="(cell, hour) in row"
                                     :key="`c-${dow}-${hour}`"
-                                    class="aspect-square min-h-3.5 border border-snitch-ink/5"
+                                    class="aspect-square w-full min-h-4 border border-snitch-ink/5"
                                     :style="heatStyle(cell)"
                                     :title="cell == null ? '' : `${days[dow]} ${hour}:00 · ${cell}×`"
                                 />

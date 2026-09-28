@@ -134,13 +134,15 @@ function toggleAccount(id: number): void {
             <span class="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Range
             </span>
-            <div class="inline-flex items-center rounded-md border border-slate-200 bg-white p-0.5">
+            <div class="inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-50 p-0.5">
                 <button
                     v-for="row in periods"
                     :key="row.value"
                     type="button"
                     class="rounded px-2.5 py-1 text-sm font-medium"
-                    :class="period === row.value ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'"
+                    :class="period === row.value
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'bg-transparent text-slate-600 hover:bg-white'"
                     @click="visit({ period: row.value })"
                 >
                     {{ row.label }}

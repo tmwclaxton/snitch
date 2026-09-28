@@ -90,5 +90,11 @@ class GrowthPageTest extends TestCase
                 );
             }
         }
+
+        $you = collect($series)->firstWhere('name', 'You');
+        $this->assertNotNull($you);
+        $lastWeekPoint = collect($you['points'] ?? [])->firstWhere('date', $lastWeek->toDateString());
+        $this->assertNotNull($lastWeekPoint);
+        $this->assertSame(1.0, (float) $lastWeekPoint['value']);
     }
 }

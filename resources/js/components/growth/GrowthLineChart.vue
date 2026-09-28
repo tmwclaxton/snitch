@@ -82,11 +82,15 @@ const strokeWidths = computed(() =>
 );
 
 const strokeDashes = computed(() =>
-    activeSeries.value.map((row) => (row.is_peer_median || row.name === 'Peer median' ? 6 : 0)),
+    activeSeries.value.map((row) => (row.is_peer_median || row.name === 'Peer median' ? 8 : 0)),
 );
 
 const colours = computed(() =>
     activeSeries.value.map((row) => colourByName.value.get(row.name) ?? PEER_COLOUR),
+);
+
+const chartKey = computed(() =>
+    activeSeries.value.map((row) => row.name).join('|') + ':' + categories.value.join(','),
 );
 
 const tableRows = computed(() =>
@@ -132,9 +136,10 @@ const options = computed(() => ({
         width: strokeWidths.value,
         curve: 'straight' as const,
         dashArray: strokeDashes.value,
+        lineCap: 'round' as const,
     },
     markers: {
-        size: 3,
+        size: activeSeries.value.map((row) => (row.is_peer_median || row.name === 'Peer median' ? 0 : 3)),
         strokeWidth: 0,
         hover: { size: 4 },
     },
@@ -245,6 +250,7 @@ const options = computed(() => ({
         </p>
         <VueApexCharts
             v-else
+            :key="chartKey"
             class="min-h-0 flex-1"
             type="line"
             :height="height ?? 240"

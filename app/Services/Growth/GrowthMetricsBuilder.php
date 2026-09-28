@@ -198,7 +198,8 @@ class GrowthMetricsBuilder
 
             $ppwPoints[] = [
                 'date' => $weekStart->toDateString(),
-                'value' => (float) $weekPosts->count(),
+                // Null (gap) when nobody posted that week - avoids a false plunge to zero.
+                'value' => $weekPosts->isEmpty() ? null : (float) $weekPosts->count(),
             ];
 
             $weekEr = [];
