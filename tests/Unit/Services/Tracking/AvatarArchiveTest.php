@@ -119,4 +119,82 @@ class AvatarArchiveTest extends TestCase
         $this->assertSame($local, $account->avatar);
         $this->assertSame('https://cdn.example.com/fresh.jpg', $social->avatar_source_url);
     }
+
+    public function test_successful_mirror_updates_every_tracker_sharing_the_social_account(): void
+    {
+        Storage::fake('public');
+        Http::fake([
+            'https://cdn.example.com/avatar.jpg' => Http::response(self::JPEG, 200, ['Content-Type' => 'image/jpeg']),
+        ]);
+
+        $userA = User::factory()->create();
+        $userB = User::factory()->create();
+        $primary = TrackedAccount::factory()->for($userA)->create([
+            'avatar' => 'https://cdn.example.com/avatar.jpg',
+            'avatar_source_url' => 'https://cdn.example.com/avatar.jpg',
+        ]);
+        $social = $primary->socialAccount;
+        $this->assertNotNull($social);
+        $social->forceFill([
+            'avatar' => 'https://cdn.example.com/avatar.jpg',
+            'avatar_source_url' => 'https://cdn.example.com/avatar.jpg',
+        ])->save();
+
+        $sibling = TrackedAccount::factory()->for($userB)->create([
+            'platform' => $primary->platform,
+            'handle' => $primary->handle,
+            'social_account_id' => $social->id,
+            'avatar' => 'https://cdn.example.com/avatar.jpg',
+            'avatar_source_url' => 'https://cdn.example.com/avatar.jpg',
+        ]);
+
+        app(AvatarMirror::class)->apply($primary->fresh(), $social->fresh(), 'https://cdn.example.com/avatar.jpg');
+
+        $social->refresh();
+        $primary->refresh();
+        $sibling->refresh();
+
+        $this->assertStringStartsWith('/storage/avatars/', (string) $social->avatar);
+        $this->assertSame($social->avatar, $primary->avatar);
+        $this->assertSame($social->avatar, $sibling->avatar);
+        $this->assertSame('https://cdn.example.com/avatar.jpg', $sibling->avatar_source_url);
+    }
+
+    public function test_propagates_existing_local_avatar_to_stale_trackers_without_network(): void
+    {
+        Storage::fake('public');
+        Http::fake();
+
+        $userA = User::factory()->create();
+        $userB = User::factory()->create();
+        $primary = TrackedAccount::factory()->for($userA)->create();
+        $social = $primary->socialAccount;
+        $this->assertNotNull($social);
+
+        $local = '/storage/avatars/'.$social->id.'-bbbbbbbbbb.jpg';
+        Storage::disk('public')->put('avatars/'.$social->id.'-bbbbbbbbbb.jpg', self::JPEG);
+        $social->forceFill([
+            'avatar' => $local,
+            'avatar_source_url' => 'https://cdn.example.com/avatar.jpg',
+        ])->save();
+        $primary->forceFill([
+            'avatar' => $local,
+            'avatar_source_url' => 'https://cdn.example.com/avatar.jpg',
+        ])->save();
+
+        $stale = TrackedAccount::factory()->for($userB)->create([
+            'platform' => $primary->platform,
+            'handle' => $primary->handle,
+            'social_account_id' => $social->id,
+            'avatar' => 'https://cdn.example.com/expired.jpg',
+            'avatar_source_url' => 'https://cdn.example.com/avatar.jpg',
+        ]);
+
+        app(AvatarMirror::class)->apply($stale->fresh(), $social->fresh(), null);
+
+        $stale->refresh();
+        $this->assertSame($local, $stale->avatar);
+        $this->assertSame('https://cdn.example.com/avatar.jpg', $stale->avatar_source_url);
+        Http::assertNothingSent();
+    }
 }

@@ -205,17 +205,36 @@ class MirrorImagesCommand extends Command
 
                 $scanned++;
 
-                $tracker = TrackedAccount::query()
+                $trackers = TrackedAccount::query()
                     ->where('social_account_id', $social->id)
                     ->orderByDesc('id')
-                    ->first();
+                    ->get();
+                $tracker = $trackers->first();
 
                 $remote = $this->avatarRemote($social, $tracker);
+                $staleTrackers = $trackers->filter(
+                    fn (TrackedAccount $row): bool => ! $archive->isLocal($row->avatar)
+                        || (is_string($social->avatar) && $row->avatar !== $social->avatar),
+                );
 
+                // Social is already local: copy onto any stale trackers with no network.
                 if ($archive->isLocal($social->avatar) && $archive->localFileExists($social->avatar)
-                    && is_string($social->avatar_source_url)
-                    && ($remote === null || $social->avatar_source_url === $remote)
+                    && ($remote === null || $social->avatar_source_url === $remote || blank($social->avatar_source_url))
                     && ! $fetch) {
+                    if ($staleTrackers->isNotEmpty()) {
+                        if (! $dryRun) {
+                            $avatars->propagateToAllTrackers(
+                                $social,
+                                (string) $social->avatar,
+                                is_string($social->avatar_source_url) ? $social->avatar_source_url : $remote,
+                            );
+                        }
+                        $mirrored++;
+                        $this->line("social #{$social->id}: propagated local to {$staleTrackers->count()} tracker(s) {$social->avatar}");
+
+                        continue;
+                    }
+
                     $already++;
                     $this->line("social #{$social->id}: already-local {$social->avatar}");
 
@@ -230,6 +249,21 @@ class MirrorImagesCommand extends Command
                 }
 
                 if ($remote === null) {
+                    // Still allow propagate when social is local but remote is unknown.
+                    if ($archive->isLocal($social->avatar) && $archive->localFileExists($social->avatar) && $staleTrackers->isNotEmpty()) {
+                        if (! $dryRun) {
+                            $avatars->propagateToAllTrackers(
+                                $social,
+                                (string) $social->avatar,
+                                is_string($social->avatar_source_url) ? $social->avatar_source_url : null,
+                            );
+                        }
+                        $mirrored++;
+                        $this->line("social #{$social->id}: propagated local to {$staleTrackers->count()} tracker(s) {$social->avatar}");
+
+                        continue;
+                    }
+
                     $failed++;
                     $this->line("social #{$social->id}: failed (no remote)");
 
@@ -255,6 +289,14 @@ class MirrorImagesCommand extends Command
                 }
 
                 if ($archive->isLocal($social->avatar) && $archive->localFileExists($social->avatar)) {
+                    // Apply may have only propagated to stale trackers.
+                    if ($staleTrackers->isNotEmpty()) {
+                        $mirrored++;
+                        $this->line("social #{$social->id}: propagated local to {$staleTrackers->count()} tracker(s) {$social->avatar}");
+
+                        continue;
+                    }
+
                     $already++;
                     $this->line("social #{$social->id}: already-local {$social->avatar}");
 

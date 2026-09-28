@@ -145,4 +145,47 @@ class MirrorImagesCommandTest extends TestCase
         $this->assertStringStartsWith('/storage/avatars/', $avatar);
         $this->assertSame('https://cdn.example.com/fresh-avatar.jpg', $account->socialAccount?->fresh()?->avatar_source_url);
     }
+
+    public function test_avatars_propagates_local_social_avatar_onto_stale_trackers(): void
+    {
+        Storage::fake('public');
+        Http::fake();
+
+        $userA = User::factory()->create();
+        $userB = User::factory()->create();
+        $primary = TrackedAccount::factory()->for($userA)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'sharedhandle',
+        ]);
+        $social = $primary->socialAccount;
+        $this->assertNotNull($social);
+
+        $local = '/storage/avatars/'.$social->id.'-cccccccccc.jpg';
+        Storage::disk('public')->put('avatars/'.$social->id.'-cccccccccc.jpg', self::JPEG);
+        $social->forceFill([
+            'avatar' => $local,
+            'avatar_source_url' => 'https://cdn.example.com/avatar.jpg',
+        ])->save();
+        $primary->forceFill([
+            'avatar' => $local,
+            'avatar_source_url' => 'https://cdn.example.com/avatar.jpg',
+        ])->save();
+
+        $stale = TrackedAccount::factory()->for($userB)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'sharedhandle',
+            'social_account_id' => $social->id,
+            'avatar' => 'https://cdn.example.com/expired.jpg',
+            'avatar_source_url' => 'https://cdn.example.com/avatar.jpg',
+        ]);
+
+        $exit = Artisan::call('snitch:mirror-images', [
+            '--avatars' => true,
+            '--tracked' => [$stale->id],
+        ]);
+
+        $this->assertSame(0, $exit);
+        $this->assertSame($local, $stale->fresh()?->avatar);
+        Http::assertNothingSent();
+    }
 }

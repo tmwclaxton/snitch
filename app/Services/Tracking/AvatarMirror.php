@@ -12,9 +12,9 @@ class AvatarMirror
     public function __construct(private AvatarArchive $archive = new AvatarArchive) {}
 
     /**
-     * Mirror a remote avatar onto the social account (and optionally the tracker).
-     * Never overwrites an existing local avatar with a remote URL on failure.
-     * Never throws - callers must not abort sync when mirroring fails.
+     * Mirror a remote avatar onto the social account and every tracker that
+     * shares it. Never overwrites an existing local avatar with a remote URL
+     * on failure. Never throws - callers must not abort sync when mirroring fails.
      */
     public function apply(?TrackedAccount $tracker, ?SocialAccount $social, ?string $remoteUrl): void
     {
@@ -43,23 +43,35 @@ class AvatarMirror
 
         $remote = $this->resolveRemote($tracker, $social, $remoteUrl);
 
-        if ($remote === null) {
-            return;
+        // Social already mirrored: copy the local path to every tracker with no
+        // network call unless the remote source URL has changed.
+        if ($this->archive->isLocal($social->avatar) && $this->archive->localFileExists($social->avatar)) {
+            $source = is_string($social->avatar_source_url) ? trim($social->avatar_source_url) : '';
+
+            if ($remote === null || $source === '' || $source === $remote) {
+                $this->propagateToAllTrackers(
+                    $social,
+                    (string) $social->avatar,
+                    $source !== '' ? $source : $remote,
+                );
+
+                return;
+            }
         }
 
-        if ($this->alreadyMirrored($social, $remote) && ($tracker === null || $this->trackerMatches($tracker, $social))) {
+        if ($remote === null) {
             return;
         }
 
         $local = $this->archive->store((int) $social->id, $remote);
 
         if ($local !== null) {
-            $this->writeSuccess($social, $tracker, $remote, $local);
+            $this->writeSuccess($social, $remote, $local);
 
             return;
         }
 
-        $this->writeFailureKeepLocal($social, $tracker, $remote);
+        $this->writeFailureKeepLocal($social, $remote);
     }
 
     private function resolveRemote(?TrackedAccount $tracker, SocialAccount $social, ?string $remoteUrl): ?string
@@ -83,60 +95,43 @@ class AvatarMirror
         return null;
     }
 
-    private function alreadyMirrored(SocialAccount $social, string $remote): bool
-    {
-        return $this->archive->isLocal($social->avatar)
-            && $this->archive->localFileExists($social->avatar)
-            && is_string($social->avatar_source_url)
-            && trim((string) $social->avatar_source_url) === $remote;
-    }
-
-    private function trackerMatches(TrackedAccount $tracker, SocialAccount $social): bool
-    {
-        return $this->archive->isLocal($tracker->avatar)
-            && $tracker->avatar === $social->avatar
-            && is_string($tracker->avatar_source_url)
-            && $tracker->avatar_source_url === $social->avatar_source_url;
-    }
-
-    private function writeSuccess(SocialAccount $social, ?TrackedAccount $tracker, string $remote, string $local): void
+    private function writeSuccess(SocialAccount $social, string $remote, string $local): void
     {
         $social->forceFill([
             'avatar' => $local,
             'avatar_source_url' => $remote,
         ])->save();
 
-        if ($tracker !== null) {
-            $tracker->forceFill([
-                'avatar' => $local,
-                'avatar_source_url' => $remote,
-            ])->save();
-        } else {
-            TrackedAccount::query()
-                ->where('social_account_id', $social->id)
-                ->update([
-                    'avatar' => $local,
-                    'avatar_source_url' => $remote,
-                ]);
-        }
+        $this->propagateToAllTrackers($social, $local, $remote);
     }
 
-    private function writeFailureKeepLocal(SocialAccount $social, ?TrackedAccount $tracker, string $remote): void
+    /**
+     * Copy a durable local avatar onto every tracked_accounts row for this social.
+     */
+    public function propagateToAllTrackers(SocialAccount $social, string $local, ?string $sourceUrl): void
     {
-        $socialFill = ['avatar_source_url' => $remote];
-        $trackerFill = ['avatar_source_url' => $remote];
+        $fill = ['avatar' => $local];
 
-        if (! $this->archive->isLocal($social->avatar) || ! $this->archive->localFileExists($social->avatar)) {
-            // No durable local yet - leave avatar as-is (may still be remote) but keep source.
+        if (is_string($sourceUrl) && $sourceUrl !== '') {
+            $fill['avatar_source_url'] = $sourceUrl;
         }
 
-        $social->forceFill($socialFill)->save();
+        TrackedAccount::query()
+            ->where('social_account_id', $social->id)
+            ->update($fill);
+    }
 
-        if ($tracker !== null) {
-            if ($this->archive->isLocal($tracker->avatar) && $this->archive->localFileExists($tracker->avatar)) {
-                // keep local avatar
-            }
-            $tracker->forceFill($trackerFill)->save();
-        }
+    private function writeFailureKeepLocal(SocialAccount $social, string $remote): void
+    {
+        $social->forceFill([
+            'avatar_source_url' => $remote,
+        ])->save();
+
+        // Keep each tracker's local avatar if it has one; only refresh the source URL.
+        TrackedAccount::query()
+            ->where('social_account_id', $social->id)
+            ->update([
+                'avatar_source_url' => $remote,
+            ]);
     }
 }
