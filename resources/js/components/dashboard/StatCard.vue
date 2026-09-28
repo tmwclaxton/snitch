@@ -88,12 +88,12 @@ const gapClass = computed(() => {
 });
 
 const growthHint = computed(() => {
-    if (!props.label.startsWith('Followers')) {
+    if (! props.label.startsWith('Followers')) {
         return null;
     }
 
     if (props.you == null) {
-        return '- growth';
+        return props.reason || 'growth from next week';
     }
 
     return `${numberFmt.format(props.you)}% 30d`;

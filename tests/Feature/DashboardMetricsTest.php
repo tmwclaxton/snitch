@@ -248,10 +248,16 @@ class DashboardMetricsTest extends TestCase
 
         $this->assertContains('great.friendship', $payload['selected']);
         $this->assertContains('goodgym', $payload['selected']);
-        $this->assertNotContains('fuss.london', $payload['selected']);
+        // Empty rivals still fill remaining compare slots as muted "no posts yet" rows.
+        $this->assertContains('fuss.london', $payload['selected']);
 
         $emptyChip = collect($payload['rivals'])->firstWhere('handle', 'fuss.london');
         $this->assertTrue($emptyChip['no_posts_in_period']);
+
+        $emptyRow = collect($payload['leaderboard']['data']['rows'])->firstWhere('handle', 'fuss.london');
+        $this->assertNotNull($emptyRow);
+        $this->assertTrue($emptyRow['no_posts_in_period']);
+        $this->assertSame('No posts yet', $emptyRow['row_note']);
 
         unset($empty);
     }

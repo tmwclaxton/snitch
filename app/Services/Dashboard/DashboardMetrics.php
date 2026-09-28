@@ -13,7 +13,7 @@ use Illuminate\Support\Collection;
 
 class DashboardMetrics
 {
-    public const MAX_COMPARE = 4;
+    public const MAX_COMPARE = 6;
 
     public const PERIODS = [7, 30, 90];
 
@@ -293,17 +293,38 @@ class DashboardMetrics
             ->values();
 
         if ($valid->isEmpty()) {
-            // Prefer rivals with posts in the period; never default-select empties
-            // when denser accounts exist.
-            return $rivals
+            // Prefer rivals with posts, then fill remaining slots with empty
+            // accounts so "no posts yet" rows still appear on the leaderboard.
+            // Force Support Collection: Eloquent Collection::merge() calls getKey().
+            $ranked = $rivals
                 ->sortByDesc(fn (TrackedAccount $account): int => (int) ($periodPostCounts[$account->social_account_id] ?? 0))
-                ->filter(fn (TrackedAccount $account): bool => (int) ($periodPostCounts[$account->social_account_id] ?? 0) > 0)
-                ->take(self::MAX_COMPARE)
-                ->map(fn (TrackedAccount $account): string => strtolower((string) $account->handle))
-                ->values()
-                ->whenEmpty(fn () => $rivals->take(self::MAX_COMPARE)
+                ->values();
+
+            $handles = collect(
+                $ranked
+                    ->filter(fn (TrackedAccount $account): bool => (int) ($periodPostCounts[$account->social_account_id] ?? 0) > 0)
+                    ->take(self::MAX_COMPARE)
                     ->map(fn (TrackedAccount $account): string => strtolower((string) $account->handle))
-                    ->values());
+                    ->all(),
+            );
+
+            if ($handles->count() < self::MAX_COMPARE) {
+                $emptyFill = collect(
+                    $ranked
+                        ->reject(fn (TrackedAccount $account): bool => $handles->contains(strtolower((string) $account->handle)))
+                        ->take(self::MAX_COMPARE - $handles->count())
+                        ->map(fn (TrackedAccount $account): string => strtolower((string) $account->handle))
+                        ->all(),
+                );
+
+                $handles = $handles->merge($emptyFill)->values();
+            }
+
+            return $handles->whenEmpty(fn () => collect(
+                $rivals->take(self::MAX_COMPARE)
+                    ->map(fn (TrackedAccount $account): string => strtolower((string) $account->handle))
+                    ->all(),
+            ));
         }
 
         return $valid;
@@ -881,8 +902,8 @@ class DashboardMetrics
             ),
             $this->kpiStat(
                 key: 'er',
-                label: 'ER (per follower)',
-                why: 'Engagement rate (per follower): Does your content land with your own audience?',
+                label: 'Engagement rate',
+                why: 'likes + comments per post, as a % of followers',
                 formula: 'median((likes+comments)/followers×100) over posts in period',
                 you: $ownRow,
                 peers: $peerRows,
@@ -965,7 +986,7 @@ class DashboardMetrics
             // Still show the current follower count; growth stays "—" until
             // two snapshots exist (do not replace the cell with a paragraph).
             $status = 'ok';
-            $reason = 'Growth appears after 2 weekly snapshots.';
+            $reason = 'growth from next week';
         } elseif ($reelEmpty && $you !== null && $youValue === null && $youN > 0) {
             $status = 'ok';
             $reason = 'No Reels in this period.';
@@ -1049,7 +1070,7 @@ class DashboardMetrics
                 $rowNote = null;
 
                 if ($noPosts) {
-                    $rowNote = 'No posts imported yet';
+                    $rowNote = 'No posts yet';
                 } elseif ($measurable === 0 && $hiddenN > 0) {
                     $rowNote = 'Likes hidden on Instagram';
                 } elseif ($erUnavailable && $hiddenN > 0) {

@@ -94,6 +94,8 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString(':tracker-ids="trackerIdsByHandle"', $dashboard);
         $this->assertStringContainsString('weekly_brief.ideas', $dashboard);
         $this->assertStringContainsString('Post this next', $dashboard);
+        $this->assertStringContainsString('break-words text-slate-800', $dashboard);
+        $this->assertStringNotContainsString('truncate text-slate-800', $dashboard);
         $this->assertStringContainsString('lg:h-0 lg:min-h-full', $dashboard);
         $this->assertStringContainsString('snitch-dash-heatmap-panel', $dashboard);
         $this->assertStringNotContainsString('mt-auto p-2', $dashboard);
@@ -108,9 +110,17 @@ class DashboardTest extends TestCase
         $compare = file_get_contents(resource_path('js/components/dashboard/CompareTable.vue'));
         $this->assertNotFalse($compare);
         $this->assertStringContainsString('text-right', $compare);
-        $this->assertStringContainsString('Posts', $compare);
-        $this->assertStringContainsString('/ wk', $compare);
+        $this->assertStringContainsString('showGrowth', $compare);
+        $this->assertStringContainsString('no posts yet', $compare);
+        $this->assertStringContainsString('toFixed(1)', $compare);
+        $this->assertStringContainsString('postTypeLabel', $compare);
+        $this->assertStringNotContainsString('postTypeShortLabel', $compare);
         $this->assertStringNotContainsString('uppercase tracking-wide', $compare);
+
+        $statCard = file_get_contents(resource_path('js/components/dashboard/StatCard.vue'));
+        $this->assertNotFalse($statCard);
+        $this->assertStringContainsString('growth from next week', $statCard);
+        $this->assertStringNotContainsString('- growth', $statCard);
 
         $captions = file_get_contents(resource_path('js/components/dashboard/CaptionPanels.vue'));
         $this->assertNotFalse($captions);

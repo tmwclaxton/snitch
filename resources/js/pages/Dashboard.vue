@@ -262,34 +262,36 @@ const trackerIdsByHandle = computed(() => {
         <div class="mx-auto max-w-none space-y-2">
             <div
                 v-if="weekly_brief"
-                class="flex min-w-0 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1"
+                class="flex min-w-0 items-start gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5"
             >
-                <p class="hidden shrink-0 text-xs font-semibold text-slate-800 sm:block">
+                <p class="hidden shrink-0 pt-0.5 text-xs font-semibold text-slate-800 sm:block">
                     Post this next
                 </p>
-                <div class="flex min-w-0 flex-1 items-stretch gap-1.5 overflow-hidden">
+                <div class="grid min-w-0 flex-1 grid-cols-1 gap-1.5 sm:grid-cols-3">
                     <Link
                         v-for="(idea, index) in (weekly_brief.ideas || []).slice(0, 3)"
                         :key="`${idea.slot}-${index}`"
                         :href="briefIndex.url()"
-                        class="flex min-w-0 flex-1 items-center gap-1.5 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs leading-snug text-slate-700 hover:border-slate-400"
+                        class="flex min-w-0 flex-col gap-0.5 rounded border border-slate-200 bg-white px-1.5 py-1 text-sm leading-snug text-slate-700 hover:border-slate-400"
                     >
-                        <span class="shrink-0 rounded bg-slate-100 px-1 py-px font-medium uppercase tracking-wide text-slate-600">
-                            {{ idea.format }}
-                        </span>
-                        <span class="min-w-0 flex-1 truncate text-slate-800">{{ idea.hook }}</span>
-                        <span class="shrink-0 tabular-nums text-slate-500">{{ idea.slot }}</span>
+                        <div class="flex items-center gap-1.5 text-xs">
+                            <span class="shrink-0 rounded bg-slate-100 px-1 py-px font-medium uppercase tracking-wide text-slate-600">
+                                {{ idea.format }}
+                            </span>
+                            <span class="shrink-0 tabular-nums text-slate-500">{{ idea.slot }}</span>
+                        </div>
+                        <span class="break-words text-slate-800">{{ idea.hook }}</span>
                     </Link>
                     <p
                         v-if="!(weekly_brief.ideas || []).length"
-                        class="min-w-0 flex-1 truncate text-xs text-slate-500"
+                        class="min-w-0 text-sm leading-snug text-slate-500 sm:col-span-3"
                     >
                         {{ weekly_brief.hook || 'Three weekly ideas from competitor winners' }}
                     </p>
                 </div>
                 <Link
                     :href="briefIndex.url()"
-                    class="shrink-0 rounded bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-800"
+                    class="shrink-0 self-center rounded bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-800"
                 >
                     This week
                 </Link>

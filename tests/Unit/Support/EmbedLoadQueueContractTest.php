@@ -192,8 +192,9 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringNotContainsString('>CTAs<', $captions);
         $compare = file_get_contents(base_path('resources/js/components/dashboard/CompareTable.vue'));
         $this->assertIsString($compare);
-        $this->assertStringContainsString('postTypeShortLabel', $compare);
-        $this->assertStringContainsString('break-words font-medium', $compare);
+        $this->assertStringContainsString('postTypeLabel', $compare);
+        $this->assertStringContainsString('showGrowth', $compare);
+        $this->assertStringContainsString('no posts yet', $compare);
         $this->assertStringContainsString('text-right', $compare);
         $this->assertStringContainsString('/ wk', $compare);
         $themes = file_get_contents(base_path('resources/js/components/dashboard/ThemeMatrix.vue'));
