@@ -16,11 +16,11 @@ const open = ref(false);
 <template>
     <section
         :id="anchor || undefined"
-        class="scroll-mt-14 rounded border border-slate-200 bg-white px-2 py-1.5 transition-shadow duration-500"
+        class="scroll-mt-14 rounded border border-slate-200 bg-white px-2 py-1 transition-shadow duration-500"
         :class="props.class"
     >
-        <div class="mb-1 flex h-7 items-center justify-between gap-2">
-            <h2 class="min-w-0 text-[11px] font-semibold leading-snug tracking-tight text-slate-900">{{ title }}</h2>
+        <div class="mb-1 flex h-6 items-center justify-between gap-2">
+            <h2 class="min-w-0 text-sm font-semibold leading-snug tracking-tight text-slate-900">{{ title }}</h2>
             <button
                 v-if="formula || why"
                 type="button"

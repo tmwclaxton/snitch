@@ -16,56 +16,168 @@ defineProps<{
     hashtagBuckets?: HashBucket[];
     hooks?: Hook[];
 }>();
+
+/** Bar fill relative to 1× usual, capped at 3×. */
+function multiplierBarWidth(value: number | null): string {
+    if (value == null || Number.isNaN(value)) {
+        return '0%';
+    }
+
+    const capped = Math.min(3, Math.max(0, value));
+
+    return `${Math.round((capped / 3) * 100)}%`;
+}
+
+function formatMultiplier(value: number | null): string | null {
+    if (value == null || Number.isNaN(value)) {
+        return null;
+    }
+
+    return `${value.toFixed(1)}×`;
+}
 </script>
 
 <template>
     <EmptyState v-if="status !== 'ok'" :reason="reason" compact />
-    <div v-else class="space-y-1.5">
-        <div class="grid gap-2 sm:grid-cols-3">
-            <div>
-                <p class="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">Length vs PI</p>
+    <div v-else class="space-y-2">
+        <p class="text-[11px] leading-snug text-slate-500">
+            Results = a post's engagement vs that account's usual (1.0× = normal).
+        </p>
+
+        <div class="grid gap-3 sm:grid-cols-3 sm:gap-4 sm:max-w-3xl">
+            <div class="min-w-0 max-w-[16rem]">
+                <p class="mb-1 text-[11px] font-medium text-slate-600">
+                    Caption length vs results
+                </p>
                 <ul class="space-y-1">
                     <li
                         v-for="row in lengthBuckets || []"
                         :key="row.bucket"
-                        class="flex items-center justify-between gap-2 text-[11px] text-slate-700"
+                        class="flex items-center gap-1.5 text-[12px] text-slate-700"
                     >
-                        <span>{{ row.bucket }} <span class="text-slate-400">n={{ row.n }}</span></span>
-                        <span class="tabular-nums font-medium">{{ row.pi != null ? `${row.pi.toFixed(1)}x` : '-' }}</span>
+                        <span class="w-[4.75rem] shrink-0 leading-snug">
+                            {{ row.bucket }}
+                            <span class="text-slate-400">n={{ row.n }}</span>
+                        </span>
+                        <div
+                            class="relative h-1.5 w-14 shrink-0 overflow-hidden rounded-sm bg-slate-100"
+                            aria-hidden="true"
+                        >
+                            <div
+                                class="absolute inset-y-0 left-0 rounded-sm bg-slate-700"
+                                :style="{ width: multiplierBarWidth(row.pi) }"
+                            />
+                            <div
+                                class="absolute inset-y-0 w-px bg-slate-300"
+                                style="left: 33.333%"
+                            />
+                        </div>
+                        <span
+                            v-if="formatMultiplier(row.pi)"
+                            class="shrink-0 tabular-nums font-medium text-slate-900"
+                        >
+                            {{ formatMultiplier(row.pi) }}
+                        </span>
+                        <span
+                            v-else
+                            class="shrink-0 text-[11px] text-slate-400"
+                        >
+                            too few posts
+                        </span>
                     </li>
                 </ul>
             </div>
-            <div>
-                <p class="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">CTAs</p>
+
+            <div class="min-w-0 max-w-[16rem]">
+                <p class="mb-1 text-[11px] font-medium text-slate-600">
+                    Call to action
+                </p>
                 <EmptyState v-if="!(ctas || []).length" reason="Not enough posts in this bucket" compact />
                 <ul v-else class="space-y-1">
                     <li
                         v-for="row in ctas"
                         :key="row.type"
-                        class="flex items-center justify-between gap-2 text-[11px] text-slate-700"
+                        class="flex items-center gap-1.5 text-[12px] text-slate-700"
                     >
-                        <span class="min-w-0 break-words leading-snug">{{ row.type }} <span class="text-slate-400">{{ row.share_pct }}%</span></span>
-                        <span class="shrink-0 tabular-nums font-medium">{{ row.pi_with != null ? `${row.pi_with.toFixed(1)}x` : '-' }}</span>
+                        <span class="w-[5.5rem] shrink-0 break-words leading-snug">
+                            {{ row.type }}
+                            <span class="text-slate-400">{{ row.share_pct }}%</span>
+                        </span>
+                        <div
+                            class="relative h-1.5 w-14 shrink-0 overflow-hidden rounded-sm bg-slate-100"
+                            aria-hidden="true"
+                        >
+                            <div
+                                class="absolute inset-y-0 left-0 rounded-sm bg-slate-700"
+                                :style="{ width: multiplierBarWidth(row.pi_with) }"
+                            />
+                            <div
+                                class="absolute inset-y-0 w-px bg-slate-300"
+                                style="left: 33.333%"
+                            />
+                        </div>
+                        <span
+                            v-if="formatMultiplier(row.pi_with)"
+                            class="shrink-0 tabular-nums font-medium text-slate-900"
+                        >
+                            {{ formatMultiplier(row.pi_with) }}
+                        </span>
+                        <span
+                            v-else
+                            class="shrink-0 text-[11px] text-slate-400"
+                        >
+                            too few posts
+                        </span>
                     </li>
                 </ul>
             </div>
-            <div>
-                <p class="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">Hashtags</p>
+
+            <div class="min-w-0 max-w-[16rem]">
+                <p class="mb-1 text-[11px] font-medium text-slate-600">
+                    Hashtag count
+                </p>
                 <ul class="space-y-1">
                     <li
                         v-for="row in hashtagBuckets || []"
                         :key="row.bucket"
-                        class="flex items-center justify-between gap-2 text-[11px] text-slate-700"
+                        class="flex items-center gap-1.5 text-[12px] text-slate-700"
                     >
-                        <span>{{ row.bucket }} tags <span class="text-slate-400">n={{ row.n }}</span></span>
-                        <span class="tabular-nums font-medium">{{ row.pi != null ? `${row.pi.toFixed(1)}x` : '-' }}</span>
+                        <span class="w-[4.75rem] shrink-0 leading-snug">
+                            {{ row.bucket }} tags
+                            <span class="text-slate-400">n={{ row.n }}</span>
+                        </span>
+                        <div
+                            class="relative h-1.5 w-14 shrink-0 overflow-hidden rounded-sm bg-slate-100"
+                            aria-hidden="true"
+                        >
+                            <div
+                                class="absolute inset-y-0 left-0 rounded-sm bg-slate-700"
+                                :style="{ width: multiplierBarWidth(row.pi) }"
+                            />
+                            <div
+                                class="absolute inset-y-0 w-px bg-slate-300"
+                                style="left: 33.333%"
+                            />
+                        </div>
+                        <span
+                            v-if="formatMultiplier(row.pi)"
+                            class="shrink-0 tabular-nums font-medium text-slate-900"
+                        >
+                            {{ formatMultiplier(row.pi) }}
+                        </span>
+                        <span
+                            v-else
+                            class="shrink-0 text-[11px] text-slate-400"
+                        >
+                            too few posts
+                        </span>
                     </li>
                 </ul>
             </div>
         </div>
 
         <div>
-            <p class="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">Winning hooks</p>
+            <p class="mb-1 text-[11px] font-medium text-slate-600">Winning hooks</p>
             <EmptyState v-if="!(hooks || []).length" reason="No winner hooks yet" compact />
             <ul
                 v-else
@@ -74,11 +186,11 @@ defineProps<{
                 <li
                     v-for="(hook, idx) in hooks"
                     :key="idx"
-                    class="min-w-0 rounded border border-slate-100 bg-slate-50/80 px-1.5 py-1 text-[11px] leading-snug text-slate-700"
+                    class="min-w-0 rounded border border-slate-100 bg-slate-50/80 px-1.5 py-1 text-[12px] leading-snug text-slate-700"
                 >
                     <div class="flex flex-wrap items-baseline gap-x-1 gap-y-0.5">
-                        <span class="rounded bg-white px-1 text-[9px] uppercase text-slate-500">{{ hook.pattern }}</span>
-                        <span class="font-medium tabular-nums text-slate-900">{{ hook.pi.toFixed(1) }}x</span>
+                        <span class="rounded bg-white px-1 text-[10px] uppercase text-slate-500">{{ hook.pattern }}</span>
+                        <span class="font-medium tabular-nums text-slate-900">{{ hook.pi.toFixed(1) }}× usual</span>
                         <Link
                             v-if="hook.tracked_account_id"
                             :href="competitorShow.url(hook.tracked_account_id)"

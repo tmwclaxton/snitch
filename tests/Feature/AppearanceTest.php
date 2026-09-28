@@ -72,6 +72,9 @@ class AppearanceTest extends TestCase
         $this->assertStringContainsString('bg-white', $settings);
         $this->assertStringNotContainsString('quieter paper', $settings);
         $this->assertStringContainsString('snitch-app-chrome', $css);
+        $this->assertStringContainsString('font-size: 14px', $css);
+        $this->assertStringContainsString('font-size: 15px', $css);
+        $this->assertStringContainsString('.text-\\[10px\\]', $css);
         $this->assertMatchesRegularExpression(
             '/\.snitch-app-shell\s*\{[^}]*min-height:\s*calc\(100svh\s*-\s*4rem\)/s',
             $css,

@@ -354,10 +354,66 @@
     /*
      * Logged-in app chrome: match the white marketing home (no cream paper,
      * no serif display, no ticket/tape chrome). Marketing Beta keeps ticket buttons.
+     * Type floor: body ~14px (15px from xl), micro labels never below 12px.
      */
     .snitch-app-chrome {
         background-color: #ffffff;
         color: #0a0a0a;
+        font-size: 14px;
+        line-height: 1.45;
+    }
+
+    @media (min-width: 1280px) {
+        .snitch-app-chrome {
+            font-size: 15px;
+        }
+    }
+
+    /* Remap dashboard/product micro utilities so density stays via padding, not type. */
+    .snitch-app-chrome :is(.text-\[8px\], .text-\[9px\], .text-\[10px\]) {
+        font-size: 0.75rem; /* 12px */
+        line-height: 1.35;
+    }
+
+    .snitch-app-chrome .text-\[11px\] {
+        font-size: 0.8125rem; /* 13px */
+        line-height: 1.4;
+    }
+
+    .snitch-app-chrome .text-xs {
+        font-size: 0.75rem; /* 12px floor */
+        line-height: 1.4;
+    }
+
+    .snitch-app-chrome .text-sm {
+        font-size: 0.875rem; /* 14px */
+        line-height: 1.45;
+    }
+
+    .snitch-app-chrome .text-base {
+        font-size: 0.9375rem; /* 15px */
+        line-height: 1.45;
+    }
+
+    @media (min-width: 1280px) {
+        .snitch-app-chrome .text-base {
+            font-size: 1rem; /* 16px */
+        }
+    }
+
+    .snitch-app-chrome .text-lg {
+        font-size: 1.25rem; /* 20px KPI/heading bump */
+        line-height: 1.2;
+    }
+
+    .snitch-app-chrome .text-xl {
+        font-size: 1.375rem;
+        line-height: 1.2;
+    }
+
+    .snitch-app-chrome .text-2xl {
+        font-size: 1.5rem;
+        line-height: 1.2;
     }
 
     /* Keep the logged-in shell white (sidebar + content), not cream paper */

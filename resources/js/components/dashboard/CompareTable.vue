@@ -59,7 +59,7 @@ function formatCell(value: string | null): string {
 
 <template>
     <EmptyState v-if="status !== 'ok' || !rows?.length" :reason="reason" compact />
-    <table v-else class="w-full table-fixed text-left text-[11px]">
+    <table v-else class="w-full table-fixed text-left text-xs">
         <colgroup>
             <col class="w-[32%]">
             <col class="w-[13%]">
@@ -70,12 +70,12 @@ function formatCell(value: string | null): string {
             <col class="w-[10%]">
         </colgroup>
         <thead>
-            <tr class="border-b border-slate-200 text-[9px] uppercase tracking-wide text-slate-500">
+            <tr class="border-b border-slate-200 text-[10px] uppercase tracking-wide text-slate-500">
                 <th class="h-7 pr-1 font-medium">Account</th>
                 <th class="h-7 px-1 font-medium">Followers</th>
                 <th class="h-7 px-1 font-medium">Growth</th>
                 <th class="h-7 px-1 font-medium">Posts/wk</th>
-                <th class="h-7 px-1 font-medium">ER</th>
+                <th class="h-7 px-1 font-medium">Eng. rate</th>
                 <th class="h-7 px-1 font-medium">Format</th>
                 <th class="h-7 px-1 font-medium">Win</th>
             </tr>

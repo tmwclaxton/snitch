@@ -101,10 +101,10 @@ const growthHint = computed(() => {
 </script>
 
 <template>
-    <div class="min-w-0 border-r border-slate-200 px-2 py-1.5 last:border-r-0">
+    <div class="min-w-0 border-r border-slate-200 px-1.5 py-1 last:border-r-0">
         <div class="flex items-center justify-between gap-1">
             <div
-                class="min-w-0 text-[9px] font-medium uppercase leading-tight tracking-wide text-slate-500"
+                class="min-w-0 text-[10px] font-medium uppercase leading-tight tracking-wide text-slate-500"
                 :title="label"
             >
                 {{ label }}
@@ -120,7 +120,7 @@ const growthHint = computed(() => {
                 <Info class="h-3 w-3" />
                 <div
                     v-if="open"
-                    class="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-slate-200 bg-white p-2 text-left text-[11px] text-slate-600 shadow-sm"
+                    class="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-slate-200 bg-white p-2 text-left text-xs text-slate-600 shadow-sm"
                 >
                     <p class="mb-1 text-slate-700">{{ why }}</p>
                     <p class="text-slate-500">{{ formula }}</p>
@@ -130,12 +130,12 @@ const growthHint = computed(() => {
         </div>
 
         <div
-            class="mt-0.5 text-lg font-semibold tracking-tight text-slate-900 tabular-nums leading-none"
+            class="mt-0.5 text-xl font-semibold tracking-tight text-slate-900 tabular-nums leading-none"
             :title="youLabel === '-' ? (reason || undefined) : undefined"
         >
             {{ youLabel }}
         </div>
-        <div class="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] leading-none text-slate-500">
+        <div class="mt-0.5 flex flex-wrap items-center gap-1 text-xs leading-none text-slate-500">
             <span v-if="growthHint">{{ growthHint }}</span>
             <span v-else>Peer {{ peerLabel }}</span>
             <span

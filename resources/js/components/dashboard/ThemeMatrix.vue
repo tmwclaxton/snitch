@@ -113,7 +113,7 @@ function accountHeading(account: Account): string {
                             :key="cell.handle"
                             class="px-1 py-1 tabular-nums"
                             :style="{ backgroundColor: cellBg(cell.pi, cell.n) }"
-                            :title="`n=${cell.n}${cell.pi != null ? ` · PI ${cell.pi}` : ''}`"
+                            :title="`n=${cell.n}${cell.pi != null ? ` · ${cell.pi}× usual` : ''}`"
                         >
                             {{ cell.n < 1 ? '-' : `${cell.share.toFixed(0)}%` }}
                         </td>

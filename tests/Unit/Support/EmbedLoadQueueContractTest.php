@@ -170,10 +170,18 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringNotContainsString('line-clamp-', $winnerCard);
         $captions = file_get_contents(base_path('resources/js/components/dashboard/CaptionPanels.vue'));
         $this->assertIsString($captions);
+        $this->assertStringContainsString('Caption length vs results', $captions);
+        $this->assertStringContainsString('Call to action', $captions);
+        $this->assertStringContainsString('Hashtag count', $captions);
+        $this->assertStringContainsString('too few posts', $captions);
+        $this->assertStringContainsString('Results = a post\'s engagement vs that account\'s usual', $captions);
+        $this->assertStringContainsString('multiplierBarWidth', $captions);
         $this->assertStringContainsString('auto-fit,minmax(9.5rem,1fr)', $captions);
         $this->assertStringContainsString('Winning hooks', $captions);
         $this->assertStringContainsString('line-clamp-3', $captions);
         $this->assertStringContainsString('break-all text-slate-500', $captions);
+        $this->assertStringNotContainsString('Length vs PI', $captions);
+        $this->assertStringNotContainsString('>CTAs<', $captions);
         $compare = file_get_contents(base_path('resources/js/components/dashboard/CompareTable.vue'));
         $this->assertIsString($compare);
         $this->assertStringContainsString('postTypeShortLabel', $compare);

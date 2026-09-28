@@ -247,7 +247,7 @@ const showFollowerNote = computed(
     () => props.follower_series != null && !hasFollowerHistory.value,
 );
 
-const recentThumbs = computed(() => (props.recent_posts ?? []).slice(0, 6));
+const recentThumbs = computed(() => (props.recent_posts ?? []).slice(0, 4));
 
 const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? {});
 </script>
@@ -486,7 +486,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                         <DashCard
                             title="Leaderboard"
                             why="One glance shows who is ahead, and on what."
-                            formula="ER = median per-follower engagement. Hidden likes and all-zero samples show as -."
+                            formula="Engagement rate = median per-follower engagement. Hidden likes and all-zero samples show as -."
                             anchor="leaderboard"
                         >
                             <CompareTable
@@ -585,8 +585,8 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
 
                 <DashCard
                     title="Winning posts"
-                    why="Ready-made post ideas already proven with a similar audience (ranked by PI, not raw likes)."
-                    formula="PI = interactions ÷ median of the account's previous 30 posts. Winner ≥ 2.0×. Hidden-likes posts use comments+views when the toggle is on."
+                    why="Ready-made post ideas already proven with a similar audience (ranked by performance vs usual, not raw likes)."
+                    formula="Performance vs usual = interactions ÷ median of the account's previous 30 posts. Winner ≥ 2.0×. Hidden-likes posts use comments+views when the toggle is on."
                     anchor="winners"
                 >
                     <div class="mb-1 flex items-center gap-1.5">
@@ -658,15 +658,15 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                     id="recent_posts"
                     class="min-w-0"
                 >
-                    <div class="mb-1 flex items-center justify-between gap-2">
-                        <h2 class="text-[11px] font-semibold text-slate-900">Latest posts</h2>
-                        <Link :href="feedIndex.url()" class="text-[11px] font-medium text-slate-500 hover:text-slate-800">
+                    <div class="mb-1.5 flex items-center justify-between gap-2">
+                        <h2 class="text-sm font-semibold text-slate-900">Latest posts</h2>
+                        <Link :href="feedIndex.url()" class="text-xs font-medium text-slate-500 hover:text-slate-800">
                             Open feed →
                         </Link>
                     </div>
                     <div
                         v-if="recent_posts"
-                        class="grid grid-cols-3 gap-1.5 sm:grid-cols-6"
+                        class="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4"
                     >
                         <Link
                             v-for="post in recentThumbs"
@@ -674,7 +674,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                             :href="feedShow.url(post.id)"
                             class="group overflow-hidden rounded border border-slate-200 bg-white transition hover:border-slate-400 hover:shadow-sm"
                         >
-                            <div class="h-[100px] bg-slate-100">
+                            <div class="aspect-square min-h-[7.5rem] bg-slate-100 sm:min-h-[8.5rem]">
                                 <SnitchImage
                                     :src="post.cover_url"
                                     alt=""
@@ -684,7 +684,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                                     fallback="paper"
                                 />
                             </div>
-                            <p class="break-all px-1 py-0.5 text-[10px] leading-snug text-slate-600">
+                            <p class="break-words px-1.5 py-1.5 text-xs leading-snug text-slate-600">
                                 <span
                                     v-if="post.tracked_account?.id"
                                     role="link"
@@ -713,7 +713,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                 <DashCard
                     title="Captions and hooks"
                     why="Free changes to how posts are written."
-                    formula="Length excludes trailing hashtags. CTA via regex. Hooks from top PI winners."
+                    formula="Length excludes trailing hashtags. Call to action via regex. Hooks from top performance winners."
                     anchor="captions"
                 >
                     <CaptionPanels
@@ -731,7 +731,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                 <DashCard
                     title="Topics and themes"
                     why="Topic gaps peers win with that you skip. Top 5 themes only."
-                    formula="share = posts(theme)/posts · colour = median PI"
+                    formula="share = posts(theme)/posts · colour = median performance vs usual"
                     anchor="themes"
                 >
                     <ThemeMatrix
@@ -748,7 +748,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
 
                 <DashCard
                     title="Data notes"
-                    why="Trust after the 102% ER incident."
+                    why="Trust after the 102% engagement-rate incident."
                     formula="Posts analysed, range, excluded hidden likes. Reach/saves/shares are private."
                     anchor="data_notes"
                 >

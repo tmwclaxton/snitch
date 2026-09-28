@@ -83,6 +83,8 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('feedShow.url(post.id)', $dashboard);
         $this->assertStringContainsString('competitorShow.url(rival.id)', $dashboard);
         $this->assertStringContainsString('xl:grid-cols-6', $dashboard);
+        $this->assertStringContainsString('xl:grid-cols-4', $dashboard);
+        $this->assertStringContainsString('performance vs usual', strtolower($dashboard));
         $this->assertStringContainsString('feedShow.url(post.id)', $winnerCard);
         $this->assertStringContainsString('competitorShow.url(props.post.tracked_account_id)', $winnerCard);
         $this->assertStringContainsString('their usual', $winnerCard);
