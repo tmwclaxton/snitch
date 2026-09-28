@@ -134,7 +134,10 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('WinnerCard', $dashboard);
         $this->assertStringContainsString('id="recent_posts"', $dashboard);
         $this->assertStringContainsString('id="format_mix"', $dashboard);
+        $this->assertStringContainsString('id="activity"', $dashboard);
         $this->assertStringContainsString('id="caption_intel"', $dashboard);
+        $this->assertStringContainsString('snitch-heatmap--dash', $dashboard);
+        $this->assertStringContainsString('snitch-dash-chip-stack', $dashboard);
         $this->assertStringContainsString('items-stretch gap-2 lg:grid-cols-2', $dashboard);
         $this->assertStringContainsString('showFollowerNote', $dashboard);
         $this->assertStringContainsString('first snapshot only', $dashboard);

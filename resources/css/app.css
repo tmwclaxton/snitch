@@ -2501,6 +2501,67 @@
         min-width: 0.55rem;
     }
 
+    /* Dashboard half-width heat map: taller cells so row height matches Hashtags + CTA. */
+    .snitch-heatmap--dash .snitch-heatmap-months {
+        grid-template-columns: 1rem repeat(16, minmax(0, 1fr));
+        margin-bottom: 0.28rem;
+        min-height: 0.85rem;
+    }
+
+    .snitch-heatmap--dash .snitch-heatmap-month {
+        font-size: 0.62rem;
+        letter-spacing: 0.05em;
+    }
+
+    .snitch-heatmap--dash .snitch-heatmap-body {
+        grid-template-columns: 1rem minmax(0, 1fr);
+        gap: 0.28rem;
+    }
+
+    .snitch-heatmap--dash .snitch-heatmap-weekdays,
+    .snitch-heatmap--dash .snitch-heatmap-week {
+        grid-template-rows: repeat(7, 0.9rem);
+        gap: 3px;
+    }
+
+    .snitch-heatmap--dash .snitch-heatmap-weekday {
+        font-size: 0.6rem;
+        line-height: 0.9rem;
+    }
+
+    .snitch-heatmap--dash .snitch-heatmap-grid {
+        gap: 3px;
+        padding-block: 0.15rem;
+        padding-inline: 2%;
+    }
+
+    .snitch-heatmap--dash .snitch-heatmap-cell {
+        height: 0.9rem;
+        min-width: 0;
+    }
+
+    .snitch-heatmap--dash .snitch-heatmap-legend {
+        margin-top: 0.35rem;
+        gap: 0.25rem;
+    }
+
+    .snitch-heatmap--dash .snitch-heatmap-legend .snitch-heatmap-cell {
+        width: 0.7rem;
+        min-width: 0.7rem;
+        height: 0.7rem;
+    }
+
+    .snitch-dash-chip-stack .snitch-glance-tag {
+        padding: 0.12rem 0.32rem;
+        font-size: 0.68rem;
+        line-height: 1.25;
+    }
+
+    .snitch-dash-chip-stack .snitch-cta-type {
+        padding: 0.14rem 0.36rem;
+        font-size: 0.72rem;
+    }
+
     .snitch-platform-bar-track {
         display: flex;
         align-items: center;

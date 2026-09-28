@@ -493,46 +493,48 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                     </div>
                 </div>
 
-                <section id="activity" class="snitch-scrap relative p-2">
-                    <div class="mb-1 flex items-baseline justify-between gap-2">
-                        <p class="snitch-ink-label">Posting heat map</p>
-                        <p class="tabular-nums text-[10px] text-slate-500">16 wks</p>
-                    </div>
-                    <PostingHeatmap
-                        v-if="activity"
-                        class="snitch-dash-soft-in"
-                        :days="activity.heatmap"
-                    />
-                    <SnitchSkeleton v-else variant="scrap" height="4rem" label="Loading heat map" />
-                </section>
-
-                <section
-                    id="caption_intel"
-                    class="snitch-scrap grid items-start gap-x-4 gap-y-1.5 p-2 sm:grid-cols-2"
-                >
-                    <div class="min-w-0">
-                        <p class="snitch-ink-label mb-1">Hashtags</p>
-                        <div v-if="caption_intel" class="flex flex-wrap gap-1">
-                            <span
-                                v-for="row in caption_intel.hashtags.slice(0, 14)"
-                                :key="`hash-${row.term}`"
-                                class="snitch-glance-tag"
-                            >
-                                #{{ row.term }}
-                                <span class="tabular-nums text-slate-500">{{ row.count }}</span>
-                            </span>
-                            <p v-if="!caption_intel.hashtags.length" class="text-[11px] text-slate-500">None yet.</p>
+                <div class="grid items-stretch gap-2 lg:grid-cols-2">
+                    <section id="activity" class="snitch-scrap relative flex h-full min-w-0 flex-col p-2">
+                        <div class="mb-1 flex items-baseline justify-between gap-2">
+                            <p class="snitch-ink-label">Posting heat map</p>
+                            <p class="tabular-nums text-[10px] text-slate-500">16 wks</p>
                         </div>
-                        <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading hashtags" />
-                    </div>
-                    <div class="min-w-0">
-                        <CtaLanguage
-                            v-if="caption_intel"
-                            :ctas="caption_intel.ctas"
+                        <PostingHeatmap
+                            v-if="activity"
+                            class="snitch-heatmap--dash snitch-dash-soft-in mt-auto"
+                            :days="activity.heatmap"
                         />
-                        <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading CTA language" />
-                    </div>
-                </section>
+                        <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading heat map" />
+                    </section>
+
+                    <section
+                        id="caption_intel"
+                        class="snitch-scrap snitch-dash-chip-stack flex h-full min-w-0 flex-col gap-2 p-2"
+                    >
+                        <div class="min-w-0">
+                            <p class="snitch-ink-label mb-1">Hashtags</p>
+                            <div v-if="caption_intel" class="flex flex-wrap gap-1">
+                                <span
+                                    v-for="row in caption_intel.hashtags.slice(0, 14)"
+                                    :key="`hash-${row.term}`"
+                                    class="snitch-glance-tag"
+                                >
+                                    #{{ row.term }}
+                                    <span class="tabular-nums text-slate-500">{{ row.count }}</span>
+                                </span>
+                                <p v-if="!caption_intel.hashtags.length" class="text-[11px] text-slate-500">None yet.</p>
+                            </div>
+                            <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading hashtags" />
+                        </div>
+                        <div class="min-w-0">
+                            <CtaLanguage
+                                v-if="caption_intel"
+                                :ctas="caption_intel.ctas"
+                            />
+                            <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading CTA language" />
+                        </div>
+                    </section>
+                </div>
 
                 <div
                     v-if="hasFollowerHistory"
