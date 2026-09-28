@@ -176,6 +176,7 @@ class BriefController extends Controller
                     'position' => $idea->position,
                     'format' => $idea->format,
                     'hook' => $idea->hook,
+                    'visual' => $idea->visual,
                     'caption_angle' => $idea->caption_angle,
                     'cta' => $idea->cta,
                     'hashtags' => $idea->hashtags ?? [],

@@ -8,15 +8,37 @@ defineOptions({
 
 type Kpi = {
     you: number | null;
+    you_display: string;
     you_change: number | null;
+    you_change_label: string;
     peer: number | null;
+    peer_display: string;
+    peer_change: number | null;
+    peer_change_label: string;
+};
+
+type PostRow = {
+    caption: string;
+    caption_preview?: string;
+    multiplier: number | null;
+    thumbnail_url?: string | null;
+};
+
+type WinnerRow = {
+    handle: string | null;
+    caption: string;
+    caption_preview?: string;
+    multiplier: number | null;
+    thumbnail_url?: string | null;
+    why?: string | null;
 };
 
 type Report = {
     month_label: string;
+    prev_month_label?: string;
     kpis: Record<string, Kpi>;
-    own_top_posts: Array<{ caption: string; multiplier: number | null }>;
-    competitor_winners: Array<{ handle: string | null; caption: string; multiplier: number | null }>;
+    own_top_posts: PostRow[];
+    competitor_winners: WinnerRow[];
     what_changed: string[];
     next_focus: Array<{ format: string; hook: string; why: string | null }>;
 };
@@ -33,14 +55,8 @@ const kpiLabels: Record<string, string> = {
     avg_multiplier: 'Avg X× usual',
 };
 
-function formatChange(value: number | null): string {
-    if (value === null) {
-        return '-';
-    }
-
-    const sign = value > 0 ? '+' : '';
-
-    return `${sign}${value}%`;
+function captionText(row: { caption: string; caption_preview?: string }): string {
+    return row.caption || row.caption_preview || 'Untitled';
 }
 </script>
 
@@ -61,36 +77,79 @@ function formatChange(value: number | null): string {
                 class="snitch-scrap p-3"
             >
                 <p class="snitch-ink-label">{{ label }}</p>
-                <p class="mt-1 font-display text-2xl">{{ report.kpis[key]?.you ?? '-' }}</p>
-                <p class="text-xs text-snitch-ink/60">
-                    {{ formatChange(report.kpis[key]?.you_change ?? null) }} vs prior · peer {{ report.kpis[key]?.peer ?? '-' }}
+                <p class="mt-1 font-display text-2xl">{{ report.kpis[key]?.you_display ?? 'no data' }}</p>
+                <p class="mt-1 text-sm text-snitch-ink/60">
+                    vs last month:
+                    <span :class="report.kpis[key]?.you_change == null ? 'text-snitch-ink/45' : ''">
+                        {{ report.kpis[key]?.you_change_label ?? 'no data' }}
+                    </span>
+                    · peer
+                    {{ report.kpis[key]?.peer_display ?? 'no data' }}
+                    <span :class="report.kpis[key]?.peer_change == null ? 'text-snitch-ink/45' : ''">
+                        ({{ report.kpis[key]?.peer_change_label ?? 'no data' }})
+                    </span>
                 </p>
             </article>
         </section>
 
         <section class="snitch-scrap space-y-2 p-3">
             <h2 class="font-display text-lg">Your top posts</h2>
-            <p
+            <div
                 v-for="(post, index) in report.own_top_posts"
                 :key="index"
-                class="text-sm"
+                class="flex gap-3 text-sm"
             >
-                <span v-if="post.multiplier" class="snitch-ink-label mr-1">{{ post.multiplier }}×</span>
-                {{ post.caption || 'Untitled' }}
-            </p>
+                <img
+                    v-if="post.thumbnail_url"
+                    :src="post.thumbnail_url"
+                    alt=""
+                    class="size-12 shrink-0 object-cover"
+                >
+                <span
+                    v-else
+                    class="flex size-12 shrink-0 items-center justify-center bg-snitch-ink/10 text-[10px] text-snitch-ink/40"
+                >
+                    Post
+                </span>
+                <div class="min-w-0">
+                    <p class="snitch-ink-label">
+                        <template v-if="post.multiplier != null">{{ post.multiplier.toFixed(1) }}×</template>
+                        <template v-else>No X× yet</template>
+                    </p>
+                    <p class="mt-0.5 whitespace-pre-wrap">{{ captionText(post) }}</p>
+                </div>
+            </div>
         </section>
 
         <section class="snitch-scrap space-y-2 p-3">
             <h2 class="font-display text-lg">Competitor winners</h2>
-            <p
+            <div
                 v-for="(winner, index) in report.competitor_winners"
                 :key="index"
-                class="text-sm"
+                class="flex gap-3 text-sm"
             >
-                @{{ winner.handle ?? 'rival' }}
-                <template v-if="winner.multiplier"> · {{ winner.multiplier }}×</template>
-                - {{ winner.caption }}
-            </p>
+                <img
+                    v-if="winner.thumbnail_url"
+                    :src="winner.thumbnail_url"
+                    alt=""
+                    class="size-12 shrink-0 object-cover"
+                >
+                <span
+                    v-else
+                    class="flex size-12 shrink-0 items-center justify-center bg-snitch-ink/10 text-[10px] text-snitch-ink/40"
+                >
+                    Post
+                </span>
+                <div class="min-w-0">
+                    <p class="snitch-ink-label">
+                        @{{ winner.handle ?? 'rival' }}
+                        <template v-if="winner.multiplier != null"> · {{ winner.multiplier.toFixed(1) }}×</template>
+                    </p>
+                    <p class="mt-0.5 whitespace-pre-wrap">
+                        {{ captionText(winner) || winner.why || 'Winner post' }}
+                    </p>
+                </div>
+            </div>
         </section>
 
         <section class="snitch-scrap space-y-2 p-3">

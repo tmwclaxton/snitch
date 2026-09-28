@@ -6,7 +6,6 @@ use App\Http\Controllers\Concerns\OmitsProductDataWhenPaywalled;
 use App\Models\MonthlyReport;
 use App\Models\ReportShareLink;
 use App\Services\Growth\MonthlyReportBuilder;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -38,20 +37,6 @@ class MonthlyReportController extends Controller
             ->latest('id')
             ->first();
 
-        $months = MonthlyReport::query()
-            ->where('user_id', $user->id)
-            ->orderByDesc('month_start')
-            ->limit(24)
-            ->pluck('month_start')
-            ->map(fn ($day) => CarbonImmutable::parse($day)->format('Y-m'))
-            ->unique()
-            ->values()
-            ->all();
-
-        if (! in_array($monthStart->format('Y-m'), $months, true)) {
-            array_unshift($months, $monthStart->format('Y-m'));
-        }
-
         return Inertia::render('growth/Report', [
             'report' => [
                 'id' => $report->id,
@@ -62,7 +47,7 @@ class MonthlyReportController extends Controller
                 : route('reports.public', ['token' => $activeShare->token], absolute: true),
             'shareToken' => $activeShare?->token,
             'month' => $monthStart->format('Y-m'),
-            'months' => $months,
+            'months' => $builder->monthOptions($user, $monthStart),
         ]);
     }
 

@@ -21,6 +21,7 @@ class WeeklyBriefIdeaFactory extends Factory
             'position' => 1,
             'format' => 'Reel',
             'hook' => fake()->sentence(6),
+            'visual' => null,
             'caption_angle' => fake()->sentence(12),
             'cta' => 'Comment your take',
             'hashtags' => ['#marketing', '#growth', '#content'],

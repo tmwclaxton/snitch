@@ -23,6 +23,7 @@
         h1 { font-size: 28px; }
         h2 { font-size: 18px; margin-top: 20px; }
         .meta { color: #5c5346; margin-bottom: 16px; }
+        .muted { color: #8a8072; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .card {
             border: 1px solid rgba(28, 27, 26, 0.18);
@@ -31,8 +32,27 @@
         }
         .label { text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; color: #5c5346; }
         .value { font-size: 22px; margin-top: 4px; }
-        ul { padding-left: 18px; margin: 8px 0; }
-        li { margin-bottom: 6px; }
+        ul { padding-left: 0; margin: 8px 0; list-style: none; }
+        li { margin-bottom: 10px; }
+        .post-row { display: flex; gap: 10px; align-items: flex-start; }
+        .thumb {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            background: rgba(28, 27, 26, 0.08);
+            flex-shrink: 0;
+        }
+        .thumb-fallback {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(28, 27, 26, 0.08);
+            color: #8a8072;
+            font-size: 9px;
+            flex-shrink: 0;
+        }
         .actions { margin-bottom: 16px; }
         .actions button {
             background: var(--ink);
@@ -44,7 +64,7 @@
         @media print {
             .actions { display: none; }
             body { padding: 0; }
-            .card { break-inside: avoid; }
+            .card, .post-row { break-inside: avoid; }
         }
     </style>
 </head>
@@ -67,15 +87,16 @@
             @php $kpi = $report['kpis'][$key] ?? []; @endphp
             <div class="card">
                 <div class="label">{{ $label }}</div>
-                <div class="value">{{ $kpi['you'] ?? '-' }}</div>
+                <div class="value">{{ $kpi['you_display'] ?? ($kpi['you'] ?? 'no data') }}</div>
                 <div class="meta">
                     vs last month:
-                    @if (isset($kpi['you_change']))
-                        {{ $kpi['you_change'] > 0 ? '+' : '' }}{{ $kpi['you_change'] }}%
-                    @else
-                        -
-                    @endif
-                    · peer {{ $kpi['peer'] ?? '-' }}
+                    <span @class(['muted' => ! isset($kpi['you_change']) || $kpi['you_change'] === null])>
+                        {{ $kpi['you_change_label'] ?? ('no data for '.($report['prev_month_label'] ?? 'prior month')) }}
+                    </span>
+                    · peer {{ $kpi['peer_display'] ?? ($kpi['peer'] ?? 'no data') }}
+                    (<span @class(['muted' => ! isset($kpi['peer_change']) || $kpi['peer_change'] === null])>
+                        {{ $kpi['peer_change_label'] ?? ('no data for '.($report['prev_month_label'] ?? 'prior month')) }}
+                    </span>)
                 </div>
             </div>
         @endforeach
@@ -84,9 +105,22 @@
     <h2>Your top 3</h2>
     <ul>
         @forelse (($report['own_top_posts'] ?? []) as $post)
-            <li>
-                @if (!empty($post['multiplier'])){{ $post['multiplier'] }}x · @endif
-                {{ $post['caption'] ?? 'Untitled post' }}
+            <li class="post-row">
+                @if (! empty($post['thumbnail_url']))
+                    <img class="thumb" src="{{ $post['thumbnail_url'] }}" alt="">
+                @else
+                    <span class="thumb-fallback">Post</span>
+                @endif
+                <div>
+                    <div class="label">
+                        @if (! empty($post['multiplier']))
+                            {{ number_format((float) $post['multiplier'], 1) }}×
+                        @else
+                            No X× yet
+                        @endif
+                    </div>
+                    <div>{{ $post['caption'] ?? ($post['caption_preview'] ?? 'Untitled post') }}</div>
+                </div>
             </li>
         @empty
             <li>No own posts in this month yet.</li>
@@ -96,10 +130,21 @@
     <h2>Competitor winners</h2>
     <ul>
         @forelse (($report['competitor_winners'] ?? []) as $winner)
-            <li>
-                {{ '@'.($winner['handle'] ?? 'rival') }}
-                @if (!empty($winner['multiplier'])) · {{ $winner['multiplier'] }}x @endif
-                - {{ $winner['caption'] ?? ($winner['why'] ?? 'Winner') }}
+            <li class="post-row">
+                @if (! empty($winner['thumbnail_url']))
+                    <img class="thumb" src="{{ $winner['thumbnail_url'] }}" alt="">
+                @else
+                    <span class="thumb-fallback">Post</span>
+                @endif
+                <div>
+                    <div class="label">
+                        {{ '@'.($winner['handle'] ?? 'rival') }}
+                        @if (! empty($winner['multiplier']))
+                            · {{ number_format((float) $winner['multiplier'], 1) }}×
+                        @endif
+                    </div>
+                    <div>{{ $winner['caption'] ?? ($winner['caption_preview'] ?? ($winner['why'] ?? 'Winner')) }}</div>
+                </div>
             </li>
         @empty
             <li>No scored rival winners this month.</li>
@@ -107,14 +152,14 @@
     </ul>
 
     <h2>What changed</h2>
-    <ul>
+    <ul style="padding-left: 18px; list-style: disc;">
         @foreach (($report['what_changed'] ?? []) as $line)
             <li>{{ $line }}</li>
         @endforeach
     </ul>
 
     <h2>Next month focus</h2>
-    <ul>
+    <ul style="padding-left: 18px; list-style: disc;">
         @forelse (($report['next_focus'] ?? []) as $idea)
             <li>
                 <strong>{{ $idea['format'] ?? 'Post' }}:</strong>

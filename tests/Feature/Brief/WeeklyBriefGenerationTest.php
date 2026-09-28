@@ -74,6 +74,123 @@ class WeeklyBriefGenerationTest extends TestCase
                 (int) $idea->recommended_hour,
             );
         }
+
+        foreach ($brief->ideas as $idea) {
+            $this->assertNotEmpty($idea->inspired_by_post_ids, 'Every idea must cite a source winner');
+        }
+    }
+
+    public function test_ideas_reassign_repeated_sources_and_sanitize_hook_cta(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create(['name' => 'GoodGym']);
+        $winnerIds = $this->seedEnoughCompetitorData($user);
+        $shared = $winnerIds[0];
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'content' => json_encode([
+                            'ideas' => [
+                                [
+                                    'format' => 'Reel',
+                                    'hook' => 'Cover slide: bold title with a megaphone icon, promising results',
+                                    'caption_angle' => 'Show the proof',
+                                    'cta' => 'Swipe up in bio',
+                                    'hashtags' => ['#fitness', '#community', '#london'],
+                                    'inspired_by_post_ids' => [$shared],
+                                    'why' => 'Remix the winner.',
+                                ],
+                                [
+                                    'format' => 'Carousel',
+                                    'hook' => 'Three mistakes',
+                                    'visual' => 'Grid of three traps',
+                                    'caption_angle' => 'List the traps',
+                                    'cta' => 'Save this',
+                                    'hashtags' => ['#tips', '#growth', '#brand'],
+                                    'inspired_by_post_ids' => [$shared],
+                                    'why' => 'Same source twice is fine once.',
+                                ],
+                                [
+                                    'format' => 'Image',
+                                    'hook' => 'One bold claim',
+                                    'caption_angle' => 'Single visual',
+                                    'cta' => 'Link in bio',
+                                    'hashtags' => ['#brand', '#content', '#social'],
+                                    'inspired_by_post_ids' => [$shared],
+                                    'why' => 'Third reuse must be reassigned.',
+                                ],
+                            ],
+                        ]),
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $brief = app(WeeklyBriefGenerator::class)->generate($user, force: false, billable: false);
+
+        $this->assertCount(3, $brief->ideas);
+
+        $sourceCounts = [];
+        foreach ($brief->ideas as $idea) {
+            $this->assertNotEmpty($idea->inspired_by_post_ids);
+            foreach ($idea->inspired_by_post_ids as $id) {
+                $sourceCounts[(int) $id] = ($sourceCounts[(int) $id] ?? 0) + 1;
+            }
+        }
+
+        foreach ($sourceCounts as $id => $count) {
+            $this->assertLessThanOrEqual(2, $count, "Source {$id} used more than twice");
+        }
+
+        $first = $brief->ideas->firstWhere('position', 1);
+        $this->assertNotNull($first);
+        $this->assertNotSame('Cover slide: bold title with a megaphone icon, promising results', $first->hook);
+        $this->assertTrue(str_word_count((string) $first->hook) <= 12);
+        $this->assertNotNull($first->visual);
+        $this->assertSame('Comment your take', $first->cta);
+
+        $third = $brief->ideas->firstWhere('position', 3);
+        $this->assertNotNull($third);
+        $this->assertNotContains($shared, $third->inspired_by_post_ids);
+    }
+
+    public function test_admin_sees_can_regenerate_non_admin_does_not(): void
+    {
+        $admin = User::factory()->create(['email' => 'admin@snitch.test']);
+        BrandProfile::factory()->for($admin)->create();
+        WeeklyBrief::factory()->for($admin)->create([
+            'status' => 'ready',
+            'week_start' => app(WeeklyBriefGenerator::class)->currentWeekStart()->toDateString(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('brief.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('brief/Index')
+                ->where('canRegenerate', true)
+            );
+
+        $customer = User::factory()->create(['email' => 'customer@example.com']);
+        BrandProfile::factory()->for($customer)->create();
+        WeeklyBrief::factory()->for($customer)->create([
+            'status' => 'ready',
+            'week_start' => app(WeeklyBriefGenerator::class)->currentWeekStart()->toDateString(),
+        ]);
+
+        $this->actingAs($customer)
+            ->get(route('brief.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('brief/Index')
+                ->where('canRegenerate', false)
+            );
+
+        $source = file_get_contents(resource_path('js/pages/brief/Index.vue'));
+        $this->assertIsString($source);
+        $this->assertStringContainsString('v-if="canRegenerate && brief"', $source);
     }
 
     public function test_queue_if_ready_skips_when_insufficient_data(): void
@@ -270,9 +387,13 @@ class WeeklyBriefGenerationTest extends TestCase
         ]);
     }
 
-    private function seedEnoughCompetitorData(User $user): void
+    /**
+     * @return list<int>
+     */
+    private function seedEnoughCompetitorData(User $user): array
     {
         $base = CarbonImmutable::now('Europe/London')->subDays(25);
+        $winnerIds = [];
 
         for ($a = 0; $a < 2; $a++) {
             $rival = TrackedAccount::factory()->for($user)->create([
@@ -304,7 +425,10 @@ class WeeklyBriefGenerationTest extends TestCase
                     'status' => AnalysisStatus::Completed,
                     'hook' => 'Open on the sweat',
                 ]);
+                $winnerIds[] = (int) $winner->id;
             }
         }
+
+        return $winnerIds;
     }
 }

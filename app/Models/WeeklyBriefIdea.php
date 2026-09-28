@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'position',
     'format',
     'hook',
+    'visual',
     'caption_angle',
     'cta',
     'hashtags',

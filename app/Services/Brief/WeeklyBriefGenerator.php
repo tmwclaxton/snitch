@@ -212,6 +212,7 @@ class WeeklyBriefGenerator
                     'position' => $index + 1,
                     'format' => $idea['format'],
                     'hook' => $idea['hook'],
+                    'visual' => $idea['visual'] ?? null,
                     'caption_angle' => $idea['caption_angle'],
                     'cta' => $idea['cta'],
                     'hashtags' => $idea['hashtags'],
@@ -286,18 +287,15 @@ class WeeklyBriefGenerator
     }
 
     /**
-     * @return list<array{post_id: int, handle: string, pi: float, hook: ?string, hashtags: list<string>, format: string, caption: ?string}>
+     * Top winner candidates by X× usual, including the own account.
+     *
+     * @return list<array{post_id: int, handle: string, pi: float, hook: ?string, hashtags: list<string>, format: string, caption: ?string, is_own_account: bool}>
      */
     public function topWinners(User $user, int $days = 30): array
     {
         $accounts = TrackedAccount::query()
             ->where('user_id', $user->id)
-            ->where('is_own_account', false)
             ->get();
-
-        if ($accounts->isEmpty()) {
-            $accounts = TrackedAccount::query()->where('user_id', $user->id)->get();
-        }
 
         $socialIds = $accounts->pluck('social_account_id')->filter()->map(fn ($id) => (int) $id)->all();
 
@@ -338,12 +336,14 @@ class WeeklyBriefGenerator
                 'hashtags' => $hashtags,
                 'format' => $this->math->formatLabel($post),
                 'caption' => $post->caption,
+                'is_own_account' => (bool) ($tracked?->is_own_account ?? false),
             ];
         }
 
         usort($rows, fn (array $a, array $b): int => $b['pi'] <=> $a['pi']);
 
-        return array_slice($rows, 0, 12);
+        // Feed the LLM the top 5-8 candidates (cap at 8).
+        return array_slice($rows, 0, 8);
     }
 
     /**
@@ -419,13 +419,14 @@ class WeeklyBriefGenerator
     }
 
     /**
-     * @param  list<array{post_id: int, handle: string, pi: float, hook: ?string, hashtags: list<string>, format: string, caption: ?string}>  $winners
+     * @param  list<array{post_id: int, handle: string, pi: float, hook: ?string, hashtags: list<string>, format: string, caption: ?string, is_own_account?: bool}>  $winners
      * @param  list<array{day: string, hour: int, label: string, score: float}>  $slots
-     * @return list<array{format: string, hook: string, caption_angle: string, cta: string, hashtags: list<string>, recommended_day: string, recommended_hour: int, inspired_by_post_ids: list<int>, why: string}>
+     * @return list<array{format: string, hook: string, visual: ?string, caption_angle: string, cta: string, hashtags: list<string>, recommended_day: string, recommended_hour: int, inspired_by_post_ids: list<int>, why: string}>
      */
     private function draftIdeas(User $user, ?BrandProfile $brand, array $winners, array $slots): array
     {
-        $fallback = $this->deterministicIdeas($brand, $winners, $slots);
+        $candidates = array_slice($winners, 0, 8);
+        $fallback = $this->deterministicIdeas($brand, $candidates, $slots);
 
         try {
             $model = (string) config('snitch.brief.model', config('snitch.winners.copy_model'));
@@ -434,7 +435,17 @@ class WeeklyBriefGenerator
                     'name' => $brand?->name,
                     'description' => $brand?->description,
                 ],
-                'winners' => array_slice($winners, 0, 8),
+                'winners' => array_map(static fn (array $row): array => [
+                    'post_id' => $row['post_id'],
+                    'handle' => $row['handle'],
+                    'pi' => $row['pi'],
+                    'format' => $row['format'],
+                    'hook' => $row['hook'],
+                    'caption' => is_string($row['caption'] ?? null)
+                        ? mb_substr((string) $row['caption'], 0, 180)
+                        : null,
+                    'hashtags' => $row['hashtags'],
+                ], $candidates),
                 'best_times' => $slots,
             ];
 
@@ -442,7 +453,7 @@ class WeeklyBriefGenerator
                 messages: [
                     [
                         'role' => 'system',
-                        'content' => 'You write short Instagram post ideas for a brand. Return JSON: {"ideas":[{"format":"Reel|Carousel|Image","hook":"...","caption_angle":"...","cta":"...","hashtags":["#a","#b"],"recommended_day":"Mon","recommended_hour":9,"inspired_by_post_ids":[1],"why":"..."}]}. Exactly 3 ideas. Hashtags 3-5 from winners when possible. No em dashes.',
+                        'content' => 'You write short Instagram post ideas for a brand. Return JSON only: {"ideas":[{"format":"Reel|Carousel|Image","hook":"...","visual":"optional shot direction","caption_angle":"...","cta":"...","hashtags":["#a","#b"],"inspired_by_post_ids":[123],"why":"..."}]}. Exactly 3 ideas. Rules: (1) hook is the literal first on-screen line the viewer reads, max 12 words, never a scene direction; (2) put camera/layout direction in visual only; (3) every idea must cite 1-2 inspired_by_post_ids from the winners list post_id values, and use different winners when possible (at most 2 ideas may share one post_id); (4) Instagram CTAs only: comment, save, share, DM, or link in bio - never swipe up; (5) hashtags 3-5 from winners when possible; (6) no em dashes.',
                     ],
                     [
                         'role' => 'user',
@@ -452,12 +463,12 @@ class WeeklyBriefGenerator
                 model: $model,
                 options: [
                     'temperature' => 0.4,
-                    'max_tokens' => 1200,
+                    'max_tokens' => 1400,
                 ],
             );
 
             if (is_array($response) && isset($response['ideas']) && is_array($response['ideas'])) {
-                $parsed = $this->normalizeIdeas($response['ideas'], $winners, $slots, $brand);
+                $parsed = $this->normalizeIdeas($response['ideas'], $candidates, $slots, $brand);
 
                 if (count($parsed) === 3) {
                     return $parsed;
@@ -472,9 +483,9 @@ class WeeklyBriefGenerator
 
     /**
      * @param  list<mixed>  $raw
-     * @param  list<array{post_id: int, handle: string, pi: float, hook: ?string, hashtags: list<string>, format: string, caption: ?string}>  $winners
+     * @param  list<array{post_id: int, handle: string, pi: float, hook: ?string, hashtags: list<string>, format: string, caption: ?string, is_own_account?: bool}>  $winners
      * @param  list<array{day: string, hour: int, label: string, score: float}>  $slots
-     * @return list<array{format: string, hook: string, caption_angle: string, cta: string, hashtags: list<string>, recommended_day: string, recommended_hour: int, inspired_by_post_ids: list<int>, why: string}>
+     * @return list<array{format: string, hook: string, visual: ?string, caption_angle: string, cta: string, hashtags: list<string>, recommended_day: string, recommended_hour: int, inspired_by_post_ids: list<int>, why: string}>
      */
     private function normalizeIdeas(array $raw, array $winners, array $slots, ?BrandProfile $brand): array
     {
@@ -482,6 +493,7 @@ class WeeklyBriefGenerator
         $out = [];
         /** @var array<int, int> $sourceUses */
         $sourceUses = [];
+        $validIds = collect($winners)->pluck('post_id')->map(fn ($id) => (int) $id)->all();
 
         foreach (array_slice($raw, 0, 3) as $index => $row) {
             if (! is_array($row)) {
@@ -493,20 +505,16 @@ class WeeklyBriefGenerator
                 $format = $formats[$index] ?? 'Reel';
             }
 
-            // Idea N always gets timing slot N so the three ideas are spread across best times.
             $slot = $slots[$index] ?? $slots[0] ?? ['day' => 'Tue', 'hour' => 11];
             $sourceIds = collect($row['inspired_by_post_ids'] ?? [])
                 ->filter(fn ($id) => is_numeric($id))
                 ->map(fn ($id) => (int) $id)
+                ->filter(fn (int $id): bool => in_array($id, $validIds, true))
                 ->take(2)
                 ->values()
                 ->all();
 
-            if ($sourceIds === []) {
-                $sourceIds = $this->pickSourceIds($winners, $index, $sourceUses);
-            } else {
-                $sourceIds = $this->capSourceUses($sourceIds, $sourceUses, $winners, $index);
-            }
+            $sourceIds = $this->assignSources($sourceIds, $winners, $sourceUses, $index);
 
             $hashtags = collect($row['hashtags'] ?? [])
                 ->filter(fn ($tag) => is_string($tag) && trim($tag) !== '')
@@ -519,11 +527,20 @@ class WeeklyBriefGenerator
                 $hashtags = $this->hashtagsFromWinners($winners, 5);
             }
 
+            [$hook, $visual] = $this->sanitizeHookAndVisual(
+                (string) ($row['hook'] ?? ''),
+                is_string($row['visual'] ?? null) ? (string) $row['visual'] : null,
+                $winners,
+                $index,
+                $brand,
+            );
+
             $out[] = [
                 'format' => $format,
-                'hook' => trim((string) ($row['hook'] ?? 'Start with the proof')),
+                'hook' => $hook,
+                'visual' => $visual,
                 'caption_angle' => trim((string) ($row['caption_angle'] ?? 'Show the before/after and invite a reply')),
-                'cta' => trim((string) ($row['cta'] ?? 'Save this for later')),
+                'cta' => $this->sanitizeCta((string) ($row['cta'] ?? 'Comment your take')),
                 'hashtags' => array_slice($hashtags, 0, 5),
                 'recommended_day' => (string) $slot['day'],
                 'recommended_hour' => (int) $slot['hour'],
@@ -536,45 +553,16 @@ class WeeklyBriefGenerator
     }
 
     /**
-     * @param  list<array{post_id: int, handle: string, pi: float, hook: ?string, hashtags: list<string>, format: string, caption: ?string}>  $winners
+     * @param  list<int>  $preferred
+     * @param  list<array{post_id: int, handle: string, pi: float, hook: ?string, hashtags: list<string>, format: string, caption: ?string, is_own_account?: bool}>  $winners
      * @param  array<int, int>  $sourceUses
      * @return list<int>
      */
-    private function pickSourceIds(array $winners, int $index, array &$sourceUses): array
-    {
-        foreach ($winners as $offset => $winner) {
-            $candidateIndex = ($index + $offset) % max(1, count($winners));
-            $winner = $winners[$candidateIndex] ?? null;
-
-            if ($winner === null) {
-                continue;
-            }
-
-            $id = (int) $winner['post_id'];
-
-            if (($sourceUses[$id] ?? 0) >= 2) {
-                continue;
-            }
-
-            $sourceUses[$id] = ($sourceUses[$id] ?? 0) + 1;
-
-            return [$id];
-        }
-
-        return isset($winners[$index]) ? [(int) $winners[$index]['post_id']] : [];
-    }
-
-    /**
-     * @param  list<int>  $sourceIds
-     * @param  array<int, int>  $sourceUses
-     * @param  list<array{post_id: int, handle: string, pi: float, hook: ?string, hashtags: list<string>, format: string, caption: ?string}>  $winners
-     * @return list<int>
-     */
-    private function capSourceUses(array $sourceIds, array &$sourceUses, array $winners, int $index): array
+    private function assignSources(array $preferred, array $winners, array &$sourceUses, int $index): array
     {
         $kept = [];
 
-        foreach ($sourceIds as $id) {
+        foreach ($preferred as $id) {
             if (($sourceUses[$id] ?? 0) >= 2) {
                 continue;
             }
@@ -583,17 +571,144 @@ class WeeklyBriefGenerator
             $sourceUses[$id] = ($sourceUses[$id] ?? 0) + 1;
         }
 
-        if ($kept === []) {
-            return $this->pickSourceIds($winners, $index, $sourceUses);
+        if ($kept !== []) {
+            return array_slice($kept, 0, 2);
         }
 
-        return $kept;
+        return $this->pickSourceIds($winners, $index, $sourceUses);
     }
 
     /**
-     * @param  list<array{post_id: int, handle: string, pi: float, hook: ?string, hashtags: list<string>, format: string, caption: ?string}>  $winners
+     * @param  list<array{post_id: int, handle: string, pi: float, hook: ?string, hashtags: list<string>, format: string, caption: ?string, is_own_account?: bool}>  $winners
+     * @param  array<int, int>  $sourceUses
+     * @return list<int>
+     */
+    private function pickSourceIds(array $winners, int $index, array &$sourceUses): array
+    {
+        if ($winners === []) {
+            return [];
+        }
+
+        // Prefer unused winners starting at this idea's rank, then once-used (hard cap: 2 ideas per source).
+        foreach ([0, 1] as $maxUses) {
+            for ($offset = 0; $offset < count($winners); $offset++) {
+                $candidate = $winners[($index + $offset) % count($winners)] ?? null;
+
+                if ($candidate === null) {
+                    continue;
+                }
+
+                $id = (int) $candidate['post_id'];
+                $uses = $sourceUses[$id] ?? 0;
+
+                if ($uses >= 2 || $uses > $maxUses) {
+                    continue;
+                }
+
+                $sourceUses[$id] = $uses + 1;
+
+                return [$id];
+            }
+        }
+
+        // All winners already used twice - still cite the next best match.
+        $fallback = (int) $winners[$index % count($winners)]['post_id'];
+        $sourceUses[$fallback] = ($sourceUses[$fallback] ?? 0) + 1;
+
+        return [$fallback];
+    }
+
+    /**
+     * @param  list<array{post_id: int, handle: string, pi: float, hook: ?string, hashtags: list<string>, format: string, caption: ?string, is_own_account?: bool}>  $winners
+     * @return array{0: string, 1: ?string}
+     */
+    private function sanitizeHookAndVisual(
+        string $rawHook,
+        ?string $rawVisual,
+        array $winners,
+        int $index,
+        ?BrandProfile $brand,
+    ): array {
+        $hook = trim($rawHook);
+        $visual = filled($rawVisual) ? trim((string) $rawVisual) : null;
+
+        $looksLikeDirection = $hook !== '' && (
+            preg_match('/^(cover slide|show a|start with a|cut to|pan to|wide shot|close[- ]?up)\b/i', $hook) === 1
+            || preg_match('/\b(megaphone icon|bold title|on screen|camera|b-roll|overlay|thumbnail)\b/i', $hook) === 1
+            || preg_match('/^(cover|slide|shot)\s*:/i', $hook) === 1
+        );
+
+        if ($looksLikeDirection) {
+            $visual = $visual ?? $hook;
+
+            if (preg_match('/["“]([^"”]{3,80})["”]/u', $hook, $match) === 1) {
+                $hook = trim($match[1]);
+            } elseif (preg_match('/:\s*(.+)$/u', $hook, $match) === 1) {
+                $hook = trim($match[1]);
+                $hook = preg_replace('/\b(with a|showing a|featuring a)\b.+$/iu', '', $hook) ?? $hook;
+            } else {
+                $winnerHook = $winners[$index]['hook'] ?? $winners[0]['hook'] ?? null;
+                $hook = filled($winnerHook)
+                    ? (string) $winnerHook
+                    : 'Proof beats promises';
+            }
+        }
+
+        if ($hook === '') {
+            $brandName = trim((string) ($brand?->name ?? 'your brand'));
+            $hook = "How {$brandName} gets results";
+        }
+
+        $words = preg_split('/\s+/u', $hook, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        if (count($words) > 12) {
+            $hook = implode(' ', array_slice($words, 0, 12));
+        }
+
+        $hook = trim((string) preg_replace('/\s+/u', ' ', $hook));
+        $visual = filled($visual) ? trim((string) $visual) : null;
+
+        if ($visual !== null && mb_strtolower($visual) === mb_strtolower($hook)) {
+            $visual = null;
+        }
+
+        return [$hook, $visual];
+    }
+
+    private function sanitizeCta(string $cta): string
+    {
+        $cta = trim($cta);
+        $lower = mb_strtolower($cta);
+
+        $banned = ['swipe up', 'swipe-up', 'link in story', 'tap the sticker', 'add to cart'];
+
+        foreach ($banned as $phrase) {
+            if (str_contains($lower, $phrase)) {
+                return 'Comment your take';
+            }
+        }
+
+        $allowed = ['comment', 'save', 'share', 'dm', 'link in bio', 'reply'];
+        $ok = false;
+
+        foreach ($allowed as $phrase) {
+            if (str_contains($lower, $phrase)) {
+                $ok = true;
+                break;
+            }
+        }
+
+        if (! $ok || $cta === '') {
+            return 'Comment your take';
+        }
+
+        return $cta;
+    }
+
+    /**
+     * @param  list<array{post_id: int, handle: string, pi: float, hook: ?string, hashtags: list<string>, format: string, caption: ?string, is_own_account?: bool}>  $winners
      * @param  list<array{day: string, hour: int, label: string, score: float}>  $slots
-     * @return list<array{format: string, hook: string, caption_angle: string, cta: string, hashtags: list<string>, recommended_day: string, recommended_hour: int, inspired_by_post_ids: list<int>, why: string}>
+     * @return list<array{format: string, hook: string, visual: ?string, caption_angle: string, cta: string, hashtags: list<string>, recommended_day: string, recommended_hour: int, inspired_by_post_ids: list<int>, why: string}>
      */
     private function deterministicIdeas(?BrandProfile $brand, array $winners, array $slots): array
     {
@@ -616,15 +731,22 @@ class WeeklyBriefGenerator
             }
 
             $slot = $slots[$i] ?? $slots[0] ?? ['day' => 'Wed', 'hour' => 12];
-            $hook = filled($winner['hook'] ?? null)
-                ? (string) $winner['hook']
-                : "Show how {$brandName} solves this in 15 seconds";
+            [$hook, $visual] = $this->sanitizeHookAndVisual(
+                filled($winner['hook'] ?? null)
+                    ? (string) $winner['hook']
+                    : "How {$brandName} solves this",
+                null,
+                $winners,
+                $i,
+                $brand,
+            );
             $pi = $winner['pi'] ?? null;
             $handle = $winner['handle'] ?? 'rivals';
 
             $ideas[] = [
                 'format' => $formats[$i],
                 'hook' => $hook,
+                'visual' => $visual,
                 'caption_angle' => "Translate @{$handle}'s angle into {$brandName}'s voice, then close with a clear next step.",
                 'cta' => 'Comment your take',
                 'hashtags' => $hashtags,

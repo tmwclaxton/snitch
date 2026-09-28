@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Form, Head, router } from '@inertiajs/vue3';
+import { Form, Head, Link, router } from '@inertiajs/vue3';
 import { Download, Link2, Link2Off } from '@lucide/vue';
-import { computed } from 'vue';
+import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import GrowthController from '@/actions/App/Http/Controllers/GrowthController';
 import MonthlyReportController from '@/actions/App/Http/Controllers/MonthlyReportController';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -12,21 +12,49 @@ defineOptions({
 
 type Kpi = {
     you: number | null;
-    you_prev: number | null;
+    you_display: string;
     you_change: number | null;
+    you_change_label: string;
     peer: number | null;
+    peer_display: string;
     peer_change: number | null;
+    peer_change_label: string;
+};
+
+type PostRow = {
+    id: number;
+    caption: string;
+    caption_preview: string;
+    multiplier: number | null;
+    thumbnail_url: string | null;
+    url: string | null;
+};
+
+type WinnerRow = {
+    id: number | null;
+    handle: string | null;
+    caption: string;
+    caption_preview: string;
+    multiplier: number | null;
+    thumbnail_url: string | null;
+    why: string | null;
 };
 
 type Report = {
     id: number;
     month: string;
     month_label: string;
+    prev_month_label?: string;
     kpis: Record<string, Kpi>;
-    own_top_posts: Array<{ id: number; caption: string; multiplier: number | null; url: string | null }>;
-    competitor_winners: Array<{ id: number | null; handle: string | null; caption: string; multiplier: number | null; why: string | null }>;
+    own_top_posts: PostRow[];
+    competitor_winners: WinnerRow[];
     what_changed: string[];
     next_focus: Array<{ format: string; hook: string; why: string | null }>;
+};
+
+type MonthOption = {
+    value: string;
+    label: string;
 };
 
 const props = defineProps<{
@@ -34,7 +62,7 @@ const props = defineProps<{
     shareUrl: string | null;
     shareToken: string | null;
     month: string;
-    months: string[];
+    months: MonthOption[];
 }>();
 
 const kpiLabels: Record<string, string> = {
@@ -44,25 +72,8 @@ const kpiLabels: Record<string, string> = {
     avg_multiplier: 'Avg X× usual',
 };
 
-const monthOptions = computed(() => {
-    const set = new Set(props.months);
-    set.add(props.month);
-
-    return [...set].sort().reverse();
-});
-
 function changeMonth(value: string): void {
     router.get(MonthlyReportController.show.url({ query: { month: value } }), {}, { preserveState: true });
-}
-
-function formatChange(value: number | null): string {
-    if (value === null) {
-        return '-';
-    }
-
-    const sign = value > 0 ? '+' : '';
-
-    return `${sign}${value}%`;
 }
 
 async function copyShare(): Promise<void> {
@@ -80,6 +91,11 @@ function printPdf(): void {
 
     window.open(MonthlyReportController.pdf.url(props.report.id), '_blank');
 }
+
+function captionText(row: { caption: string; caption_preview?: string }): string {
+    // Prefer the full caption; fall back to the word-boundary preview.
+    return row.caption || row.caption_preview || 'Untitled post';
+}
 </script>
 
 <template>
@@ -93,19 +109,26 @@ function printPdf(): void {
                     {{ report?.month_label ?? 'Pick a month' }}
                 </h1>
             </div>
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center gap-3">
                 <a :href="GrowthController.index.url()" class="text-sm text-snitch-ink/70 underline-offset-2 hover:underline">
                     Growth charts
                 </a>
-                <select
-                    class="rounded border border-snitch-ink/20 bg-snitch-paper px-2 py-1 text-sm"
-                    :value="month"
-                    @change="changeMonth(($event.target as HTMLSelectElement).value)"
-                >
-                    <option v-for="row in monthOptions" :key="row" :value="row">
-                        {{ row }}
-                    </option>
-                </select>
+                <label class="inline-flex items-center gap-2 text-sm text-snitch-ink/70">
+                    <span class="text-xs font-medium uppercase tracking-wide text-slate-500">Month</span>
+                    <select
+                        class="rounded border border-snitch-ink/20 bg-snitch-paper px-2 py-1 text-sm text-snitch-ink"
+                        :value="month"
+                        @change="changeMonth(($event.target as HTMLSelectElement).value)"
+                    >
+                        <option
+                            v-for="row in months"
+                            :key="row.value"
+                            :value="row.value"
+                        >
+                            {{ row.label }}
+                        </option>
+                    </select>
+                </label>
             </div>
         </header>
 
@@ -153,26 +176,56 @@ function printPdf(): void {
                 >
                     <p class="snitch-ink-label">{{ label }}</p>
                     <p class="mt-1 font-display text-2xl text-snitch-ink">
-                        {{ report.kpis[key]?.you ?? '-' }}
+                        {{ report.kpis[key]?.you_display ?? 'no data' }}
                     </p>
-                    <p class="text-xs text-snitch-ink/60">
-                        vs last month: {{ formatChange(report.kpis[key]?.you_change ?? null) }}
-                        · peer {{ report.kpis[key]?.peer ?? '-' }}
-                        ({{ formatChange(report.kpis[key]?.peer_change ?? null) }})
+                    <p class="mt-1 text-sm text-snitch-ink/60">
+                        vs last month:
+                        <span :class="report.kpis[key]?.you_change == null ? 'text-snitch-ink/45' : ''">
+                            {{ report.kpis[key]?.you_change_label ?? 'no data' }}
+                        </span>
+                        · peer
+                        {{ report.kpis[key]?.peer_display ?? 'no data' }}
+                        <span :class="report.kpis[key]?.peer_change == null ? 'text-snitch-ink/45' : ''">
+                            ({{ report.kpis[key]?.peer_change_label ?? 'no data' }})
+                        </span>
                     </p>
                 </article>
             </section>
 
             <section class="snitch-scrap space-y-2 p-3">
                 <h2 class="font-display text-lg text-snitch-ink">Your top 3</h2>
-                <ul class="space-y-2">
+                <ul class="space-y-3">
                     <li
                         v-for="post in report.own_top_posts"
                         :key="post.id"
-                        class="border-b border-snitch-ink/10 pb-2 text-sm last:border-0"
+                        class="flex gap-3 border-b border-snitch-ink/10 pb-3 text-sm last:border-0"
                     >
-                        <span v-if="post.multiplier" class="snitch-ink-label mr-2">{{ post.multiplier }}×</span>
-                        {{ post.caption || 'Untitled post' }}
+                        <Link
+                            :href="feedShow.url(post.id)"
+                            class="shrink-0"
+                        >
+                            <img
+                                v-if="post.thumbnail_url"
+                                :src="post.thumbnail_url"
+                                alt=""
+                                class="size-14 object-cover"
+                            >
+                            <span
+                                v-else
+                                class="flex size-14 items-center justify-center bg-snitch-ink/10 text-[10px] text-snitch-ink/40"
+                            >
+                                Post
+                            </span>
+                        </Link>
+                        <div class="min-w-0">
+                            <p class="snitch-ink-label">
+                                <template v-if="post.multiplier != null">{{ post.multiplier.toFixed(1) }}×</template>
+                                <template v-else>No X× yet</template>
+                            </p>
+                            <p class="mt-0.5 whitespace-pre-wrap text-snitch-ink">
+                                {{ captionText(post) }}
+                            </p>
+                        </div>
                     </li>
                     <li v-if="!report.own_top_posts.length" class="text-sm text-snitch-ink/55">
                         No own posts in this month yet.
@@ -182,17 +235,39 @@ function printPdf(): void {
 
             <section class="snitch-scrap space-y-2 p-3">
                 <h2 class="font-display text-lg text-snitch-ink">Competitor winners</h2>
-                <ul class="space-y-2">
+                <ul class="space-y-3">
                     <li
                         v-for="(winner, index) in report.competitor_winners"
                         :key="winner.id ?? index"
-                        class="border-b border-snitch-ink/10 pb-2 text-sm last:border-0"
+                        class="flex gap-3 border-b border-snitch-ink/10 pb-3 text-sm last:border-0"
                     >
-                        <span class="snitch-ink-label mr-2">
-                            @{{ winner.handle ?? 'rival' }}
-                            <template v-if="winner.multiplier"> · {{ winner.multiplier }}×</template>
-                        </span>
-                        {{ winner.caption || winner.why || 'Winner post' }}
+                        <Link
+                            v-if="winner.id"
+                            :href="feedShow.url(winner.id)"
+                            class="shrink-0"
+                        >
+                            <img
+                                v-if="winner.thumbnail_url"
+                                :src="winner.thumbnail_url"
+                                alt=""
+                                class="size-14 object-cover"
+                            >
+                            <span
+                                v-else
+                                class="flex size-14 items-center justify-center bg-snitch-ink/10 text-[10px] text-snitch-ink/40"
+                            >
+                                Post
+                            </span>
+                        </Link>
+                        <div class="min-w-0">
+                            <p class="snitch-ink-label">
+                                @{{ winner.handle ?? 'rival' }}
+                                <template v-if="winner.multiplier != null"> · {{ winner.multiplier.toFixed(1) }}×</template>
+                            </p>
+                            <p class="mt-0.5 whitespace-pre-wrap text-snitch-ink">
+                                {{ captionText(winner) || winner.why || 'Winner post' }}
+                            </p>
+                        </div>
                     </li>
                     <li v-if="!report.competitor_winners.length" class="text-sm text-snitch-ink/55">
                         No scored rival winners this month.
@@ -220,7 +295,7 @@ function printPdf(): void {
                         <p class="text-snitch-ink/65">{{ idea.why }}</p>
                     </li>
                     <li v-if="!report.next_focus.length" class="text-sm text-snitch-ink/55">
-                        Generate a weekly brief to pull focus ideas here.
+                        Your weekly brief ideas will show up here once ready.
                     </li>
                 </ul>
             </section>

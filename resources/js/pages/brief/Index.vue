@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Form, Head, Link, router } from '@inertiajs/vue3';
 import { CalendarDays, Check, ChevronDown, Lightbulb, LoaderCircle, RefreshCw } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import BriefController from '@/actions/App/Http/Controllers/BriefController';
@@ -30,6 +30,7 @@ type Idea = {
     position: number;
     format: string;
     hook: string;
+    visual: string | null;
     caption_angle: string;
     cta: string | null;
     hashtags: string[];
@@ -70,8 +71,6 @@ const props = defineProps<{
     canRegenerate: boolean;
 }>();
 
-const page = usePage();
-const isAdmin = computed(() => Boolean(page.props.auth?.user?.is_admin) || props.canRegenerate);
 const historyOpen = ref(false);
 
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -132,7 +131,7 @@ function hourLabel(hour: number): string {
 }
 
 function regenerate(): void {
-    if (!isAdmin.value) {
+    if (!props.canRegenerate) {
         return;
     }
 
@@ -191,7 +190,7 @@ function regenerate(): void {
                         </div>
                     </div>
                     <button
-                        v-if="isAdmin && brief"
+                        v-if="canRegenerate && brief"
                         type="button"
                         class="snitch-btn snitch-btn-ghost"
                         :disabled="generating"
@@ -322,6 +321,12 @@ function regenerate(): void {
                     <h3 class="snitch-display mt-2 text-xl font-semibold text-snitch-ink">
                         {{ idea.hook }}
                     </h3>
+                    <p
+                        v-if="idea.visual"
+                        class="mt-1 text-sm text-snitch-ink/50"
+                    >
+                        {{ idea.visual }}
+                    </p>
                     <p class="mt-2 text-sm text-snitch-ink/80">
                         {{ idea.caption_angle }}
                     </p>
