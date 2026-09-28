@@ -11,7 +11,7 @@ use Tests\TestCase;
 class CtaEssenceGrouperTest extends TestCase
 {
     #[Test]
-    public function test_model_groups_map_onto_fixed_plain_labels(): void
+    public function test_model_groups_reclassify_catch_all_phrases_onto_real_labels(): void
     {
         config([
             'snitch.cta_essence.force' => true,
@@ -21,6 +21,8 @@ class CtaEssenceGrouperTest extends TestCase
         $listen = 'listen or watch the full podcast recorded at the studio';
         $watch = 'watch the full episode on youtube now';
         $comment = 'comment guide and we will send the checklist';
+        $join = 'join challenge or event this weekend';
+        $resource = 'check out local resource near you';
 
         $nano = $this->createMock(NanoGptClient::class);
         $nano->expects($this->once())
@@ -28,8 +30,8 @@ class CtaEssenceGrouperTest extends TestCase
             ->willReturn([
                 'groups' => [
                     [
-                        'label' => 'watch the full episode',
-                        'phrases' => [$listen, $watch, 'this phrase was not analysed'],
+                        'label' => 'Other',
+                        'phrases' => [$listen, $watch, $join, $resource, 'this phrase was not analysed'],
                     ],
                     [
                         'label' => 'Comment for the guide',
@@ -43,11 +45,16 @@ class CtaEssenceGrouperTest extends TestCase
             $listen => 2,
             $watch => 3,
             $comment => 1,
+            $join => 4,
+            $resource => 2,
         ]);
 
         $terms = array_column($grouped, 'term');
         $this->assertContains('Comment a keyword', $terms);
-        $this->assertContains('Other', $terms);
+        $this->assertContains('Join the event', $terms);
+        $this->assertContains('Link in bio', $terms);
+        $this->assertContains('No clear ask', $terms);
+        $this->assertNotContains('Other', $terms);
         $this->assertNotContains('Watch the full episode', $terms);
         $this->assertNotContains('Comment for the guide', $terms);
 
@@ -55,8 +62,14 @@ class CtaEssenceGrouperTest extends TestCase
         $this->assertSame(1, $commentRow['count']);
         $this->assertSame($comment, mb_strtolower($commentRow['lines'][0]['text']));
 
-        $otherRow = collect($grouped)->firstWhere('term', 'Other');
-        $this->assertSame(5, $otherRow['count']);
+        $joinRow = collect($grouped)->firstWhere('term', 'Join the event');
+        $this->assertSame(4, $joinRow['count']);
+
+        $linkRow = collect($grouped)->firstWhere('term', 'Link in bio');
+        $this->assertSame(2, $linkRow['count']);
+
+        $noAskRow = collect($grouped)->firstWhere('term', 'No clear ask');
+        $this->assertSame(5, $noAskRow['count']);
     }
 
     #[Test]
@@ -94,9 +107,15 @@ class CtaEssenceGrouperTest extends TestCase
 
         $this->assertSame('Tag a friend', $grouper->canonicalLabel('Comment which friend luxury'));
         $this->assertSame('Join the event', $grouper->canonicalLabel('Get involved in area'));
-        $this->assertSame('Other', $grouper->canonicalLabel('Check out local resource'));
+        $this->assertSame('Join the event', $grouper->canonicalLabel('Book a table'));
+        $this->assertSame('Join the event', $grouper->canonicalLabel('Join challenge or event'));
+        $this->assertSame('Link in bio', $grouper->canonicalLabel('Check out local resource'));
         $this->assertSame('Link in bio', $grouper->canonicalLabel('Grab ticket via bio'));
         $this->assertSame('Comment a keyword', $grouper->canonicalLabel('Comment to receive details'));
-        $this->assertSame('Other', $grouper->canonicalLabel('Other asks'));
+        $this->assertSame('No clear ask', $grouper->canonicalLabel('Other asks'));
+        $this->assertSame('No clear ask', $grouper->canonicalLabel('Swipe to see content'));
+        $this->assertSame('No clear ask', $grouper->canonicalLabel('Watch the full episode'));
+        $this->assertSame('Save this', $grouper->canonicalLabel('Save for later'));
+        $this->assertSame('Ask a question', $grouper->canonicalLabel('Drop your question below'));
     }
 }

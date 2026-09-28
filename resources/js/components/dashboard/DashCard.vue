@@ -19,7 +19,7 @@ const open = ref(false);
         class="scroll-mt-14 rounded border border-slate-200 bg-white px-1.5 py-0.5 transition-shadow duration-500"
         :class="props.class"
     >
-        <div class="mb-0.5 flex h-6 items-center justify-between gap-2">
+        <div class="mb-0.5 flex h-6 shrink-0 items-center justify-between gap-2">
             <h2 class="min-w-0 text-sm font-semibold leading-snug tracking-tight text-slate-900">{{ title }}</h2>
             <button
                 v-if="formula || why"
@@ -39,6 +39,8 @@ const open = ref(false);
                 </div>
             </button>
         </div>
-        <slot />
+        <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+            <slot />
+        </div>
     </section>
 </template>

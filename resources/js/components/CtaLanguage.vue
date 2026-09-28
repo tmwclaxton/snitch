@@ -48,11 +48,11 @@ function toggle(row: CtaGroup): void {
 </script>
 
 <template>
-    <div class="min-w-0">
-        <p class="snitch-ink-label mb-1">CTA language</p>
+    <div class="flex min-h-0 min-w-0 flex-col">
+        <p class="snitch-ink-label mb-1 shrink-0">CTA language</p>
         <div
             v-if="ctas.length"
-            class="flex flex-wrap gap-1"
+            class="flex min-h-0 flex-1 flex-wrap content-start gap-1"
         >
             <button
                 v-for="row in ctas"

@@ -480,10 +480,10 @@ const trackerIdsByHandle = computed(() => {
                     </template>
                 </div>
 
-                <div class="grid items-start gap-2 lg:grid-cols-2">
+                <div class="grid items-stretch gap-2 lg:grid-cols-2">
                     <!--
-                      Left: insights (content-sized) + Format mix.
-                      Right: Leaderboard alone. No height clamp / pinned void.
+                      Left: insights + Format mix (row height driver).
+                      Right: Leaderboard stretches to that height; table rows share the slack.
                     -->
                     <div class="flex min-w-0 flex-col gap-1.5">
                         <DashCard
@@ -538,8 +538,9 @@ const trackerIdsByHandle = computed(() => {
                         </div>
                     </div>
 
-                    <div class="min-w-0">
+                    <div class="flex min-h-0 min-w-0 flex-col">
                         <DashCard
+                            class="flex h-full min-h-0 flex-col"
                             title="Leaderboard"
                             why="One glance shows who is ahead, and on what."
                             formula="Engagement rate = median per-follower engagement. Hidden likes and all-zero samples show as -."
@@ -547,6 +548,7 @@ const trackerIdsByHandle = computed(() => {
                         >
                             <CompareTable
                                 v-if="leaderboard"
+                                class="min-h-0 flex-1"
                                 :status="leaderboard.status"
                                 :reason="leaderboard.reason"
                                 :rows="(leaderboard.data?.rows as any) || []"
@@ -572,33 +574,36 @@ const trackerIdsByHandle = computed(() => {
                         </section>
                     </div>
 
-                    <section
-                        id="caption_intel"
-                        class="snitch-scrap snitch-dash-chip-stack flex min-w-0 flex-col gap-2 p-2"
-                    >
-                        <div class="min-w-0">
-                            <p class="snitch-ink-label mb-1">Hashtags</p>
-                            <div v-if="caption_intel" class="flex flex-wrap gap-1">
-                                <span
-                                    v-for="row in caption_intel.hashtags.slice(0, 14)"
-                                    :key="`hash-${row.term}`"
-                                    class="snitch-glance-tag"
-                                >
-                                    #{{ row.term }}
-                                    <span class="tabular-nums text-slate-500">{{ row.count }}</span>
-                                </span>
-                                <p v-if="!caption_intel.hashtags.length" class="text-xs text-slate-500">None yet.</p>
+                    <div class="flex min-h-[12rem] min-w-0 flex-col lg:h-0 lg:min-h-full">
+                        <section
+                            id="caption_intel"
+                            class="snitch-scrap snitch-dash-chip-stack flex h-full min-h-0 min-w-0 flex-col gap-2 p-2"
+                        >
+                            <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+                                <p class="snitch-ink-label mb-1 shrink-0">Hashtags</p>
+                                <div v-if="caption_intel" class="flex min-h-0 flex-1 flex-wrap content-start gap-1">
+                                    <span
+                                        v-for="row in caption_intel.hashtags.slice(0, 14)"
+                                        :key="`hash-${row.term}`"
+                                        class="snitch-glance-tag"
+                                    >
+                                        #{{ row.term }}
+                                        <span class="tabular-nums text-slate-500">{{ row.count }}</span>
+                                    </span>
+                                    <p v-if="!caption_intel.hashtags.length" class="text-xs text-slate-500">None yet.</p>
+                                </div>
+                                <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading hashtags" />
                             </div>
-                            <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading hashtags" />
-                        </div>
-                        <div class="min-w-0">
-                            <CtaLanguage
-                                v-if="caption_intel"
-                                :ctas="caption_intel.ctas"
-                            />
-                            <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading CTA language" />
-                        </div>
-                    </section>
+                            <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+                                <CtaLanguage
+                                    v-if="caption_intel"
+                                    class="flex min-h-0 flex-1 flex-col"
+                                    :ctas="caption_intel.ctas"
+                                />
+                                <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading CTA language" />
+                            </div>
+                        </section>
+                    </div>
                 </div>
 
                 <div

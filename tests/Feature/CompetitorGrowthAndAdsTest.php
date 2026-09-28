@@ -101,7 +101,7 @@ class CompetitorGrowthAndAdsTest extends TestCase
             $this->assertSame(2000, $insights['growth']['month_delta']);
             $this->assertSame(1, $insights['cta_clicks']['posts_with_cta']);
             $this->assertArrayNotHasKey('clicks', $insights['cta_clicks']);
-            $this->assertSame('Other', $insights['ctas'][0]['term']);
+            $this->assertSame('Join the event', $insights['ctas'][0]['term']);
             $this->assertSame('Book a table', $insights['ctas'][0]['lines'][0]['text']);
             $this->assertSame($post->id, $insights['ctas'][0]['lines'][0]['post_id']);
             $this->assertSame('Autumn set menu', $insights['ads'][0]['title']);

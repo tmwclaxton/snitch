@@ -72,50 +72,56 @@ function formatUnderHandle(row: Row): string | null {
 </script>
 
 <template>
-    <EmptyState v-if="status !== 'ok' || !rows?.length" :reason="reason" compact />
-    <table v-else class="w-full table-fixed text-left text-sm">
-        <colgroup>
-            <col :style="{ width: showGrowth ? '40%' : '44%' }">
-            <col style="width: 14%">
-            <col v-if="showGrowth" style="width: 12%">
-            <col style="width: 14%">
-            <col style="width: 14%">
-            <col style="width: 10%">
-        </colgroup>
-        <thead>
-            <tr class="border-b border-slate-200 text-xs text-slate-500">
-                <th class="py-1 pr-3 text-left font-medium">Account</th>
-                <th class="py-1 pl-2 pr-1 text-right font-medium leading-tight">Followers</th>
-                <th
-                    v-if="showGrowth"
-                    class="py-1 pl-2 pr-1 text-right font-medium leading-tight"
+    <div class="flex h-full min-h-0 min-w-0 flex-col">
+        <EmptyState v-if="status !== 'ok' || !rows?.length" :reason="reason" compact />
+        <table
+            v-else
+            class="h-full w-full table-fixed text-left text-sm"
+            :style="{ '--lb-rows': String(rows?.length || 1) }"
+        >
+            <colgroup>
+                <col :style="{ width: showGrowth ? '40%' : '44%' }">
+                <col style="width: 14%">
+                <col v-if="showGrowth" style="width: 12%">
+                <col style="width: 14%">
+                <col style="width: 14%">
+                <col style="width: 10%">
+            </colgroup>
+            <thead>
+                <tr class="border-b border-slate-200 text-xs text-slate-500">
+                    <th class="py-1 pr-3 text-left font-medium">Account</th>
+                    <th class="py-1 pl-2 pr-1 text-right font-medium leading-tight">Followers</th>
+                    <th
+                        v-if="showGrowth"
+                        class="py-1 pl-2 pr-1 text-right font-medium leading-tight"
+                    >
+                        Growth
+                    </th>
+                    <th class="py-1 pl-2 pr-1 text-right font-medium leading-tight">
+                        Posts
+                        <br>
+                        / wk
+                    </th>
+                    <th class="py-1 pl-2 pr-1 text-right font-medium leading-tight">
+                        Eng.
+                        <br>
+                        rate
+                    </th>
+                    <th class="py-1 pl-2 pr-1 text-right font-medium leading-tight">Win</th>
+                </tr>
+            </thead>
+            <tbody class="h-full">
+                <tr
+                    v-for="row in rows"
+                    :key="row.handle"
+                    class="border-b border-slate-100 last:border-b-0"
+                    :class="[
+                        row.is_own_account ? 'bg-slate-50' : '',
+                        row.no_posts_in_period ? 'text-slate-400' : '',
+                    ]"
+                    :style="{ height: `calc(100% / var(--lb-rows))` }"
                 >
-                    Growth
-                </th>
-                <th class="py-1 pl-2 pr-1 text-right font-medium leading-tight">
-                    Posts
-                    <br>
-                    / wk
-                </th>
-                <th class="py-1 pl-2 pr-1 text-right font-medium leading-tight">
-                    Eng.
-                    <br>
-                    rate
-                </th>
-                <th class="py-1 pl-2 pr-1 text-right font-medium leading-tight">Win</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr
-                v-for="row in rows"
-                :key="row.handle"
-                class="border-b border-slate-100"
-                :class="[
-                    row.is_own_account ? 'bg-slate-50' : '',
-                    row.no_posts_in_period ? 'text-slate-400' : '',
-                ]"
-            >
-                <td class="py-1 pr-3 align-top">
+                <td class="py-1.5 pr-3 align-middle">
                     <div class="flex min-w-0 items-start gap-1.5" :title="row.row_note || undefined">
                         <SnitchAvatar
                             :src="row.avatar"
@@ -152,26 +158,26 @@ function formatUnderHandle(row: Row): string | null {
                     </div>
                 </td>
                 <td
-                    class="py-1 pl-2 pr-1 text-right align-top tabular-nums"
+                    class="py-1.5 pl-2 pr-1 text-right align-middle tabular-nums"
                     :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-700'"
                 >
                     {{ followers(row.followers) }}
                 </td>
                 <td
                     v-if="showGrowth"
-                    class="py-1 pl-2 pr-1 text-right align-top tabular-nums"
+                    class="py-1.5 pl-2 pr-1 text-right align-middle tabular-nums"
                     :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-700'"
                 >
                     {{ row.no_posts_in_period ? '-' : pct(row.growth_pct) }}
                 </td>
                 <td
-                    class="py-1 pl-2 pr-1 text-right align-top tabular-nums"
+                    class="py-1.5 pl-2 pr-1 text-right align-middle tabular-nums"
                     :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-700'"
                 >
                     {{ row.no_posts_in_period ? '-' : num(row.posts_per_week) }}
                 </td>
                 <td
-                    class="py-1 pl-2 pr-1 text-right align-top tabular-nums"
+                    class="py-1.5 pl-2 pr-1 text-right align-middle tabular-nums"
                     :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-700'"
                 >
                     <span
@@ -182,12 +188,13 @@ function formatUnderHandle(row: Row): string | null {
                     <span v-else>{{ row.er.toFixed(1) }}%</span>
                 </td>
                 <td
-                    class="py-1 pl-2 pr-1 text-right align-top tabular-nums"
+                    class="py-1.5 pl-2 pr-1 text-right align-middle tabular-nums"
                     :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-700'"
                 >
                     {{ row.no_posts_in_period ? '-' : row.winners }}
                 </td>
-            </tr>
-        </tbody>
-    </table>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </template>

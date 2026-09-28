@@ -13,6 +13,8 @@ class CtaEssenceGrouper
 
     private const PHRASE_LIMIT = 40;
 
+    private const CATCH_ALL = 'No clear ask';
+
     /** Fixed plain chip labels shown on the dashboard. */
     public const LABELS = [
         'Comment a keyword',
@@ -23,7 +25,7 @@ class CtaEssenceGrouper
         'Share this',
         'Join the event',
         'Ask a question',
-        'Other',
+        self::CATCH_ALL,
     ];
 
     public function __construct(private NanoGptClient $nanoGpt) {}
@@ -55,8 +57,14 @@ class CtaEssenceGrouper
     {
         $normalised = $this->normalise($label);
 
-        if ($normalised === '' || $normalised === 'other' || $normalised === 'other asks') {
-            return 'Other';
+        if ($normalised === ''
+            || $normalised === 'other'
+            || $normalised === 'other asks'
+            || $normalised === 'no clear ask'
+            || $normalised === 'no explicit cta'
+            || $normalised === 'no ask'
+            || $normalised === 'none') {
+            return self::CATCH_ALL;
         }
 
         foreach (self::LABELS as $canonical) {
@@ -82,6 +90,7 @@ class CtaEssenceGrouper
             'link in bio' => 'Link in bio',
             'grab ticket via bio' => 'Link in bio',
             'link in the bio' => 'Link in bio',
+            'check out local resource' => 'Link in bio',
             'save this' => 'Save this',
             'save for later' => 'Save this',
             'share this' => 'Share this',
@@ -90,10 +99,13 @@ class CtaEssenceGrouper
             'join challenge or event' => 'Join the event',
             'get involved or join' => 'Join the event',
             'get involved in area' => 'Join the event',
+            'get involved' => 'Join the event',
+            'book a table' => 'Join the event',
+            'come along' => 'Join the event',
             'ask a question' => 'Ask a question',
-            'swipe to see content' => 'Other',
-            'check out local resource' => 'Other',
-            'watch the full episode' => 'Other',
+            'swipe to see content' => self::CATCH_ALL,
+            'watch the full episode' => self::CATCH_ALL,
+            'listen or watch' => self::CATCH_ALL,
         ];
 
         if (isset($aliases[$normalised])) {
@@ -113,8 +125,8 @@ class CtaEssenceGrouper
             return null;
         }
 
-        // Bump cache key when the fixed label set changes so old free-text labels are remapped.
-        $key = 'cta-essence:v2:'.hash('sha256', implode("\n", array_keys($counts)));
+        // Bump cache key when the fixed label set or phrase remaps change.
+        $key = 'cta-essence:v3:'.hash('sha256', implode("\n", array_keys($counts)));
         $cached = Cache::get($key);
 
         if (is_array($cached)) {
@@ -160,7 +172,7 @@ class CtaEssenceGrouper
         $decoded = $this->nanoGpt->chatJson([
             [
                 'role' => 'system',
-                'content' => 'Group social post calls to action by the ask they make. Reply with JSON only: {"groups":[{"label":"exact label","phrases":["exact input"]}]}. Each label MUST be one of: '.$allowed.'. Copy phrases exactly from the input. Put every input phrase in exactly one group. Do not invent phrases. Prefer "Other" when unsure.',
+                'content' => 'Group social post calls to action by the ask they make. Reply with JSON only: {"groups":[{"label":"exact label","phrases":["exact input"]}]}. Each label MUST be one of: '.$allowed.'. Copy phrases exactly from the input. Put every input phrase in exactly one group. Do not invent phrases. Prefer a real ask label when the phrase implies one (comment, tag, DM, bio link, save, share, join/attend/book, ask). Use "No clear ask" only for passive or non-asks (swipe, watch/listen with no action, vague "check this out" with no destination). Never use "Other".',
             ],
             [
                 'role' => 'user',
@@ -233,7 +245,7 @@ class CtaEssenceGrouper
                 continue;
             }
 
-            $label = $this->canonicalLabel((string) ($group['label'] ?? ''));
+            $groupLabel = $this->canonicalLabel((string) ($group['label'] ?? ''));
 
             foreach ($group['phrases'] ?? [] as $phrase) {
                 if (! is_string($phrase)) {
@@ -247,6 +259,7 @@ class CtaEssenceGrouper
                 }
 
                 $used[$original] = true;
+                $label = $this->resolvePhraseLabel($original, $groupLabel);
                 $buckets[$label][] = $original;
             }
         }
@@ -257,8 +270,8 @@ class CtaEssenceGrouper
 
         $leftover = array_values(array_diff(array_keys($counts), array_keys($used)));
 
-        if ($leftover !== []) {
-            $buckets['Other'] = [...($buckets['Other'] ?? []), ...$leftover];
+        foreach ($leftover as $phrase) {
+            $buckets[$this->canonicalLabel($phrase)][] = $phrase;
         }
 
         $mapping = [];
@@ -275,6 +288,24 @@ class CtaEssenceGrouper
         }
 
         return $mapping === [] ? null : $mapping;
+    }
+
+    /**
+     * Prefer phrase keywords over a catch-all LLM group label.
+     */
+    private function resolvePhraseLabel(string $phrase, string $groupLabel): string
+    {
+        $phraseLabel = $this->canonicalLabel($phrase);
+
+        if ($phraseLabel !== self::CATCH_ALL) {
+            return $phraseLabel;
+        }
+
+        if ($groupLabel !== self::CATCH_ALL) {
+            return $groupLabel;
+        }
+
+        return self::CATCH_ALL;
     }
 
     /**
@@ -306,11 +337,11 @@ class CtaEssenceGrouper
         }
 
         usort($rows, function (array $left, array $right): int {
-            if ($left['term'] === 'Other') {
+            if ($left['term'] === self::CATCH_ALL) {
                 return 1;
             }
 
-            if ($right['term'] === 'Other') {
+            if ($right['term'] === self::CATCH_ALL) {
                 return -1;
             }
 
@@ -332,23 +363,23 @@ class CtaEssenceGrouper
             }
         }
 
-        $other = null;
+        $catchAll = null;
 
         foreach ($head as $index => $row) {
-            if ($row['term'] === 'Other') {
-                $other = $index;
+            if ($row['term'] === self::CATCH_ALL) {
+                $catchAll = $index;
             }
         }
 
-        if ($other === null) {
+        if ($catchAll === null) {
             $head[] = [
-                'term' => 'Other',
+                'term' => self::CATCH_ALL,
                 'count' => array_sum(array_column($extraLines, 'count')),
                 'lines' => $extraLines,
             ];
         } else {
-            $head[$other]['lines'] = [...$head[$other]['lines'], ...$extraLines];
-            $head[$other]['count'] = array_sum(array_column($head[$other]['lines'], 'count'));
+            $head[$catchAll]['lines'] = [...$head[$catchAll]['lines'], ...$extraLines];
+            $head[$catchAll]['count'] = array_sum(array_column($head[$catchAll]['lines'], 'count'));
         }
 
         return array_slice($head, 0, self::GROUP_LIMIT + 1);
@@ -364,7 +395,7 @@ class CtaEssenceGrouper
             return 'DM us';
         }
 
-        if (preg_match('/\b(link in bio|bio link|in our bio|via bio)\b/u', $normalised)) {
+        if (preg_match('/\b(link in bio|bio link|in our bio|via bio|check out|visit|head to)\b/u', $normalised)) {
             return 'Link in bio';
         }
 
@@ -376,7 +407,7 @@ class CtaEssenceGrouper
             return 'Share this';
         }
 
-        if (preg_match('/\b(join|sign up|signup|register|rsvp|ticket|event|challenge)\b/u', $normalised)) {
+        if (preg_match('/\b(join|sign up|signup|register|rsvp|ticket|event|challenge|involved|volunteer|come along|attend|book)\b/u', $normalised)) {
             return 'Join the event';
         }
 
@@ -388,7 +419,11 @@ class CtaEssenceGrouper
             return 'Comment a keyword';
         }
 
-        return 'Other';
+        if (preg_match('/\b(swipe|listen|watch|podcast|episode|follow for more)\b/u', $normalised)) {
+            return self::CATCH_ALL;
+        }
+
+        return self::CATCH_ALL;
     }
 
     private function displayText(string $text): string
