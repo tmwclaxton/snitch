@@ -153,4 +153,24 @@ class MonthlyReportBuilderTest extends TestCase
             ->assertSee('1,200', false)
             ->assertDontSee('vs last month: -', false);
     }
+
+    public function test_persist_updates_existing_month_without_unique_collision(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $month = CarbonImmutable::now('Europe/London')->startOfMonth()->subMonth();
+
+        $builder = app(MonthlyReportBuilder::class);
+        $first = $builder->persist($user, $month);
+        $second = $builder->persist($user, $month);
+
+        $this->assertSame($first->id, $second->id);
+        $this->assertSame(
+            1,
+            MonthlyReport::query()
+                ->where('user_id', $user->id)
+                ->whereDate('month_start', $month->toDateString())
+                ->count(),
+        );
+    }
 }

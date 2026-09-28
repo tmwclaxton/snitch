@@ -140,14 +140,27 @@ class MonthlyReportBuilder
     public function persist(User $user, CarbonImmutable $monthStart): MonthlyReport
     {
         $payload = $this->build($user, $monthStart);
+        $day = $monthStart->toDateString();
 
-        return MonthlyReport::query()->updateOrCreate(
-            [
+        // Match on the calendar day so SQLite datetime-stored dates and MySQL DATE
+        // columns both resolve the same unique (user_id, month_start) row.
+        $report = MonthlyReport::query()
+            ->where('user_id', $user->id)
+            ->whereDate('month_start', $day)
+            ->first();
+
+        if ($report === null) {
+            $report = new MonthlyReport([
                 'user_id' => $user->id,
-                'month_start' => $monthStart->toDateString(),
-            ],
-            ['payload' => $payload],
-        );
+                'month_start' => $day,
+            ]);
+        }
+
+        $report->forceFill([
+            'payload' => $payload,
+        ])->save();
+
+        return $report;
     }
 
     /**
