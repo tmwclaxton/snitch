@@ -309,6 +309,42 @@ class DashboardMetricsTest extends TestCase
 
         $winnerHandles = collect($payload['winners']['data']['winners'] ?? [])->pluck('handle');
         $this->assertNotContains('goodgym', $winnerHandles->all());
+
+        foreach ($payload['recent_posts'] as $post) {
+            $this->assertFalse(
+                (bool) ($post['metrics']['like_count_hidden'] ?? false),
+                'Hidden-like posts stay out of Latest posts when the toggle is off',
+            );
+        }
+
+        // High comments+views so the proxy PI clears the winner threshold vs
+        // the account's usual (all other hidden posts are quieter).
+        Post::factory()->forAccount($hiddenAccount)->create([
+            'type' => PostType::Reel,
+            'posted_at' => now()->subHours(3),
+            'metrics' => [
+                'likes' => null,
+                'like_count_hidden' => true,
+                'comments' => 80,
+                'views' => 12000,
+            ],
+        ]);
+
+        $withHidden = app(DashboardMetrics::class)->forUser($user, [], 30, true);
+
+        $this->assertTrue($withHidden['show_hidden_likes']);
+        $hiddenEr = collect($withHidden['leaderboard']['data']['rows'])->firstWhere('handle', 'goodgym');
+        $this->assertNull($hiddenEr['er'], 'ER averages stay null even when the toggle is on');
+
+        $hiddenWinners = collect($withHidden['winners']['data']['winners'] ?? []);
+        $this->assertTrue(
+            $hiddenWinners->contains(fn (array $row): bool => ($row['handle'] ?? null) === 'goodgym' && ($row['likes_hidden'] ?? false)),
+            'Toggle on includes hidden-like posts in Winning posts with a likes_hidden badge',
+        );
+
+        $hiddenRecent = collect($withHidden['recent_posts'])
+            ->filter(fn (array $post): bool => (bool) ($post['metrics']['like_count_hidden'] ?? false));
+        $this->assertNotEmpty($hiddenRecent, 'Toggle on includes hidden-like posts in Latest posts');
     }
 
     public function test_growth_efficiency_format_and_heatmap_cards_return_shapes(): void

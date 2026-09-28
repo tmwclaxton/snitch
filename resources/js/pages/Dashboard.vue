@@ -170,7 +170,6 @@ const props = defineProps<{
 
 const winnerTab = ref<'winners' | 'flops'>('winners');
 const winnersExpanded = ref(false);
-const showHiddenTip = ref(false);
 
 const showOnboarding = computed(
     () => props.onboarding.status === 'ok' && !(props.onboarding.data?.hide ?? false),
@@ -314,29 +313,38 @@ const timeOfDayTotal = computed(() =>
                     <span class="truncate">@{{ rival.handle }}</span>
                 </button>
 
-                <div class="ml-auto flex items-center gap-2">
-                    <label class="inline-flex items-center gap-1 text-[10px] text-slate-500" title="Include posts with hidden likes in winner lists">
+                <div class="ml-auto flex shrink-0 items-center gap-1.5">
+                    <label class="group relative inline-flex h-6 cursor-pointer items-center gap-1 text-[10px] text-slate-600">
                         <input
                             type="checkbox"
-                            class="size-3 rounded border-slate-300"
+                            class="peer sr-only"
                             :checked="!!show_hidden_likes"
+                            aria-label="Show hidden-likes posts"
                             @change="refreshQuery({ hidden: !show_hidden_likes })"
                         >
-                        Hidden likes
-                        <button
-                            type="button"
-                            class="relative rounded p-0.5 text-slate-400 hover:text-slate-700"
-                            @click.prevent="showHiddenTip = !showHiddenTip"
-                            @blur="showHiddenTip = false"
+                        <span
+                            class="relative inline-flex h-3.5 w-6 shrink-0 items-center rounded-full bg-slate-200 transition-colors peer-checked:bg-slate-900 peer-focus-visible:ring-2 peer-focus-visible:ring-slate-400"
+                            aria-hidden="true"
+                        >
+                            <span
+                                class="ml-0.5 inline-block size-2.5 rounded-full bg-white transition-transform"
+                                :class="show_hidden_likes ? 'translate-x-2.5' : 'translate-x-0'"
+                            />
+                        </span>
+                        <span class="whitespace-nowrap">Hidden likes</span>
+                        <span
+                            class="relative inline-flex text-slate-400 group-hover:text-slate-700"
+                            tabindex="0"
+                            aria-label="About hidden-likes posts"
                         >
                             <Info class="h-3 w-3" />
                             <span
-                                v-if="showHiddenTip"
-                                class="absolute right-0 z-20 mt-2 w-56 rounded border border-slate-200 bg-white p-2 text-left text-[10px] leading-snug text-slate-600 shadow-sm"
+                                role="tooltip"
+                                class="pointer-events-none absolute right-0 top-full z-20 mt-1.5 w-60 rounded border border-slate-200 bg-white p-2 text-left text-[10px] leading-snug text-slate-600 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
                             >
-                                Some accounts hide like counts. Those posts are left out of engagement averages and winner rankings by default. Turn this on to include them in post lists, ranked on comments and views.
+                                Some accounts hide their like counts on Instagram. Those posts are left out of engagement averages and winner rankings by default. Turn this on to include them in post lists, ranked on comments and views.
                             </span>
-                        </button>
+                        </span>
                     </label>
                     <div class="flex items-center gap-0.5 rounded border border-slate-200 p-0.5">
                         <button

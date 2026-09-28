@@ -214,7 +214,12 @@ class DashboardMetrics
         $followerSeries = $this->competitorInsights->followerSeriesForIds(array_map('intval', $socialIds));
         $growthDelta = $this->growthDeltaFromSnapshots($visibleAccounts, $snapshots);
         $captionIntel = $this->captionIntelForAccounts($user, $socialIds, $since);
-        $recentPosts = $this->recentPostsPayload($user, $visibleAccounts, self::RECENT_POST_FRAMES);
+        $recentPosts = $this->recentPostsPayload(
+            $user,
+            $visibleAccounts,
+            self::RECENT_POST_FRAMES,
+            $showHiddenLikes,
+        );
         $rail = $this->railCard(
             $visibleAccounts,
             $ownRow,
@@ -1124,17 +1129,30 @@ class DashboardMetrics
                 ->filter(fn (array $row): bool => $row['hidden_likes'])
                 ->map(function (array $row) use ($periodPosts): array {
                     $sid = (int) $row['social_account_id'];
+                    $scoreFn = static fn (array $prior): float => (float) $prior['comments'] + ((float) $prior['views'] * 0.01);
 
-                    // Rank hidden-like posts on comments (+ views) vs the account's
-                    // visible median - never invent a like-based PI.
+                    // Rank on comments (+ views) vs the account's usual - prefer
+                    // visible-like posts as the baseline; if every post hides
+                    // likes, fall back to that account's own comment/view median.
                     $proxyBase = $this->math->median(
                         $periodPosts
                             ->where('social_account_id', $sid)
                             ->filter(fn (array $prior): bool => ! $prior['hidden_likes'])
-                            ->map(fn (array $prior): float => (float) $prior['comments'] + ((float) $prior['views'] * 0.01))
+                            ->map($scoreFn)
                             ->values(),
                     );
-                    $score = (float) $row['comments'] + ((float) $row['views'] * 0.01);
+
+                    if ($proxyBase === null || $proxyBase <= 0) {
+                        $proxyBase = $this->math->median(
+                            $periodPosts
+                                ->where('social_account_id', $sid)
+                                ->filter(fn (array $prior): bool => $prior['hidden_likes'])
+                                ->map($scoreFn)
+                                ->values(),
+                        );
+                    }
+
+                    $score = $scoreFn($row);
                     $row['pi'] = $proxyBase !== null && $proxyBase > 0
                         ? $score / $proxyBase
                         : null;
@@ -2136,14 +2154,20 @@ class DashboardMetrics
      * @param  Collection<int, TrackedAccount>  $visibleAccounts
      * @return list<array<string, mixed>>
      */
-    private function recentPostsPayload(User $user, Collection $visibleAccounts, int $limit): array
-    {
+    private function recentPostsPayload(
+        User $user,
+        Collection $visibleAccounts,
+        int $limit,
+        bool $showHiddenLikes = false,
+    ): array {
         $ids = $visibleAccounts->pluck('social_account_id')->filter()->map(fn ($id) => (int) $id)->values()->all();
 
         if ($ids === []) {
             return [];
         }
 
+        // Over-fetch then filter so hidden-like posts do not crowd out visible
+        // ones when the toggle is off (JSON metrics cannot be WHERE'd cleanly).
         $posts = Post::query()
             ->whereIn('social_account_id', $ids)
             ->whereNotNull('posted_at')
@@ -2153,7 +2177,7 @@ class DashboardMetrics
                 'winnerInsight' => fn ($q) => $q->where('user_id', $user->id)->select(['id', 'post_id', 'user_id', 'score']),
             ])
             ->latest('posted_at')
-            ->limit($limit)
+            ->limit($showHiddenLikes ? $limit : max($limit * 3, 48))
             ->get([
                 'id',
                 'social_account_id',
@@ -2168,12 +2192,21 @@ class DashboardMetrics
                 'posted_at',
             ]);
 
+        if (! $showHiddenLikes) {
+            $posts = $posts
+                ->reject(fn (Post $post): bool => $this->math->isHiddenLikes($post))
+                ->take($limit)
+                ->values();
+        }
+
         PostAccountPresenter::attachForUser($posts, $user);
 
         return $posts->map(function (Post $post): array {
             $analysis = $post->analysis;
             $winner = $post->winnerInsight;
             $metrics = is_array($post->metrics) ? $post->metrics : [];
+            $likesHidden = ($metrics['like_count_hidden'] ?? false) === true
+                || $this->math->isHiddenLikes($post);
 
             return [
                 'id' => $post->id,
@@ -2190,10 +2223,10 @@ class DashboardMetrics
                 'media_availability' => $post->media_availability,
                 'metrics' => [
                     'views' => $metrics['views'] ?? null,
-                    'likes' => ($metrics['like_count_hidden'] ?? false) === true ? null : ($metrics['likes'] ?? null),
+                    'likes' => $likesHidden ? null : ($metrics['likes'] ?? null),
                     'comments' => $metrics['comments'] ?? null,
                     'shares' => $metrics['shares'] ?? null,
-                    'like_count_hidden' => (bool) ($metrics['like_count_hidden'] ?? false),
+                    'like_count_hidden' => $likesHidden,
                 ],
                 'tracked_account' => $post->getAttribute('tracked_account'),
                 'analysis' => $analysis === null ? null : [

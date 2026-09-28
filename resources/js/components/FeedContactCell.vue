@@ -194,9 +194,12 @@ const winnerScore = computed(() => {
                     v-for="metric in metrics"
                     :key="metric.key"
                     class="snitch-glance-metric"
-                    :title="`${metric.value} ${metric.label}`"
+                    :title="metric.value === 'hidden' ? 'Like count hidden on Instagram' : `${metric.value} ${metric.label}`"
                 >
-                    <span class="snitch-glance-metric-value tabular-nums">{{ metric.value }}</span>
+                    <span
+                        class="snitch-glance-metric-value"
+                        :class="metric.value === 'hidden' ? 'rounded bg-amber-50 px-1 font-medium text-amber-700' : 'tabular-nums'"
+                    >{{ metric.value }}</span>
                     <span class="snitch-glance-metric-label">{{ metric.label }}</span>
                 </li>
             </ul>

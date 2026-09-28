@@ -58,12 +58,40 @@ class DashboardTest extends TestCase
                 ->component('Dashboard')
                 ->has('rivals', 1)
                 ->where('rivals.0.handle', 'rivalbakery')
+                ->where('show_hidden_likes', false)
                 ->has('rail.cells')
                 ->loadDeferredProps('panel', fn (Assert $panel) => $panel
                     ->where('leaderboard.status', 'ok')
                     ->has('activity.heatmap')
                     ->has('recent_posts')
                 )
+            );
+    }
+
+    public function test_dashboard_hidden_likes_query_persists_toggle(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'rivalbakery',
+            'followers' => 1200,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('dashboard', ['hidden' => '1']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->where('show_hidden_likes', true)
+            );
+
+        $this->actingAs($user)
+            ->get(route('dashboard', ['hidden' => '0']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->where('show_hidden_likes', false)
             );
     }
 
@@ -76,6 +104,9 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('Only Instagram accounts appear here', $dashboard);
         $this->assertStringContainsString('No rivals to compare yet', $dashboard);
         $this->assertStringContainsString('legacy_non_instagram_count', $dashboard);
+        $this->assertStringContainsString('Show hidden-likes posts', $dashboard);
+        $this->assertStringContainsString('ranked on comments and views', $dashboard);
+        $this->assertStringContainsString('hidden: !show_hidden_likes', $dashboard);
     }
 
     public function test_dashboard_reports_legacy_non_instagram_trackers(): void

@@ -3,7 +3,8 @@ export type PostMetrics = {
     likes?: number | null;
     comments?: number | null;
     shares?: number | null;
-    [key: string]: number | null | undefined;
+    like_count_hidden?: boolean;
+    [key: string]: number | boolean | null | undefined;
 };
 
 const METRIC_ORDER = ['views', 'likes', 'comments', 'shares'] as const;
@@ -46,6 +47,16 @@ export function metricPairs(
     const pairs: Array<{ key: string; label: string; value: string }> = [];
 
     for (const key of METRIC_ORDER) {
+        if (key === 'likes' && metrics.like_count_hidden === true) {
+            pairs.push({
+                key: 'likes',
+                label: 'Likes',
+                value: 'hidden',
+            });
+
+            continue;
+        }
+
         const raw = metrics[key];
 
         if (typeof raw !== 'number' || raw <= 0) {
