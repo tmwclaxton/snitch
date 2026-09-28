@@ -14,7 +14,7 @@ class DashboardController extends Controller
 
     /**
      * Keys sent on the first paint (controls + rail). Everything else loads in
-     * one deferred `panel` group so charts and the contact sheet arrive together.
+     * one deferred `panel` group so charts and boards arrive together.
      *
      * @var list<string>
      */
@@ -55,7 +55,6 @@ class DashboardController extends Controller
         'activity',
         'follower_series',
         'growth_delta',
-        'recent_posts',
         'caption_intel',
     ];
 

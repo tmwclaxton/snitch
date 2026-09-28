@@ -4,7 +4,6 @@ import { Info } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { index as briefIndex } from '@/actions/App/Http/Controllers/BriefController';
 import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
-import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import CtaLanguage from '@/components/CtaLanguage.vue';
 import CaptionPanels from '@/components/dashboard/CaptionPanels.vue';
 import CompareTable from '@/components/dashboard/CompareTable.vue';
@@ -19,11 +18,9 @@ import StatCard from '@/components/dashboard/StatCard.vue';
 import ThemeMatrix from '@/components/dashboard/ThemeMatrix.vue';
 import WinnerCard from '@/components/dashboard/WinnerCard.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
-import SnitchImage from '@/components/SnitchImage.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
-import { index as feedIndex } from '@/routes/feed';
 import { index as winnersIndex } from '@/routes/winners';
 
 defineOptions({
@@ -47,19 +44,6 @@ type Account = {
     posts_count: number;
     period_posts_count?: number;
     no_posts_in_period?: boolean;
-};
-
-type RecentPost = {
-    id: number;
-    platform: string;
-    type: string;
-    url: string | null;
-    caption?: string | null;
-    media_url: string | null;
-    cover_url?: string | null;
-    media_availability?: string | null;
-    metrics?: Record<string, unknown> | null;
-    tracked_account?: { id?: number; handle: string; display_name?: string | null } | null;
 };
 
 type WinnerPost = {
@@ -128,7 +112,6 @@ const props = defineProps<{
     } | null;
     follower_series?: { captured_on: string; label: string; followers: number }[] | null;
     growth_delta?: { followers: number; week_delta: number | null; week_pct: number | null } | null;
-    recent_posts?: RecentPost[] | null;
     caption_intel?: {
         hashtags: { term: string; count: number }[];
         keywords: { term: string; count: number }[];
@@ -247,8 +230,6 @@ const hasFollowerHistory = computed(() => followerPoints.value.length >= 2);
 const showFollowerNote = computed(
     () => props.follower_series != null && !hasFollowerHistory.value,
 );
-
-const recentThumbs = computed(() => (props.recent_posts ?? []).slice(0, 4));
 
 const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? {});
 </script>
@@ -671,62 +652,6 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                     </button>
                     <SnitchSkeleton v-else-if="!winners" variant="scrap" height="6rem" label="Loading winners" />
                 </DashCard>
-
-                <div
-                    id="recent_posts"
-                    class="min-w-0"
-                >
-                    <div class="mb-1.5 flex items-center justify-between gap-2">
-                        <h2 class="text-sm font-semibold text-slate-900">Latest posts</h2>
-                        <Link :href="feedIndex.url()" class="text-xs font-medium text-slate-500 hover:text-slate-800">
-                            Open feed →
-                        </Link>
-                    </div>
-                    <div
-                        v-if="recent_posts"
-                        class="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4"
-                    >
-                        <Link
-                            v-for="post in recentThumbs"
-                            :key="post.id"
-                            :href="feedShow.url(post.id)"
-                            class="group overflow-hidden rounded border border-slate-200 bg-white transition hover:border-slate-400 hover:shadow-sm"
-                        >
-                            <div class="aspect-square min-h-[7.5rem] bg-slate-100 sm:min-h-[8.5rem]">
-                                <SnitchImage
-                                    :src="post.cover_url"
-                                    alt=""
-                                    class="size-full"
-                                    img-class="size-full object-cover"
-                                    aspect-ratio="1 / 1"
-                                    fallback="paper"
-                                />
-                            </div>
-                            <p class="break-words px-1.5 py-1.5 text-xs leading-snug text-slate-600">
-                                <span
-                                    v-if="post.tracked_account?.id"
-                                    role="link"
-                                    tabindex="0"
-                                    class="cursor-pointer hover:underline"
-                                    @click.prevent.stop="router.visit(competitorShow.url(post.tracked_account.id))"
-                                    @keydown.enter.prevent.stop="router.visit(competitorShow.url(post.tracked_account.id))"
-                                >
-                                    @{{ post.tracked_account.handle }}
-                                </span>
-                                <template v-else>
-                                    @{{ post.tracked_account?.handle || 'post' }}
-                                </template>
-                            </p>
-                        </Link>
-                    </div>
-                    <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading latest posts" />
-                    <p
-                        v-if="recent_posts && !recent_posts.length"
-                        class="mt-1 text-[11px] text-slate-500"
-                    >
-                        No posts in the selected accounts yet.
-                    </p>
-                </div>
 
                 <DashCard
                     title="Captions and hooks"

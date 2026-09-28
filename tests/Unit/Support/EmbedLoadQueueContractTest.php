@@ -146,7 +146,8 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertIsString($dashboard);
         $this->assertStringContainsString('px-2 py-2 sm:px-3', $dashboard);
         $this->assertStringContainsString('WinnerCard', $dashboard);
-        $this->assertStringContainsString('id="recent_posts"', $dashboard);
+        $this->assertStringNotContainsString('id="recent_posts"', $dashboard);
+        $this->assertStringNotContainsString('Latest posts', $dashboard);
         $this->assertStringContainsString('id="format_mix"', $dashboard);
         $this->assertStringContainsString('id="activity"', $dashboard);
         $this->assertStringContainsString('id="caption_intel"', $dashboard);

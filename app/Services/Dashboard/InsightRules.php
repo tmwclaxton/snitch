@@ -30,6 +30,7 @@ class InsightRules
         'actions' => 'insights',
         'attention' => 'leaderboard',
         'weekly' => 'activity',
+        'recent_posts' => 'winners',
     ];
 
     /**
@@ -49,7 +50,6 @@ class InsightRules
         'format_mix',
         'captions',
         'caption_intel',
-        'recent_posts',
         'themes',
         'data_notes',
     ];

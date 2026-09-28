@@ -46,7 +46,7 @@ class DashboardTest extends TestCase
             'handle' => 'rivalbakery',
             'followers' => 1200,
         ]);
-        $post = Post::factory()->forAccount($account)->create([
+        Post::factory()->forAccount($account)->create([
             'posted_at' => now()->subDay(),
             'metrics' => ['likes' => 10, 'comments' => 2],
         ]);
@@ -65,10 +65,8 @@ class DashboardTest extends TestCase
                     ->where('leaderboard.status', 'ok')
                     ->where('leaderboard.data.rows.0.tracked_account_id', $account->id)
                     ->has('activity.heatmap')
-                    ->has('recent_posts', 1)
-                    ->where('recent_posts.0.id', $post->id)
-                    ->where('recent_posts.0.tracked_account.id', $account->id)
-                    ->where('recent_posts.0.tracked_account.handle', 'rivalbakery')
+                    ->missing('recent_posts')
+                    ->has('winners')
                 )
             );
     }
@@ -80,10 +78,10 @@ class DashboardTest extends TestCase
 
         $this->assertNotFalse($dashboard);
         $this->assertNotFalse($winnerCard);
-        $this->assertStringContainsString('feedShow.url(post.id)', $dashboard);
+        $this->assertStringNotContainsString('Latest posts', $dashboard);
+        $this->assertStringNotContainsString('recent_posts', $dashboard);
         $this->assertStringContainsString('competitorShow.url(rival.id)', $dashboard);
         $this->assertStringContainsString('xl:grid-cols-6', $dashboard);
-        $this->assertStringContainsString('xl:grid-cols-4', $dashboard);
         $this->assertStringContainsString('performance vs usual', strtolower($dashboard));
         $this->assertStringContainsString('feedShow.url(post.id)', $winnerCard);
         $this->assertStringContainsString('competitorShow.url(props.post.tracked_account_id)', $winnerCard);

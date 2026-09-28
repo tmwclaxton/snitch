@@ -3,14 +3,11 @@
 namespace App\Services\Dashboard;
 
 use App\Enums\Platform;
-use App\Enums\PostType;
 use App\Models\FollowerSnapshot;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
-use App\Services\Analysis\AnalysisTermCatalogue;
 use App\Services\Competitors\CompetitorInsightsBuilder;
-use App\Support\PostAccountPresenter;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -20,15 +17,12 @@ class DashboardMetrics
 
     public const PERIODS = [7, 30, 90];
 
-    public const RECENT_POST_FRAMES = 24;
-
     public function __construct(
         private DashboardMath $math,
         private InsightRules $insightRules,
         private DashboardCache $cache,
         private DashboardActivityBuilder $activity,
         private CompetitorInsightsBuilder $competitorInsights,
-        private AnalysisTermCatalogue $catalogue,
     ) {}
 
     /**
@@ -109,7 +103,6 @@ class DashboardMetrics
                 'week_delta' => null,
                 'week_pct' => null,
             ],
-            'recent_posts' => [],
             'caption_intel' => [
                 'hashtags' => [],
                 'keywords' => [],
@@ -215,12 +208,6 @@ class DashboardMetrics
         $followerSeries = $this->competitorInsights->followerSeriesForIds(array_map('intval', $socialIds));
         $growthDelta = $this->growthDeltaFromSnapshots($visibleAccounts, $snapshots);
         $captionIntel = $this->captionIntelForAccounts($user, $socialIds, $since);
-        $recentPosts = $this->recentPostsPayload(
-            $user,
-            $visibleAccounts,
-            self::RECENT_POST_FRAMES,
-            $showHiddenLikes,
-        );
         $rail = $this->railCard(
             $visibleAccounts,
             $ownRow,
@@ -280,7 +267,6 @@ class DashboardMetrics
             'activity' => $activity,
             'follower_series' => $followerSeries,
             'growth_delta' => $growthDelta,
-            'recent_posts' => $recentPosts,
             'caption_intel' => $captionIntel,
         ];
     }
@@ -2174,102 +2160,6 @@ class DashboardMetrics
             ->get(['id', 'social_account_id', 'caption', 'type', 'metrics', 'posted_at', 'raw_payload']);
 
         return $this->competitorInsights->captionIntel($posts);
-    }
-
-    /**
-     * @param  Collection<int, TrackedAccount>  $visibleAccounts
-     * @return list<array<string, mixed>>
-     */
-    private function recentPostsPayload(
-        User $user,
-        Collection $visibleAccounts,
-        int $limit,
-        bool $showHiddenLikes = false,
-    ): array {
-        $ids = $visibleAccounts->pluck('social_account_id')->filter()->map(fn ($id) => (int) $id)->values()->all();
-
-        if ($ids === []) {
-            return [];
-        }
-
-        // Over-fetch then filter so hidden-like posts do not crowd out visible
-        // ones when the toggle is off (JSON metrics cannot be WHERE'd cleanly).
-        $posts = Post::query()
-            ->whereIn('social_account_id', $ids)
-            ->whereNotNull('posted_at')
-            ->with([
-                'analysis:id,post_id,status,hook,concept,topics,custom_tags',
-                'analysis.terms:id,dimension,slug,label',
-                'winnerInsight' => fn ($q) => $q->where('user_id', $user->id)->select(['id', 'post_id', 'user_id', 'score']),
-            ])
-            ->latest('posted_at')
-            ->limit($showHiddenLikes ? $limit : max($limit * 3, 48))
-            ->get([
-                'id',
-                'social_account_id',
-                'platform',
-                'type',
-                'url',
-                'caption',
-                'media_url',
-                'cover_url',
-                'media_availability',
-                'metrics',
-                'posted_at',
-            ]);
-
-        if (! $showHiddenLikes) {
-            $posts = $posts
-                ->reject(fn (Post $post): bool => $this->math->isHiddenLikes($post))
-                ->take($limit)
-                ->values();
-        }
-
-        PostAccountPresenter::attachForUser($posts, $user);
-
-        return $posts->map(function (Post $post): array {
-            $analysis = $post->analysis;
-            $winner = $post->winnerInsight;
-            $metrics = is_array($post->metrics) ? $post->metrics : [];
-            $likesHidden = ($metrics['like_count_hidden'] ?? false) === true
-                || $this->math->isHiddenLikes($post);
-
-            return [
-                'id' => $post->id,
-                'platform' => $post->platform instanceof Platform
-                    ? $post->platform->value
-                    : (string) $post->platform,
-                'type' => $post->type instanceof PostType
-                    ? $post->type->value
-                    : (string) $post->type,
-                'url' => $post->url,
-                'caption' => $post->caption,
-                'media_url' => $post->media_url,
-                'cover_url' => $post->cover_url,
-                'media_availability' => $post->media_availability,
-                'metrics' => [
-                    'views' => $metrics['views'] ?? null,
-                    'likes' => $likesHidden ? null : ($metrics['likes'] ?? null),
-                    'comments' => $metrics['comments'] ?? null,
-                    'shares' => $metrics['shares'] ?? null,
-                    'like_count_hidden' => $likesHidden,
-                ],
-                'tracked_account' => $post->getAttribute('tracked_account'),
-                'analysis' => $analysis === null ? null : [
-                    'status' => $analysis->status?->value ?? (string) $analysis->status,
-                    'hook' => $analysis->hook,
-                    'concept' => $analysis->concept,
-                    'topics' => $analysis->topics,
-                    'custom_tags' => $analysis->custom_tags,
-                    'term_labels' => $analysis->relationLoaded('terms')
-                        ? $this->catalogue->frontendLabels($analysis->terms)
-                        : [],
-                ],
-                'winner_insight' => $winner === null ? null : [
-                    'score' => (float) $winner->score,
-                ],
-            ];
-        })->values()->all();
     }
 
     private function compactNumber(int|float $value): string

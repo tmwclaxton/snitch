@@ -200,7 +200,7 @@ class BillingPaywallTest extends TestCase
                 ->where('kpis.status', 'empty')
                 ->where('leaderboard.status', 'empty')
                 ->where('winners.status', 'empty')
-                ->where('recent_posts', [])
+                ->missing('recent_posts')
                 ->missing('top_posts')
                 ->missing('top_winners')
             );

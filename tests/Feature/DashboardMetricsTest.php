@@ -41,7 +41,7 @@ class DashboardMetricsTest extends TestCase
                     ->has('leaderboard.status')
                     ->has('winners.status')
                     ->has('activity.heatmap')
-                    ->has('recent_posts')
+                    ->missing('recent_posts')
                     ->has('caption_intel.hashtags')
                     ->where('leaderboard.data.rows.0.is_own_account', true)
                     ->missing('activity.by_platform')
@@ -310,13 +310,6 @@ class DashboardMetricsTest extends TestCase
         $winnerHandles = collect($payload['winners']['data']['winners'] ?? [])->pluck('handle');
         $this->assertNotContains('goodgym', $winnerHandles->all());
 
-        foreach ($payload['recent_posts'] as $post) {
-            $this->assertFalse(
-                (bool) ($post['metrics']['like_count_hidden'] ?? false),
-                'Hidden-like posts stay out of Latest posts when the toggle is off',
-            );
-        }
-
         // High comments+views so the proxy PI clears the winner threshold vs
         // the account's usual (all other hidden posts are quieter).
         Post::factory()->forAccount($hiddenAccount)->create([
@@ -344,10 +337,7 @@ class DashboardMetricsTest extends TestCase
         );
         $this->assertGreaterThan(0, $withHidden['winners']['data']['hidden_included'] ?? 0);
         $this->assertNotEmpty($withHidden['winners']['data']['hidden_spotlight'] ?? []);
-
-        $hiddenRecent = collect($withHidden['recent_posts'])
-            ->filter(fn (array $post): bool => (bool) ($post['metrics']['like_count_hidden'] ?? false));
-        $this->assertNotEmpty($hiddenRecent, 'Toggle on includes hidden-like posts in Latest posts');
+        $this->assertArrayNotHasKey('recent_posts', $withHidden);
     }
 
     public function test_growth_efficiency_format_and_heatmap_cards_return_shapes(): void
@@ -525,17 +515,11 @@ class DashboardMetricsTest extends TestCase
         $this->assertArrayNotHasKey('by_platform', $payload['activity']);
         $this->assertIsArray($payload['follower_series']);
         $this->assertArrayHasKey('week_delta', $payload['growth_delta']);
-        $this->assertIsArray($payload['recent_posts']);
-        $this->assertLessThanOrEqual(24, count($payload['recent_posts']));
+        $this->assertArrayNotHasKey('recent_posts', $payload);
         $this->assertArrayHasKey('hashtags', $payload['caption_intel']);
         $this->assertArrayHasKey('keywords', $payload['caption_intel']);
         $this->assertArrayHasKey('ctas', $payload['caption_intel']);
         $this->assertArrayHasKey('format_mix', $payload['caption_intel']);
-
-        foreach ($payload['recent_posts'] as $post) {
-            $this->assertArrayNotHasKey('embed', $post);
-            $this->assertArrayHasKey('cover_url', $post);
-        }
 
         $erCell = collect($payload['rail']['cells'])->firstWhere('key', 'er');
         $this->assertNotNull($erCell);
