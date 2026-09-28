@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
@@ -24,21 +24,41 @@ const props = withDefaults(
         items?: Insight[];
         /** Lowercased handle → tracked account id for @mentions in insight copy. */
         trackerIds?: Record<string, number>;
-        /** Collapsed list length before "Show all". */
+        /** Max bullets to try showing before "Show all". */
         collapsedCount?: number;
+        /** Clamp visible bullets to the parent column height (no inner scroll). */
+        fitHeight?: boolean;
     }>(),
-    { collapsedCount: 3 },
+    { collapsedCount: 5, fitHeight: false },
 );
 
 const { colourFor } = useAccountColours();
 const openKey = ref<string | null>(null);
 const expanded = ref(false);
+const rootRef = ref<HTMLElement | null>(null);
+const measureRef = ref<HTMLElement | null>(null);
+const fitCount = ref(props.collapsedCount);
 
 const allItems = computed(() => props.items ?? []);
-const hasMore = computed(() => allItems.value.length > props.collapsedCount);
-const visibleItems = computed(() =>
-    expanded.value ? allItems.value : allItems.value.slice(0, props.collapsedCount),
-);
+const visibleLimit = computed(() => {
+    if (expanded.value) {
+        return allItems.value.length;
+    }
+
+    const cap = Math.min(props.collapsedCount, allItems.value.length);
+
+    if (! props.fitHeight) {
+        return cap;
+    }
+
+    return Math.min(cap, Math.max(1, fitCount.value));
+});
+const visibleItems = computed(() => allItems.value.slice(0, visibleLimit.value));
+const hasMore = computed(() => allItems.value.length > visibleLimit.value);
+const measureItems = computed(() => allItems.value.slice(0, props.collapsedCount));
+
+let resizeObserver: ResizeObserver | null = null;
+let measureFrame = 0;
 
 function itemKey(item: Insight): string {
     return item.category + '::' + item.text;
@@ -101,11 +121,142 @@ function onInsightClick(event: MouseEvent): void {
     event.preventDefault();
     router.visit(competitorShow.url(id));
 }
+
+function scheduleMeasure(): void {
+    if (! props.fitHeight || expanded.value) {
+        return;
+    }
+
+    cancelAnimationFrame(measureFrame);
+    measureFrame = requestAnimationFrame(() => {
+        void recomputeFit();
+    });
+}
+
+async function recomputeFit(): Promise<void> {
+    if (! props.fitHeight || expanded.value) {
+        return;
+    }
+
+    const root = rootRef.value;
+    const measure = measureRef.value;
+    const parent = root?.parentElement;
+
+    if (! root || ! measure || ! parent) {
+        return;
+    }
+
+    await nextTick();
+
+    const gap = 4;
+    let siblingHeight = 0;
+
+    for (const child of Array.from(parent.children)) {
+        if (child === root) {
+            continue;
+        }
+
+        siblingHeight += (child as HTMLElement).offsetHeight + gap;
+    }
+
+    const available = parent.clientHeight - siblingHeight;
+
+    if (available <= 0) {
+        return;
+    }
+
+    const rows = Array.from(measure.querySelectorAll('[data-measure-row]')) as HTMLElement[];
+    const showAllHeight = 28;
+    const totalItems = allItems.value.length;
+    const maxTry = Math.min(props.collapsedCount, rows.length);
+    let used = 0;
+    let count = 0;
+
+    for (let index = 0; index < maxTry; index++) {
+        const rowHeight = rows[index]?.offsetHeight ?? 0;
+        const remainingAfter = totalItems > index + 1;
+        const nextUsed = used + rowHeight + (remainingAfter ? showAllHeight : 0);
+
+        if (count > 0 && nextUsed > available) {
+            break;
+        }
+
+        used += rowHeight;
+        count += 1;
+    }
+
+    fitCount.value = Math.max(1, count);
+}
+
+onMounted(() => {
+    if (! props.fitHeight) {
+        return;
+    }
+
+    scheduleMeasure();
+
+    if (typeof ResizeObserver === 'undefined') {
+        return;
+    }
+
+    resizeObserver = new ResizeObserver(() => scheduleMeasure());
+
+    if (rootRef.value?.parentElement) {
+        resizeObserver.observe(rootRef.value.parentElement);
+    }
+
+    if (measureRef.value) {
+        resizeObserver.observe(measureRef.value);
+    }
+});
+
+onBeforeUnmount(() => {
+    cancelAnimationFrame(measureFrame);
+    resizeObserver?.disconnect();
+    resizeObserver = null;
+});
+
+watch(
+    () => [props.items, props.collapsedCount, props.fitHeight, expanded.value] as const,
+    () => {
+        if (! expanded.value) {
+            fitCount.value = props.collapsedCount;
+            scheduleMeasure();
+        }
+    },
+    { deep: true },
+);
 </script>
 
 <template>
     <EmptyState v-if="status !== 'ok' || !items?.length" :reason="reason" compact />
-    <div v-else class="min-h-0">
+    <div
+        v-else
+        ref="rootRef"
+        class="relative min-h-0"
+        :class="expanded ? 'overflow-y-auto' : ''"
+    >
+        <ul
+            v-if="fitHeight"
+            ref="measureRef"
+            aria-hidden="true"
+            class="pointer-events-none invisible absolute inset-x-0 top-0 -z-10 space-y-0.5"
+        >
+            <li
+                v-for="item in measureItems"
+                :key="'m-' + itemKey(item)"
+                data-measure-row
+                class="min-w-0 border-b border-slate-100 py-1"
+            >
+                <div class="flex items-start gap-1.5">
+                    <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
+                    <p class="min-w-0 flex-1 text-sm leading-snug text-slate-700">
+                        <span v-html="htmlText(item.text)" />
+                        <span class="ml-1 whitespace-nowrap text-xs font-medium">see why →</span>
+                    </p>
+                </div>
+            </li>
+        </ul>
         <ul class="space-y-0.5">
             <li
                 v-for="item in visibleItems"
@@ -156,7 +307,7 @@ function onInsightClick(event: MouseEvent): void {
             </li>
         </ul>
         <button
-            v-if="hasMore"
+            v-if="hasMore || expanded"
             type="button"
             class="mt-1 text-xs font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
             @click="expanded = !expanded"

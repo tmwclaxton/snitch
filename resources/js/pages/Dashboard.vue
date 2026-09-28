@@ -483,30 +483,35 @@ const trackerIdsByHandle = computed(() => {
                 <div class="grid items-stretch gap-2 lg:grid-cols-2">
                     <!--
                       h-0 + min-h-full: row height comes from the right stack
-                      (Leaderboard + Format mix); insights scroll inside that height.
+                      (Leaderboard + Format mix). Insights fill that height with
+                      up to 5 bullets (no inner scroll); Followers note pins to
+                      the bottom when bullets fall short.
                     -->
-                    <div class="min-h-[14rem] lg:h-0 lg:min-h-full">
+                    <div class="flex min-h-[14rem] flex-col lg:h-0 lg:min-h-full">
                         <DashCard
-                            class="flex h-full min-h-0 flex-col overflow-hidden"
+                            class="flex h-full min-h-0 flex-1 flex-col overflow-hidden"
                             title="This week in 30 seconds"
                             why="Do-this-next lines from peer gaps for a busy organiser."
                             formula="score = |effect| × min(1, n/20); top 6, max 1 per category; n ≥ 5."
                             anchor="insights"
                         >
-                            <div class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+                            <div class="flex min-h-0 flex-1 flex-col gap-1">
                                 <InsightList
                                     v-if="insights"
+                                    class="min-h-0"
                                     :status="insights.status"
                                     :reason="insights.reason"
                                     :items="insights.data?.items"
                                     :tracker-ids="trackerIdsByHandle"
+                                    :collapsed-count="5"
+                                    fit-height
                                 />
                                 <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading insights" />
 
                                 <p
                                     v-if="showFollowerNote"
                                     id="growth_series"
-                                    class="border-t border-slate-100 pt-1 text-sm leading-snug text-slate-600"
+                                    class="mt-auto shrink-0 border-t border-slate-100 pt-1 text-sm leading-snug text-slate-600"
                                 >
                                     <span class="font-medium text-slate-800">Followers</span>
                                     ·
@@ -521,6 +526,7 @@ const trackerIdsByHandle = computed(() => {
                                 <p
                                     v-else-if="!follower_series"
                                     id="growth_series"
+                                    class="mt-auto shrink-0"
                                 >
                                     <SnitchSkeleton variant="scrap" height="1.25rem" label="Loading follower note" />
                                 </p>

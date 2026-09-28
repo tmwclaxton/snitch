@@ -99,12 +99,18 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('lg:h-0 lg:min-h-full', $dashboard);
         $this->assertStringContainsString('snitch-dash-heatmap-panel', $dashboard);
         $this->assertStringNotContainsString('mt-auto p-2', $dashboard);
+        $this->assertStringNotContainsString('overflow-y-auto', $dashboard);
+        $this->assertStringContainsString('mt-auto shrink-0 border-t', $dashboard);
+        $this->assertStringContainsString(':collapsed-count="5"', $dashboard);
+        $this->assertStringContainsString('fit-height', $dashboard);
 
         $insightList = file_get_contents(resource_path('js/components/dashboard/InsightList.vue'));
         $this->assertNotFalse($insightList);
         $this->assertStringContainsString('data-tracker-id', $insightList);
         $this->assertStringContainsString('competitorShow.url(id)', $insightList);
         $this->assertStringContainsString('Show all', $insightList);
+        $this->assertStringContainsString('fitHeight', $insightList);
+        $this->assertStringContainsString('collapsedCount: 5', $insightList);
         $this->assertStringNotContainsString('line-clamp-', $insightList);
 
         $compare = file_get_contents(resource_path('js/components/dashboard/CompareTable.vue'));
