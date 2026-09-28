@@ -33,6 +33,7 @@ class BriefController extends Controller
                 'weekStart' => $weekStart->toDateString(),
                 'creditCost' => WeeklyBriefGenerator::CREDIT_PENCE,
                 'generating' => false,
+                'canRegenerate' => false,
             ]);
         }
 
@@ -57,14 +58,19 @@ class BriefController extends Controller
             'weekStart' => $weekStart->toDateString(),
             'creditCost' => WeeklyBriefGenerator::CREDIT_PENCE,
             'generating' => GenerateWeeklyBriefJob::isActiveFor($user->id),
+            'canRegenerate' => $user->isAdmin(),
         ]);
     }
 
     public function generate(Request $request, WeeklyBriefGenerator $generator): RedirectResponse
     {
         $user = $request->user();
-        $force = (bool) $request->boolean('force');
 
+        if (! $user->isAdmin()) {
+            abort(403);
+        }
+
+        $force = (bool) $request->boolean('force');
         $weekStart = $generator->currentWeekStart();
         $existing = $generator->briefForWeek($user, $weekStart);
 
@@ -72,9 +78,8 @@ class BriefController extends Controller
             return redirect()->route('brief.index');
         }
 
-        // Sync generation keeps tests and first paint simple; queue for force regenerations.
         if ($force && $existing !== null) {
-            GenerateWeeklyBriefJob::queueFor($user->id, force: true);
+            GenerateWeeklyBriefJob::queueFor($user->id, force: true, billable: true);
             Inertia::flash('toast', [
                 'type' => 'info',
                 'message' => 'Regenerating this week\'s brief…',
@@ -83,13 +88,11 @@ class BriefController extends Controller
             return back();
         }
 
-        $brief = $generator->generate($user, force: false);
+        $brief = $generator->generate($user, force: false, billable: false);
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => $brief->was_free
-                ? 'This week\'s brief is ready (free).'
-                : 'Brief regenerated.',
+            'message' => 'Brief ready.',
         ]);
 
         return redirect()->route('brief.index');

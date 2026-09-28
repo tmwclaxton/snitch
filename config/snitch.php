@@ -254,7 +254,14 @@ return [
 
     'brief' => [
         'model' => env('SNITCH_BRIEF_MODEL', env('SNITCH_WINNER_COPY_MODEL', 'deepseek/deepseek-v4-flash')),
+        // Admin-only regenerate fee (automatic weekly briefs are always free).
         'credit_pence' => 5,
+        // Auto-generate only when the brand has enough competitive signal.
+        'min_competitors' => 2,
+        'min_analysed_posts_30d' => 10,
+        'min_winner_candidates' => 3,
+        // Debounce queueAfterSync/queueAfterAnalysis so one brief per brand per week.
+        'debounce_seconds' => 300,
     ],
 
     'winners' => [

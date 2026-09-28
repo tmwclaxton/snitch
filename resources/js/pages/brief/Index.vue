@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head, Link, router } from '@inertiajs/vue3';
+import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
 import { CalendarDays, Check, Lightbulb, LoaderCircle, RefreshCw } from '@lucide/vue';
 import { computed } from 'vue';
 import BriefController from '@/actions/App/Http/Controllers/BriefController';
@@ -59,7 +59,11 @@ const props = defineProps<{
     weekStart: string;
     creditCost: number;
     generating: boolean;
+    canRegenerate: boolean;
 }>();
+
+const page = usePage();
+const isAdmin = computed(() => Boolean(page.props.auth?.user?.is_admin) || props.canRegenerate);
 
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -95,8 +99,12 @@ function formatHour(hour: number | null): string {
     return `${String(hour).padStart(2, '0')}:00`;
 }
 
-function generate(force = false): void {
-    router.post(BriefController.generate.url(), { force }, { preserveScroll: true });
+function regenerate(): void {
+    if (!isAdmin.value) {
+        return;
+    }
+
+    router.post(BriefController.generate.url(), { force: true }, { preserveScroll: true });
 }
 </script>
 
@@ -117,35 +125,25 @@ function generate(force = false): void {
                         Week of {{ weekStart }}.
                     </p>
                 </div>
-                <div class="flex flex-wrap gap-2">
+                <div
+                    v-if="isAdmin && brief"
+                    class="flex flex-wrap gap-2"
+                >
                     <button
-                        v-if="!brief"
                         type="button"
-                        class="snitch-btn snitch-btn-spot"
+                        class="snitch-btn snitch-btn-ghost"
                         :disabled="generating"
-                        @click="generate(false)"
+                        @click="regenerate"
                     >
                         <span class="relative z-10 inline-flex items-center gap-2">
                             <LoaderCircle
                                 v-if="generating"
                                 class="size-4 animate-spin"
                             />
-                            <Lightbulb
+                            <RefreshCw
                                 v-else
                                 class="size-4"
                             />
-                            Generate free brief
-                        </span>
-                    </button>
-                    <button
-                        v-else
-                        type="button"
-                        class="snitch-btn snitch-btn-ghost"
-                        :disabled="generating"
-                        @click="generate(true)"
-                    >
-                        <span class="relative z-10 inline-flex items-center gap-2">
-                            <RefreshCw class="size-4" />
                             Regenerate ({{ Math.round(creditCost) }} credits)
                         </span>
                     </button>
@@ -317,9 +315,8 @@ function generate(force = false): void {
             >
                 <span class="snitch-tape left-8 -top-2" aria-hidden="true" />
                 <Lightbulb class="mx-auto size-8 text-snitch-ink/35" />
-                <p class="snitch-display mt-3 text-2xl">No brief yet this week</p>
-                <p class="mt-2 text-sm text-snitch-ink/65">
-                    Generate one for free after your Monday sync, or now.
+                <p class="mt-3 text-sm text-snitch-ink/70">
+                    Your first brief appears automatically once Snitch has enough competitor posts analysed.
                 </p>
             </section>
 

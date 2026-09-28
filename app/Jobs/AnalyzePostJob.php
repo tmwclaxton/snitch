@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\Analysis\VideoAnalysisService;
 use App\Services\Billing\UsageBillingService;
 use App\Services\Billing\VendorUsageCharger;
+use App\Services\Brief\WeeklyBriefGenerator;
 use App\Services\Scraping\YoutubeMediaHydrator;
 use App\Services\Winners\WinnerScorer;
 use App\Support\PostCover;
@@ -155,6 +156,7 @@ class AnalyzePostJob implements ShouldQueue
 
             if ($persisted->status === AnalysisStatus::Completed) {
                 EmbedPostAnalysisJob::dispatch($persisted->id, $owner->id);
+                app(WeeklyBriefGenerator::class)->queueIfReady($owner);
             }
         } catch (Throwable $e) {
             if ($this->isUnavailableException($e)) {

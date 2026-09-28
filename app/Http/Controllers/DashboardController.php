@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\OmitsProductDataWhenPaywalled;
+use App\Services\Brief\WeeklyBriefGenerator;
 use App\Services\Dashboard\DashboardMetrics;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -32,6 +33,7 @@ class DashboardController extends Controller
         'onboarding',
         'rail',
         'kpis',
+        'weekly_brief',
     ];
 
     /**
@@ -58,7 +60,7 @@ class DashboardController extends Controller
         'caption_intel',
     ];
 
-    public function __invoke(Request $request, DashboardMetrics $metrics): Response
+    public function __invoke(Request $request, DashboardMetrics $metrics, WeeklyBriefGenerator $briefs): Response
     {
         $user = $request->user();
         $handles = $this->selectedHandles($request);
@@ -66,7 +68,10 @@ class DashboardController extends Controller
         $showHiddenLikes = $this->showHiddenLikes($request);
 
         if ($this->productAccessBlocked($user)) {
-            return Inertia::render('Dashboard', $metrics->emptyPayload());
+            $empty = $metrics->emptyPayload();
+            $empty['weekly_brief'] = null;
+
+            return Inertia::render('Dashboard', $empty);
         }
 
         // Build once for the first paint (fills cache). Closures on immediate
@@ -77,6 +82,9 @@ class DashboardController extends Controller
         foreach (self::IMMEDIATE_KEYS as $key) {
             $props[$key] = $payload[$key] ?? null;
         }
+
+        // Only surface when a ready brief already exists (current or most recent week).
+        $props['weekly_brief'] = $briefs->dashboardTeaser($user);
 
         foreach (self::PANEL_KEYS as $key) {
             $props[$key] = Inertia::defer(

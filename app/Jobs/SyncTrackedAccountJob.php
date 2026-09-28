@@ -13,6 +13,7 @@ use App\Models\TrackedAccount;
 use App\Services\Apify\Contracts\PlatformAdapter;
 use App\Services\Apify\PlatformAdapterManager;
 use App\Services\Billing\VendorUsageCharger;
+use App\Services\Brief\WeeklyBriefGenerator;
 use App\Services\Competitors\CompetitorAdsFinder;
 use App\Services\SnitchAnalyticsService;
 use App\Services\Tracking\AvatarMirror;
@@ -326,6 +327,7 @@ class SyncTrackedAccountJob implements ShouldQueue
             }
 
             ScoreWinnersJob::queueFor($account->user_id);
+            app(WeeklyBriefGenerator::class)->queueIfReady($owner);
         } catch (Throwable $e) {
             $account->fill([
                 'last_sync_status' => 'failed',

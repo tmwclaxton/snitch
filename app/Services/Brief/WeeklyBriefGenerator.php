@@ -2,7 +2,10 @@
 
 namespace App\Services\Brief;
 
+use App\Enums\AnalysisStatus;
 use App\Enums\BillingVendor;
+use App\Enums\TrackedAccountKind;
+use App\Jobs\GenerateWeeklyBriefJob;
 use App\Models\BrandProfile;
 use App\Models\Post;
 use App\Models\TrackedAccount;
@@ -14,6 +17,7 @@ use App\Services\Billing\UsageBillingService;
 use App\Services\Billing\VendorUsageCharger;
 use App\Services\Dashboard\DashboardMath;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -45,9 +49,116 @@ class WeeklyBriefGenerator
     }
 
     /**
-     * Generate (or regenerate) this week's brief. First brief of the week is free.
+     * Current week's brief, or the most recent ready brief if this week is empty.
      */
-    public function generate(User $user, bool $force = false): WeeklyBrief
+    public function latestReadyBrief(User $user): ?WeeklyBrief
+    {
+        $current = $this->briefForWeek($user, $this->currentWeekStart());
+
+        if ($current !== null && $current->status === 'ready') {
+            return $current;
+        }
+
+        return WeeklyBrief::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'ready')
+            ->orderByDesc('week_start')
+            ->with('ideas')
+            ->first();
+    }
+
+    /**
+     * @return array{ready: bool, competitors: int, analysed_posts_30d: int, winner_candidates: int}
+     */
+    public function dataSufficiency(User $user): array
+    {
+        $minCompetitors = max(1, (int) config('snitch.brief.min_competitors', 2));
+        $minAnalysed = max(1, (int) config('snitch.brief.min_analysed_posts_30d', 10));
+        $minWinners = max(1, (int) config('snitch.brief.min_winner_candidates', 3));
+
+        $competitors = TrackedAccount::query()
+            ->where('user_id', $user->id)
+            ->where('is_own_account', false)
+            ->where('kind', TrackedAccountKind::Competitor)
+            ->count();
+
+        $socialIds = TrackedAccount::query()
+            ->where('user_id', $user->id)
+            ->where('is_own_account', false)
+            ->pluck('social_account_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $analysed = 0;
+
+        if ($socialIds !== []) {
+            $since = CarbonImmutable::now(DashboardMath::TIMEZONE)->subDays(30);
+            $analysed = Post::query()
+                ->whereIn('social_account_id', $socialIds)
+                ->where('posted_at', '>=', $since)
+                ->whereHas('analysis', fn ($q) => $q->where('status', AnalysisStatus::Completed))
+                ->count();
+        }
+
+        $winners = count($this->topWinners($user, 30));
+
+        return [
+            'ready' => $competitors >= $minCompetitors
+                && $analysed >= $minAnalysed
+                && $winners >= $minWinners,
+            'competitors' => $competitors,
+            'analysed_posts_30d' => $analysed,
+            'winner_candidates' => $winners,
+        ];
+    }
+
+    public function hasEnoughData(User $user): bool
+    {
+        return $this->dataSufficiency($user)['ready'];
+    }
+
+    /**
+     * Queue an automatic free brief when missing and data is sufficient.
+     * Debounced; silent no-op when not ready or already present.
+     */
+    public function queueIfReady(User $user): bool
+    {
+        if (! BrandProfile::query()->where('user_id', $user->id)->exists()) {
+            return false;
+        }
+
+        $weekStart = $this->currentWeekStart();
+
+        if ($this->briefForWeek($user, $weekStart) !== null) {
+            return false;
+        }
+
+        if (GenerateWeeklyBriefJob::isActiveFor($user->id)) {
+            return false;
+        }
+
+        if (! $this->hasEnoughData($user)) {
+            return false;
+        }
+
+        $debounceKey = 'weekly-brief-debounce:'.$user->id.':'.$weekStart->toDateString();
+        $seconds = max(30, (int) config('snitch.brief.debounce_seconds', 300));
+
+        if (! Cache::add($debounceKey, 1, now()->addSeconds($seconds))) {
+            return false;
+        }
+
+        GenerateWeeklyBriefJob::queueFor($user->id, force: false, billable: false);
+
+        return true;
+    }
+
+    /**
+     * Generate this week's brief. Automatic runs are always free.
+     * Billable regenerate is for admin force only.
+     */
+    public function generate(User $user, bool $force = false, bool $billable = false): WeeklyBrief
     {
         $weekStart = $this->currentWeekStart();
         $existing = $this->briefForWeek($user, $weekStart);
@@ -56,8 +167,7 @@ class WeeklyBriefGenerator
             return $existing->load('ideas');
         }
 
-        $isFirstThisWeek = $existing === null;
-        $chargePence = $isFirstThisWeek ? 0.0 : self::CREDIT_PENCE;
+        $chargePence = ($billable && $force) ? self::CREDIT_PENCE : 0.0;
 
         if ($chargePence > 0) {
             $this->charger->assertCanRun($user);
@@ -72,7 +182,6 @@ class WeeklyBriefGenerator
             $user,
             $weekStart,
             $existing,
-            $isFirstThisWeek,
             $chargePence,
             $timing,
             $ideas,
@@ -93,7 +202,7 @@ class WeeklyBriefGenerator
                 'heat_grid' => $timing['grid'],
                 'thin_data' => $timing['thin'],
                 'credits_charged_pence' => $chargePence,
-                'was_free' => $isFirstThisWeek,
+                'was_free' => $chargePence <= 0,
                 'generated_at' => now(),
             ])->save();
 
@@ -130,6 +239,29 @@ class WeeklyBriefGenerator
 
             return $brief->load('ideas');
         });
+    }
+
+    /**
+     * Compact teaser for the dashboard panel (null when nothing to show).
+     *
+     * @return array{id: int, week_start: string|null, idea_count: int, hook: string|null}|null
+     */
+    public function dashboardTeaser(User $user): ?array
+    {
+        $brief = $this->latestReadyBrief($user);
+
+        if ($brief === null) {
+            return null;
+        }
+
+        $first = $brief->ideas->first();
+
+        return [
+            'id' => (int) $brief->id,
+            'week_start' => $brief->week_start?->toDateString(),
+            'idea_count' => $brief->ideas->count(),
+            'hook' => $first?->hook,
+        ];
     }
 
     /**

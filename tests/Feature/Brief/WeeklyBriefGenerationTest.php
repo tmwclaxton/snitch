@@ -3,6 +3,8 @@
 namespace Tests\Feature\Brief;
 
 use App\Enums\AnalysisStatus;
+use App\Enums\TrackedAccountKind;
+use App\Jobs\GenerateWeeklyBriefJob;
 use App\Models\BrandProfile;
 use App\Models\Post;
 use App\Models\PostAnalysis;
@@ -13,6 +15,7 @@ use App\Services\Brief\WeeklyBriefGenerator;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -20,14 +23,186 @@ class WeeklyBriefGenerationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_first_weekly_brief_is_free_and_uses_faked_llm(): void
+    protected function setUp(): void
     {
+        parent::setUp();
+
         config([
             'snitch.nanogpt.api_key' => 'test-key',
             'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
             'snitch.brief.model' => 'test-model',
+            'snitch.brief.min_competitors' => 2,
+            'snitch.brief.min_analysed_posts_30d' => 10,
+            'snitch.brief.min_winner_candidates' => 3,
+            'snitch.brief.debounce_seconds' => 1,
+            'snitch.admin_emails' => ['admin@snitch.test'],
+        ]);
+    }
+
+    public function test_automatic_brief_is_free_when_data_is_sufficient(): void
+    {
+        $this->fakeLlm();
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create([
+            'name' => 'GoodGym',
+            'description' => 'Community fitness charity',
         ]);
 
+        $this->seedEnoughCompetitorData($user);
+
+        $brief = app(WeeklyBriefGenerator::class)->generate($user, force: false, billable: false);
+
+        $this->assertTrue($brief->was_free);
+        $this->assertSame(0.0, (float) $brief->credits_charged_pence);
+        $this->assertCount(3, $brief->ideas);
+        $this->assertSame('Open on the proof', $brief->ideas->first()->hook);
+    }
+
+    public function test_queue_if_ready_skips_when_insufficient_data(): void
+    {
+        Queue::fake([GenerateWeeklyBriefJob::class]);
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        TrackedAccount::factory()->for($user)->create([
+            'is_own_account' => false,
+            'kind' => TrackedAccountKind::Competitor,
+        ]);
+
+        $queued = app(WeeklyBriefGenerator::class)->queueIfReady($user);
+
+        $this->assertFalse($queued);
+        Queue::assertNothingPushed();
+    }
+
+    public function test_queue_if_ready_dispatches_when_threshold_met(): void
+    {
+        Queue::fake([GenerateWeeklyBriefJob::class]);
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $this->seedEnoughCompetitorData($user);
+
+        $queued = app(WeeklyBriefGenerator::class)->queueIfReady($user);
+
+        $this->assertTrue($queued);
+        Queue::assertPushed(GenerateWeeklyBriefJob::class, fn (GenerateWeeklyBriefJob $job) => $job->userId === $user->id
+            && $job->force === false
+            && $job->billable === false);
+    }
+
+    public function test_brief_page_empty_state_has_no_generate_cta(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->get(route('brief.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('brief/Index')
+                ->where('brief', null)
+                ->where('canRegenerate', false)
+            );
+
+        $source = file_get_contents(resource_path('js/pages/brief/Index.vue'));
+        $this->assertIsString($source);
+        $this->assertStringContainsString(
+            'Your first brief appears automatically once Snitch has enough competitor posts analysed.',
+            $source,
+        );
+        $this->assertStringNotContainsString('Generate free brief', $source);
+    }
+
+    public function test_non_admin_cannot_post_generate(): void
+    {
+        $user = User::factory()->create(['email' => 'customer@example.com']);
+        BrandProfile::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->post(route('brief.generate'))
+            ->assertForbidden();
+    }
+
+    public function test_dashboard_hides_brief_panel_without_brief(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->where('weekly_brief', null)
+            );
+    }
+
+    public function test_dashboard_shows_brief_panel_when_ready(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $brief = WeeklyBrief::factory()->for($user)->create([
+            'status' => 'ready',
+            'week_start' => app(WeeklyBriefGenerator::class)->currentWeekStart()->toDateString(),
+        ]);
+        $brief->ideas()->create([
+            'position' => 1,
+            'format' => 'Reel',
+            'hook' => 'Open on proof',
+            'caption_angle' => 'Angle',
+            'cta' => 'CTA',
+            'hashtags' => ['#a', '#b', '#c'],
+            'recommended_day' => 'Mon',
+            'recommended_hour' => 9,
+            'inspired_by_post_ids' => [],
+            'why' => 'Because',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->where('weekly_brief.id', $brief->id)
+                ->where('weekly_brief.hook', 'Open on proof')
+            );
+    }
+
+    public function test_mark_idea_used_toggles(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $brief = WeeklyBrief::factory()->for($user)->create();
+        $idea = $brief->ideas()->create([
+            'position' => 1,
+            'format' => 'Reel',
+            'hook' => 'Hook',
+            'caption_angle' => 'Angle',
+            'cta' => 'CTA',
+            'hashtags' => ['#a', '#b', '#c'],
+            'recommended_day' => 'Mon',
+            'recommended_hour' => 9,
+            'inspired_by_post_ids' => [],
+            'why' => 'Because numbers',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('brief.ideas.used', $idea))
+            ->assertRedirect();
+
+        $this->assertNotNull($idea->fresh()->used_at);
+
+        $this->actingAs($user)
+            ->post(route('brief.ideas.used', $idea))
+            ->assertRedirect();
+
+        $this->assertNull($idea->fresh()->used_at);
+    }
+
+    private function fakeLlm(): void
+    {
         Http::fake([
             'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
                 'choices' => [[
@@ -73,87 +248,43 @@ class WeeklyBriefGenerationTest extends TestCase
                 ]],
             ]),
         ]);
-
-        $user = User::factory()->create();
-        BrandProfile::factory()->for($user)->create([
-            'name' => 'GoodGym',
-            'description' => 'Community fitness charity',
-        ]);
-        $rival = TrackedAccount::factory()->for($user)->create([
-            'handle' => 'rivalgym',
-            'is_own_account' => false,
-        ]);
-
-        $base = CarbonImmutable::now('Europe/London')->subDays(20);
-
-        for ($i = 0; $i < 12; $i++) {
-            Post::factory()->forAccount($rival)->create([
-                'posted_at' => $base->addDays($i),
-                'caption' => 'Training day #fitness #community',
-                'metrics' => ['views' => 1000, 'likes' => 40, 'comments' => 4, 'shares' => 0],
-            ]);
-        }
-
-        $winner = Post::factory()->forAccount($rival)->create([
-            'posted_at' => $base->addDays(15),
-            'caption' => 'Big session #fitness #london',
-            'metrics' => ['views' => 8000, 'likes' => 320, 'comments' => 40, 'shares' => 5],
-        ]);
-        PostAnalysis::factory()->for($winner)->create([
-            'status' => AnalysisStatus::Completed,
-            'hook' => 'Open on the sweat',
-        ]);
-
-        $this->actingAs($user)
-            ->post(route('brief.generate'))
-            ->assertRedirect(route('brief.index'));
-
-        $brief = WeeklyBrief::query()->where('user_id', $user->id)->first();
-        $this->assertNotNull($brief);
-        $this->assertTrue($brief->was_free);
-        $this->assertSame(0.0, (float) $brief->credits_charged_pence);
-        $this->assertCount(3, $brief->ideas);
-        $this->assertSame('Open on the proof', $brief->ideas->first()->hook);
-
-        $this->actingAs($user)
-            ->get(route('brief.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('brief/Index')
-                ->where('brief.id', $brief->id)
-                ->has('brief.ideas', 3)
-                ->where('creditCost', fn ($value): bool => (float) $value === WeeklyBriefGenerator::CREDIT_PENCE)
-            );
     }
 
-    public function test_mark_idea_used_toggles(): void
+    private function seedEnoughCompetitorData(User $user): void
     {
-        $user = User::factory()->create();
-        BrandProfile::factory()->for($user)->create();
-        $brief = WeeklyBrief::factory()->for($user)->create();
-        $idea = $brief->ideas()->create([
-            'position' => 1,
-            'format' => 'Reel',
-            'hook' => 'Hook',
-            'caption_angle' => 'Angle',
-            'cta' => 'CTA',
-            'hashtags' => ['#a', '#b', '#c'],
-            'recommended_day' => 'Mon',
-            'recommended_hour' => 9,
-            'inspired_by_post_ids' => [],
-            'why' => 'Because numbers',
-        ]);
+        $base = CarbonImmutable::now('Europe/London')->subDays(25);
 
-        $this->actingAs($user)
-            ->post(route('brief.ideas.used', $idea))
-            ->assertRedirect();
+        for ($a = 0; $a < 2; $a++) {
+            $rival = TrackedAccount::factory()->for($user)->create([
+                'handle' => 'rival'.$a,
+                'is_own_account' => false,
+                'kind' => TrackedAccountKind::Competitor,
+            ]);
 
-        $this->assertNotNull($idea->fresh()->used_at);
+            for ($i = 0; $i < 12; $i++) {
+                $post = Post::factory()->forAccount($rival)->create([
+                    'posted_at' => $base->addDays($i)->addHours($a),
+                    'caption' => 'Training day #fitness #community',
+                    'metrics' => ['views' => 1000, 'likes' => 40, 'comments' => 4, 'shares' => 0],
+                ]);
+                PostAnalysis::factory()->for($post)->create([
+                    'status' => AnalysisStatus::Completed,
+                    'hook' => 'Steady open',
+                ]);
+            }
 
-        $this->actingAs($user)
-            ->post(route('brief.ideas.used', $idea))
-            ->assertRedirect();
-
-        $this->assertNull($idea->fresh()->used_at);
+            // Three clear winners per rival (>= 2x usual on interactions).
+            for ($w = 0; $w < 3; $w++) {
+                $winner = Post::factory()->forAccount($rival)->create([
+                    'posted_at' => $base->addDays(20 + $w)->addHours($a),
+                    'caption' => 'Big session #fitness #london',
+                    'metrics' => ['views' => 8000, 'likes' => 320, 'comments' => 40, 'shares' => 5],
+                ]);
+                PostAnalysis::factory()->for($winner)->create([
+                    'status' => AnalysisStatus::Completed,
+                    'hook' => 'Open on the sweat',
+                ]);
+            }
+        }
     }
 }

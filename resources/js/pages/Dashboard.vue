@@ -112,6 +112,12 @@ const props = defineProps<{
     } | null;
     follower_series?: { captured_on: string; label: string; followers: number }[] | null;
     growth_delta?: { followers: number; week_delta: number | null; week_pct: number | null } | null;
+    weekly_brief?: {
+        id: number;
+        week_start: string | null;
+        idea_count: number;
+        hook: string | null;
+    } | null;
     caption_intel?: {
         hashtags: { term: string; count: number }[];
         keywords: { term: string; count: number }[];
@@ -239,13 +245,16 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
         <Head title="Dashboard" />
 
         <div class="mx-auto max-w-none space-y-2">
-            <div class="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+            <div
+                v-if="weekly_brief"
+                class="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5"
+            >
                 <div class="min-w-0">
                     <p class="text-[11px] font-semibold text-slate-900">
                         Post this next
                     </p>
                     <p class="truncate text-[10px] text-slate-500">
-                        Three weekly ideas from competitor winners
+                        {{ weekly_brief.hook || 'Three weekly ideas from competitor winners' }}
                     </p>
                 </div>
                 <Link

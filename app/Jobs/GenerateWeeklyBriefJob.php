@@ -29,6 +29,7 @@ class GenerateWeeklyBriefJob implements ShouldBeUnique, ShouldQueue
     public function __construct(
         public int $userId,
         public bool $force = false,
+        public bool $billable = false,
     ) {}
 
     public function uniqueId(): string
@@ -36,10 +37,10 @@ class GenerateWeeklyBriefJob implements ShouldBeUnique, ShouldQueue
         return (string) $this->userId;
     }
 
-    public static function queueFor(int $userId, bool $force = false): void
+    public static function queueFor(int $userId, bool $force = false, bool $billable = false): void
     {
         Cache::put(self::cacheKey($userId), ['status' => 'queued'], now()->addHour());
-        self::dispatch($userId, $force);
+        self::dispatch($userId, $force, $billable);
     }
 
     public static function isActiveFor(int $userId): bool
@@ -62,7 +63,13 @@ class GenerateWeeklyBriefJob implements ShouldBeUnique, ShouldQueue
         }
 
         try {
-            $generator->generate($user, force: $this->force);
+            if (! $this->force && ! $generator->hasEnoughData($user)) {
+                Cache::put(self::cacheKey($this->userId), ['status' => 'skipped'], now()->addMinutes(10));
+
+                return;
+            }
+
+            $generator->generate($user, force: $this->force, billable: $this->billable);
             Cache::put(self::cacheKey($this->userId), ['status' => 'completed'], now()->addMinutes(10));
         } catch (PlatformSubscriptionRequiredException|InsufficientCreditsException $e) {
             Cache::put(self::cacheKey($this->userId), [
