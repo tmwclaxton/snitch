@@ -24,10 +24,10 @@ type Metrics = {
     thin_data: boolean;
     note: string | null;
     charts: {
-        followers: Array<{ name: string; points: Array<{ date: string; value: number | null }> }>;
-        posts_per_week: Array<{ name: string; points: Array<{ date: string; value: number | null }> }>;
-        engagement_rate: Array<{ name: string; points: Array<{ date: string; value: number | null }> }>;
-        avg_multiplier: Array<{ name: string; points: Array<{ date: string; value: number | null }> }>;
+        followers: Array<{ name: string; is_own_account?: boolean; is_peer_median?: boolean; points: Array<{ date: string; value: number | null }> }>;
+        posts_per_week: Array<{ name: string; is_own_account?: boolean; is_peer_median?: boolean; points: Array<{ date: string; value: number | null }> }>;
+        engagement_rate: Array<{ name: string; is_own_account?: boolean; is_peer_median?: boolean; points: Array<{ date: string; value: number | null }> }>;
+        avg_multiplier: Array<{ name: string; is_own_account?: boolean; is_peer_median?: boolean; points: Array<{ date: string; value: number | null }> }>;
     };
     accounts: Array<{
         handle: string;
@@ -55,9 +55,29 @@ const periods = [
     { value: 'all', label: 'All time' },
 ];
 
+const RIVAL_COLOURS = ['#3A5F6B', '#C45C26', '#5B7C99', '#8B5A2B', '#2F6F4E', '#6B4C7A', '#B45309', '#0F766E'];
+
 const rivalOptions = computed(() =>
     props.accountOptions.filter((account) => !account.is_own_account),
 );
+
+const chipColourById = computed(() => {
+    const map = new Map<number, string>();
+    let index = 0;
+
+    for (const account of rivalOptions.value) {
+        map.set(account.id, RIVAL_COLOURS[index % RIVAL_COLOURS.length]);
+        index++;
+    }
+
+    return map;
+});
+
+const showAllRivals = computed(() => props.selectedAccounts.length === 0);
+
+function isRivalSelected(id: number): boolean {
+    return showAllRivals.value || props.selectedAccounts.includes(id);
+}
 
 function visit(next: { period?: string; accounts?: number[] }): void {
     router.get(
@@ -99,7 +119,7 @@ function toggleAccount(id: number): void {
                     Own account vs peers
                 </h1>
                 <p class="mt-1 max-w-xl text-sm text-snitch-ink/65">
-                    Followers, posting pace, engagement, and X× usual from weekly snapshots. Charts stay dense; empty weeks are skipped.
+                    How your account is trending against the accounts you track, week by week.
                 </p>
             </div>
             <a
@@ -110,17 +130,17 @@ function toggleAccount(id: number): void {
             </a>
         </header>
 
-        <div class="snitch-filter-bar flex flex-wrap items-center gap-2">
-            <label class="text-[11px] uppercase tracking-wide text-snitch-ink/55">
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Range
-            </label>
-            <div class="snitch-seg">
+            </span>
+            <div class="inline-flex items-center rounded-md border border-slate-200 bg-white p-0.5">
                 <button
                     v-for="row in periods"
                     :key="row.value"
                     type="button"
-                    class="snitch-seg-btn"
-                    :class="{ 'is-active': period === row.value }"
+                    class="rounded px-2.5 py-1 text-sm font-medium"
+                    :class="period === row.value ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'"
                     @click="visit({ period: row.value })"
                 >
                     {{ row.label }}
@@ -133,33 +153,29 @@ function toggleAccount(id: number): void {
                 v-for="account in rivalOptions"
                 :key="account.id"
                 type="button"
-                class="rounded border border-snitch-ink/20 bg-snitch-paper px-2 py-1 text-xs"
-                :class="selectedAccounts.includes(account.id) || selectedAccounts.length === 0
-                    ? 'border-snitch-ink bg-snitch-spot/30'
-                    : 'opacity-60'"
+                class="inline-flex h-7 items-center gap-1.5 rounded-full border px-2 text-sm font-medium"
+                :class="isRivalSelected(account.id)
+                    ? 'border-slate-800 bg-slate-800 text-white'
+                    : 'border-slate-200 bg-white text-slate-700'"
                 @click="toggleAccount(account.id)"
             >
+                <span
+                    class="size-2.5 shrink-0 rounded-full"
+                    :style="{ background: chipColourById.get(account.id) }"
+                    aria-hidden="true"
+                />
                 @{{ account.handle }}
             </button>
-            <p class="w-full text-[11px] text-snitch-ink/50">
+            <p class="w-full text-xs text-slate-500">
                 Own account always included. Leave rivals unchecked to show all.
             </p>
         </div>
 
-        <p
-            v-if="metrics?.note"
-            class="rounded border border-snitch-ink/15 bg-snitch-paper px-3 py-2 text-sm text-snitch-ink/70"
-        >
-            {{ metrics.note }}
-            <span v-if="metrics.snapshot_count">
-                ({{ metrics.snapshot_count }} snapshot{{ metrics.snapshot_count === 1 ? '' : 's' }})
-            </span>
-        </p>
-
-        <div v-if="metrics" class="grid gap-3 lg:grid-cols-2">
+        <div v-if="metrics" class="grid auto-rows-fr gap-3 lg:grid-cols-2">
             <GrowthLineChart
                 title="Followers"
                 :series="metrics.charts.followers"
+                :table-fallback="metrics.thin_data"
                 :note="metrics.thin_data ? metrics.note : null"
             />
             <GrowthLineChart

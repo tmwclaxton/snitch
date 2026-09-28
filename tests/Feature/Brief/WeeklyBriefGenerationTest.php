@@ -57,6 +57,23 @@ class WeeklyBriefGenerationTest extends TestCase
         $this->assertSame(0.0, (float) $brief->credits_charged_pence);
         $this->assertCount(3, $brief->ideas);
         $this->assertSame('Open on the proof', $brief->ideas->first()->hook);
+
+        $slots = $brief->best_times ?? [];
+        foreach ($brief->ideas as $index => $idea) {
+            if (! isset($slots[$index])) {
+                continue;
+            }
+
+            $this->assertSame(
+                (string) $slots[$index]['day'],
+                (string) $idea->recommended_day,
+                'Idea '.($index + 1).' should use timing slot '.($index + 1),
+            );
+            $this->assertSame(
+                (int) $slots[$index]['hour'],
+                (int) $idea->recommended_hour,
+            );
+        }
     }
 
     public function test_queue_if_ready_skips_when_insufficient_data(): void

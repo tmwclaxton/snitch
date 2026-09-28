@@ -459,6 +459,8 @@ class WeeklyBriefGenerator
     {
         $formats = ['Reel', 'Carousel', 'Image'];
         $out = [];
+        /** @var array<int, int> $sourceUses */
+        $sourceUses = [];
 
         foreach (array_slice($raw, 0, 3) as $index => $row) {
             if (! is_array($row)) {
@@ -470,6 +472,7 @@ class WeeklyBriefGenerator
                 $format = $formats[$index] ?? 'Reel';
             }
 
+            // Idea N always gets timing slot N so the three ideas are spread across best times.
             $slot = $slots[$index] ?? $slots[0] ?? ['day' => 'Tue', 'hour' => 11];
             $sourceIds = collect($row['inspired_by_post_ids'] ?? [])
                 ->filter(fn ($id) => is_numeric($id))
@@ -478,8 +481,10 @@ class WeeklyBriefGenerator
                 ->values()
                 ->all();
 
-            if ($sourceIds === [] && isset($winners[$index])) {
-                $sourceIds = [(int) $winners[$index]['post_id']];
+            if ($sourceIds === []) {
+                $sourceIds = $this->pickSourceIds($winners, $index, $sourceUses);
+            } else {
+                $sourceIds = $this->capSourceUses($sourceIds, $sourceUses, $winners, $index);
             }
 
             $hashtags = collect($row['hashtags'] ?? [])
@@ -499,14 +504,69 @@ class WeeklyBriefGenerator
                 'caption_angle' => trim((string) ($row['caption_angle'] ?? 'Show the before/after and invite a reply')),
                 'cta' => trim((string) ($row['cta'] ?? 'Save this for later')),
                 'hashtags' => array_slice($hashtags, 0, 5),
-                'recommended_day' => (string) ($row['recommended_day'] ?? $slot['day']),
-                'recommended_hour' => (int) ($row['recommended_hour'] ?? $slot['hour']),
+                'recommended_day' => (string) $slot['day'],
+                'recommended_hour' => (int) $slot['hour'],
                 'inspired_by_post_ids' => $sourceIds,
                 'why' => trim((string) ($row['why'] ?? $this->defaultWhy($winners, $index))),
             ];
         }
 
         return $out;
+    }
+
+    /**
+     * @param  list<array{post_id: int, handle: string, pi: float, hook: ?string, hashtags: list<string>, format: string, caption: ?string}>  $winners
+     * @param  array<int, int>  $sourceUses
+     * @return list<int>
+     */
+    private function pickSourceIds(array $winners, int $index, array &$sourceUses): array
+    {
+        foreach ($winners as $offset => $winner) {
+            $candidateIndex = ($index + $offset) % max(1, count($winners));
+            $winner = $winners[$candidateIndex] ?? null;
+
+            if ($winner === null) {
+                continue;
+            }
+
+            $id = (int) $winner['post_id'];
+
+            if (($sourceUses[$id] ?? 0) >= 2) {
+                continue;
+            }
+
+            $sourceUses[$id] = ($sourceUses[$id] ?? 0) + 1;
+
+            return [$id];
+        }
+
+        return isset($winners[$index]) ? [(int) $winners[$index]['post_id']] : [];
+    }
+
+    /**
+     * @param  list<int>  $sourceIds
+     * @param  array<int, int>  $sourceUses
+     * @param  list<array{post_id: int, handle: string, pi: float, hook: ?string, hashtags: list<string>, format: string, caption: ?string}>  $winners
+     * @return list<int>
+     */
+    private function capSourceUses(array $sourceIds, array &$sourceUses, array $winners, int $index): array
+    {
+        $kept = [];
+
+        foreach ($sourceIds as $id) {
+            if (($sourceUses[$id] ?? 0) >= 2) {
+                continue;
+            }
+
+            $kept[] = $id;
+            $sourceUses[$id] = ($sourceUses[$id] ?? 0) + 1;
+        }
+
+        if ($kept === []) {
+            return $this->pickSourceIds($winners, $index, $sourceUses);
+        }
+
+        return $kept;
     }
 
     /**
@@ -520,9 +580,20 @@ class WeeklyBriefGenerator
         $brandName = trim((string) ($brand?->name ?? 'your brand'));
         $hashtags = $this->hashtagsFromWinners($winners, 5);
         $ideas = [];
+        /** @var array<int, int> $sourceUses */
+        $sourceUses = [];
 
         for ($i = 0; $i < 3; $i++) {
-            $winner = $winners[$i] ?? $winners[0] ?? null;
+            $sourceIds = $this->pickSourceIds($winners, $i, $sourceUses);
+            $winner = null;
+
+            if ($sourceIds !== []) {
+                $winner = collect($winners)->firstWhere('post_id', $sourceIds[0])
+                    ?? ($winners[$i] ?? $winners[0] ?? null);
+            } else {
+                $winner = $winners[$i] ?? $winners[0] ?? null;
+            }
+
             $slot = $slots[$i] ?? $slots[0] ?? ['day' => 'Wed', 'hour' => 12];
             $hook = filled($winner['hook'] ?? null)
                 ? (string) $winner['hook']
@@ -538,7 +609,7 @@ class WeeklyBriefGenerator
                 'hashtags' => $hashtags,
                 'recommended_day' => (string) $slot['day'],
                 'recommended_hour' => (int) $slot['hour'],
-                'inspired_by_post_ids' => $winner ? [(int) $winner['post_id']] : [],
+                'inspired_by_post_ids' => $sourceIds !== [] ? $sourceIds : ($winner ? [(int) $winner['post_id']] : []),
                 'why' => $pi !== null
                     ? sprintf('@%s hit %.1f× usual - remix that proof pattern this week.', $handle, $pi)
                     : 'Grounded in recent competitor winners and your brand profile.',

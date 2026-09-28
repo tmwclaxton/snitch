@@ -198,7 +198,7 @@ class GrowthMetricsBuilder
 
             $ppwPoints[] = [
                 'date' => $weekStart->toDateString(),
-                'value' => $weekPosts->count(),
+                'value' => (float) $weekPosts->count(),
             ];
 
             $weekEr = [];
@@ -374,14 +374,17 @@ class GrowthMetricsBuilder
         }
 
         $cursor = $first->timezone(DashboardMath::TIMEZONE)->startOfWeek(CarbonImmutable::MONDAY);
-        $last = $end->timezone(DashboardMath::TIMEZONE)->startOfWeek(CarbonImmutable::MONDAY);
+        // Drop the in-progress week so posts-per-week does not plunge to a partial count.
+        $completeEnd = $end->timezone(DashboardMath::TIMEZONE)
+            ->startOfWeek(CarbonImmutable::MONDAY)
+            ->subWeek();
         $weeks = [];
 
-        while ($cursor->lte($last)) {
+        while ($cursor->lte($completeEnd)) {
             $weeks[] = $cursor;
             $cursor = $cursor->addWeek();
         }
 
-        return $weeks === [] ? [$last] : $weeks;
+        return $weeks;
     }
 }

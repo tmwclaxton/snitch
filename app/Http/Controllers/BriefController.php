@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\OmitsProductDataWhenPaywalled;
 use App\Jobs\GenerateWeeklyBriefJob;
 use App\Models\Post;
+use App\Models\User;
 use App\Models\WeeklyBrief;
 use App\Models\WeeklyBriefIdea;
 use App\Services\Brief\WeeklyBriefGenerator;
@@ -53,7 +54,7 @@ class BriefController extends Controller
             ->all();
 
         return Inertia::render('brief/Index', [
-            'brief' => $brief === null ? null : $this->briefPayload($brief),
+            'brief' => $brief === null ? null : $this->briefPayload($brief, $user, $generator),
             'history' => $history,
             'weekStart' => $weekStart->toDateString(),
             'creditCost' => WeeklyBriefGenerator::CREDIT_PENCE,
@@ -116,7 +117,7 @@ class BriefController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function briefPayload(WeeklyBrief $brief): array
+    private function briefPayload(WeeklyBrief $brief, User $user, WeeklyBriefGenerator $generator): array
     {
         $postIds = $brief->ideas
             ->flatMap(fn (WeeklyBriefIdea $idea) => $idea->inspired_by_post_ids ?? [])
@@ -128,7 +129,14 @@ class BriefController extends Controller
 
         $posts = $postIds === []
             ? collect()
-            : Post::query()->whereIn('id', $postIds)->get(['id', 'url', 'caption'])->keyBy('id');
+            : Post::query()
+                ->whereIn('id', $postIds)
+                ->with(['socialAccount'])
+                ->get()
+                ->keyBy('id');
+
+        $winnerLookup = collect($generator->topWinners($user, 30))
+            ->keyBy('post_id');
 
         return [
             'id' => $brief->id,
@@ -140,18 +148,23 @@ class BriefController extends Controller
             'was_free' => (bool) $brief->was_free,
             'credits_charged_pence' => (float) $brief->credits_charged_pence,
             'generated_at' => $brief->generated_at?->toIso8601String(),
-            'ideas' => $brief->ideas->map(function (WeeklyBriefIdea $idea) use ($posts): array {
+            'ideas' => $brief->ideas->map(function (WeeklyBriefIdea $idea) use ($posts, $winnerLookup): array {
                 $sources = collect($idea->inspired_by_post_ids ?? [])
-                    ->map(function ($id) use ($posts): ?array {
+                    ->map(function ($id) use ($posts, $winnerLookup): ?array {
                         $post = $posts->get((int) $id);
 
                         if ($post === null) {
                             return null;
                         }
 
+                        $winner = $winnerLookup->get((int) $post->id);
+
                         return [
                             'id' => (int) $post->id,
                             'url' => $post->url,
+                            'thumbnail_url' => $post->cover_url,
+                            'handle' => (string) ($winner['handle'] ?? $post->socialAccount?->handle ?? 'unknown'),
+                            'pi' => isset($winner['pi']) ? (float) $winner['pi'] : null,
                         ];
                     })
                     ->filter()

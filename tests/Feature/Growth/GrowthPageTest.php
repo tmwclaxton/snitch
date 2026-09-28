@@ -51,4 +51,44 @@ class GrowthPageTest extends TestCase
                 ->has('metrics.charts.followers')
             );
     }
+
+    public function test_growth_charts_exclude_current_incomplete_week(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $own = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'is_own_account' => true,
+            'handle' => 'goodgym',
+            'followers' => 1000,
+        ]);
+
+        $thisWeek = CarbonImmutable::now('Europe/London')->startOfWeek(CarbonImmutable::MONDAY);
+        $lastWeek = $thisWeek->subWeek();
+
+        Post::factory()->forAccount($own)->create([
+            'posted_at' => $lastWeek->addDays(1),
+            'metrics' => ['views' => 500, 'likes' => 40, 'comments' => 4, 'shares' => 0],
+        ]);
+        Post::factory()->forAccount($own)->create([
+            'posted_at' => $thisWeek->addHours(2),
+            'metrics' => ['views' => 500, 'likes' => 40, 'comments' => 4, 'shares' => 0],
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('growth.index', ['period' => '30d']))
+            ->assertOk();
+
+        $series = $response->original->getData()['page']['props']['metrics']['charts']['posts_per_week'] ?? null;
+        $this->assertIsArray($series);
+        foreach ($series as $row) {
+            foreach ($row['points'] ?? [] as $point) {
+                $this->assertNotSame(
+                    $thisWeek->toDateString(),
+                    $point['date'] ?? null,
+                    json_encode($series),
+                );
+            }
+        }
+    }
 }
