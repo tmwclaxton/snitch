@@ -186,14 +186,15 @@ class ExploreController extends Controller
 
         $posts ??= $this->paginateQualityMix($request, $query, $mixSeed);
 
-        PostAccountPresenter::attachForUser($posts->getCollection(), $user);
         $posts->getCollection()->transform(function (Post $post): Post {
             // Archive from payload / cover_source_url only - do not hit Instagram
             // media/oEmbed on every Explore page load (backfill --fetch recovers).
             $this->covers->ensureMirrored($post, fetchRemote: false);
             $post->refresh();
+            $post->loadMissing(['socialAccount', 'analysis.terms']);
 
             $post->makeHidden(['raw_payload']);
+            PostAccountPresenter::normalizePlatform($post);
             $post->setAttribute(
                 'embed',
                 PlatformEmbed::resolve($post->platform, $post->url, compact: true),
@@ -208,6 +209,9 @@ class ExploreController extends Controller
 
             return $post;
         });
+
+        // Attach after refresh so dynamic tracked_account / platform attrs are not wiped.
+        PostAccountPresenter::attachForUser($posts->getCollection(), $user);
 
         return $posts;
     }

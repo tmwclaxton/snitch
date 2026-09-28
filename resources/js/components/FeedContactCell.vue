@@ -29,7 +29,7 @@ type AnalysisGlance = {
 const props = defineProps<{
     post: {
         id: number;
-        platform: string;
+        platform?: string | null;
         type: string;
         url: string | null;
         caption?: string | null;
@@ -42,6 +42,11 @@ const props = defineProps<{
             id?: number;
             handle: string;
             display_name?: string | null;
+            platform?: string | null;
+        } | null;
+        social_account?: {
+            platform?: string | null;
+            handle?: string | null;
         } | null;
         analysis?: AnalysisGlance | null;
         winner_insight?: { score: number } | null;
@@ -50,6 +55,14 @@ const props = defineProps<{
     accountHref?: string | null;
     compact?: boolean;
 }>();
+
+const platform = computed(
+    () =>
+        props.post.platform
+        || props.post.tracked_account?.platform
+        || props.post.social_account?.platform
+        || null,
+);
 
 const frameIndex = computed(() => String(props.index + 1).padStart(2, '0'));
 const metrics = computed(() => metricPairs(props.post.metrics));
@@ -150,7 +163,7 @@ const winnerScore = computed(() => {
             <span class="snitch-contact-cell-index">{{ frameIndex }}</span>
             <span class="snitch-contact-cell-platform">
                 <img
-                    :src="platformIconSrc(post.platform)"
+                    :src="platformIconSrc(platform ?? '')"
                     alt=""
                     class="snitch-platform-logo"
                     width="14"
@@ -159,7 +172,7 @@ const winnerScore = computed(() => {
                     decoding="async"
                 >
                 <span class="snitch-contact-cell-platform-text">
-                    {{ productPlatformLabel(post.platform) }} · {{ postTypeLabel(post.type) }}
+                    {{ productPlatformLabel(platform) }} · {{ postTypeLabel(post.type) }}
                 </span>
             </span>
             <span
@@ -176,7 +189,7 @@ const winnerScore = computed(() => {
                     :embed="post.embed"
                     :cover-url="post.cover_url"
                     :post-url="post.url"
-                    :platform="post.platform"
+                    :platform="platform ?? undefined"
                     compact
                 />
             </div>

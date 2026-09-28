@@ -94,9 +94,9 @@ class FeedController extends Controller
         }
 
         $posts = $query->paginate(24)->withQueryString();
-        PostAccountPresenter::attachForUser($posts->getCollection(), $user);
         $posts->getCollection()->transform(function (Post $post): Post {
             $post->makeHidden(['raw_payload']);
+            PostAccountPresenter::normalizePlatform($post);
             $post->setAttribute(
                 'embed',
                 PlatformEmbed::resolve($post->platform, $post->url, compact: true),
@@ -111,6 +111,7 @@ class FeedController extends Controller
 
             return $post;
         });
+        PostAccountPresenter::attachForUser($posts->getCollection(), $user);
 
         return $posts;
     }
