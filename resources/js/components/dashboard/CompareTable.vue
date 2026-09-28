@@ -61,23 +61,31 @@ function formatCell(value: string | null): string {
     <EmptyState v-if="status !== 'ok' || !rows?.length" :reason="reason" compact />
     <table v-else class="w-full table-fixed text-left text-sm">
         <colgroup>
-            <col class="w-[32%]">
-            <col class="w-[13%]">
-            <col class="w-[12%]">
-            <col class="w-[12%]">
-            <col class="w-[11%]">
-            <col class="w-[10%]">
-            <col class="w-[10%]">
+            <col style="width: 34%">
+            <col style="width: 13%">
+            <col style="width: 11%">
+            <col style="width: 12%">
+            <col style="width: 12%">
+            <col style="width: 10%">
+            <col style="width: 8%">
         </colgroup>
         <thead>
-            <tr class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                <th class="h-5 pr-1 font-medium">Account</th>
-                <th class="h-5 px-0.5 font-medium">Followers</th>
-                <th class="h-5 px-0.5 font-medium">Growth</th>
-                <th class="h-5 px-0.5 font-medium">Posts/wk</th>
-                <th class="h-5 px-0.5 font-medium">Eng. rate</th>
-                <th class="h-5 px-0.5 font-medium">Format</th>
-                <th class="h-5 px-0.5 font-medium">Win</th>
+            <tr class="border-b border-slate-200 text-xs text-slate-500">
+                <th class="py-1 pr-2 text-left font-medium">Account</th>
+                <th class="px-1.5 py-1 text-right font-medium leading-tight">Followers</th>
+                <th class="px-1.5 py-1 text-right font-medium leading-tight">Growth</th>
+                <th class="px-1.5 py-1 text-right font-medium leading-tight">
+                    Posts
+                    <br>
+                    / wk
+                </th>
+                <th class="px-1.5 py-1 text-right font-medium leading-tight">
+                    Eng.
+                    <br>
+                    rate
+                </th>
+                <th class="px-1.5 py-1 text-right font-medium leading-tight">Format</th>
+                <th class="pl-1.5 py-1 text-right font-medium leading-tight">Win</th>
             </tr>
         </thead>
         <tbody>
@@ -87,7 +95,7 @@ function formatCell(value: string | null): string {
                 class="border-b border-slate-100"
                 :class="row.is_own_account ? 'bg-slate-50' : ''"
             >
-                <td class="py-0.5 pr-1 align-top">
+                <td class="py-0.5 pr-2 align-top">
                     <div class="flex min-w-0 items-start gap-1" :title="row.row_note || undefined">
                         <SnitchAvatar
                             :src="row.avatar"
@@ -99,35 +107,41 @@ function formatCell(value: string | null): string {
                         <Link
                             v-if="row.tracked_account_id"
                             :href="competitorShow.url(row.tracked_account_id)"
-                            class="break-words font-medium leading-snug text-slate-900 hover:underline"
+                            class="min-w-0 break-words font-medium leading-snug text-slate-900 hover:underline"
                         >
                             <template v-if="row.is_own_account">You</template>
                             <template v-else>@{{ row.handle }}</template>
                         </Link>
-                        <span v-else class="break-words font-medium leading-snug text-slate-900">
+                        <span v-else class="min-w-0 break-words font-medium leading-snug text-slate-900">
                             <template v-if="row.is_own_account">You</template>
                             <template v-else>@{{ row.handle }}</template>
                         </span>
                     </div>
                 </td>
-                <td class="px-0.5 py-0.5 align-top tabular-nums text-slate-700">{{ followers(row.followers) }}</td>
-                <td class="px-0.5 py-0.5 align-top tabular-nums text-slate-700">
+                <td class="px-1.5 py-0.5 text-right align-top tabular-nums text-slate-700">
+                    {{ followers(row.followers) }}
+                </td>
+                <td class="px-1.5 py-0.5 text-right align-top tabular-nums text-slate-700">
                     {{ row.no_posts_in_period ? '-' : pct(row.growth_pct) }}
                 </td>
-                <td class="px-0.5 py-0.5 align-top tabular-nums text-slate-700">
+                <td class="px-1.5 py-0.5 text-right align-top tabular-nums text-slate-700">
                     {{ row.no_posts_in_period ? '-' : num(row.posts_per_week) }}
                 </td>
-                <td class="px-0.5 py-0.5 align-top tabular-nums text-slate-700">
-                    <span v-if="row.no_posts_in_period || row.er == null" class="text-slate-400" :title="row.er_reason || undefined">-</span>
+                <td class="px-1.5 py-0.5 text-right align-top tabular-nums text-slate-700">
+                    <span
+                        v-if="row.no_posts_in_period || row.er == null"
+                        class="text-slate-400"
+                        :title="row.er_reason || undefined"
+                    >-</span>
                     <span v-else>{{ row.er.toFixed(2) }}%</span>
                 </td>
                 <td
-                    class="whitespace-nowrap px-0.5 py-0.5 align-top text-slate-700"
+                    class="px-1.5 py-0.5 text-right align-top text-slate-700"
                     :title="row.top_format ? postTypeLabel(row.top_format) : undefined"
                 >
                     {{ row.no_posts_in_period || row.er == null ? '-' : formatCell(row.top_format) }}
                 </td>
-                <td class="px-0.5 py-0.5 align-top tabular-nums text-slate-700">
+                <td class="py-0.5 pl-1.5 text-right align-top tabular-nums text-slate-700">
                     {{ row.no_posts_in_period ? '-' : row.winners }}
                 </td>
             </tr>

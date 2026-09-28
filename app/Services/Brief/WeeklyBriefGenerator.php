@@ -244,7 +244,13 @@ class WeeklyBriefGenerator
     /**
      * Compact teaser for the dashboard panel (null when nothing to show).
      *
-     * @return array{id: int, week_start: string|null, idea_count: int, hook: string|null}|null
+     * @return array{
+     *     id: int,
+     *     week_start: string|null,
+     *     idea_count: int,
+     *     hook: string|null,
+     *     ideas: list<array{format: string, hook: string, slot: string}>
+     * }|null
      */
     public function dashboardTeaser(User $user): ?array
     {
@@ -254,13 +260,28 @@ class WeeklyBriefGenerator
             return null;
         }
 
-        $first = $brief->ideas->first();
+        $ideas = $brief->ideas
+            ->sortBy('position')
+            ->take(3)
+            ->values()
+            ->map(function ($idea): array {
+                $day = filled($idea->recommended_day) ? (string) $idea->recommended_day : 'Mon';
+                $hour = is_int($idea->recommended_hour) ? $idea->recommended_hour : 9;
+
+                return [
+                    'format' => (string) ($idea->format ?: 'Reel'),
+                    'hook' => (string) ($idea->hook ?: ''),
+                    'slot' => sprintf('%s %02d:00', $day, $hour),
+                ];
+            })
+            ->all();
 
         return [
             'id' => (int) $brief->id,
             'week_start' => $brief->week_start?->toDateString(),
             'idea_count' => $brief->ideas->count(),
-            'hook' => $first?->hook,
+            'hook' => $ideas[0]['hook'] ?? null,
+            'ideas' => $ideas,
         ];
     }
 

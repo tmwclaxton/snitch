@@ -117,6 +117,7 @@ const props = defineProps<{
         week_start: string | null;
         idea_count: number;
         hook: string | null;
+        ideas?: { format: string; hook: string; slot: string }[];
     } | null;
     caption_intel?: {
         hashtags: { term: string; count: number }[];
@@ -261,13 +262,28 @@ const trackerIdsByHandle = computed(() => {
         <div class="mx-auto max-w-none space-y-2">
             <div
                 v-if="weekly_brief"
-                class="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5"
+                class="flex min-w-0 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1"
             >
-                <div class="min-w-0">
-                    <p class="text-sm font-semibold text-slate-900">
-                        Post this next
-                    </p>
-                    <p class="truncate text-xs text-slate-500">
+                <p class="hidden shrink-0 text-xs font-semibold text-slate-800 sm:block">
+                    Post this next
+                </p>
+                <div class="flex min-w-0 flex-1 items-stretch gap-1.5 overflow-hidden">
+                    <Link
+                        v-for="(idea, index) in (weekly_brief.ideas || []).slice(0, 3)"
+                        :key="`${idea.slot}-${index}`"
+                        :href="briefIndex.url()"
+                        class="flex min-w-0 flex-1 items-center gap-1.5 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs leading-snug text-slate-700 hover:border-slate-400"
+                    >
+                        <span class="shrink-0 rounded bg-slate-100 px-1 py-px font-medium uppercase tracking-wide text-slate-600">
+                            {{ idea.format }}
+                        </span>
+                        <span class="min-w-0 flex-1 truncate text-slate-800">{{ idea.hook }}</span>
+                        <span class="shrink-0 tabular-nums text-slate-500">{{ idea.slot }}</span>
+                    </Link>
+                    <p
+                        v-if="!(weekly_brief.ideas || []).length"
+                        class="min-w-0 flex-1 truncate text-xs text-slate-500"
+                    >
                         {{ weekly_brief.hook || 'Three weekly ideas from competitor winners' }}
                     </p>
                 </div>
@@ -462,15 +478,15 @@ const trackerIdsByHandle = computed(() => {
                     </template>
                 </div>
 
-                <div class="grid items-stretch gap-2 lg:grid-cols-2">
+                <div class="grid items-start gap-2 lg:grid-cols-2">
                     <DashCard
-                        class="flex h-full flex-col"
+                        class="flex min-h-0 flex-col"
                         title="This week in 30 seconds"
                         why="Do-this-next lines from peer gaps for a busy organiser."
                         formula="score = |effect| × min(1, n/20); top 6, max 1 per category; n ≥ 5."
                         anchor="insights"
                     >
-                        <div class="flex min-h-0 flex-1 flex-col gap-1.5">
+                        <div class="flex min-h-0 flex-1 flex-col gap-1">
                             <InsightList
                                 v-if="insights"
                                 :status="insights.status"
@@ -483,7 +499,7 @@ const trackerIdsByHandle = computed(() => {
                             <p
                                 v-if="showFollowerNote"
                                 id="growth_series"
-                                class="mt-auto border-t border-slate-100 pt-1 text-sm leading-snug text-slate-600"
+                                class="border-t border-slate-100 pt-1 text-sm leading-snug text-slate-600"
                             >
                                 <span class="font-medium text-slate-800">Followers</span>
                                 ·
@@ -498,14 +514,13 @@ const trackerIdsByHandle = computed(() => {
                             <p
                                 v-else-if="!follower_series"
                                 id="growth_series"
-                                class="mt-auto"
                             >
                                 <SnitchSkeleton variant="scrap" height="1.25rem" label="Loading follower note" />
                             </p>
                         </div>
                     </DashCard>
 
-                    <div class="flex h-full min-w-0 flex-col gap-1.5">
+                    <div class="flex min-w-0 flex-col gap-1.5">
                         <DashCard
                             title="Leaderboard"
                             why="One glance shows who is ahead, and on what."
@@ -521,7 +536,7 @@ const trackerIdsByHandle = computed(() => {
                             <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading leaderboard" />
                         </DashCard>
 
-                        <div id="format_mix" class="snitch-scrap relative mt-auto p-2">
+                        <div id="format_mix" class="snitch-scrap relative p-2">
                             <FormatMixChart
                                 v-if="caption_intel"
                                 class="snitch-dash-soft-in"
@@ -535,13 +550,13 @@ const trackerIdsByHandle = computed(() => {
 
                 <div class="grid items-stretch gap-2 lg:grid-cols-2">
                     <section id="activity" class="snitch-scrap relative flex h-full min-w-0 flex-col p-2">
-                        <div class="mb-1 flex items-baseline justify-between gap-2">
+                        <div class="mb-0.5 flex shrink-0 items-baseline justify-between gap-2">
                             <p class="snitch-ink-label">Posting heat map</p>
                             <p class="tabular-nums text-xs text-slate-500">16 wks</p>
                         </div>
                         <PostingHeatmap
                             v-if="activity"
-                            class="snitch-heatmap--dash snitch-dash-soft-in mt-auto"
+                            class="snitch-heatmap--dash snitch-dash-soft-in min-h-0 flex-1"
                             :days="activity.heatmap"
                         />
                         <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading heat map" />

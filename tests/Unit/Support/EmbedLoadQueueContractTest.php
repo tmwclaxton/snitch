@@ -194,6 +194,8 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertIsString($compare);
         $this->assertStringContainsString('postTypeShortLabel', $compare);
         $this->assertStringContainsString('break-words font-medium', $compare);
+        $this->assertStringContainsString('text-right', $compare);
+        $this->assertStringContainsString('/ wk', $compare);
         $themes = file_get_contents(base_path('resources/js/components/dashboard/ThemeMatrix.vue'));
         $this->assertIsString($themes);
         $this->assertStringContainsString('accountHeading', $themes);

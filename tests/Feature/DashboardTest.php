@@ -92,12 +92,24 @@ class DashboardTest extends TestCase
         $this->assertStringNotContainsString('...', $winnerCard);
         $this->assertStringContainsString('trackerIdsByHandle', $dashboard);
         $this->assertStringContainsString(':tracker-ids="trackerIdsByHandle"', $dashboard);
+        $this->assertStringContainsString('weekly_brief.ideas', $dashboard);
+        $this->assertStringContainsString('Post this next', $dashboard);
+        $this->assertStringContainsString('items-start', $dashboard);
+        $this->assertStringNotContainsString('mt-auto p-2', $dashboard);
 
         $insightList = file_get_contents(resource_path('js/components/dashboard/InsightList.vue'));
         $this->assertNotFalse($insightList);
         $this->assertStringContainsString('data-tracker-id', $insightList);
         $this->assertStringContainsString('competitorShow.url(id)', $insightList);
+        $this->assertStringContainsString('Show all', $insightList);
         $this->assertStringNotContainsString('line-clamp-', $insightList);
+
+        $compare = file_get_contents(resource_path('js/components/dashboard/CompareTable.vue'));
+        $this->assertNotFalse($compare);
+        $this->assertStringContainsString('text-right', $compare);
+        $this->assertStringContainsString('Posts', $compare);
+        $this->assertStringContainsString('/ wk', $compare);
+        $this->assertStringNotContainsString('uppercase tracking-wide', $compare);
 
         $captions = file_get_contents(resource_path('js/components/dashboard/CaptionPanels.vue'));
         $this->assertNotFalse($captions);

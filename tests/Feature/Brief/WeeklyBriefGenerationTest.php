@@ -184,6 +184,9 @@ class WeeklyBriefGenerationTest extends TestCase
                 ->component('Dashboard')
                 ->where('weekly_brief.id', $brief->id)
                 ->where('weekly_brief.hook', 'Open on proof')
+                ->where('weekly_brief.ideas.0.format', 'Reel')
+                ->where('weekly_brief.ideas.0.hook', 'Open on proof')
+                ->where('weekly_brief.ideas.0.slot', 'Mon 09:00')
             );
     }
 
