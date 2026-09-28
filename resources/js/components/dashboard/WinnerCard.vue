@@ -35,7 +35,10 @@ const fmt = new Intl.NumberFormat('en-GB');
         rel="noreferrer"
         class="flex items-start gap-1.5 overflow-hidden rounded-md border border-slate-200 bg-white p-1"
     >
-        <div class="relative h-16 w-16 shrink-0 overflow-hidden rounded bg-slate-100 sm:h-20 sm:w-20">
+        <div
+            class="relative shrink-0 overflow-hidden rounded bg-slate-100"
+            :class="compact ? 'h-16 w-16 sm:h-20 sm:w-20' : 'h-24 w-24 sm:h-28 sm:w-28'"
+        >
             <SnitchImage
                 v-if="post.thumbnail_url"
                 :src="post.thumbnail_url"
@@ -60,7 +63,7 @@ const fmt = new Intl.NumberFormat('en-GB');
             <div class="mt-0.5 text-[10px] tabular-nums text-slate-500">
                 <span v-if="post.likes_hidden" class="rounded bg-amber-50 px-1 text-amber-700">hidden</span>
                 <span v-else-if="post.likes != null">{{ fmt.format(post.likes) }}♥</span>
-                <span v-else>—</span>
+                <span v-else>-</span>
                 · {{ fmt.format(post.comments) }}💬
             </div>
         </div>

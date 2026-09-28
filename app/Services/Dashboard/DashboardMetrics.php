@@ -751,6 +751,7 @@ class DashboardMetrics
             'peer_growth_pct' => $this->math->median($peerRows->pluck('growth_pct')->filter(fn ($v) => $v !== null)->values()),
             'peer_format_lift' => $peerFormatLift,
             'top_winner' => $topWinner === null ? null : [
+                'id' => $topWinner['id'] ?? null,
                 'handle' => $topWinner['handle'],
                 'pi' => $topWinner['pi'],
                 'prior_n' => $topWinner['prior_n'],
@@ -759,6 +760,7 @@ class DashboardMetrics
                 'when' => $topWinner['london_at']?->format('l \\a\\t H:i'),
             ],
             'your_win' => $yourWin === null ? null : [
+                'id' => $yourWin['id'] ?? null,
                 'pi' => $yourWin['pi'],
                 'prior_n' => $yourWin['prior_n'],
                 'format' => $yourWin['format'],
@@ -965,12 +967,15 @@ class DashboardMetrics
         $status = 'ok';
         $reason = null;
 
-        if ($emptyGrowth && $youValue === null) {
-            $status = 'insufficient';
-            $reason = 'Tracking started recently. Growth appears after 2 weekly snapshots.';
-        } elseif ($reelEmpty && $youValue === null && $youN > 0) {
-            $status = 'empty';
+        if ($emptyGrowth && $you !== null && $youValue === null) {
+            // Still show the current follower count; growth stays "—" until
+            // two snapshots exist (do not replace the cell with a paragraph).
+            $status = 'ok';
+            $reason = 'Growth appears after 2 weekly snapshots.';
+        } elseif ($reelEmpty && $you !== null && $youValue === null && $youN > 0) {
+            $status = 'ok';
             $reason = 'No Reels in this period.';
+            $display = null;
         } elseif ($key === 'posts_per_week' && $you !== null && $youN === 0) {
             $status = 'insufficient';
             $reason = 'No posts imported yet';
@@ -1066,14 +1071,19 @@ class DashboardMetrics
                     'growth_pct' => $row['growth_pct'] === null ? null : $this->math->round1((float) $row['growth_pct']),
                     'posts_per_week' => $noPosts ? null : $this->math->round1((float) $row['posts_per_week']),
                     'consistency' => $row['consistency'],
-                    'er' => $erUnavailable ? null : $this->math->round2($row['er']),
-                    'er_reason' => $erUnavailable
+                    // Treat unavailable / all-zero measurable samples as null, never 0.00%.
+                    'er' => ($erUnavailable || $row['er'] === null || ($measurable === 0 && (float) ($row['er'] ?? 0) === 0.0))
+                        ? null
+                        : $this->math->round2($row['er']),
+                    'er_reason' => $erUnavailable || $measurable === 0
                         ? ($measurable === 0 && $hiddenN > 0
                             ? 'Likes hidden on Instagram'
-                            : $this->math->insufficientReason($measurable))
+                            : ($measurable === 0
+                                ? 'No measurable engagement yet'
+                                : $this->math->insufficientReason($measurable)))
                         : null,
                     'comments_per_post' => $noPosts ? null : $this->math->round1($row['comments_per_post']),
-                    'top_format' => $noPosts ? null : $row['top_format'],
+                    'top_format' => ($noPosts || $measurable === 0) ? null : $row['top_format'],
                     'winners' => $row['winners'],
                     'engagement_share' => $measurable === 0
                         ? null
@@ -1159,7 +1169,7 @@ class DashboardMetrics
         $winners = $scored
             ->filter(fn (array $row): bool => (float) $row['pi'] >= DashboardMath::WINNER_THRESHOLD)
             ->sortByDesc('pi')
-            ->take(9)
+            ->take(12)
             ->map(fn (array $row): array => $this->winnerPayload($row))
             ->values()
             ->all();

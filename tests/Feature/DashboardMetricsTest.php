@@ -303,7 +303,7 @@ class DashboardMetricsTest extends TestCase
         $this->assertNull($hiddenRow['er']);
         $this->assertSame('Likes hidden on Instagram', $hiddenRow['er_reason']);
         $this->assertSame('Likes hidden on Instagram', $hiddenRow['row_note']);
-        $this->assertSame('Reel', $hiddenRow['top_format']);
+        $this->assertNull($hiddenRow['top_format']);
         $this->assertNotNull($visibleRow['er']);
         $this->assertGreaterThan(0, $visibleRow['er']);
 

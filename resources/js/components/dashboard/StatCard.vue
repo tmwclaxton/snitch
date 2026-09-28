@@ -32,8 +32,8 @@ const youLabel = computed(() => {
             : String(props.youDisplay);
     }
 
-    if (props.status !== 'ok' || props.you == null) {
-        return null;
+    if (props.you == null) {
+        return '-';
     }
 
     if (props.unit === 'pct') {
@@ -45,7 +45,7 @@ const youLabel = computed(() => {
 
 const peerLabel = computed(() => {
     if (props.peerMedian == null) {
-        return '—';
+        return '-';
     }
 
     if (props.unit === 'pct') {
@@ -56,7 +56,7 @@ const peerLabel = computed(() => {
 });
 
 const gapLabel = computed(() => {
-    if (!props.gap) {
+    if (!props.gap || props.you == null) {
         return null;
     }
 
@@ -86,16 +86,29 @@ const gapClass = computed(() => {
         ? 'bg-rose-50 text-rose-700'
         : 'bg-green-50 text-green-700';
 });
+
+const growthHint = computed(() => {
+    if (!props.label.startsWith('Followers')) {
+        return null;
+    }
+
+    if (props.you == null) {
+        return '- growth';
+    }
+
+    return `${numberFmt.format(props.you)}% 30d`;
+});
 </script>
 
 <template>
-    <div class="rounded-md border border-slate-200 bg-white px-2 py-1.5">
+    <div class="min-w-0 border-r border-slate-200 px-2 py-1.5 last:border-r-0">
         <div class="flex items-center justify-between gap-1">
             <div class="truncate text-[9px] font-medium uppercase tracking-wide text-slate-500">{{ label }}</div>
             <button
                 type="button"
                 class="relative rounded p-0.5 text-slate-400 hover:text-slate-700"
                 :aria-label="'About ' + label"
+                :title="reason || why"
                 @click="open = !open"
                 @blur="open = false"
             >
@@ -106,27 +119,27 @@ const gapClass = computed(() => {
                 >
                     <p class="mb-1 text-slate-700">{{ why }}</p>
                     <p class="text-slate-500">{{ formula }}</p>
+                    <p v-if="reason" class="mt-1 text-slate-400">{{ reason }}</p>
                 </div>
             </button>
         </div>
 
-        <template v-if="youLabel != null">
-            <div class="mt-0.5 text-base font-semibold tracking-tight text-slate-900 tabular-nums leading-none">
-                {{ youLabel }}
-            </div>
-            <div class="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] leading-none text-slate-500">
-                <span>Peer {{ peerLabel }}</span>
-                <span
-                    v-if="gapLabel"
-                    class="rounded px-1 py-0.5 font-medium tabular-nums"
-                    :class="gapClass"
-                >
-                    {{ gapLabel }}
-                </span>
-            </div>
-        </template>
-        <div v-else class="mt-1 text-[10px] leading-snug text-slate-400">
-            {{ reason || '—' }}
+        <div
+            class="mt-0.5 text-lg font-semibold tracking-tight text-slate-900 tabular-nums leading-none"
+            :title="youLabel === '-' ? (reason || undefined) : undefined"
+        >
+            {{ youLabel }}
+        </div>
+        <div class="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] leading-none text-slate-500">
+            <span v-if="growthHint">{{ growthHint }}</span>
+            <span v-else>Peer {{ peerLabel }}</span>
+            <span
+                v-if="gapLabel"
+                class="rounded px-1 py-0.5 font-medium tabular-nums"
+                :class="gapClass"
+            >
+                {{ gapLabel }}
+            </span>
         </div>
     </div>
 </template>

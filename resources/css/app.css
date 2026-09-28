@@ -1041,7 +1041,21 @@
     }
 
     .snitch-dash-chart-slot {
-        min-height: 11rem;
+        min-height: 7rem;
+    }
+
+    .snitch-dash-kpi-strip {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid rgb(226 232 240);
+        background: #fff;
+    }
+
+    @media (min-width: 1280px) {
+        .snitch-dash-kpi-strip {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
     }
 
     /* Soft fade only on the dash sheet - keep transform stagger off so rows do not jump. */

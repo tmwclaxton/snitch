@@ -10,7 +10,9 @@ namespace App\Services\Dashboard;
  *     text: string,
  *     score: float,
  *     n: int,
- *     links_to: string
+ *     links_to: string,
+ *     detail?: string|null,
+ *     post_id?: int|null
  * }
  */
 class InsightRules
@@ -145,6 +147,8 @@ class InsightRules
 
             $seen[$row['category']] = true;
             $row['links_to'] = $this->resolveAnchor((string) $row['links_to']);
+            $row['detail'] = $row['detail'] ?? sprintf('Based on n=%d · effect score %.2f', $row['n'], $row['score']);
+            $row['post_id'] = isset($row['post_id']) ? (int) $row['post_id'] : null;
             $picked[] = $row;
 
             if (count($picked) >= $limit) {
@@ -298,6 +302,13 @@ class InsightRules
             'score' => ((float) $winner['pi'] - 1) * min(1, $n / 20),
             'n' => $n,
             'links_to' => 'winners',
+            'detail' => sprintf(
+                'PI %s× · prior sample n=%d · format %s',
+                $this->x((float) $winner['pi']),
+                $n,
+                (string) ($winner['format'] ?? 'post'),
+            ),
+            'post_id' => isset($winner['id']) ? (int) $winner['id'] : null,
         ]];
     }
 
@@ -616,6 +627,8 @@ class InsightRules
             'score' => ((float) $win['pi']) * min(1, $n / 20),
             'n' => max($n, DashboardMath::MIN_SAMPLE),
             'links_to' => 'winners',
+            'detail' => sprintf('PI %s× · prior sample n=%d', $this->x((float) $win['pi']), $n),
+            'post_id' => isset($win['id']) ? (int) $win['id'] : null,
         ]];
     }
 
