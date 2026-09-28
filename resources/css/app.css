@@ -1477,10 +1477,10 @@
 
     /* Brief flash when an insight "see why →" scrolls to a card. */
     .snitch-dash-anchor-flash {
-        box-shadow:
-            0 0 0 2px color-mix(in oklab, var(--snitch-ink) 85%, transparent),
-            0 0 0 4px color-mix(in oklab, var(--snitch-lift, #fff) 100%, transparent);
-        transition: box-shadow 0.35s ease;
+        outline: 2px solid var(--snitch-ink);
+        outline-offset: 3px;
+        box-shadow: 0 0 0 4px color-mix(in oklab, var(--snitch-spot) 55%, transparent);
+        transition: outline-color 0.35s ease, box-shadow 0.35s ease;
     }
 
     #rail,
