@@ -6,39 +6,45 @@ const PLATFORM_LABELS: Record<string, string> = {
     youtube: 'YouTube',
 };
 
-/** Product is Instagram-only in the UI; do not advertise other networks. */
+const PLATFORM_ICONS = new Set(Object.keys(PLATFORM_LABELS));
+
 export function isInstagramPlatform(platform: string | null | undefined): boolean {
     return (platform ?? '').toLowerCase() === 'instagram';
 }
 
 export function platformLabel(platform: string): string {
-    return PLATFORM_LABELS[platform] ?? platform;
+    const key = platform.toLowerCase();
+
+    return PLATFORM_LABELS[key] ?? platform;
 }
 
 /**
- * Badge / open-link label for the Instagram-only product.
- * Instagram stays named; legacy non-IG trackers get a neutral label.
+ * Badge label for product UI. Always the real network name when known.
  */
 export function productPlatformLabel(platform: string | null | undefined): string {
-    if (isInstagramPlatform(platform)) {
-        return 'Instagram';
+    if (!platform) {
+        return 'Profile';
     }
 
-    return 'Profile';
+    return platformLabel(platform);
 }
 
 export function openOnPlatformLabel(platform: string | null | undefined): string {
-    if (isInstagramPlatform(platform)) {
-        return 'Open on Instagram';
+    const label = productPlatformLabel(platform);
+
+    if (label === 'Profile') {
+        return 'Open profile';
     }
 
-    return 'Open profile';
+    return `Open on ${label}`;
 }
 
 export function platformIconSrc(platform: string): string {
-    if (!isInstagramPlatform(platform)) {
-        return '/images/platforms/instagram.svg';
+    const key = platform.toLowerCase();
+
+    if (PLATFORM_ICONS.has(key)) {
+        return `/images/platforms/${key}.svg`;
     }
 
-    return `/images/platforms/${platform}.svg`;
+    return '/images/platforms/instagram.svg';
 }

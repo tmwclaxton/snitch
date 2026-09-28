@@ -34,7 +34,6 @@ import { formatAppDate } from '@/lib/dates';
 import type { PostMetrics } from '@/lib/metrics';
 import { formatFollowers } from '@/lib/metrics';
 import {
-    isInstagramPlatform,
     openOnPlatformLabel,
     platformIconSrc,
     productPlatformLabel,
@@ -389,7 +388,6 @@ function askRemove(): void {
                     <div class="min-w-0">
                         <div class="flex items-center gap-2">
                             <img
-                                v-if="isInstagramPlatform(account.platform)"
                                 :src="platformIconSrc(account.platform)"
                                 :alt="`${productPlatformLabel(account.platform)} logo`"
                                 class="snitch-platform-logo size-4 shrink-0"
@@ -397,7 +395,6 @@ function askRemove(): void {
                                 height="16"
                             />
                             <p
-                                v-if="isInstagramPlatform(account.platform)"
                                 class="text-xs font-medium uppercase tracking-wide text-neutral-500"
                             >
                                 {{ productPlatformLabel(account.platform) }}
