@@ -18,8 +18,8 @@ defineProps<{
 
 <template>
     <EmptyState v-if="status !== 'ok'" :reason="reason" compact />
-    <div v-else class="space-y-2">
-        <div class="grid gap-3 sm:grid-cols-3">
+    <div v-else class="space-y-1.5">
+        <div class="grid gap-2 sm:grid-cols-3">
             <div>
                 <p class="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">Length vs PI</p>
                 <ul class="space-y-1">

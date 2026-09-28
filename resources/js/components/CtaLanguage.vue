@@ -49,10 +49,10 @@ function toggle(row: CtaGroup): void {
 
 <template>
     <div class="min-w-0">
-        <p class="snitch-ink-label mb-2">CTA language</p>
+        <p class="snitch-ink-label mb-1">CTA language</p>
         <div
             v-if="ctas.length"
-            class="flex flex-wrap gap-1.5"
+            class="flex flex-wrap gap-1"
         >
             <button
                 v-for="row in ctas"
@@ -69,18 +69,18 @@ function toggle(row: CtaGroup): void {
         </div>
         <p
             v-else
-            class="text-sm text-snitch-ink/60"
+            class="text-[11px] text-snitch-ink/60"
         >
             No analysed CTAs yet.
         </p>
         <ul
             v-if="active?.lines?.length"
-            class="mt-2 max-w-3xl space-y-1"
+            class="mt-1.5 max-w-3xl space-y-1"
         >
             <li
                 v-for="line in active.lines"
                 :key="`${active.term}-${line.text}`"
-                class="text-sm leading-snug text-snitch-ink"
+                class="text-[11px] leading-snug text-snitch-ink"
             >
                 <Link
                     v-if="line.post_id"
