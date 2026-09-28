@@ -56,11 +56,14 @@ class LovableDashboardTest extends TestCase
                 ->has('rivals', 1)
                 ->where('selected.0', 'rivalbrand')
                 ->has('kpis')
-                ->has('insights')
-                ->has('leaderboard')
-                ->has('winners')
+                ->missing('insights')
                 ->missing('top_posts')
-                ->missing('heatmap.0')
+                ->loadDeferredProps('panel', fn (Assert $panel) => $panel
+                    ->has('insights')
+                    ->has('leaderboard')
+                    ->has('winners')
+                    ->missing('heatmap.0')
+                )
             );
     }
 }

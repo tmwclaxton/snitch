@@ -327,7 +327,8 @@ class PlatformAdapterTest extends TestCase
     public function test_instagram_list_input_uses_since_date_and_multiplier(): void
     {
         $client = $this->createMock(ApifyClient::class);
-        $since = CarbonImmutable::parse('2026-08-01');
+        // Stay inside the recency floor so dateFilterValue does not clamp $since.
+        $since = CarbonImmutable::now()->subDays(10);
 
         $client->expects($this->once())
             ->method('runActor')
@@ -353,7 +354,7 @@ class PlatformAdapterTest extends TestCase
     public function test_youtube_list_input_uses_since_date(): void
     {
         $client = $this->createMock(ApifyClient::class);
-        $since = CarbonImmutable::parse('2026-08-02');
+        $since = CarbonImmutable::now()->subDays(10);
 
         $client->expects($this->once())
             ->method('runActor')

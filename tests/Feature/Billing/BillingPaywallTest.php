@@ -200,8 +200,8 @@ class BillingPaywallTest extends TestCase
                 ->where('kpis.status', 'empty')
                 ->where('leaderboard.status', 'empty')
                 ->where('winners.status', 'empty')
+                ->where('recent_posts', [])
                 ->missing('top_posts')
-                ->missing('recent_posts')
                 ->missing('top_winners')
             );
     }
@@ -311,8 +311,10 @@ class BillingPaywallTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('subscription.paywall.blocked', false)
                 ->where('rivals.0.handle', 'visible-rival')
-                ->where('leaderboard.status', 'ok')
                 ->where('rivals.0.posts_count', 1)
+                ->loadDeferredProps('panel', fn (Assert $panel) => $panel
+                    ->where('leaderboard.status', 'ok')
+                )
             );
 
         $this->actingAs($user)
