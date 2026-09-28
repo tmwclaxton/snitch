@@ -74,7 +74,7 @@ const peakIndex = computed(() => {
                 :key="row.type"
                 class="grid grid-cols-[5.5rem_minmax(0,1fr)_2rem_2.75rem] items-center gap-1.5"
             >
-                <span class="truncate text-[11px] text-slate-600">
+                <span class="whitespace-nowrap text-[11px] text-slate-600">
                     {{ postTypeLabel(row.type) }}
                 </span>
                 <div

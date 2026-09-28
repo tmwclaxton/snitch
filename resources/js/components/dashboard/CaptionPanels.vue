@@ -42,8 +42,8 @@ defineProps<{
                         :key="row.type"
                         class="flex items-center justify-between gap-2 text-[11px] text-slate-700"
                     >
-                        <span class="truncate">{{ row.type }} <span class="text-slate-400">{{ row.share_pct }}%</span></span>
-                        <span class="tabular-nums font-medium">{{ row.pi_with != null ? `${row.pi_with.toFixed(1)}x` : '-' }}</span>
+                        <span class="min-w-0 break-words leading-snug">{{ row.type }} <span class="text-slate-400">{{ row.share_pct }}%</span></span>
+                        <span class="shrink-0 tabular-nums font-medium">{{ row.pi_with != null ? `${row.pi_with.toFixed(1)}x` : '-' }}</span>
                     </li>
                 </ul>
             </div>
@@ -77,9 +77,9 @@ defineProps<{
                     <div class="flex flex-wrap items-baseline gap-x-1 gap-y-0.5">
                         <span class="rounded bg-white px-1 text-[9px] uppercase text-slate-500">{{ hook.pattern }}</span>
                         <span class="font-medium tabular-nums text-slate-900">{{ hook.pi.toFixed(1) }}x</span>
-                        <span class="truncate text-slate-500">@{{ hook.handle }}</span>
+                        <span class="break-all text-slate-500">@{{ hook.handle }}</span>
                     </div>
-                    <p class="mt-0.5 line-clamp-2 text-slate-600">{{ hook.hook }}</p>
+                    <p class="mt-0.5 line-clamp-3 text-slate-600">{{ hook.hook }}</p>
                 </li>
             </ul>
         </div>

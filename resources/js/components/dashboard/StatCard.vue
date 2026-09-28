@@ -103,7 +103,12 @@ const growthHint = computed(() => {
 <template>
     <div class="min-w-0 border-r border-slate-200 px-2 py-1.5 last:border-r-0">
         <div class="flex items-center justify-between gap-1">
-            <div class="truncate text-[9px] font-medium uppercase tracking-wide text-slate-500">{{ label }}</div>
+            <div
+                class="min-w-0 text-[9px] font-medium uppercase leading-tight tracking-wide text-slate-500"
+                :title="label"
+            >
+                {{ label }}
+            </div>
             <button
                 type="button"
                 class="relative rounded p-0.5 text-slate-400 hover:text-slate-700"

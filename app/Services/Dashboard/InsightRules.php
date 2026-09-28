@@ -642,10 +642,21 @@ class InsightRules
         return rtrim(rtrim(number_format($value, 1, '.', ''), '0'), '.') ?: '0';
     }
 
-    private function plain(string $text): string
+    private function plain(string $text, int $max = 100): string
     {
         $clean = preg_replace('/[*_`]/', '', $text) ?? $text;
 
-        return mb_strlen($clean) > 80 ? rtrim(mb_substr($clean, 0, 79)).'…' : $clean;
+        if (mb_strlen($clean) <= $max) {
+            return $clean;
+        }
+
+        $slice = rtrim(mb_substr($clean, 0, $max - 1));
+        $break = mb_strrpos($slice, ' ');
+
+        if ($break !== false && $break > (int) ($max * 0.55)) {
+            $slice = rtrim(mb_substr($slice, 0, $break));
+        }
+
+        return $slice.'…';
     }
 }

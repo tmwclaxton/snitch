@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import EmptyState from '@/components/dashboard/EmptyState.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
+import { postTypeLabel, postTypeShortLabel } from '@/lib/posts';
 
 type Consistency = { filled: number; weeks: boolean[] };
 
@@ -43,17 +44,25 @@ function pct(value: number | null): string {
 function num(value: number | null): string {
     return value == null ? '-' : value.toFixed(1);
 }
+
+function formatCell(value: string | null): string {
+    if (!value) {
+        return '-';
+    }
+
+    return postTypeShortLabel(value);
+}
 </script>
 
 <template>
     <EmptyState v-if="status !== 'ok' || !rows?.length" :reason="reason" compact />
     <table v-else class="w-full table-fixed text-left text-[11px]">
         <colgroup>
-            <col class="w-[30%]">
-            <col class="w-[14%]">
+            <col class="w-[32%]">
+            <col class="w-[13%]">
             <col class="w-[12%]">
             <col class="w-[12%]">
-            <col class="w-[12%]">
+            <col class="w-[11%]">
             <col class="w-[10%]">
             <col class="w-[10%]">
         </colgroup>
@@ -72,11 +81,11 @@ function num(value: number | null): string {
             <tr
                 v-for="row in rows"
                 :key="row.handle"
-                class="h-8 border-b border-slate-100"
+                class="border-b border-slate-100"
                 :class="row.is_own_account ? 'bg-slate-50' : ''"
             >
-                <td class="pr-1">
-                    <div class="flex min-w-0 items-center gap-1" :title="row.row_note || undefined">
+                <td class="py-1 pr-1 align-top">
+                    <div class="flex min-w-0 items-start gap-1" :title="row.row_note || undefined">
                         <SnitchAvatar
                             :src="row.avatar"
                             :name="row.display_name"
@@ -84,27 +93,30 @@ function num(value: number | null): string {
                             size="sm"
                             class="!size-4 shrink-0"
                         />
-                        <span class="truncate font-medium text-slate-900">
+                        <span class="break-words font-medium leading-snug text-slate-900">
                             <template v-if="row.is_own_account">You</template>
                             <template v-else>@{{ row.handle }}</template>
                         </span>
                     </div>
                 </td>
-                <td class="px-1 tabular-nums text-slate-700">{{ followers(row.followers) }}</td>
-                <td class="px-1 tabular-nums text-slate-700">
+                <td class="px-1 py-1 align-top tabular-nums text-slate-700">{{ followers(row.followers) }}</td>
+                <td class="px-1 py-1 align-top tabular-nums text-slate-700">
                     {{ row.no_posts_in_period ? '-' : pct(row.growth_pct) }}
                 </td>
-                <td class="px-1 tabular-nums text-slate-700">
+                <td class="px-1 py-1 align-top tabular-nums text-slate-700">
                     {{ row.no_posts_in_period ? '-' : num(row.posts_per_week) }}
                 </td>
-                <td class="px-1 tabular-nums text-slate-700">
+                <td class="px-1 py-1 align-top tabular-nums text-slate-700">
                     <span v-if="row.no_posts_in_period || row.er == null" class="text-slate-400" :title="row.er_reason || undefined">-</span>
                     <span v-else>{{ row.er.toFixed(2) }}%</span>
                 </td>
-                <td class="truncate px-1 text-slate-700">
-                    {{ row.no_posts_in_period || row.er == null ? '-' : row.top_format || '-' }}
+                <td
+                    class="whitespace-nowrap px-1 py-1 align-top text-slate-700"
+                    :title="row.top_format ? postTypeLabel(row.top_format) : undefined"
+                >
+                    {{ row.no_posts_in_period || row.er == null ? '-' : formatCell(row.top_format) }}
                 </td>
-                <td class="px-1 tabular-nums text-slate-700">
+                <td class="px-1 py-1 align-top tabular-nums text-slate-700">
                     {{ row.no_posts_in_period ? '-' : row.winners }}
                 </td>
             </tr>

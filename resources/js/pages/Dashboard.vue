@@ -254,16 +254,16 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
         <Head title="Dashboard" />
 
         <div class="mx-auto max-w-none space-y-2">
-            <div class="flex min-w-0 items-center gap-x-1.5 border-b border-slate-200 pb-1.5">
+            <div class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 border-b border-slate-200 pb-1.5">
                 <h1 class="hidden shrink-0 text-sm font-semibold tracking-tight text-slate-900 sm:block">
                     Dashboard
                 </h1>
 
-                <div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+                <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1">
                     <button
                         v-if="own_account"
                         type="button"
-                        class="inline-flex h-6 max-w-[5.5rem] shrink items-center gap-1 truncate rounded-full border border-slate-900 bg-slate-900 px-1.5 text-[10px] font-medium text-white"
+                        class="inline-flex h-6 items-center gap-1 rounded-full border border-slate-900 bg-slate-900 px-1.5 text-[10px] font-medium text-white"
                     >
                         <SnitchAvatar
                             :src="own_account.avatar"
@@ -272,13 +272,13 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                             size="sm"
                             class="!size-4 shrink-0"
                         />
-                        <span class="truncate">You</span>
+                        <span>You</span>
                     </button>
                     <button
                         v-for="rival in rivals"
                         :key="rival.id"
                         type="button"
-                        class="inline-flex h-6 min-w-0 max-w-[6.5rem] shrink items-center gap-1 truncate rounded-full border px-1.5 text-[10px] font-medium"
+                        class="inline-flex h-6 items-center gap-1 rounded-full border px-1.5 text-[10px] font-medium"
                         :class="
                             selected.includes(rival.handle.toLowerCase())
                                 ? 'border-slate-800 bg-slate-800 text-white'
@@ -296,11 +296,11 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                             size="sm"
                             class="!size-4 shrink-0"
                         />
-                        <span class="truncate">@{{ rival.handle }}</span>
+                        <span class="whitespace-nowrap">@{{ rival.handle }}</span>
                     </button>
                 </div>
 
-                <div class="ml-1 flex shrink-0 items-center gap-1">
+                <div class="ml-auto flex shrink-0 flex-wrap items-center gap-1">
                     <label class="group relative inline-flex h-6 cursor-pointer items-center gap-1 text-[10px] text-slate-600">
                         <input
                             type="checkbox"
@@ -671,7 +671,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                                     decoding="async"
                                 >
                             </div>
-                            <p class="truncate px-1 py-0.5 text-[10px] text-slate-600">
+                            <p class="break-all px-1 py-0.5 text-[10px] leading-snug text-slate-600">
                                 @{{ post.tracked_account?.handle || 'post' }}
                             </p>
                         </a>

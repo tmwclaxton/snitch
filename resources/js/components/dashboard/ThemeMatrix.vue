@@ -68,14 +68,8 @@ function cellBg(pi: number | null, n: number): string {
     return `color-mix(in oklab, #0f766e ${Math.round(t * 70)}%, #f8fafc)`;
 }
 
-function shortHandle(account: Account): string {
-    if (account.is_own_account) {
-        return 'You';
-    }
-
-    const handle = account.handle;
-
-    return handle.length > 14 ? `@${handle.slice(0, 12)}...` : `@${handle}`;
+function accountHeading(account: Account): string {
+    return account.is_own_account ? 'You' : `@${account.handle}`;
 }
 </script>
 
@@ -86,24 +80,23 @@ function shortHandle(account: Account): string {
         class="grid gap-3"
         :class="hasGaps ? 'lg:grid-cols-[minmax(0,1fr)_11rem]' : ''"
     >
-        <div class="min-w-0">
+        <div class="min-w-0 overflow-x-hidden">
             <table class="w-full table-fixed text-left text-[11px]">
                 <thead>
-                    <tr class="border-b border-slate-200 text-[10px] uppercase text-slate-500">
-                        <th class="w-[22%] py-1 pr-2 font-medium">Theme</th>
+                    <tr class="border-b border-slate-200 text-[9px] text-slate-500">
+                        <th class="w-[18%] py-1 pr-2 font-medium uppercase">Theme</th>
                         <th
                             v-for="account in accounts || []"
                             :key="account.handle"
-                            class="truncate px-1 py-1 font-medium"
-                            :title="account.is_own_account ? 'You' : `@${account.handle}`"
+                            class="break-words px-1 py-1 font-medium normal-case leading-tight"
                         >
-                            {{ shortHandle(account) }}
+                            {{ accountHeading(account) }}
                         </th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="row in visibleMatrix" :key="row.theme_key" class="border-b border-slate-100">
-                        <td class="truncate py-1 pr-2 font-medium text-slate-700">{{ row.theme }}</td>
+                        <td class="break-words py-1 pr-2 font-medium leading-snug text-slate-700">{{ row.theme }}</td>
                         <td
                             v-for="cell in row.cells"
                             :key="cell.handle"

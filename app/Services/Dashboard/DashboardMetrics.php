@@ -872,8 +872,8 @@ class DashboardMetrics
         $cards = [
             $this->kpiStat(
                 key: 'followers_growth',
-                label: 'Followers · 30d growth',
-                why: 'Are you growing as fast as similar clubs?',
+                label: 'Followers · 30d',
+                why: 'Followers · 30d growth: Are you growing as fast as similar clubs?',
                 formula: 'F_now; (F_now − F_30d) / F_30d × 100. Real snapshots only.',
                 you: $ownRow,
                 peers: $peerRows,
@@ -884,8 +884,8 @@ class DashboardMetrics
             ),
             $this->kpiStat(
                 key: 'posts_per_week',
-                label: 'Posts per week',
-                why: 'Effort vs peers; the simplest lever.',
+                label: 'Posts / week',
+                why: 'Posts per week: Effort vs peers; the simplest lever.',
                 formula: 'posts in last 28 days ÷ 4',
                 you: $ownRow,
                 peers: $peerRows,
@@ -894,8 +894,8 @@ class DashboardMetrics
             ),
             $this->kpiStat(
                 key: 'er',
-                label: 'Engagement rate (per follower)',
-                why: 'Does your content land with your own audience?',
+                label: 'ER (per follower)',
+                why: 'Engagement rate (per follower): Does your content land with your own audience?',
                 formula: 'median((likes+comments)/followers×100) over posts in period',
                 you: $ownRow,
                 peers: $peerRows,
@@ -906,7 +906,7 @@ class DashboardMetrics
             $this->kpiStat(
                 key: 'winner_rate',
                 label: 'Winner rate',
-                why: 'How often an account "hits". Size-independent.',
+                why: 'Winner rate: How often an account "hits". Size-independent.',
                 formula: '% of posts with Performance Index ≥ 2.0',
                 you: $ownRow,
                 peers: $peerRows,
@@ -916,8 +916,8 @@ class DashboardMetrics
             ),
             $this->kpiStat(
                 key: 'reel_reach',
-                label: 'Reel reach proxy',
-                why: 'Do Reels travel beyond followers? The only public reach proxy.',
+                label: 'Reel reach',
+                why: 'Reel reach proxy: Do Reels travel beyond followers? The only public reach proxy.',
                 formula: 'median(reel plays / followers × 100) over Reels in period',
                 you: $ownRow,
                 peers: $peerRows,

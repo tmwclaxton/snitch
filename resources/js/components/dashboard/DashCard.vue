@@ -20,7 +20,7 @@ const open = ref(false);
         :class="props.class"
     >
         <div class="mb-1 flex h-7 items-center justify-between gap-2">
-            <h2 class="truncate text-[11px] font-semibold tracking-tight text-slate-900">{{ title }}</h2>
+            <h2 class="min-w-0 text-[11px] font-semibold leading-snug tracking-tight text-slate-900">{{ title }}</h2>
             <button
                 v-if="formula || why"
                 type="button"

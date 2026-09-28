@@ -1,5 +1,5 @@
 export function postTypeLabel(type: string): string {
-    switch (type) {
+    switch (type.toLowerCase()) {
         case 'reel':
             return 'Reel';
         case 'video':
@@ -12,6 +12,24 @@ export function postTypeLabel(type: string): string {
             return 'Text';
         default:
             return type.charAt(0).toUpperCase() + type.slice(1);
+    }
+}
+
+/** Dense table / chip label that still reads clearly (no ellipsis). */
+export function postTypeShortLabel(type: string): string {
+    switch (type.toLowerCase()) {
+        case 'reel':
+            return 'Reel';
+        case 'video':
+            return 'Video';
+        case 'carousel':
+            return 'Car.';
+        case 'image':
+            return 'Image';
+        case 'text':
+            return 'Text';
+        default:
+            return postTypeLabel(type);
     }
 }
 
