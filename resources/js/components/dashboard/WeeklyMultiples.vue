@@ -49,7 +49,7 @@ const options = computed(() => ({
 <template>
     <EmptyState v-if="status !== 'ok'" :reason="reason" compact />
     <div v-else>
-        <p v-if="deltas" class="mb-1 text-[11px] text-slate-500">
+        <p v-if="deltas" class="mb-1 text-xs text-slate-500">
             This week vs last:
             <span class="font-medium text-slate-800">posts {{ deltas.posts >= 0 ? '+' : '' }}{{ deltas.posts }}</span>
             <span v-if="deltas.er != null" class="ml-2 font-medium text-slate-800">

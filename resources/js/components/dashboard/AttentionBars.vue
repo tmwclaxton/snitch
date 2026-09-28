@@ -64,7 +64,7 @@ const postOptions = computed(() => optionsFor('Posting share'));
 <template>
     <EmptyState v-if="status !== 'ok'" :reason="reason" compact />
     <div v-else class="space-y-1">
-        <p class="text-[10px] text-slate-400">Proxy share of attention (not true SOV).</p>
+        <p class="text-xs text-slate-400">Proxy share of attention (not true SOV).</p>
         <VueApexCharts type="bar" height="100" :options="engOptions" :series="engStacked" />
         <VueApexCharts type="bar" height="100" :options="postOptions" :series="postStacked" />
     </div>

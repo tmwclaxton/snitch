@@ -39,16 +39,16 @@ const options = computed(() => ({
     dataLabels: { enabled: false },
     xaxis: {
         categories: formats.value,
-        labels: { style: { colors: '#64748b', fontSize: '10px' } },
+        labels: { style: { colors: '#64748b', fontSize: '12px' } },
     },
     yaxis: {
-        title: { text: '× usual', style: { color: '#94a3b8', fontSize: '10px' } },
-        labels: { style: { colors: '#64748b', fontSize: '10px' } },
+        title: { text: '× usual', style: { color: '#94a3b8', fontSize: '12px' } },
+        labels: { style: { colors: '#64748b', fontSize: '12px' } },
     },
     annotations: {
-        yaxis: [{ y: 1, borderColor: '#94a3b8', strokeDashArray: 4, label: { text: '1.0×', style: { fontSize: '9px' } } }],
+        yaxis: [{ y: 1, borderColor: '#94a3b8', strokeDashArray: 4, label: { text: '1.0×', style: { fontSize: '12px' } } }],
     },
-    legend: { fontSize: '11px', labels: { colors: '#475569' } },
+    legend: { fontSize: '12px', labels: { colors: '#475569' } },
     grid: { borderColor: '#e2e8f0' },
 }));
 </script>
@@ -61,7 +61,7 @@ const options = computed(() => ({
             <li
                 v-for="row in rows"
                 :key="row.handle"
-                class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-600"
+                class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-slate-600"
             >
                 <span class="font-medium text-slate-800">{{ row.is_own_account ? 'You' : `@${row.handle}` }}</span>
                 <span
@@ -74,13 +74,13 @@ const options = computed(() => ({
                         {{ row.lifts[format].lift.toFixed(2) }}×
                         <span class="text-slate-400">(n={{ row.lifts[format].n }})</span>
                     </template>
-                    <template v-else>—</template>
+                    <template v-else>-</template>
                 </span>
             </li>
         </ul>
         <p
             v-if="peerMedianLift && Object.keys(peerMedianLift).length"
-            class="text-[10px] text-slate-500"
+            class="text-xs text-slate-500"
         >
             Peer median lift:
             <span
@@ -88,7 +88,7 @@ const options = computed(() => ({
                 :key="String(format)"
                 class="mr-2 tabular-nums"
             >
-                {{ format }} {{ lift != null ? `${Number(lift).toFixed(2)}×` : '—' }}
+                {{ format }} {{ lift != null ? `${Number(lift).toFixed(2)}×` : '-' }}
             </span>
         </p>
     </div>

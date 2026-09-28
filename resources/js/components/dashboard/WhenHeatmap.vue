@@ -54,8 +54,8 @@ function hasOwn(dow: number, block: number): boolean {
 <template>
     <EmptyState v-if="status === 'empty'" :reason="reason" compact />
     <div v-else>
-        <p v-if="reason" class="mb-2 text-[11px] text-slate-500">{{ reason }}</p>
-        <div class="grid grid-cols-[2.5rem_repeat(6,minmax(0,1fr))] gap-1 text-[10px]">
+        <p v-if="reason" class="mb-1.5 text-xs text-slate-500">{{ reason }}</p>
+        <div class="grid grid-cols-[2.5rem_repeat(6,minmax(0,1fr))] gap-1 text-xs">
             <div />
             <div
                 v-for="block in blocks || []"

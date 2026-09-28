@@ -238,6 +238,20 @@ const showFollowerNote = computed(
 );
 
 const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? {});
+
+const trackerIdsByHandle = computed(() => {
+    const map: Record<string, number> = {};
+
+    if (props.own_account) {
+        map[props.own_account.handle.toLowerCase()] = props.own_account.id;
+    }
+
+    for (const rival of props.rivals) {
+        map[rival.handle.toLowerCase()] = rival.id;
+    }
+
+    return map;
+});
 </script>
 
 <template>
@@ -250,16 +264,16 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                 class="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5"
             >
                 <div class="min-w-0">
-                    <p class="text-[11px] font-semibold text-slate-900">
+                    <p class="text-sm font-semibold text-slate-900">
                         Post this next
                     </p>
-                    <p class="truncate text-[10px] text-slate-500">
+                    <p class="truncate text-xs text-slate-500">
                         {{ weekly_brief.hook || 'Three weekly ideas from competitor winners' }}
                     </p>
                 </div>
                 <Link
                     :href="briefIndex.url()"
-                    class="shrink-0 rounded bg-slate-900 px-2 py-1 text-[10px] font-medium text-white hover:bg-slate-800"
+                    class="shrink-0 rounded bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-800"
                 >
                     This week
                 </Link>
@@ -273,7 +287,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                 <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1">
                     <div
                         v-if="own_account"
-                        class="inline-flex h-6 items-center gap-1 rounded-full border border-slate-900 bg-slate-900 px-1.5 text-[10px] font-medium text-white"
+                        class="inline-flex h-6 items-center gap-1 rounded-full border border-slate-900 bg-slate-900 px-1.5 text-xs font-medium text-white"
                     >
                         <SnitchAvatar
                             :src="own_account.avatar"
@@ -292,7 +306,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                     <div
                         v-for="rival in rivals"
                         :key="rival.id"
-                        class="inline-flex h-6 items-center gap-1 rounded-full border px-1.5 text-[10px] font-medium"
+                        class="inline-flex h-6 items-center gap-1 rounded-full border px-1.5 text-xs font-medium"
                         :class="
                             selected.includes(rival.handle.toLowerCase())
                                 ? 'border-slate-800 bg-slate-800 text-white'
@@ -326,7 +340,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                 </div>
 
                 <div class="ml-auto flex shrink-0 flex-wrap items-center gap-1">
-                    <label class="group relative inline-flex h-6 cursor-pointer items-center gap-1 text-[10px] text-slate-600">
+                    <label class="group relative inline-flex h-6 cursor-pointer items-center gap-1 text-xs text-slate-600">
                         <input
                             type="checkbox"
                             class="peer sr-only"
@@ -361,7 +375,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                             <Info class="h-3 w-3" />
                             <span
                                 role="tooltip"
-                                class="pointer-events-none absolute right-0 top-full z-20 mt-1.5 w-60 rounded border border-slate-200 bg-white p-2 text-left text-[10px] leading-snug text-slate-600 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                                class="pointer-events-none absolute right-0 top-full z-20 mt-1.5 w-60 rounded border border-slate-200 bg-white p-2 text-left text-xs leading-snug text-slate-600 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
                             >
                                 Some accounts hide their like counts on Instagram. Those posts are left out of engagement averages and winner rankings by default. Turn this on to include them in post lists, ranked on comments and views.
                             </span>
@@ -372,7 +386,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                             v-for="days in periods"
                             :key="days"
                             type="button"
-                            class="rounded px-1.5 py-0.5 text-[11px] font-medium"
+                            class="rounded px-1.5 py-0.5 text-xs font-medium"
                             :class="period === days ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'"
                             @click="refreshQuery({ period: days })"
                         >
@@ -397,7 +411,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                         class="flex gap-2 rounded-lg border border-slate-200 px-2.5 py-2"
                     >
                         <span
-                            class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+                            class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
                             :class="step.done ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-600'"
                         >
                             {{ step.done ? '✓' : index + 1 }}
@@ -462,13 +476,14 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                                 :status="insights.status"
                                 :reason="insights.reason"
                                 :items="insights.data?.items"
+                                :tracker-ids="trackerIdsByHandle"
                             />
                             <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading insights" />
 
                             <p
                                 v-if="showFollowerNote"
                                 id="growth_series"
-                                class="mt-auto border-t border-slate-100 pt-1.5 text-[11px] leading-snug text-slate-600"
+                                class="mt-auto border-t border-slate-100 pt-1 text-sm leading-snug text-slate-600"
                             >
                                 <span class="font-medium text-slate-800">Followers</span>
                                 ·
@@ -522,7 +537,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                     <section id="activity" class="snitch-scrap relative flex h-full min-w-0 flex-col p-2">
                         <div class="mb-1 flex items-baseline justify-between gap-2">
                             <p class="snitch-ink-label">Posting heat map</p>
-                            <p class="tabular-nums text-[10px] text-slate-500">16 wks</p>
+                            <p class="tabular-nums text-xs text-slate-500">16 wks</p>
                         </div>
                         <PostingHeatmap
                             v-if="activity"
@@ -547,7 +562,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                                     #{{ row.term }}
                                     <span class="tabular-nums text-slate-500">{{ row.count }}</span>
                                 </span>
-                                <p v-if="!caption_intel.hashtags.length" class="text-[11px] text-slate-500">None yet.</p>
+                                <p v-if="!caption_intel.hashtags.length" class="text-xs text-slate-500">None yet.</p>
                             </div>
                             <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading hashtags" />
                         </div>
@@ -570,7 +585,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                         <p class="snitch-ink-label">Followers</p>
                         <p
                             v-if="growth_delta?.week_delta != null"
-                            class="tabular-nums text-[10px] text-slate-500"
+                            class="tabular-nums text-xs text-slate-500"
                         >
                             {{ growth_delta.week_delta > 0 ? '+' : '' }}{{ growth_delta.week_delta }}
                             this week
@@ -578,7 +593,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                                 ({{ growth_delta.week_pct > 0 ? '+' : '' }}{{ growth_delta.week_pct }}%)
                             </template>
                         </p>
-                        <p v-else class="text-[10px] text-slate-400">
+                        <p v-else class="text-xs text-slate-400">
                             {{ followerPoints.length }} counts
                         </p>
                     </div>
@@ -600,7 +615,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                     <div class="mb-1 flex items-center gap-1.5">
                         <button
                             type="button"
-                            class="rounded px-1.5 py-0.5 text-[10px] font-medium"
+                            class="rounded px-1 py-0.5 text-xs font-medium"
                             :class="winnerTab === 'winners' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'"
                             @click="winnerTab = 'winners'; winnersExpanded = false"
                         >
@@ -608,7 +623,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                         </button>
                         <button
                             type="button"
-                            class="rounded px-1.5 py-0.5 text-[10px] font-medium"
+                            class="rounded px-1 py-0.5 text-xs font-medium"
                             :class="winnerTab === 'flops' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'"
                             @click="winnerTab = 'flops'; winnersExpanded = false"
                         >
@@ -616,11 +631,11 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                         </button>
                         <span
                             v-if="show_hidden_likes && (winners?.data?.hidden_included ?? 0) > 0"
-                            class="text-[10px] text-amber-700"
+                            class="text-xs text-amber-700"
                         >
                             {{ winners?.data?.hidden_included }} hidden-likes ranked on comments+views
                         </span>
-                        <Link :href="winnersIndex.url()" class="ml-auto text-[11px] font-medium text-slate-500 hover:text-slate-800">
+                        <Link :href="winnersIndex.url()" class="ml-auto text-xs font-medium text-slate-500 hover:text-slate-800">
                             View all →
                         </Link>
                     </div>
@@ -640,7 +655,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                         v-if="hiddenSpotlight.length"
                         class="mt-1.5"
                     >
-                        <p class="mb-1 text-[10px] font-medium uppercase tracking-wide text-amber-800/80">
+                        <p class="mb-1 text-xs font-medium uppercase tracking-wide text-amber-800/80">
                             Hidden-likes spotlight (comments+views)
                         </p>
                         <div class="grid grid-cols-2 items-stretch gap-1.5 sm:grid-cols-3 xl:grid-cols-6">
@@ -654,7 +669,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                     <button
                         v-if="winnersHaveMore"
                         type="button"
-                        class="mt-1.5 text-[11px] font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
+                        class="mt-1 text-xs font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
                         @click="winnersExpanded = true"
                     >
                         Show more ({{ winnerList.length - 6 }})

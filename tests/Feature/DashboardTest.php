@@ -90,6 +90,19 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('aspect-[4/5]', $winnerCard);
         $this->assertStringNotContainsString('…', $winnerCard);
         $this->assertStringNotContainsString('...', $winnerCard);
+        $this->assertStringContainsString('trackerIdsByHandle', $dashboard);
+        $this->assertStringContainsString(':tracker-ids="trackerIdsByHandle"', $dashboard);
+
+        $insightList = file_get_contents(resource_path('js/components/dashboard/InsightList.vue'));
+        $this->assertNotFalse($insightList);
+        $this->assertStringContainsString('data-tracker-id', $insightList);
+        $this->assertStringContainsString('competitorShow.url(id)', $insightList);
+        $this->assertStringNotContainsString('line-clamp-', $insightList);
+
+        $captions = file_get_contents(resource_path('js/components/dashboard/CaptionPanels.vue'));
+        $this->assertNotFalse($captions);
+        $this->assertStringContainsString('hookNeedsToggle', $captions);
+        $this->assertStringContainsString('more', $captions);
     }
 
     public function test_dashboard_hidden_likes_query_persists_toggle(): void

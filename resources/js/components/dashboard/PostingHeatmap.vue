@@ -152,13 +152,13 @@ function isFuture(day: HeatmapDay): boolean {
         </div>
 
         <div class="snitch-heatmap-legend" aria-hidden="true">
-            <span class="text-[10px] uppercase tracking-wide text-snitch-ink/45">Less</span>
+            <span class="text-xs uppercase tracking-wide text-snitch-ink/45">Less</span>
             <span class="snitch-heatmap-cell level-0" />
             <span class="snitch-heatmap-cell level-1" />
             <span class="snitch-heatmap-cell level-2" />
             <span class="snitch-heatmap-cell level-3" />
             <span class="snitch-heatmap-cell level-4" />
-            <span class="text-[10px] uppercase tracking-wide text-snitch-ink/45">More</span>
+            <span class="text-xs uppercase tracking-wide text-snitch-ink/45">More</span>
         </div>
     </div>
 </template>

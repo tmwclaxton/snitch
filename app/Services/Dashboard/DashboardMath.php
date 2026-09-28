@@ -329,7 +329,7 @@ class DashboardMath
         return array_values(array_unique($flags));
     }
 
-    public function hook(?string $caption, int $max = 100): string
+    public function hook(?string $caption): string
     {
         $text = trim((string) $caption);
 
@@ -337,14 +337,10 @@ class DashboardMath
             return '';
         }
 
+        // First line only; no ellipsis. Vue cards use a more/less toggle for length.
         $firstLine = preg_split('/\R/u', $text, 2)[0] ?? $text;
-        $firstLine = trim($firstLine);
 
-        if (mb_strlen($firstLine) <= $max) {
-            return $firstLine;
-        }
-
-        return rtrim(mb_substr($firstLine, 0, $max - 1)).'…';
+        return trim($firstLine);
     }
 
     /**

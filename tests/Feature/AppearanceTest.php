@@ -75,6 +75,10 @@ class AppearanceTest extends TestCase
         $this->assertStringContainsString('font-size: 14px', $css);
         $this->assertStringContainsString('font-size: 15px', $css);
         $this->assertStringContainsString('.text-\\[10px\\]', $css);
+        $this->assertStringContainsString('.text-\\[11px\\], .text-\\[12px\\]', $css);
+        $this->assertStringContainsString('snitch-dash-chip-stack .snitch-glance-tag', $css);
+        $this->assertStringContainsString('font-size: 0.875rem; /* 14px body floor */', $css);
+        $this->assertStringContainsString('Authenticated type floors (unlayered', $css);
         $this->assertMatchesRegularExpression(
             '/\.snitch-app-shell\s*\{[^}]*min-height:\s*calc\(100svh\s*-\s*4rem\)/s',
             $css,

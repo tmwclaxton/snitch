@@ -179,8 +179,15 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('multiplierBarWidth', $captions);
         $this->assertStringContainsString('auto-fit,minmax(9.5rem,1fr)', $captions);
         $this->assertStringContainsString('Winning hooks', $captions);
-        $this->assertStringContainsString('line-clamp-3', $captions);
+        $this->assertStringContainsString('hookDisplay', $captions);
+        $this->assertStringContainsString('hookNeedsToggle', $captions);
+        $this->assertStringNotContainsString('line-clamp-', $captions);
         $this->assertStringContainsString('break-all text-slate-500', $captions);
+        $insightList = file_get_contents(base_path('resources/js/components/dashboard/InsightList.vue'));
+        $this->assertIsString($insightList);
+        $this->assertStringContainsString('data-tracker-id', $insightList);
+        $this->assertStringContainsString('trackerIds', $insightList);
+        $this->assertStringContainsString('competitorShow.url(id)', $insightList);
         $this->assertStringNotContainsString('Length vs PI', $captions);
         $this->assertStringNotContainsString('>CTAs<', $captions);
         $compare = file_get_contents(base_path('resources/js/components/dashboard/CompareTable.vue'));
@@ -196,6 +203,9 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertIsString($css);
         $this->assertStringContainsString('.snitch-app-canvas', $css);
         $this->assertStringContainsString('max-width: none', $css);
+        $this->assertStringContainsString('font-size: 0.875rem; /* 14px body floor */', $css);
+        $this->assertStringContainsString('Authenticated type floors (unlayered', $css);
+        $this->assertStringContainsString('.snitch-heatmap--dash .snitch-heatmap-month', $css);
 
         $feed = file_get_contents(base_path('resources/js/pages/feed/Index.vue'));
         $this->assertIsString($feed);

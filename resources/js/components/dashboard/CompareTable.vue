@@ -59,7 +59,7 @@ function formatCell(value: string | null): string {
 
 <template>
     <EmptyState v-if="status !== 'ok' || !rows?.length" :reason="reason" compact />
-    <table v-else class="w-full table-fixed text-left text-xs">
+    <table v-else class="w-full table-fixed text-left text-sm">
         <colgroup>
             <col class="w-[32%]">
             <col class="w-[13%]">
@@ -70,14 +70,14 @@ function formatCell(value: string | null): string {
             <col class="w-[10%]">
         </colgroup>
         <thead>
-            <tr class="border-b border-slate-200 text-[10px] uppercase tracking-wide text-slate-500">
-                <th class="h-7 pr-1 font-medium">Account</th>
-                <th class="h-7 px-1 font-medium">Followers</th>
-                <th class="h-7 px-1 font-medium">Growth</th>
-                <th class="h-7 px-1 font-medium">Posts/wk</th>
-                <th class="h-7 px-1 font-medium">Eng. rate</th>
-                <th class="h-7 px-1 font-medium">Format</th>
-                <th class="h-7 px-1 font-medium">Win</th>
+            <tr class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                <th class="h-5 pr-1 font-medium">Account</th>
+                <th class="h-5 px-0.5 font-medium">Followers</th>
+                <th class="h-5 px-0.5 font-medium">Growth</th>
+                <th class="h-5 px-0.5 font-medium">Posts/wk</th>
+                <th class="h-5 px-0.5 font-medium">Eng. rate</th>
+                <th class="h-5 px-0.5 font-medium">Format</th>
+                <th class="h-5 px-0.5 font-medium">Win</th>
             </tr>
         </thead>
         <tbody>
@@ -87,7 +87,7 @@ function formatCell(value: string | null): string {
                 class="border-b border-slate-100"
                 :class="row.is_own_account ? 'bg-slate-50' : ''"
             >
-                <td class="py-1 pr-1 align-top">
+                <td class="py-0.5 pr-1 align-top">
                     <div class="flex min-w-0 items-start gap-1" :title="row.row_note || undefined">
                         <SnitchAvatar
                             :src="row.avatar"
@@ -110,24 +110,24 @@ function formatCell(value: string | null): string {
                         </span>
                     </div>
                 </td>
-                <td class="px-1 py-1 align-top tabular-nums text-slate-700">{{ followers(row.followers) }}</td>
-                <td class="px-1 py-1 align-top tabular-nums text-slate-700">
+                <td class="px-0.5 py-0.5 align-top tabular-nums text-slate-700">{{ followers(row.followers) }}</td>
+                <td class="px-0.5 py-0.5 align-top tabular-nums text-slate-700">
                     {{ row.no_posts_in_period ? '-' : pct(row.growth_pct) }}
                 </td>
-                <td class="px-1 py-1 align-top tabular-nums text-slate-700">
+                <td class="px-0.5 py-0.5 align-top tabular-nums text-slate-700">
                     {{ row.no_posts_in_period ? '-' : num(row.posts_per_week) }}
                 </td>
-                <td class="px-1 py-1 align-top tabular-nums text-slate-700">
+                <td class="px-0.5 py-0.5 align-top tabular-nums text-slate-700">
                     <span v-if="row.no_posts_in_period || row.er == null" class="text-slate-400" :title="row.er_reason || undefined">-</span>
                     <span v-else>{{ row.er.toFixed(2) }}%</span>
                 </td>
                 <td
-                    class="whitespace-nowrap px-1 py-1 align-top text-slate-700"
+                    class="whitespace-nowrap px-0.5 py-0.5 align-top text-slate-700"
                     :title="row.top_format ? postTypeLabel(row.top_format) : undefined"
                 >
                     {{ row.no_posts_in_period || row.er == null ? '-' : formatCell(row.top_format) }}
                 </td>
-                <td class="px-1 py-1 align-top tabular-nums text-slate-700">
+                <td class="px-0.5 py-0.5 align-top tabular-nums text-slate-700">
                     {{ row.no_posts_in_period ? '-' : row.winners }}
                 </td>
             </tr>

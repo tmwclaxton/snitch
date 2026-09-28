@@ -303,7 +303,7 @@ class InsightRules
             'n' => $n,
             'links_to' => 'winners',
             'detail' => sprintf(
-                'PI %s× · prior sample n=%d · format %s',
+                '%s× usual · prior sample n=%d · format %s',
                 $this->x((float) $winner['pi']),
                 $n,
                 (string) ($winner['format'] ?? 'post'),
@@ -627,7 +627,7 @@ class InsightRules
             'score' => ((float) $win['pi']) * min(1, $n / 20),
             'n' => max($n, DashboardMath::MIN_SAMPLE),
             'links_to' => 'winners',
-            'detail' => sprintf('PI %s× · prior sample n=%d', $this->x((float) $win['pi']), $n),
+            'detail' => sprintf('%s× usual · prior sample n=%d', $this->x((float) $win['pi']), $n),
             'post_id' => isset($win['id']) ? (int) $win['id'] : null,
         ]];
     }
@@ -642,21 +642,12 @@ class InsightRules
         return rtrim(rtrim(number_format($value, 1, '.', ''), '0'), '.') ?: '0';
     }
 
-    private function plain(string $text, int $max = 100): string
+    /**
+     * Strip markdown markers for quoted hooks. Keep the full line - the Vue
+     * insight list uses a more/less toggle instead of ellipsis truncation.
+     */
+    private function plain(string $text): string
     {
-        $clean = preg_replace('/[*_`]/', '', $text) ?? $text;
-
-        if (mb_strlen($clean) <= $max) {
-            return $clean;
-        }
-
-        $slice = rtrim(mb_substr($clean, 0, $max - 1));
-        $break = mb_strrpos($slice, ' ');
-
-        if ($break !== false && $break > (int) ($max * 0.55)) {
-            $slice = rtrim(mb_substr($slice, 0, $break));
-        }
-
-        return $slice.'…';
+        return preg_replace('/[*_`]/', '', $text) ?? $text;
     }
 }

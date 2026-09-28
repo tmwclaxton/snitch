@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
 
@@ -16,6 +17,35 @@ defineProps<{
     hashtagBuckets?: HashBucket[];
     hooks?: Hook[];
 }>();
+
+const HOOK_COLLAPSE_CHARS = 120;
+const expandedHooks = ref<Record<number, boolean>>({});
+
+function hookNeedsToggle(text: string): boolean {
+    return text.trim().length > HOOK_COLLAPSE_CHARS;
+}
+
+function hookDisplay(text: string, idx: number): string {
+    const value = text.trim() || 'No caption';
+
+    if (expandedHooks.value[idx] || ! hookNeedsToggle(value)) {
+        return value;
+    }
+
+    const slice = value.slice(0, HOOK_COLLAPSE_CHARS);
+    const lastSpace = slice.lastIndexOf(' ');
+
+    return lastSpace > 40 ? slice.slice(0, lastSpace) : slice;
+}
+
+function toggleHook(idx: number, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    expandedHooks.value = {
+        ...expandedHooks.value,
+        [idx]: ! expandedHooks.value[idx],
+    };
+}
 
 /** Bar fill relative to 1× usual, capped at 3×. */
 function multiplierBarWidth(value: number | null): string {
@@ -40,20 +70,20 @@ function formatMultiplier(value: number | null): string | null {
 <template>
     <EmptyState v-if="status !== 'ok'" :reason="reason" compact />
     <div v-else class="space-y-2">
-        <p class="text-[11px] leading-snug text-slate-500">
+        <p class="text-xs leading-snug text-slate-500">
             Results = a post's engagement vs that account's usual (1.0× = normal).
         </p>
 
-        <div class="grid gap-3 sm:grid-cols-3 sm:gap-4 sm:max-w-3xl">
+        <div class="grid gap-3 sm:grid-cols-3 sm:max-w-3xl sm:gap-3">
             <div class="min-w-0 max-w-[16rem]">
-                <p class="mb-1 text-[11px] font-medium text-slate-600">
+                <p class="mb-1 text-xs font-medium text-slate-600">
                     Caption length vs results
                 </p>
                 <ul class="space-y-1">
                     <li
                         v-for="row in lengthBuckets || []"
                         :key="row.bucket"
-                        class="flex items-center gap-1.5 text-[12px] text-slate-700"
+                        class="flex items-center gap-1.5 text-sm text-slate-700"
                     >
                         <span class="w-[4.75rem] shrink-0 leading-snug">
                             {{ row.bucket }}
@@ -80,7 +110,7 @@ function formatMultiplier(value: number | null): string | null {
                         </span>
                         <span
                             v-else
-                            class="shrink-0 text-[11px] text-slate-400"
+                            class="shrink-0 text-xs text-slate-400"
                         >
                             too few posts
                         </span>
@@ -89,7 +119,7 @@ function formatMultiplier(value: number | null): string | null {
             </div>
 
             <div class="min-w-0 max-w-[16rem]">
-                <p class="mb-1 text-[11px] font-medium text-slate-600">
+                <p class="mb-1 text-xs font-medium text-slate-600">
                     Call to action
                 </p>
                 <EmptyState v-if="!(ctas || []).length" reason="Not enough posts in this bucket" compact />
@@ -97,7 +127,7 @@ function formatMultiplier(value: number | null): string | null {
                     <li
                         v-for="row in ctas"
                         :key="row.type"
-                        class="flex items-center gap-1.5 text-[12px] text-slate-700"
+                        class="flex items-center gap-1.5 text-sm text-slate-700"
                     >
                         <span class="w-[5.5rem] shrink-0 break-words leading-snug">
                             {{ row.type }}
@@ -124,7 +154,7 @@ function formatMultiplier(value: number | null): string | null {
                         </span>
                         <span
                             v-else
-                            class="shrink-0 text-[11px] text-slate-400"
+                            class="shrink-0 text-xs text-slate-400"
                         >
                             too few posts
                         </span>
@@ -133,14 +163,14 @@ function formatMultiplier(value: number | null): string | null {
             </div>
 
             <div class="min-w-0 max-w-[16rem]">
-                <p class="mb-1 text-[11px] font-medium text-slate-600">
+                <p class="mb-1 text-xs font-medium text-slate-600">
                     Hashtag count
                 </p>
                 <ul class="space-y-1">
                     <li
                         v-for="row in hashtagBuckets || []"
                         :key="row.bucket"
-                        class="flex items-center gap-1.5 text-[12px] text-slate-700"
+                        class="flex items-center gap-1.5 text-sm text-slate-700"
                     >
                         <span class="w-[4.75rem] shrink-0 leading-snug">
                             {{ row.bucket }} tags
@@ -167,7 +197,7 @@ function formatMultiplier(value: number | null): string | null {
                         </span>
                         <span
                             v-else
-                            class="shrink-0 text-[11px] text-slate-400"
+                            class="shrink-0 text-xs text-slate-400"
                         >
                             too few posts
                         </span>
@@ -177,7 +207,7 @@ function formatMultiplier(value: number | null): string | null {
         </div>
 
         <div>
-            <p class="mb-1 text-[11px] font-medium text-slate-600">Winning hooks</p>
+            <p class="mb-1 text-xs font-medium text-slate-600">Winning hooks</p>
             <EmptyState v-if="!(hooks || []).length" reason="No winner hooks yet" compact />
             <ul
                 v-else
@@ -186,10 +216,10 @@ function formatMultiplier(value: number | null): string | null {
                 <li
                     v-for="(hook, idx) in hooks"
                     :key="idx"
-                    class="min-w-0 rounded border border-slate-100 bg-slate-50/80 px-1.5 py-1 text-[12px] leading-snug text-slate-700"
+                    class="min-w-0 rounded border border-slate-100 bg-slate-50/80 px-1.5 py-1 text-sm leading-snug text-slate-700"
                 >
                     <div class="flex flex-wrap items-baseline gap-x-1 gap-y-0.5">
-                        <span class="rounded bg-white px-1 text-[10px] uppercase text-slate-500">{{ hook.pattern }}</span>
+                        <span class="rounded bg-white px-1 text-xs uppercase text-slate-500">{{ hook.pattern }}</span>
                         <span class="font-medium tabular-nums text-slate-900">{{ hook.pi.toFixed(1) }}× usual</span>
                         <Link
                             v-if="hook.tracked_account_id"
@@ -200,7 +230,15 @@ function formatMultiplier(value: number | null): string | null {
                         </Link>
                         <span v-else class="break-all text-slate-500">@{{ hook.handle }}</span>
                     </div>
-                    <p class="mt-0.5 line-clamp-3 text-slate-600">{{ hook.hook }}</p>
+                    <p class="mt-0.5 break-words text-slate-600">{{ hookDisplay(hook.hook || '', idx) }}</p>
+                    <button
+                        v-if="hookNeedsToggle(hook.hook || '')"
+                        type="button"
+                        class="mt-0.5 text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-800 hover:underline"
+                        @click="toggleHook(idx, $event)"
+                    >
+                        {{ expandedHooks[idx] ? 'less' : 'more' }}
+                    </button>
                 </li>
             </ul>
         </div>

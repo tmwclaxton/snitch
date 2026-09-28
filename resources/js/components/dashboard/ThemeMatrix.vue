@@ -83,14 +83,14 @@ function accountHeading(account: Account): string {
         :class="hasGaps ? 'lg:grid-cols-[minmax(0,1fr)_11rem]' : ''"
     >
         <div class="min-w-0 overflow-x-hidden">
-            <table class="w-full table-fixed text-left text-[11px]">
+            <table class="w-full table-fixed text-left text-sm">
                 <thead>
-                    <tr class="border-b border-slate-200 text-[9px] text-slate-500">
-                        <th class="w-[18%] py-1 pr-2 font-medium uppercase">Theme</th>
+                    <tr class="border-b border-slate-200 text-xs text-slate-500">
+                        <th class="w-[18%] py-0.5 pr-1.5 font-medium uppercase">Theme</th>
                         <th
                             v-for="account in accounts || []"
                             :key="account.handle"
-                            class="break-words px-1 py-1 font-medium normal-case leading-tight"
+                            class="break-words px-0.5 py-0.5 font-medium normal-case leading-tight"
                         >
                             <Link
                                 v-if="account.id"
@@ -107,11 +107,11 @@ function accountHeading(account: Account): string {
                 </thead>
                 <tbody>
                     <tr v-for="row in visibleMatrix" :key="row.theme_key" class="border-b border-slate-100">
-                        <td class="break-words py-1 pr-2 font-medium leading-snug text-slate-700">{{ row.theme }}</td>
+                        <td class="break-words py-0.5 pr-1.5 font-medium leading-snug text-slate-700">{{ row.theme }}</td>
                         <td
                             v-for="cell in row.cells"
                             :key="cell.handle"
-                            class="px-1 py-1 tabular-nums"
+                            class="px-0.5 py-0.5 tabular-nums"
                             :style="{ backgroundColor: cellBg(cell.pi, cell.n) }"
                             :title="`n=${cell.n}${cell.pi != null ? ` · ${cell.pi}× usual` : ''}`"
                         >
@@ -120,17 +120,17 @@ function accountHeading(account: Account): string {
                     </tr>
                 </tbody>
             </table>
-            <p v-if="otherHeavy" class="mt-1 text-[10px] text-slate-400">
+            <p v-if="otherHeavy" class="mt-1 text-xs text-slate-400">
                 "Other" is high for You - theme tags are still coarse.
             </p>
         </div>
         <div v-if="hasGaps">
-            <p class="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">Gaps you skip</p>
+            <p class="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Gaps you skip</p>
             <ul class="space-y-1">
                 <li
                     v-for="gap in gaps"
                     :key="gap.theme"
-                    class="rounded border border-slate-100 bg-slate-50 px-2 py-1 text-[11px] text-slate-700"
+                    class="rounded border border-slate-100 bg-slate-50 px-1.5 py-0.5 text-sm text-slate-700"
                 >
                     <span class="font-medium">{{ gap.theme }}</span>
                     <span class="text-slate-500"> · peers {{ gap.peer_pi.toFixed(1) }}x · n={{ gap.n }}</span>

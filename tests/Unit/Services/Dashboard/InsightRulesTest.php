@@ -112,4 +112,37 @@ class InsightRulesTest extends TestCase
         $this->assertSame($categories, array_values(array_unique($categories)));
         $this->assertLessThanOrEqual(6, count($items));
     }
+
+    public function test_winner_insight_keeps_full_hook_without_ellipsis(): void
+    {
+        $rules = new InsightRules;
+        $hook = 'This is a deliberately long winning hook that must not be truncated with an ellipsis in the insight bullet';
+
+        $items = $rules->top([
+            'own' => [
+                'posts_n' => 20,
+                'posts_per_week' => 2,
+                'er' => 2.0,
+                'format_share' => ['Reel' => 40],
+            ],
+            'rival_rows' => [],
+            'peer_posts_per_week' => 2,
+            'peer_er' => 2,
+            'rival_posts_n' => 20,
+            'top_winner' => [
+                'handle' => 'peerbrand',
+                'pi' => 4.2,
+                'prior_n' => 20,
+                'format' => 'Reel',
+                'hook' => $hook,
+                'when' => 'Sunday evening',
+            ],
+        ]);
+
+        $winner = collect($items)->firstWhere('category', 'winner_spotlight');
+        $this->assertNotNull($winner);
+        $this->assertStringContainsString($hook, $winner['text']);
+        $this->assertStringNotContainsString('…', $winner['text']);
+        $this->assertStringContainsString('@peerbrand', $winner['text']);
+    }
 }

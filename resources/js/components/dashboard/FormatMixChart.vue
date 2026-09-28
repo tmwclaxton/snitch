@@ -74,7 +74,7 @@ const peakIndex = computed(() => {
                 :key="row.type"
                 class="grid grid-cols-[5.5rem_minmax(0,1fr)_2rem_2.75rem] items-center gap-1.5"
             >
-                <span class="whitespace-nowrap text-[11px] text-slate-600">
+                <span class="whitespace-nowrap text-sm text-slate-600">
                     {{ postTypeLabel(row.type) }}
                 </span>
                 <div
@@ -87,11 +87,11 @@ const peakIndex = computed(() => {
                         :style="{ width: barWidth(row.count) }"
                     />
                 </div>
-                <span class="text-right text-[11px] tabular-nums text-slate-600">
+                <span class="text-right text-sm tabular-nums text-slate-600">
                     {{ row.count }}
                 </span>
                 <span
-                    class="text-right text-[10px] tabular-nums text-slate-500"
+                    class="text-right text-xs tabular-nums text-slate-500"
                     :title="liftLabel(row.type) ? 'Peer median lift vs account usual' : undefined"
                 >
                     {{ liftLabel(row.type) || '-' }}

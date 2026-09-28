@@ -22,7 +22,7 @@ defineProps<{
 </script>
 
 <template>
-    <p class="text-[11px] leading-snug break-words text-slate-500">
+    <p class="text-xs leading-snug break-words text-slate-500">
         Analysed
         <span
             v-for="(account, index) in accounts || []"

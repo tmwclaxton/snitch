@@ -122,4 +122,13 @@ class DashboardMathTest extends TestCase
     {
         $this->assertSame(2.5, $this->math->median([1, 2, 3, 4]));
     }
+
+    public function test_hook_returns_full_first_line_without_ellipsis(): void
+    {
+        $long = str_repeat('Winning hook words ', 12).'end';
+
+        $this->assertSame($long, $this->math->hook($long."\nsecond line ignored"));
+        $this->assertStringNotContainsString('…', $this->math->hook($long));
+        $this->assertSame('', $this->math->hook('   '));
+    }
 }
