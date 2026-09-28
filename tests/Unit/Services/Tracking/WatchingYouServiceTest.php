@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services\Tracking;
 
+use App\Enums\Platform;
 use App\Models\BrandProfile;
 use App\Models\TrackedAccount;
 use App\Models\User;
@@ -19,10 +20,11 @@ class WatchingYouServiceTest extends TestCase
         $watcher = User::factory()->create();
         $second = User::factory()->create();
 
-        TrackedAccount::factory()->for($viewer)->create(['handle' => 'loaflocal']);
-        TrackedAccount::factory()->for($watcher)->create(['handle' => 'LoafLocal']);
-        TrackedAccount::factory()->for($second)->create(['handle' => '@loaflocal']);
-        TrackedAccount::factory()->for($second)->influencer()->create(['handle' => 'loaflocal']);
+        TrackedAccount::factory()->for($viewer)->forPlatform(Platform::Instagram)->create(['handle' => 'loaflocal']);
+        TrackedAccount::factory()->for($watcher)->forPlatform(Platform::Instagram)->create(['handle' => 'LoafLocal']);
+        // Same user + handle needs distinct platforms (unique user_id, platform, handle).
+        TrackedAccount::factory()->for($second)->forPlatform(Platform::Instagram)->create(['handle' => '@loaflocal']);
+        TrackedAccount::factory()->for($second)->forPlatform(Platform::TikTok)->influencer()->create(['handle' => 'loaflocal']);
 
         $result = app(WatchingYouService::class)->lookup('loaflocal', $viewer->id);
 
