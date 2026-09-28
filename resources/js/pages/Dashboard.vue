@@ -646,7 +646,7 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                             rel="noreferrer"
                             class="group overflow-hidden rounded border border-slate-200 bg-white"
                         >
-                            <div class="aspect-square bg-slate-100">
+                            <div class="h-[100px] bg-slate-100">
                                 <img
                                     v-if="post.cover_url || post.media_url"
                                     :src="(post.cover_url || post.media_url)!"
@@ -670,45 +670,41 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                     </p>
                 </div>
 
-                <div class="grid gap-2 xl:grid-cols-5">
-                    <DashCard
-                        class="xl:col-span-3"
-                        title="Captions and hooks"
-                        why="Free changes to how posts are written."
-                        formula="Length excludes trailing hashtags. CTA via regex. Hooks from top PI winners."
-                        anchor="captions"
-                    >
-                        <CaptionPanels
-                            v-if="captions"
-                            :status="captions.status"
-                            :reason="captions.reason"
-                            :length-buckets="(captions.data?.length_buckets as any) || []"
-                            :ctas="(captions.data?.ctas as any) || []"
-                            :hashtag-buckets="(captions.data?.hashtag_buckets as any) || []"
-                            :hooks="(captions.data?.hooks as any) || []"
-                        />
-                        <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading captions" />
-                    </DashCard>
+                <DashCard
+                    title="Captions and hooks"
+                    why="Free changes to how posts are written."
+                    formula="Length excludes trailing hashtags. CTA via regex. Hooks from top PI winners."
+                    anchor="captions"
+                >
+                    <CaptionPanels
+                        v-if="captions"
+                        :status="captions.status"
+                        :reason="captions.reason"
+                        :length-buckets="(captions.data?.length_buckets as any) || []"
+                        :ctas="(captions.data?.ctas as any) || []"
+                        :hashtag-buckets="(captions.data?.hashtag_buckets as any) || []"
+                        :hooks="(captions.data?.hooks as any) || []"
+                    />
+                    <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading captions" />
+                </DashCard>
 
-                    <DashCard
-                        class="xl:col-span-2"
-                        title="Topics and themes"
-                        why="Topic gaps peers win with that you skip. Top 5 themes only."
-                        formula="share = posts(theme)/posts · colour = median PI"
-                        anchor="themes"
-                    >
-                        <ThemeMatrix
-                            v-if="themes"
-                            :status="themes.status"
-                            :reason="themes.reason"
-                            :accounts="(themes.data?.accounts as any) || []"
-                            :matrix="(themes.data?.matrix as any) || []"
-                            :gaps="(themes.data?.gaps as any) || []"
-                            :max-themes="5"
-                        />
-                        <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading themes" />
-                    </DashCard>
-                </div>
+                <DashCard
+                    title="Topics and themes"
+                    why="Topic gaps peers win with that you skip. Top 5 themes only."
+                    formula="share = posts(theme)/posts · colour = median PI"
+                    anchor="themes"
+                >
+                    <ThemeMatrix
+                        v-if="themes"
+                        :status="themes.status"
+                        :reason="themes.reason"
+                        :accounts="(themes.data?.accounts as any) || []"
+                        :matrix="(themes.data?.matrix as any) || []"
+                        :gaps="(themes.data?.gaps as any) || []"
+                        :max-themes="5"
+                    />
+                    <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading themes" />
+                </DashCard>
 
                 <DashCard
                     title="Data notes"

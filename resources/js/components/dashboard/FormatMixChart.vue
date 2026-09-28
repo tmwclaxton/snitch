@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import PlatformStippleTrack from '@/components/PlatformStippleTrack.vue';
 import { postTypeLabel } from '@/lib/posts';
 
 export type FormatMixRow = {
@@ -33,6 +32,10 @@ function liftLabel(type: string): string | null {
     return value == null ? null : `${value.toFixed(1)}x`;
 }
 
+function barWidth(count: number): string {
+    return `${Math.max((count / maxCount.value) * 100, count > 0 ? 4 : 0)}%`;
+}
+
 const maxCount = computed(() =>
     Math.max(1, ...props.formats.map((row) => row.count)),
 );
@@ -60,7 +63,7 @@ const peakIndex = computed(() => {
     <div class="snitch-format-mix">
         <div class="flex items-baseline justify-between gap-3">
             <p class="snitch-ink-label">Format mix</p>
-            <p class="tabular-nums text-xs text-snitch-ink/55">
+            <p class="tabular-nums text-xs text-slate-500">
                 {{ total }} posts
             </p>
         </div>
@@ -71,18 +74,20 @@ const peakIndex = computed(() => {
                 :key="row.type"
                 class="grid grid-cols-[5.5rem_minmax(0,1fr)_2rem_2.75rem] items-center gap-1.5"
             >
-                <span class="truncate text-xs text-snitch-ink/75">
+                <span class="truncate text-xs text-slate-600">
                     {{ postTypeLabel(row.type) }}
                 </span>
-                <PlatformStippleTrack
-                    :count="row.count"
-                    :max-count="maxCount"
-                    :is-peak="index === peakIndex && row.count > 0"
-                    :seed="index + 7"
-                    :delay-offset="index * 28"
+                <div
+                    class="h-2.5 overflow-hidden rounded-sm bg-slate-100"
                     :title="`${postTypeLabel(row.type)}: ${row.count}`"
-                />
-                <span class="text-right text-xs tabular-nums text-snitch-ink/70">
+                >
+                    <div
+                        class="h-full rounded-sm"
+                        :class="index === peakIndex && row.count > 0 ? 'bg-slate-800' : 'bg-slate-500'"
+                        :style="{ width: barWidth(row.count) }"
+                    />
+                </div>
+                <span class="text-right text-xs tabular-nums text-slate-600">
                     {{ row.count }}
                 </span>
                 <span
@@ -93,7 +98,7 @@ const peakIndex = computed(() => {
                 </span>
             </li>
         </ul>
-        <p v-else class="mt-2 text-sm text-snitch-ink/55">
+        <p v-else class="mt-2 text-sm text-slate-500">
             No posts yet.
         </p>
     </div>

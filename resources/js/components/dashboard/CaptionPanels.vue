@@ -18,7 +18,7 @@ defineProps<{
 
 <template>
     <EmptyState v-if="status !== 'ok'" :reason="reason" compact />
-    <div v-else class="grid gap-3 lg:grid-cols-4">
+    <div v-else class="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_minmax(0,1.4fr)]">
         <div>
             <p class="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">Length vs PI</p>
             <ul class="space-y-1">
@@ -28,7 +28,7 @@ defineProps<{
                     class="flex items-center justify-between gap-2 text-[11px] text-slate-700"
                 >
                     <span>{{ row.bucket }} <span class="text-slate-400">n={{ row.n }}</span></span>
-                    <span class="tabular-nums font-medium">{{ row.pi != null ? `${row.pi.toFixed(1)}×` : '—' }}</span>
+                    <span class="tabular-nums font-medium">{{ row.pi != null ? `${row.pi.toFixed(1)}x` : '-' }}</span>
                 </li>
             </ul>
         </div>
@@ -42,7 +42,7 @@ defineProps<{
                     class="flex items-center justify-between gap-2 text-[11px] text-slate-700"
                 >
                     <span class="truncate">{{ row.type }} <span class="text-slate-400">{{ row.share_pct }}%</span></span>
-                    <span class="tabular-nums font-medium">{{ row.pi_with != null ? `${row.pi_with.toFixed(1)}×` : '—' }}</span>
+                    <span class="tabular-nums font-medium">{{ row.pi_with != null ? `${row.pi_with.toFixed(1)}x` : '-' }}</span>
                 </li>
             </ul>
         </div>
@@ -55,18 +55,20 @@ defineProps<{
                     class="flex items-center justify-between gap-2 text-[11px] text-slate-700"
                 >
                     <span>{{ row.bucket }} tags <span class="text-slate-400">n={{ row.n }}</span></span>
-                    <span class="tabular-nums font-medium">{{ row.pi != null ? `${row.pi.toFixed(1)}×` : '—' }}</span>
+                    <span class="tabular-nums font-medium">{{ row.pi != null ? `${row.pi.toFixed(1)}x` : '-' }}</span>
                 </li>
             </ul>
         </div>
-        <div>
+        <div class="min-w-0">
             <p class="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">Winning hooks</p>
             <EmptyState v-if="!(hooks || []).length" reason="No winner hooks yet" compact />
             <ul v-else class="space-y-1.5">
-                <li v-for="(hook, idx) in hooks" :key="idx" class="text-[11px] leading-snug text-slate-700">
-                    <span class="rounded bg-slate-100 px-1 text-[9px] uppercase text-slate-500">{{ hook.pattern }}</span>
-                    <span class="ml-1 font-medium text-slate-900">{{ hook.pi.toFixed(1) }}×</span>
-                    <span class="ml-1 text-slate-500">@{{ hook.handle }}</span>
+                <li v-for="(hook, idx) in hooks" :key="idx" class="min-w-0 text-[11px] leading-snug text-slate-700">
+                    <div class="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                        <span class="rounded bg-slate-100 px-1 text-[9px] uppercase text-slate-500">{{ hook.pattern }}</span>
+                        <span class="font-medium tabular-nums text-slate-900">{{ hook.pi.toFixed(1) }}x</span>
+                        <span class="truncate text-slate-500">@{{ hook.handle }}</span>
+                    </div>
                     <p class="mt-0.5 line-clamp-2 text-slate-600">{{ hook.hook }}</p>
                 </li>
             </ul>

@@ -56,6 +56,8 @@ const otherHeavy = computed(() => {
     return own != null && own.share >= 50;
 });
 
+const hasGaps = computed(() => (props.gaps ?? []).length > 0);
+
 function cellBg(pi: number | null, n: number): string {
     if (n < 3 || pi == null) {
         return '#f8fafc';
@@ -65,28 +67,43 @@ function cellBg(pi: number | null, n: number): string {
 
     return `color-mix(in oklab, #0f766e ${Math.round(t * 70)}%, #f8fafc)`;
 }
+
+function shortHandle(account: Account): string {
+    if (account.is_own_account) {
+        return 'You';
+    }
+
+    const handle = account.handle;
+
+    return handle.length > 14 ? `@${handle.slice(0, 12)}...` : `@${handle}`;
+}
 </script>
 
 <template>
     <EmptyState v-if="status !== 'ok'" :reason="reason" compact />
-    <div v-else class="grid gap-3 lg:grid-cols-[1fr_12rem]">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-[11px]">
+    <div
+        v-else
+        class="grid gap-3"
+        :class="hasGaps ? 'lg:grid-cols-[minmax(0,1fr)_11rem]' : ''"
+    >
+        <div class="min-w-0">
+            <table class="w-full table-fixed text-left text-[11px]">
                 <thead>
                     <tr class="border-b border-slate-200 text-[10px] uppercase text-slate-500">
-                        <th class="py-1 pr-2 font-medium">Theme</th>
+                        <th class="w-[22%] py-1 pr-2 font-medium">Theme</th>
                         <th
                             v-for="account in accounts || []"
                             :key="account.handle"
-                            class="px-1 py-1 font-medium"
+                            class="truncate px-1 py-1 font-medium"
+                            :title="account.is_own_account ? 'You' : `@${account.handle}`"
                         >
-                            {{ account.is_own_account ? 'You' : `@${account.handle}` }}
+                            {{ shortHandle(account) }}
                         </th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="row in visibleMatrix" :key="row.theme_key" class="border-b border-slate-100">
-                        <td class="py-1 pr-2 font-medium text-slate-700">{{ row.theme }}</td>
+                        <td class="truncate py-1 pr-2 font-medium text-slate-700">{{ row.theme }}</td>
                         <td
                             v-for="cell in row.cells"
                             :key="cell.handle"
@@ -103,17 +120,16 @@ function cellBg(pi: number | null, n: number): string {
                 "Other" is high for You - theme tags are still coarse.
             </p>
         </div>
-        <div>
+        <div v-if="hasGaps">
             <p class="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">Gaps you skip</p>
-            <EmptyState v-if="!(gaps || []).length" reason="No theme gaps yet" compact />
-            <ul v-else class="space-y-1">
+            <ul class="space-y-1">
                 <li
                     v-for="gap in gaps"
                     :key="gap.theme"
                     class="rounded border border-slate-100 bg-slate-50 px-2 py-1 text-[11px] text-slate-700"
                 >
                     <span class="font-medium">{{ gap.theme }}</span>
-                    <span class="text-slate-500"> · peers {{ gap.peer_pi.toFixed(1) }}× · n={{ gap.n }}</span>
+                    <span class="text-slate-500"> · peers {{ gap.peer_pi.toFixed(1) }}x · n={{ gap.n }}</span>
                 </li>
             </ul>
         </div>
