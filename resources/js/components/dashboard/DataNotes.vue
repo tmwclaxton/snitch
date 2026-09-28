@@ -1,5 +1,13 @@
 <script setup lang="ts">
-type AccountNote = { handle: string; is_own_account: boolean; posts: number };
+import { Link } from '@inertiajs/vue3';
+import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
+
+type AccountNote = {
+    handle: string;
+    tracked_account_id?: number | null;
+    is_own_account: boolean;
+    posts: number;
+};
 
 defineProps<{
     status: 'ok' | 'insufficient' | 'empty';
@@ -21,7 +29,16 @@ defineProps<{
             :key="account.handle"
         >
             <template v-if="index > 0"> · </template>
-            {{ account.is_own_account ? 'You' : `@${account.handle}` }}
+            <Link
+                v-if="account.tracked_account_id"
+                :href="competitorShow.url(account.tracked_account_id)"
+                class="hover:underline"
+            >
+                {{ account.is_own_account ? 'You' : `@${account.handle}` }}
+            </Link>
+            <template v-else>
+                {{ account.is_own_account ? 'You' : `@${account.handle}` }}
+            </template>
             {{ account.posts }}
         </span>
         <template v-if="range"> · {{ range }}</template>

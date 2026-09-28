@@ -8,6 +8,7 @@ use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Billing\PlanEntitlementService;
 use App\Services\Competitors\CompetitorInsightsBuilder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -18,8 +19,12 @@ class AdsController extends Controller
 
     public function __construct(private PlanEntitlementService $entitlements) {}
 
-    public function index(Request $request, CompetitorInsightsBuilder $insights): Response
+    public function index(Request $request, CompetitorInsightsBuilder $insights): Response|RedirectResponse
     {
+        if (! config('features.ad_library')) {
+            return redirect()->route('dashboard');
+        }
+
         $user = $request->user();
 
         if ($this->productAccessBlocked($user)) {

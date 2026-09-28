@@ -15,14 +15,18 @@ class AdsPageTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_are_redirected_from_ads(): void
+    public function test_guests_are_redirected_from_ads_when_library_enabled(): void
     {
+        config(['features.ad_library' => true]);
+
         $this->get(route('ads.index'))
             ->assertRedirect(route('login'));
     }
 
-    public function test_authenticated_users_can_visit_ads_with_deferred_catalogue(): void
+    public function test_authenticated_users_can_visit_ads_with_deferred_catalogue_when_enabled(): void
     {
+        config(['features.ad_library' => true]);
+
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
         $account = TrackedAccount::factory()->for($user)->create([
@@ -58,8 +62,24 @@ class AdsPageTest extends TestCase
             );
     }
 
-    public function test_ads_page_avoids_adblock_sensitive_path(): void
+    public function test_ad_library_redirects_to_dashboard_when_feature_disabled(): void
     {
+        config(['features.ad_library' => false]);
+
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+
+        $this->actingAs($user)
+            ->get(route('ads.index'))
+            ->assertRedirect(route('dashboard'));
+
+        $this->get('/ads')->assertRedirect('/dashboard');
+    }
+
+    public function test_ads_page_avoids_adblock_sensitive_path_when_enabled(): void
+    {
+        config(['features.ad_library' => true]);
+
         $this->assertSame('/ad-library', parse_url(route('ads.index'), PHP_URL_PATH));
 
         $this->get('/ads')->assertRedirect('/ad-library');
@@ -68,15 +88,16 @@ class AdsPageTest extends TestCase
         $this->assertFileDoesNotExist(resource_path('js/pages/ads/Index.vue'));
     }
 
-    public function test_dashboard_ads_overview_links_to_ads_page(): void
+    public function test_sidebar_hides_ad_library_when_feature_disabled(): void
     {
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
 
         $this->assertIsString($sidebar);
         $this->assertStringContainsString("title: 'Dashboard'", $sidebar);
         $this->assertStringContainsString("title: 'Competitors'", $sidebar);
-        $this->assertStringContainsString("title: 'Ad Library'", $sidebar);
-        $this->assertStringContainsString('AdsController', $sidebar);
+        $this->assertStringNotContainsString("title: 'Ad Library'", $sidebar);
+        $this->assertStringNotContainsString('AdsController', $sidebar);
+        $this->assertStringContainsString("config('features.ad_library')", $sidebar);
     }
 
     public function test_dashboard_insights_preview_caps_active_ads_at_two(): void

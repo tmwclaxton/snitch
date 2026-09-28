@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
 
 type Cell = { handle: string; share: number; pi: number | null; n: number };
 type Row = { theme: string; theme_key: string; cells: Cell[] };
-type Account = { handle: string; is_own_account: boolean };
+type Account = { id?: number | null; handle: string; is_own_account: boolean };
 type Gap = { theme: string; peer_pi: number; n: number };
 
 const props = withDefaults(
@@ -90,7 +92,16 @@ function accountHeading(account: Account): string {
                             :key="account.handle"
                             class="break-words px-1 py-1 font-medium normal-case leading-tight"
                         >
-                            {{ accountHeading(account) }}
+                            <Link
+                                v-if="account.id"
+                                :href="competitorShow.url(account.id)"
+                                class="hover:underline"
+                            >
+                                {{ accountHeading(account) }}
+                            </Link>
+                            <template v-else>
+                                {{ accountHeading(account) }}
+                            </template>
                         </th>
                     </tr>
                 </thead>

@@ -332,6 +332,9 @@ class PublicPagesTest extends TestCase
         $this->assertStringNotContainsString('platforms-front.png', $welcome);
         $this->assertStringContainsString('Stop scrolling your competitors', $welcome);
         $this->assertStringContainsString('Questions, answered', $welcome);
+        $this->assertStringNotContainsString('Instagram logins required', $welcome);
+        $this->assertStringContainsString('min-h-[calc(100svh-3.5rem)]', $welcome);
+        $this->assertStringContainsString('lg:whitespace-nowrap', $welcome);
     }
 
     public function test_beta_hero_backdrop_waits_for_decode_before_reveal(): void

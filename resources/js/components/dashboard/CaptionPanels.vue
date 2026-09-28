@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
+import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
 
 type LengthBucket = { bucket: string; n: number; pi: number | null };
 type CtaRow = { type: string; share_pct: number; pi_with: number | null; pi_without: number | null; n: number };
 type HashBucket = { bucket: string; n: number; pi: number | null };
-type Hook = { handle: string | null; hook: string; pattern: string; pi: number };
+type Hook = { handle: string | null; tracked_account_id?: number | null; hook: string; pattern: string; pi: number };
 
 defineProps<{
     status: 'ok' | 'insufficient' | 'empty';
@@ -77,7 +79,14 @@ defineProps<{
                     <div class="flex flex-wrap items-baseline gap-x-1 gap-y-0.5">
                         <span class="rounded bg-white px-1 text-[9px] uppercase text-slate-500">{{ hook.pattern }}</span>
                         <span class="font-medium tabular-nums text-slate-900">{{ hook.pi.toFixed(1) }}x</span>
-                        <span class="break-all text-slate-500">@{{ hook.handle }}</span>
+                        <Link
+                            v-if="hook.tracked_account_id"
+                            :href="competitorShow.url(hook.tracked_account_id)"
+                            class="break-all text-slate-500 hover:underline"
+                        >
+                            @{{ hook.handle }}
+                        </Link>
+                        <span v-else class="break-all text-slate-500">@{{ hook.handle }}</span>
                     </div>
                     <p class="mt-0.5 line-clamp-3 text-slate-600">{{ hook.hook }}</p>
                 </li>

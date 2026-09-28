@@ -64,8 +64,9 @@ const faqs = [
     <div class="bg-white text-neutral-950">
         <Head title="Better social media performance. Without manual research." />
 
-        <section class="relative overflow-hidden border-b border-neutral-200">
-            <div class="mx-auto flex min-h-[70vh] max-w-5xl flex-col justify-center px-4 py-24 text-center sm:py-32">
+        <!-- First viewport: hero + stats (nav sits above in PublicLayout ~3.5rem). -->
+        <section class="flex min-h-[calc(100svh-3.5rem)] flex-col border-b border-neutral-200">
+            <div class="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-4 py-10 text-center sm:py-12">
                 <h1 class="text-[clamp(2.25rem,5vw,4rem)] font-semibold leading-[1.1] tracking-tight">
                     <span class="block">Better social media performance.</span>
                     <span class="block">Without manual research.</span>
@@ -83,21 +84,22 @@ const faqs = [
                     </Link>
                 </div>
             </div>
-        </section>
 
-        <section class="border-b border-neutral-200 bg-neutral-50">
-            <div class="mx-auto max-w-6xl px-4 py-8 text-center">
-                <p class="text-sm text-neutral-500">
-                    Tracking <span class="font-semibold text-neutral-950">27</span> brands ·
-                    <span class="font-semibold text-neutral-950">781</span> posts analysed ·
-                    <span class="font-semibold text-neutral-950">0</span> Instagram logins required
-                </p>
+            <div class="border-t border-neutral-200 bg-neutral-50">
+                <div class="mx-auto max-w-6xl px-4 py-4 text-center sm:py-5">
+                    <p class="text-sm text-neutral-500">
+                        Tracking <span class="font-semibold text-neutral-950">27</span> brands ·
+                        <span class="font-semibold text-neutral-950">781</span> posts analysed
+                    </p>
+                </div>
             </div>
         </section>
 
         <section class="border-b border-neutral-200">
             <div class="mx-auto max-w-6xl px-4 py-24">
-                <h2 class="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">
+                <h2
+                    class="text-3xl font-semibold tracking-tight md:text-4xl lg:whitespace-nowrap lg:text-[clamp(1.65rem,2.15vw,2.5rem)]"
+                >
                     Stop scrolling your competitors. Let Snitch do it.
                 </h2>
                 <div class="mt-12 grid gap-8 md:grid-cols-4">

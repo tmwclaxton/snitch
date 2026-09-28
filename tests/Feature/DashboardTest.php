@@ -46,7 +46,7 @@ class DashboardTest extends TestCase
             'handle' => 'rivalbakery',
             'followers' => 1200,
         ]);
-        Post::factory()->forAccount($account)->create([
+        $post = Post::factory()->forAccount($account)->create([
             'posted_at' => now()->subDay(),
             'metrics' => ['likes' => 10, 'comments' => 2],
         ]);
@@ -58,14 +58,32 @@ class DashboardTest extends TestCase
                 ->component('Dashboard')
                 ->has('rivals', 1)
                 ->where('rivals.0.handle', 'rivalbakery')
+                ->where('rivals.0.id', $account->id)
                 ->where('show_hidden_likes', false)
                 ->has('rail.cells')
                 ->loadDeferredProps('panel', fn (Assert $panel) => $panel
                     ->where('leaderboard.status', 'ok')
+                    ->where('leaderboard.data.rows.0.tracked_account_id', $account->id)
                     ->has('activity.heatmap')
-                    ->has('recent_posts')
+                    ->has('recent_posts', 1)
+                    ->where('recent_posts.0.id', $post->id)
+                    ->where('recent_posts.0.tracked_account.id', $account->id)
+                    ->where('recent_posts.0.tracked_account.handle', 'rivalbakery')
                 )
             );
+    }
+
+    public function test_dashboard_vue_wires_feed_and_tracker_links(): void
+    {
+        $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
+        $winnerCard = file_get_contents(resource_path('js/components/dashboard/WinnerCard.vue'));
+
+        $this->assertNotFalse($dashboard);
+        $this->assertNotFalse($winnerCard);
+        $this->assertStringContainsString('feedShow.url(post.id)', $dashboard);
+        $this->assertStringContainsString('competitorShow.url(rival.id)', $dashboard);
+        $this->assertStringContainsString('feedShow.url(post.id)', $winnerCard);
+        $this->assertStringContainsString('competitorShow.url(props.post.tracked_account_id)', $winnerCard);
     }
 
     public function test_dashboard_hidden_likes_query_persists_toggle(): void

@@ -51,7 +51,11 @@ Route::inertia('/cookies', 'marketing/Cookies')->name('cookies');
 // Special Calendly landing page (shared PublicLayout chrome; stays out of the sitemap).
 Route::inertia('/beta', 'marketing/Beta')->name('beta');
 Route::view('/pitch', 'pitch')->name('pitch');
-Route::permanentRedirect('/ads', '/ad-library');
+Route::get('/ads', function () {
+    return config('features.ad_library')
+        ? redirect('/ad-library', 301)
+        : redirect('/dashboard');
+})->name('ads.legacy');
 
 Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
 Route::get('/analytics.json', [AnalyticsController::class, 'json'])->name('analytics.json');

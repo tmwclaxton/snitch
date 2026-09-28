@@ -20,10 +20,11 @@ class SidebarNavigationTest extends TestCase
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
 
         $this->assertNotFalse($sidebar);
-        foreach (['Dashboard', 'Brand', 'Competitors', 'Feed', 'Winners', 'Ad Library', 'Explore'] as $title) {
+        foreach (['Dashboard', 'Brand', 'Competitors', 'Feed', 'Winners', 'Explore'] as $title) {
             $this->assertStringContainsString("title: '{$title}'", $sidebar);
         }
 
+        $this->assertStringNotContainsString("title: 'Ad Library'", $sidebar);
         $this->assertStringNotContainsString("title: 'Influencers'", $sidebar);
         $this->assertStringNotContainsString("title: 'Backlog'", $sidebar);
         $this->assertStringContainsString('isCurrentOrParentUrl', file_get_contents(
@@ -62,7 +63,6 @@ class SidebarNavigationTest extends TestCase
             'competitors.index',
             'feed.index',
             'winners.index',
-            'ads.index',
             'explore.index',
         ];
 
@@ -72,6 +72,11 @@ class SidebarNavigationTest extends TestCase
                     ->get(route($route))
                     ->assertOk();
             }
+
+            // Ad Library stays behind config('features.ad_library'); default off → dashboard.
+            $this->actingAs($user)
+                ->get(route('ads.index'))
+                ->assertRedirect(route('dashboard'));
         }
 
         $this->actingAs($populated)

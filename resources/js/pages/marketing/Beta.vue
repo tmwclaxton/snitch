@@ -303,16 +303,14 @@ onMounted(() => {
                         <span class="font-semibold text-neutral-950">27</span>
                         brands ·
                         <span class="font-semibold text-neutral-950">781</span>
-                        posts analysed ·
-                        <span class="font-semibold text-neutral-950">0</span>
-                        Instagram logins required
+                        posts analysed
                     </p>
                 </div>
             </section>
 
             <section class="border-b border-neutral-200">
                 <div class="mx-auto max-w-6xl px-5 py-20 sm:px-8 md:py-28">
-                    <h2 class="max-w-3xl text-3xl font-semibold tracking-tight text-neutral-950 md:text-4xl">
+                    <h2 class="text-3xl font-semibold tracking-tight text-neutral-950 md:text-4xl lg:whitespace-nowrap lg:text-[clamp(1.65rem,2.15vw,2.5rem)]">
                         Stop scrolling your competitors. Let Snitch do it.
                     </h2>
                     <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">

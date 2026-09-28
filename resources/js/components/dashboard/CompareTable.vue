@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
+import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
 import { postTypeLabel, postTypeShortLabel } from '@/lib/posts';
@@ -6,6 +8,7 @@ import { postTypeLabel, postTypeShortLabel } from '@/lib/posts';
 type Consistency = { filled: number; weeks: boolean[] };
 
 type Row = {
+    tracked_account_id?: number | null;
     handle: string;
     display_name: string | null;
     avatar: string | null;
@@ -93,7 +96,15 @@ function formatCell(value: string | null): string {
                             size="sm"
                             class="!size-4 shrink-0"
                         />
-                        <span class="break-words font-medium leading-snug text-slate-900">
+                        <Link
+                            v-if="row.tracked_account_id"
+                            :href="competitorShow.url(row.tracked_account_id)"
+                            class="break-words font-medium leading-snug text-slate-900 hover:underline"
+                        >
+                            <template v-if="row.is_own_account">You</template>
+                            <template v-else>@{{ row.handle }}</template>
+                        </Link>
+                        <span v-else class="break-words font-medium leading-snug text-slate-900">
                             <template v-if="row.is_own_account">You</template>
                             <template v-else>@{{ row.handle }}</template>
                         </span>

@@ -2,7 +2,8 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Info } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
+import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
+import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import CtaLanguage from '@/components/CtaLanguage.vue';
 import CaptionPanels from '@/components/dashboard/CaptionPanels.vue';
 import CompareTable from '@/components/dashboard/CompareTable.vue';
@@ -261,9 +262,8 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                 </h1>
 
                 <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-                    <button
+                    <div
                         v-if="own_account"
-                        type="button"
                         class="inline-flex h-6 items-center gap-1 rounded-full border border-slate-900 bg-slate-900 px-1.5 text-[10px] font-medium text-white"
                     >
                         <SnitchAvatar
@@ -273,32 +273,47 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                             size="sm"
                             class="!size-4 shrink-0"
                         />
-                        <span>You</span>
-                    </button>
-                    <button
+                        <Link
+                            :href="competitorShow.url(own_account.id)"
+                            class="hover:underline"
+                        >
+                            You
+                        </Link>
+                    </div>
+                    <div
                         v-for="rival in rivals"
                         :key="rival.id"
-                        type="button"
                         class="inline-flex h-6 items-center gap-1 rounded-full border px-1.5 text-[10px] font-medium"
                         :class="
                             selected.includes(rival.handle.toLowerCase())
                                 ? 'border-slate-800 bg-slate-800 text-white'
                                 : rival.no_posts_in_period
                                     ? 'border-slate-200 bg-slate-50 text-slate-400'
-                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                    : 'border-slate-200 bg-white text-slate-700'
                         "
                         :title="rival.no_posts_in_period ? 'No posts imported yet' : `@${rival.handle}`"
-                        @click="toggleAccount(rival.handle)"
                     >
-                        <SnitchAvatar
-                            :src="rival.avatar"
-                            :name="rival.display_name"
-                            :handle="rival.handle"
-                            size="sm"
-                            class="!size-4 shrink-0"
-                        />
-                        <span class="whitespace-nowrap">@{{ rival.handle }}</span>
-                    </button>
+                        <button
+                            type="button"
+                            class="inline-flex items-center"
+                            :aria-label="`Toggle ${rival.handle} in compare`"
+                            @click="toggleAccount(rival.handle)"
+                        >
+                            <SnitchAvatar
+                                :src="rival.avatar"
+                                :name="rival.display_name"
+                                :handle="rival.handle"
+                                size="sm"
+                                class="!size-4 shrink-0"
+                            />
+                        </button>
+                        <Link
+                            :href="competitorShow.url(rival.id)"
+                            class="whitespace-nowrap hover:underline"
+                        >
+                            @{{ rival.handle }}
+                        </Link>
+                    </div>
                 </div>
 
                 <div class="ml-auto flex shrink-0 flex-wrap items-center gap-1">
@@ -654,13 +669,11 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                         v-if="recent_posts"
                         class="grid grid-cols-3 gap-1.5 sm:grid-cols-6"
                     >
-                        <a
+                        <Link
                             v-for="post in recentThumbs"
                             :key="post.id"
-                            :href="post.url || feedIndex.url()"
-                            :target="post.url ? '_blank' : undefined"
-                            rel="noreferrer"
-                            class="group overflow-hidden rounded border border-slate-200 bg-white"
+                            :href="feedShow.url(post.id)"
+                            class="group overflow-hidden rounded border border-slate-200 bg-white transition hover:border-slate-400 hover:shadow-sm"
                         >
                             <div class="h-[100px] bg-slate-100">
                                 <SnitchImage
@@ -673,9 +686,21 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                                 />
                             </div>
                             <p class="break-all px-1 py-0.5 text-[10px] leading-snug text-slate-600">
-                                @{{ post.tracked_account?.handle || 'post' }}
+                                <span
+                                    v-if="post.tracked_account?.id"
+                                    role="link"
+                                    tabindex="0"
+                                    class="cursor-pointer hover:underline"
+                                    @click.prevent.stop="router.visit(competitorShow.url(post.tracked_account.id))"
+                                    @keydown.enter.prevent.stop="router.visit(competitorShow.url(post.tracked_account.id))"
+                                >
+                                    @{{ post.tracked_account.handle }}
+                                </span>
+                                <template v-else>
+                                    @{{ post.tracked_account?.handle || 'post' }}
+                                </template>
                             </p>
-                        </a>
+                        </Link>
                     </div>
                     <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading latest posts" />
                     <p
@@ -752,7 +777,14 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                 </h2>
                 <p class="mt-2 text-sm text-slate-500">
                     <template v-if="own_account">
-                        You have marked @{{ own_account.handle }} as your account. Add rival Instagram handles on
+                        You have marked
+                        <Link
+                            :href="competitorShow.url(own_account.id)"
+                            class="font-medium text-slate-700 hover:underline"
+                        >
+                            @{{ own_account.handle }}
+                        </Link>
+                        as your account. Add rival Instagram handles on
                         Tracking to see the gap.
                     </template>
                     <template v-else-if="(legacy_non_instagram_count ?? 0) > 0">

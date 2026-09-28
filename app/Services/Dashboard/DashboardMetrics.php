@@ -1070,6 +1070,7 @@ class DashboardMetrics
                 }
 
                 return [
+                    'tracked_account_id' => $row['id'] ?? null,
                     'handle' => $row['handle'],
                     'display_name' => $row['display_name'],
                     'avatar' => $row['avatar'],
@@ -1604,6 +1605,7 @@ class DashboardMetrics
             ->take(5)
             ->map(fn (array $row): array => [
                 'handle' => $row['handle'],
+                'tracked_account_id' => $row['tracked_account_id'] ?? null,
                 'hook' => $row['hook'],
                 'pattern' => $row['hook_pattern'] ?? 'plain',
                 'pi' => $this->math->round1((float) $row['pi']),
@@ -1613,6 +1615,7 @@ class DashboardMetrics
 
         $avgHashtags = $accountRows->map(fn (array $row): array => [
             'handle' => $row['handle'],
+            'tracked_account_id' => $row['id'] ?? null,
             'is_own_account' => $row['is_own_account'],
             'avg' => $this->math->round1(
                 (float) $periodPosts
@@ -1663,6 +1666,7 @@ class DashboardMetrics
 
         $themes = $usable->pluck('theme')->unique()->sort()->values();
         $handles = $accountRows->map(fn (array $row): array => [
+            'id' => $row['id'] ?? null,
             'handle' => $row['handle'],
             'is_own_account' => $row['is_own_account'],
         ])->values();
@@ -1897,6 +1901,7 @@ class DashboardMetrics
     {
         $hidden = $periodPosts->filter(fn (array $row): bool => $row['hidden_likes'])->count();
         $perAccount = $accountRows->map(fn (array $row): array => [
+            'tracked_account_id' => $row['id'] ?? null,
             'handle' => $row['handle'],
             'is_own_account' => $row['is_own_account'],
             'posts' => (int) ($row['posts_n'] ?? 0),

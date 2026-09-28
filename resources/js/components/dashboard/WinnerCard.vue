@@ -1,11 +1,15 @@
 <script setup lang="ts">
+import { Link, router } from '@inertiajs/vue3';
+import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
+import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import SnitchImage from '@/components/SnitchImage.vue';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         post: {
             id: number;
             handle: string | null;
+            tracked_account_id?: number | null;
             is_own_account: boolean;
             format: string;
             posted_at: string | null;
@@ -26,14 +30,27 @@ withDefaults(
 );
 
 const fmt = new Intl.NumberFormat('en-GB');
+
+function handleLabel(): string {
+    return props.post.is_own_account ? 'You' : `@${props.post.handle}`;
+}
+
+function openTracker(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (! props.post.tracked_account_id) {
+        return;
+    }
+
+    router.visit(competitorShow.url(props.post.tracked_account_id));
+}
 </script>
 
 <template>
-    <a
-        :href="post.url || undefined"
-        :target="post.url ? '_blank' : undefined"
-        rel="noreferrer"
-        class="flex flex-col overflow-hidden rounded-md border border-slate-200 bg-white"
+    <Link
+        :href="feedShow.url(post.id)"
+        class="flex flex-col overflow-hidden rounded-md border border-slate-200 bg-white transition hover:border-slate-400 hover:shadow-sm"
     >
         <div
             class="relative w-full overflow-hidden bg-slate-100"
@@ -53,7 +70,19 @@ const fmt = new Intl.NumberFormat('en-GB');
         </div>
         <div class="space-y-0.5 px-1 py-1">
             <div class="break-words text-[10px] font-medium leading-snug text-slate-900">
-                {{ post.is_own_account ? 'You' : `@${post.handle}` }}
+                <span
+                    v-if="post.tracked_account_id"
+                    role="link"
+                    tabindex="0"
+                    class="cursor-pointer hover:underline"
+                    @click="openTracker"
+                    @keydown.enter="openTracker"
+                >
+                    {{ handleLabel() }}
+                </span>
+                <template v-else>
+                    {{ handleLabel() }}
+                </template>
             </div>
             <div class="text-[10px] leading-snug text-slate-400">
                 {{ post.format }}<span v-if="post.posted_at"> · {{ post.posted_at }}</span>
@@ -66,5 +95,5 @@ const fmt = new Intl.NumberFormat('en-GB');
             </div>
             <p class="line-clamp-2 text-[10px] leading-snug text-slate-600">{{ post.hook || 'No caption' }}</p>
         </div>
-    </a>
+    </Link>
 </template>
