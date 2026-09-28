@@ -17,4 +17,7 @@ paths:
 Dashboard `weekly_brief` teaser is null unless a ready brief exists (current or most recent week). No empty state or generate button on the dashboard. On `/brief` without a brief, show only the automatic-wait copy. Manual generate is admin-only regenerate (billable when force).
 
 ## Force regenerate
-Admin POST `brief.generate` with `force` queues `GenerateWeeklyBriefJob` with `billable: true`. Ops may use `snitch:generate-weekly-briefs --force --billable` when charging is intended; omit `--billable` for free ops runs.
+Admin POST `brief.generate` with `force` queues `GenerateWeeklyBriefJob` with `billable: true`. Ops may use `snitch:generate-weekly-briefs --force --billable` when charging is intended; omit `--billable` for free ops runs. Non-admins never see the regenerate control (`canRegenerate` is admin-only).
+
+## Idea quality
+Feed the LLM the top 5-8 winner candidates by X× usual (30d, tracked accounts including own). Every idea must cite 1-2 `inspired_by_post_ids`; at most 2 ideas may share one source - reassign repeats in code. `hook` is the literal on-screen first line (max ~12 words); scene direction goes in optional `visual`. Instagram CTAs only: comment, save, share, DM, or link in bio - never swipe up.
