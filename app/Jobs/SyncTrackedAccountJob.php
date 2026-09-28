@@ -15,6 +15,7 @@ use App\Services\Apify\PlatformAdapterManager;
 use App\Services\Billing\VendorUsageCharger;
 use App\Services\Competitors\CompetitorAdsFinder;
 use App\Services\SnitchAnalyticsService;
+use App\Services\Tracking\AvatarMirror;
 use App\Services\Tracking\FollowerCountRefresher;
 use App\Services\Tracking\FollowerSnapshotRecorder;
 use App\Services\Tracking\PostCoverHydrator;
@@ -373,16 +374,18 @@ class SyncTrackedAccountJob implements ShouldQueue
                 app(FollowerCountRefresher::class)->seedTracker($account);
             }
 
+            $this->mirrorStoredAvatar($account);
+
             return;
         }
 
         $profile = $adapter->resolveProfile($account->handle);
         $followers = $this->followersFromProfile($profile);
+        $remoteAvatar = filled($profile['avatar'] ?? null) ? (string) $profile['avatar'] : null;
 
         $account->fill([
             'url' => $profile['url'] ?: $account->url,
             'external_id' => $profile['external_id'] ?? $account->external_id,
-            'avatar' => $profile['avatar'] ?? $account->avatar,
             'display_name' => $profile['display_name'] ?? $account->display_name,
             ...($followers !== null ? ['followers' => $followers] : []),
         ]);
@@ -390,6 +393,25 @@ class SyncTrackedAccountJob implements ShouldQueue
         if ($followers !== null && $account->social_account_id !== null) {
             app(FollowerCountRefresher::class)->propagate((int) $account->social_account_id, $followers);
         }
+
+        app(AvatarMirror::class)->apply(
+            $account,
+            $account->socialAccount,
+            $remoteAvatar,
+        );
+    }
+
+    /**
+     * Best-effort local mirror when sync skips resolveProfile (fields already
+     * present). Uses avatar_source_url / remote avatar already on the row.
+     */
+    private function mirrorStoredAvatar(TrackedAccount $account): void
+    {
+        app(AvatarMirror::class)->apply(
+            $account,
+            $account->socialAccount,
+            null,
+        );
     }
 
     /**

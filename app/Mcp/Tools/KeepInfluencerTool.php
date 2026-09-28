@@ -4,6 +4,7 @@ namespace App\Mcp\Tools;
 
 use App\Enums\TrackedAccountKind;
 use App\Jobs\FindInfluencersJob;
+use App\Jobs\MirrorAvatarJob;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Mcp\Support\McpAuth;
 use App\Models\TrackedAccount;
@@ -98,6 +99,7 @@ class KeepInfluencerTool extends Tool
             'url' => $url,
             'display_name' => $displayName,
             'avatar' => $avatar,
+            'avatar_source_url' => is_string($avatar) && str_starts_with($avatar, 'http') ? $avatar : null,
             'fit_reason' => $fitReason !== '' ? Str::limit($fitReason, 280, '') : null,
         ];
 
@@ -114,6 +116,7 @@ class KeepInfluencerTool extends Tool
             $attributes,
         );
 
+        MirrorAvatarJob::dispatch($account->id);
         SyncTrackedAccountJob::dispatch($account->id, true);
 
         return Response::json([

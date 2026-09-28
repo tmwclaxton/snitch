@@ -3,33 +3,39 @@
 namespace App\Services\Tracking;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
-class PostCoverArchive
+class AvatarArchive
 {
-    public function isDurable(?string $url): bool
+    private const MAX_BYTES = 5_000_000;
+
+    public function isLocal(?string $url): bool
+    {
+        return $this->localRelative($url) !== null;
+    }
+
+    public function localFileExists(?string $url): bool
     {
         $relative = $this->localRelative($url);
 
-        if ($relative !== null) {
-            return Storage::disk('public')->exists($relative);
+        return $relative !== null && Storage::disk('public')->exists($relative);
+    }
+
+    /**
+     * Download a remote avatar onto the public disk. Does not delete older
+     * avatar files (Cloudflare caches /storage/* for 4h, so new hashes get
+     * new URLs).
+     */
+    public function store(int $socialAccountId, string $remoteUrl): ?string
+    {
+        if ($socialAccountId < 1 || trim($remoteUrl) === '') {
+            return null;
         }
 
-        return $this->isStableRemote($url);
-    }
-
-    public function isStableRemote(?string $url): bool
-    {
-        $host = $this->host($url);
-
-        return $host !== null && str_ends_with($host, 'ytimg.com');
-    }
-
-    public function store(int $postId, string $remoteUrl): ?string
-    {
-        if ($postId < 1 || $this->isStableRemote($remoteUrl)) {
-            return null;
+        if ($this->isLocal($remoteUrl)) {
+            return $this->normalizeLocalUrl($remoteUrl);
         }
 
         try {
@@ -42,11 +48,21 @@ class PostCoverArchive
                     'Accept' => 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
                 ])
                 ->get($remoteUrl);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            Log::warning('Avatar download failed', [
+                'social_account_id' => $socialAccountId,
+                'error' => $e->getMessage(),
+            ]);
+
             return null;
         }
 
         if (! $response->successful()) {
+            Log::warning('Avatar download rejected', [
+                'social_account_id' => $socialAccountId,
+                'status' => $response->status(),
+            ]);
+
             return null;
         }
 
@@ -58,20 +74,22 @@ class PostCoverArchive
 
         $body = $response->body();
 
-        if ($body === '' || strlen($body) > 8_000_000) {
+        if ($body === '' || strlen($body) > self::MAX_BYTES) {
             return null;
         }
 
-        foreach (['jpg', 'png', 'webp', 'gif'] as $candidate) {
-            if ($candidate !== $extension) {
-                Storage::disk('public')->delete("post-covers/{$postId}.{$candidate}");
-            }
-        }
-
-        $relative = "post-covers/{$postId}.{$extension}";
+        $hash = substr(sha1($body), 0, 10);
+        $relative = "avatars/{$socialAccountId}-{$hash}.{$extension}";
         Storage::disk('public')->put($relative, $body);
 
         return '/storage/'.$relative;
+    }
+
+    public function normalizeLocalUrl(string $url): string
+    {
+        $relative = $this->localRelative($url);
+
+        return $relative !== null ? '/storage/'.$relative : $url;
     }
 
     private function localRelative(?string $url): ?string
@@ -82,17 +100,17 @@ class PostCoverArchive
 
         $path = parse_url(trim($url), PHP_URL_PATH);
 
-        if (! is_string($path) || ! str_starts_with($path, '/storage/post-covers/')) {
+        if (! is_string($path) || ! str_starts_with($path, '/storage/avatars/')) {
             return null;
         }
 
         $name = basename($path);
 
-        if (preg_match('/^\d+\.(jpg|png|webp|gif)$/', $name) !== 1) {
+        if (preg_match('/^\d+-[a-f0-9]{10}\.(jpg|png|webp|gif)$/', $name) !== 1) {
             return null;
         }
 
-        return 'post-covers/'.$name;
+        return 'avatars/'.$name;
     }
 
     private function extension(string $contentType): ?string
@@ -106,20 +124,5 @@ class PostCoverArchive
             'image/gif' => 'gif',
             default => null,
         };
-    }
-
-    private function host(?string $url): ?string
-    {
-        if (! is_string($url) || trim($url) === '') {
-            return null;
-        }
-
-        $host = parse_url(trim($url), PHP_URL_HOST);
-
-        if (! is_string($host) || $host === '') {
-            return null;
-        }
-
-        return strtolower($host);
     }
 }

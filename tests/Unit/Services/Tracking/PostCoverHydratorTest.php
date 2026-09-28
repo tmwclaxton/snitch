@@ -72,6 +72,7 @@ class PostCoverHydratorTest extends TestCase
         $this->assertSame('/storage/post-covers/'.$post->id.'.jpg', $url);
         Storage::disk('public')->assertExists('post-covers/'.$post->id.'.jpg');
         Http::assertSent(fn ($request): bool => $request->url() === 'https://cdn.example.com/ig1.jpg');
+        $this->assertSame('https://cdn.example.com/ig1.jpg', $post->fresh()?->cover_source_url);
     }
 
     public function test_persist_keeps_a_local_cover_without_downloading_again(): void

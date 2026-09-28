@@ -16,6 +16,7 @@ use App\Http\Requests\Competitors\StoreTrackedAccountRequest;
 use App\Http\Requests\Competitors\SuggestCompetitorsRequest;
 use App\Http\Requests\Competitors\SyncTrackedAccountRequest;
 use App\Http\Requests\Competitors\UpdateCompetitorBriefRequest;
+use App\Jobs\MirrorAvatarJob;
 use App\Jobs\SuggestCompetitorsJob;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Models\Post;
@@ -313,9 +314,14 @@ class CompetitorController extends Controller
                     'url' => $this->defaultUrl($platform, $handle),
                     'display_name' => $suggestion['display_name'] ?? $handle,
                     'avatar' => $suggestion['avatar'] ?? null,
+                    'avatar_source_url' => isset($suggestion['avatar']) && is_string($suggestion['avatar'])
+                        && str_starts_with($suggestion['avatar'], 'http')
+                            ? $suggestion['avatar']
+                            : null,
                 ],
             );
 
+            MirrorAvatarJob::dispatch($account->id);
             $this->queueSyncIfBillable($user, $account);
             $confirmed[] = [
                 'platform' => $platform->value,

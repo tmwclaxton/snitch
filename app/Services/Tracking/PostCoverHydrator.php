@@ -26,6 +26,43 @@ class PostCoverHydrator
         return $url;
     }
 
+    public function needsMirroring(Post $post): bool
+    {
+        $stored = $this->stored($post);
+
+        if ($stored === null || $stored === '') {
+            return true;
+        }
+
+        if ($this->archive->isDurable($stored)) {
+            return false;
+        }
+
+        return str_starts_with($stored, 'http://') || str_starts_with($stored, 'https://');
+    }
+
+    /**
+     * Ensure a durable cover is on disk when possible. Safe to call from
+     * Explore / Feed for posts that never went through tracker sync.
+     */
+    public function ensureMirrored(Post $post, bool $fetchRemote = true): ?string
+    {
+        if (! $this->needsMirroring($post)) {
+            return $this->stored($post);
+        }
+
+        // Feature requests must not block the suite / CI on outbound CDN downloads.
+        if (app()->runningUnitTests()) {
+            return $this->stored($post);
+        }
+
+        try {
+            return $this->persist($post, fetchRemote: $fetchRemote);
+        } catch (Throwable) {
+            return $this->stored($post);
+        }
+    }
+
     /**
      * @param  array<string, mixed>|null  $mapped
      */
@@ -41,37 +78,47 @@ class PostCoverHydrator
         $remote = $this->discover($source);
 
         if ($this->archive->isStableRemote($remote)) {
-            return $this->save($post, $remote);
+            return $this->save($post, $remote, $remote);
         }
 
         $local = $this->archiveRemote($post, $remote);
 
         if ($local !== null) {
-            return $this->save($post, $local);
+            return $this->save($post, $local, is_string($remote) ? $remote : null);
         }
 
         if ($fetchRemote) {
             $fallback = $this->fetchRemote($source);
 
             if ($this->archive->isStableRemote($fallback)) {
-                return $this->save($post, $fallback);
+                return $this->save($post, $fallback, $fallback);
             }
 
             $local = $this->archiveRemote($post, $fallback);
 
             if ($local !== null) {
-                return $this->save($post, $local);
+                return $this->save($post, $local, is_string($fallback) ? $fallback : null);
+            }
+
+            if (is_string($fallback) && $fallback !== '') {
+                $remote = $fallback;
             }
         }
 
+        // Temporary remote fallback only when nothing durable exists yet.
+        // Always record cover_source_url so backfill can retry the download.
         if ($stored === null && is_string($remote) && $remote !== '') {
-            return $this->save($post, $remote);
+            return $this->save($post, $remote, $remote);
+        }
+
+        if (is_string($remote) && $remote !== '' && $this->sourceUrl($post) !== $remote) {
+            $post->forceFill(['cover_source_url' => $remote])->save();
         }
 
         $poster = $this->posterFromMedia($post);
 
         if ($poster !== null) {
-            return $this->save($post, $poster);
+            return $this->save($post, $poster, is_string($remote) ? $remote : $this->sourceUrl($post));
         }
 
         if (is_string($stored) && ! PostCover::isDisplayableStill($stored)) {
@@ -201,16 +248,31 @@ class PostCoverHydrator
         return $this->archive->store((int) $post->id, $remote);
     }
 
-    private function save(Post $post, ?string $url): ?string
+    private function save(Post $post, ?string $url, ?string $sourceUrl = null): ?string
     {
         if (! is_string($url) || $url === '') {
             return null;
         }
 
+        $fill = [];
         $stored = $this->stored($post);
 
         if ($stored !== $url) {
-            $post->forceFill(['cover_url' => $url])->save();
+            $fill['cover_url'] = $url;
+        }
+
+        if (is_string($sourceUrl) && $sourceUrl !== '' && $this->sourceUrl($post) !== $sourceUrl) {
+            $fill['cover_source_url'] = $sourceUrl;
+        } elseif (
+            (str_starts_with($url, 'http://') || str_starts_with($url, 'https://'))
+            && ! $this->archive->isStableRemote($url)
+            && $this->sourceUrl($post) !== $url
+        ) {
+            $fill['cover_source_url'] = $url;
+        }
+
+        if ($fill !== []) {
+            $post->forceFill($fill)->save();
         }
 
         return $url;
@@ -227,6 +289,19 @@ class PostCoverHydrator
         $stored = trim($stored);
 
         return $stored === '' ? null : $stored;
+    }
+
+    private function sourceUrl(Post $post): ?string
+    {
+        $source = $post->getAttribute('cover_source_url');
+
+        if (! is_string($source)) {
+            return null;
+        }
+
+        $source = trim($source);
+
+        return $source === '' ? null : $source;
     }
 
     private function instagramMediaUrl(string $pageUrl): ?string

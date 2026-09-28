@@ -40,14 +40,13 @@ const fmt = new Intl.NumberFormat('en-GB');
             :class="compact ? 'h-[88px]' : 'h-[112px]'"
         >
             <SnitchImage
-                v-if="post.thumbnail_url"
                 :src="post.thumbnail_url"
                 alt=""
                 class="size-full"
                 img-class="size-full object-cover"
                 aspect-ratio="1 / 1"
+                fallback="paper"
             />
-            <div v-else class="flex size-full items-center justify-center text-[9px] text-slate-400">No img</div>
             <span class="absolute top-0.5 right-0.5 rounded bg-slate-900/90 px-1 text-[9px] font-semibold text-white">
                 {{ post.pi.toFixed(1) }}×
             </span>

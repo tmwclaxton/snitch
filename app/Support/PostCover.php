@@ -90,6 +90,26 @@ class PostCover
     }
 
     /**
+     * Stills safe to emit to the frontend: local public-disk covers or durable
+     * YouTube thumbs. Signed CDN URLs expire and must not be rendered.
+     */
+    public static function isDurableDisplay(?string $url): bool
+    {
+        if (! self::isDisplayableStill($url)) {
+            return false;
+        }
+
+        $url = trim((string) $url);
+        $path = parse_url($url, PHP_URL_PATH);
+
+        if (is_string($path) && str_starts_with($path, '/storage/post-covers/')) {
+            return true;
+        }
+
+        return str_contains($url, 'ytimg.com');
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      */
     private static function fromPayload(array $payload): ?string

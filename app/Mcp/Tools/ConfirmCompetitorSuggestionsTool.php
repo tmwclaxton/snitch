@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Enums\TrackedAccountKind;
+use App\Jobs\MirrorAvatarJob;
 use App\Jobs\SuggestCompetitorsJob;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Mcp\Support\McpAuth;
@@ -90,8 +91,13 @@ class ConfirmCompetitorSuggestionsTool extends Tool
                     'display_name' => $row['display_name'] ?? null,
                     'external_id' => $row['external_id'] ?? null,
                     'avatar' => $row['avatar'] ?? null,
+                    'avatar_source_url' => isset($row['avatar']) && is_string($row['avatar'])
+                        && str_starts_with($row['avatar'], 'http')
+                            ? $row['avatar']
+                            : null,
                 ],
             );
+            MirrorAvatarJob::dispatch($account->id);
             $created[] = $account->id;
             $confirmed[] = [
                 'platform' => $platform,

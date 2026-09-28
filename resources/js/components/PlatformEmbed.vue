@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import SnitchImage from '@/components/SnitchImage.vue';
+import { isDisplayableImageSrc, isDurableMediaSrc } from '@/lib/mediaSrc';
 import { openOnPlatformLabel, productPlatformLabel } from '@/lib/platforms';
 
 export type EmbedConfig = {
@@ -32,7 +34,6 @@ const props = withDefaults(
     },
 );
 
-const coverFailed = ref(false);
 const mediaFailed = ref(false);
 const frameReady = ref(false);
 
@@ -49,41 +50,47 @@ const interactiveSrc = computed(() => {
 });
 
 const usableCoverUrl = computed(() => {
-    if (coverFailed.value || !props.coverUrl) {
+    if (!props.coverUrl || !isDurableMediaSrc(props.coverUrl)) {
         return null;
     }
 
     return props.coverUrl;
 });
 
-const usableMediaUrl = computed(() => {
+const usableStillMediaUrl = computed(() => {
     if (mediaFailed.value || !props.mediaUrl) {
+        return null;
+    }
+
+    if (!isDisplayableImageSrc(props.mediaUrl) || !isDurableMediaSrc(props.mediaUrl)) {
         return null;
     }
 
     return props.mediaUrl;
 });
 
-const isVideoMedia = computed(() => {
-    const url = (usableMediaUrl.value ?? '').split('?')[0]?.toLowerCase() ?? '';
+const usableVideoMediaUrl = computed(() => {
+    if (mediaFailed.value || !props.mediaUrl || usableCoverUrl.value || usableStillMediaUrl.value) {
+        return null;
+    }
 
-    return /\.(mp4|webm|ogg|m4v)$/i.test(url);
+    const url = props.mediaUrl.split('?')[0]?.toLowerCase() ?? '';
+
+    if (!/\.(mp4|webm|ogg|m4v)$/i.test(url)) {
+        return null;
+    }
+
+    // Only play locally stored video - never expiring CDN mp4 as a preview.
+    if (!isDurableMediaSrc(props.mediaUrl)) {
+        return null;
+    }
+
+    return props.mediaUrl;
 });
-
-function onCoverError(): void {
-    coverFailed.value = true;
-}
 
 function onMediaError(): void {
     mediaFailed.value = true;
 }
-
-watch(
-    () => props.coverUrl,
-    () => {
-        coverFailed.value = false;
-    },
-);
 
 watch(
     () => props.mediaUrl,
@@ -115,27 +122,25 @@ watch(interactiveSrc, () => {
             @load="frameReady = true"
         />
         <div class="snitch-platform-embed-fallback">
-            <img
+            <SnitchImage
                 v-if="usableCoverUrl"
                 :src="usableCoverUrl"
                 alt=""
-                class="snitch-platform-embed-fallback-img"
-                loading="lazy"
-                decoding="async"
-                @error="onCoverError"
+                class="snitch-platform-embed-fallback-img size-full"
+                img-class="size-full object-cover"
+                fallback="paper"
             />
-            <img
-                v-else-if="usableMediaUrl && !isVideoMedia"
-                :src="usableMediaUrl"
+            <SnitchImage
+                v-else-if="usableStillMediaUrl"
+                :src="usableStillMediaUrl"
                 alt=""
-                class="snitch-platform-embed-fallback-img"
-                loading="lazy"
-                decoding="async"
-                @error="onMediaError"
+                class="snitch-platform-embed-fallback-img size-full"
+                img-class="size-full object-cover"
+                fallback="paper"
             />
             <video
-                v-else-if="usableMediaUrl && isVideoMedia"
-                :src="usableMediaUrl"
+                v-else-if="usableVideoMediaUrl"
+                :src="usableVideoMediaUrl"
                 class="snitch-platform-embed-fallback-img"
                 muted
                 playsinline

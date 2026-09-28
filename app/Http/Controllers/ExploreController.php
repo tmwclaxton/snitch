@@ -16,6 +16,7 @@ use App\Services\Analysis\AnalysisEmbeddingService;
 use App\Services\Analysis\AnalysisTermCatalogue;
 use App\Services\Analysis\ExploreMixService;
 use App\Services\Billing\ExploreBillingService;
+use App\Services\Tracking\PostCoverHydrator;
 use App\Support\PlatformEmbed;
 use App\Support\PostAccountPresenter;
 use Illuminate\Database\Eloquent\Builder;
@@ -35,6 +36,7 @@ class ExploreController extends Controller
         private AnalysisEmbeddingService $embeddings,
         private ExploreMixService $exploreMix,
         private ExploreBillingService $exploreBilling,
+        private PostCoverHydrator $covers,
     ) {}
 
     public function index(Request $request): Response|RedirectResponse
@@ -186,6 +188,11 @@ class ExploreController extends Controller
 
         PostAccountPresenter::attachForUser($posts->getCollection(), $user);
         $posts->getCollection()->transform(function (Post $post): Post {
+            // Archive from payload / cover_source_url only - do not hit Instagram
+            // media/oEmbed on every Explore page load (backfill --fetch recovers).
+            $this->covers->ensureMirrored($post, fetchRemote: false);
+            $post->refresh();
+
             $post->makeHidden(['raw_payload']);
             $post->setAttribute(
                 'embed',

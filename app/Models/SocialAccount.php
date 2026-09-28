@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'url',
     'external_id',
     'avatar',
+    'avatar_source_url',
     'display_name',
 ])]
 class SocialAccount extends Model

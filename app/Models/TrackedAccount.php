@@ -27,6 +27,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'url',
     'external_id',
     'avatar',
+    'avatar_source_url',
     'display_name',
     'followers',
     'fit_reason',

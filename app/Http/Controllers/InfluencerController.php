@@ -12,6 +12,7 @@ use App\Http\Requests\Influencers\GenerateInfluencerBriefRequest;
 use App\Http\Requests\Influencers\SearchInfluencersRequest;
 use App\Http\Requests\Influencers\UpdateInfluencerBriefRequest;
 use App\Jobs\FindInfluencersJob;
+use App\Jobs\MirrorAvatarJob;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Models\TrackedAccount;
 use App\Models\User;
@@ -682,6 +683,10 @@ class InfluencerController extends Controller
             'url' => (string) ($suggestion['url'] ?? $this->defaultUrl($platform, $handle)),
             'display_name' => $suggestion['display_name'] ?? $handle,
             'avatar' => $suggestion['avatar'] ?? null,
+            'avatar_source_url' => isset($suggestion['avatar']) && is_string($suggestion['avatar'])
+                && str_starts_with($suggestion['avatar'], 'http')
+                    ? $suggestion['avatar']
+                    : null,
             'fit_reason' => $fitReason !== '' ? Str::limit($fitReason, 280, '') : null,
         ];
 
@@ -697,6 +702,8 @@ class InfluencerController extends Controller
             ],
             $attributes,
         );
+
+        MirrorAvatarJob::dispatch($account->id);
 
         if ($this->billing->canRun($user)) {
             $account->markSyncRunning();
