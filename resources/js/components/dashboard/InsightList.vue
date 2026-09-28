@@ -57,11 +57,11 @@ function htmlText(text: string): string {
 
 <template>
     <EmptyState v-if="status !== 'ok' || !items?.length" :reason="reason" compact />
-    <ul v-else class="grid gap-x-3 gap-y-0.5 sm:grid-cols-2">
+    <ul v-else class="space-y-0.5">
         <li
             v-for="item in items"
             :key="itemKey(item)"
-            class="min-w-0 border-b border-slate-100 py-1 last:border-b-0 sm:odd:pr-1"
+            class="min-w-0 border-b border-slate-100 py-1 last:border-b-0"
         >
             <div class="flex items-start gap-1.5">
                 <span

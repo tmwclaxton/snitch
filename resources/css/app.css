@@ -2431,14 +2431,14 @@
 
     .snitch-heatmap-weekdays {
         display: grid;
-        grid-template-rows: repeat(7, 0.7rem);
-        gap: 3px;
+        grid-template-rows: repeat(7, 0.55rem);
+        gap: 2px;
         padding-top: 1px;
     }
 
     .snitch-heatmap-weekday {
-        font-size: 0.6rem;
-        line-height: 0.7rem;
+        font-size: 0.55rem;
+        line-height: 0.55rem;
         color: color-mix(in oklab, var(--snitch-ink) 45%, transparent);
     }
 
@@ -2446,7 +2446,7 @@
         display: grid;
         grid-auto-flow: column;
         grid-auto-columns: minmax(0, 1fr);
-        gap: 3px;
+        gap: 2px;
         /* Inset so a hovered cell can scale without becoming a scrollbar. */
         padding-block: 0.22rem;
         padding-inline: 3%;
@@ -2454,14 +2454,14 @@
 
     .snitch-heatmap-week {
         display: grid;
-        grid-template-rows: repeat(7, 0.7rem);
-        gap: 3px;
+        grid-template-rows: repeat(7, 0.55rem);
+        gap: 2px;
     }
 
     .snitch-heatmap-cell {
         display: block;
         width: 100%;
-        height: 0.7rem;
+        height: 0.55rem;
         min-width: 0.55rem;
         border-radius: 1px;
         background: color-mix(in oklab, var(--snitch-ink) 8%, var(--snitch-paper));
@@ -2497,8 +2497,8 @@
     }
 
     .snitch-heatmap-legend .snitch-heatmap-cell {
-        width: 0.7rem;
-        min-width: 0.7rem;
+        width: 0.55rem;
+        min-width: 0.55rem;
     }
 
     .snitch-platform-bar-track {

@@ -420,9 +420,8 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                     </template>
                 </div>
 
-                <div class="grid gap-2 xl:grid-cols-5">
+                <div class="grid items-start gap-2 lg:grid-cols-2">
                     <DashCard
-                        class="xl:col-span-2"
                         title="This week in 30 seconds"
                         why="Do-this-next lines from peer gaps for a busy organiser."
                         formula="score = |effect| × min(1, n/20); top 5, max 1 per category; n ≥ 5."
@@ -437,25 +436,36 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                         <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading insights" />
                     </DashCard>
 
-                    <DashCard
-                        class="xl:col-span-3"
-                        title="Leaderboard"
-                        why="One glance shows who is ahead, and on what."
-                        formula="ER = median per-follower engagement. Hidden likes and all-zero samples show as -."
-                        anchor="leaderboard"
-                    >
-                        <CompareTable
-                            v-if="leaderboard"
-                            :status="leaderboard.status"
-                            :reason="leaderboard.reason"
-                            :rows="(leaderboard.data?.rows as any) || []"
-                        />
-                        <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading leaderboard" />
-                    </DashCard>
+                    <div class="flex min-w-0 flex-col gap-2">
+                        <DashCard
+                            title="Leaderboard"
+                            why="One glance shows who is ahead, and on what."
+                            formula="ER = median per-follower engagement. Hidden likes and all-zero samples show as -."
+                            anchor="leaderboard"
+                        >
+                            <CompareTable
+                                v-if="leaderboard"
+                                :status="leaderboard.status"
+                                :reason="leaderboard.reason"
+                                :rows="(leaderboard.data?.rows as any) || []"
+                            />
+                            <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading leaderboard" />
+                        </DashCard>
+
+                        <div id="format_mix" class="snitch-scrap relative p-2">
+                            <FormatMixChart
+                                v-if="caption_intel"
+                                class="snitch-dash-soft-in"
+                                :formats="caption_intel.format_mix"
+                                :lifts="formatLifts"
+                            />
+                            <SnitchSkeleton v-else variant="scrap" height="4rem" label="Loading format mix" />
+                        </div>
+                    </div>
                 </div>
 
-                <section id="activity" class="grid items-stretch gap-2 lg:grid-cols-2">
-                    <div class="snitch-scrap snitch-dash-chart-slot relative flex h-full flex-col p-2">
+                <section id="activity" class="grid items-start gap-2 lg:grid-cols-2">
+                    <div class="snitch-scrap relative p-2">
                         <div class="mb-1 flex items-baseline justify-between gap-2">
                             <p class="snitch-ink-label">Posting heat map</p>
                             <p class="tabular-nums text-[10px] text-slate-500">16 wks</p>
@@ -467,15 +477,30 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                         />
                         <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading heat map" />
                     </div>
-                    <div id="format_mix" class="snitch-scrap snitch-dash-chart-slot relative flex h-full flex-col p-2">
-                        <FormatMixChart
-                            v-if="caption_intel"
-                            class="snitch-dash-soft-in"
-                            :formats="caption_intel.format_mix"
-                            :lifts="formatLifts"
-                        />
-                        <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading format mix" />
-                    </div>
+                    <section id="caption_intel" class="snitch-scrap space-y-2 p-2">
+                        <div>
+                            <p class="snitch-ink-label mb-1">Hashtags</p>
+                            <div v-if="caption_intel" class="flex flex-wrap gap-1">
+                                <span
+                                    v-for="row in caption_intel.hashtags.slice(0, 12)"
+                                    :key="`hash-${row.term}`"
+                                    class="snitch-glance-tag"
+                                >
+                                    #{{ row.term }}
+                                    <span class="tabular-nums text-slate-500">{{ row.count }}</span>
+                                </span>
+                                <p v-if="!caption_intel.hashtags.length" class="text-[11px] text-slate-500">None yet.</p>
+                            </div>
+                            <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading hashtags" />
+                        </div>
+                        <div>
+                            <CtaLanguage
+                                v-if="caption_intel"
+                                :ctas="caption_intel.ctas"
+                            />
+                            <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading CTA language" />
+                        </div>
+                    </section>
                 </section>
 
                 <div id="growth_series">
@@ -596,33 +621,6 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                     </button>
                     <SnitchSkeleton v-else-if="!winners" variant="scrap" height="6rem" label="Loading winners" />
                 </DashCard>
-
-                <section id="caption_intel" class="snitch-scrap space-y-1.5 p-2">
-                    <div class="flex flex-wrap items-start gap-x-4 gap-y-1.5">
-                        <div class="min-w-0 flex-1">
-                            <p class="snitch-ink-label mb-1">Hashtags</p>
-                            <div v-if="caption_intel" class="flex flex-wrap gap-1">
-                                <span
-                                    v-for="row in caption_intel.hashtags.slice(0, 10)"
-                                    :key="`hash-${row.term}`"
-                                    class="snitch-glance-tag"
-                                >
-                                    #{{ row.term }}
-                                    <span class="tabular-nums text-slate-500">{{ row.count }}</span>
-                                </span>
-                                <p v-if="!caption_intel.hashtags.length" class="text-[11px] text-slate-500">None yet.</p>
-                            </div>
-                            <SnitchSkeleton v-else variant="scrap" height="1.5rem" label="Loading hashtags" />
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <CtaLanguage
-                                v-if="caption_intel"
-                                :ctas="caption_intel.ctas"
-                            />
-                            <SnitchSkeleton v-else variant="scrap" height="1.5rem" label="Loading CTA language" />
-                        </div>
-                    </div>
-                </section>
 
                 <div
                     id="recent_posts"

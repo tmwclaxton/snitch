@@ -68,17 +68,17 @@ const peakIndex = computed(() => {
             </p>
         </div>
 
-        <ul v-if="formats.length" class="mt-2 space-y-2">
+        <ul v-if="formats.length" class="mt-1.5 space-y-1.5">
             <li
                 v-for="(row, index) in formats"
                 :key="row.type"
                 class="grid grid-cols-[5.5rem_minmax(0,1fr)_2rem_2.75rem] items-center gap-1.5"
             >
-                <span class="truncate text-xs text-slate-600">
+                <span class="truncate text-[11px] text-slate-600">
                     {{ postTypeLabel(row.type) }}
                 </span>
                 <div
-                    class="h-2.5 overflow-hidden rounded-sm bg-slate-100"
+                    class="h-2 overflow-hidden rounded-sm bg-slate-100"
                     :title="`${postTypeLabel(row.type)}: ${row.count}`"
                 >
                     <div
@@ -87,7 +87,7 @@ const peakIndex = computed(() => {
                         :style="{ width: barWidth(row.count) }"
                     />
                 </div>
-                <span class="text-right text-xs tabular-nums text-slate-600">
+                <span class="text-right text-[11px] tabular-nums text-slate-600">
                     {{ row.count }}
                 </span>
                 <span

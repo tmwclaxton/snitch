@@ -133,10 +133,16 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('px-2 py-2 sm:px-3', $dashboard);
         $this->assertStringContainsString('WinnerCard', $dashboard);
         $this->assertStringContainsString('id="recent_posts"', $dashboard);
-        $this->assertStringContainsString('xl:grid-cols-5', $dashboard);
+        $this->assertStringContainsString('id="format_mix"', $dashboard);
+        $this->assertStringContainsString('id="caption_intel"', $dashboard);
+        $this->assertStringContainsString('items-start gap-2 lg:grid-cols-2', $dashboard);
         $this->assertStringContainsString('anchor="winners"', $dashboard);
         $this->assertStringContainsString('anchor="insights"', $dashboard);
         $this->assertStringContainsString('followDashboardLink', file_get_contents(base_path('resources/js/components/dashboard/InsightList.vue')) ?: '');
+        $captions = file_get_contents(base_path('resources/js/components/dashboard/CaptionPanels.vue'));
+        $this->assertIsString($captions);
+        $this->assertStringContainsString('xl:grid-cols-5', $captions);
+        $this->assertStringContainsString('Winning hooks', $captions);
 
         $css = file_get_contents(base_path('resources/css/app.css'));
         $this->assertIsString($css);
