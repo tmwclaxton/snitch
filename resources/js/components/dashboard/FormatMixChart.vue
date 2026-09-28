@@ -10,7 +10,28 @@ export type FormatMixRow = {
 
 const props = defineProps<{
     formats: FormatMixRow[];
+    lifts?: Record<string, number | null>;
 }>();
+
+function liftFor(type: string): number | null {
+    const lifts = props.lifts ?? {};
+    const direct = lifts[type];
+
+    if (typeof direct === 'number' && Number.isFinite(direct)) {
+        return direct;
+    }
+
+    const titled = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+    const titledValue = lifts[titled];
+
+    return typeof titledValue === 'number' && Number.isFinite(titledValue) ? titledValue : null;
+}
+
+function liftLabel(type: string): string | null {
+    const value = liftFor(type);
+
+    return value == null ? null : `${value.toFixed(1)}x`;
+}
 
 const maxCount = computed(() =>
     Math.max(1, ...props.formats.map((row) => row.count)),
@@ -44,13 +65,13 @@ const peakIndex = computed(() => {
             </p>
         </div>
 
-        <ul v-if="formats.length" class="mt-4 space-y-3">
+        <ul v-if="formats.length" class="mt-2 space-y-2">
             <li
                 v-for="(row, index) in formats"
                 :key="row.type"
-                class="grid grid-cols-[6.5rem_minmax(0,1fr)_2.5rem] items-center gap-2"
+                class="grid grid-cols-[5.5rem_minmax(0,1fr)_2rem_2.75rem] items-center gap-1.5"
             >
-                <span class="truncate text-sm text-snitch-ink/75">
+                <span class="truncate text-xs text-snitch-ink/75">
                     {{ postTypeLabel(row.type) }}
                 </span>
                 <PlatformStippleTrack
@@ -61,12 +82,18 @@ const peakIndex = computed(() => {
                     :delay-offset="index * 28"
                     :title="`${postTypeLabel(row.type)}: ${row.count}`"
                 />
-                <span class="text-right text-sm tabular-nums text-snitch-ink/70">
+                <span class="text-right text-xs tabular-nums text-snitch-ink/70">
                     {{ row.count }}
+                </span>
+                <span
+                    class="text-right text-[10px] tabular-nums text-slate-500"
+                    :title="liftLabel(row.type) ? 'Peer median lift vs account usual' : undefined"
+                >
+                    {{ liftLabel(row.type) || '-' }}
                 </span>
             </li>
         </ul>
-        <p v-else class="mt-4 text-sm text-snitch-ink/55">
+        <p v-else class="mt-2 text-sm text-snitch-ink/55">
             No posts yet.
         </p>
     </div>

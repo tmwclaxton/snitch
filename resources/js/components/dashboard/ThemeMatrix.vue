@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
 
 type Cell = { handle: string; share: number; pi: number | null; n: number };
@@ -6,13 +7,54 @@ type Row = { theme: string; theme_key: string; cells: Cell[] };
 type Account = { handle: string; is_own_account: boolean };
 type Gap = { theme: string; peer_pi: number; n: number };
 
-defineProps<{
-    status: 'ok' | 'insufficient' | 'empty';
-    reason?: string | null;
-    accounts?: Account[];
-    matrix?: Row[];
-    gaps?: Gap[];
-}>();
+const props = withDefaults(
+    defineProps<{
+        status: 'ok' | 'insufficient' | 'empty';
+        reason?: string | null;
+        accounts?: Account[];
+        matrix?: Row[];
+        gaps?: Gap[];
+        maxThemes?: number;
+    }>(),
+    { maxThemes: 5 },
+);
+
+const visibleMatrix = computed(() => {
+    const rows = props.matrix ?? [];
+
+    if (rows.length <= props.maxThemes) {
+        return rows;
+    }
+
+    // Prefer themes with the most posts; keep "other" last if present.
+    const ranked = [...rows].sort((a, b) => {
+        const aN = a.cells.reduce((sum, cell) => sum + cell.n, 0);
+        const bN = b.cells.reduce((sum, cell) => sum + cell.n, 0);
+
+        if (a.theme_key === 'other') {
+            return 1;
+        }
+
+        if (b.theme_key === 'other') {
+            return -1;
+        }
+
+        return bN - aN;
+    });
+
+    return ranked.slice(0, props.maxThemes);
+});
+
+const otherHeavy = computed(() => {
+    const other = (props.matrix ?? []).find((row) => row.theme_key === 'other');
+    const own = other?.cells.find((cell) => {
+        const account = (props.accounts ?? []).find((a) => a.handle === cell.handle);
+
+        return account?.is_own_account;
+    });
+
+    return own != null && own.share >= 50;
+});
 
 function cellBg(pi: number | null, n: number): string {
     if (n < 3 || pi == null) {
@@ -43,7 +85,7 @@ function cellBg(pi: number | null, n: number): string {
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="row in matrix || []" :key="row.theme_key" class="border-b border-slate-100">
+                    <tr v-for="row in visibleMatrix" :key="row.theme_key" class="border-b border-slate-100">
                         <td class="py-1 pr-2 font-medium text-slate-700">{{ row.theme }}</td>
                         <td
                             v-for="cell in row.cells"
@@ -52,11 +94,14 @@ function cellBg(pi: number | null, n: number): string {
                             :style="{ backgroundColor: cellBg(cell.pi, cell.n) }"
                             :title="`n=${cell.n}${cell.pi != null ? ` · PI ${cell.pi}` : ''}`"
                         >
-                            {{ cell.n < 1 ? '—' : `${cell.share.toFixed(0)}%` }}
+                            {{ cell.n < 1 ? '-' : `${cell.share.toFixed(0)}%` }}
                         </td>
                     </tr>
                 </tbody>
             </table>
+            <p v-if="otherHeavy" class="mt-1 text-[10px] text-slate-400">
+                "Other" is high for You - theme tags are still coarse.
+            </p>
         </div>
         <div>
             <p class="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">Gaps you skip</p>

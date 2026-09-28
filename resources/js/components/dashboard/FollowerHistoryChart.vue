@@ -8,10 +8,18 @@ export type FollowerPoint = {
     followers: number;
 };
 
-const props = defineProps<{
-    points: FollowerPoint[];
-    scope?: 'account' | 'corpus';
-}>();
+const props = withDefaults(
+    defineProps<{
+        points: FollowerPoint[];
+        scope?: 'account' | 'corpus';
+        hideTitle?: boolean;
+        compact?: boolean;
+    }>(),
+    {
+        hideTitle: false,
+        compact: false,
+    },
+);
 
 const scopeLabel = computed(() =>
     props.scope === 'corpus'
@@ -21,12 +29,12 @@ const scopeLabel = computed(() =>
 
 const leftPad = 54;
 const rightPad = 12;
-const topPad = 16;
-const bottomPad = 28;
+const topPad = 12;
+const bottomPad = 24;
 const plotWidth = 560;
-const plotHeight = 140;
+const plotHeight = computed(() => (props.compact ? 96 : 140));
 const chartWidth = leftPad + plotWidth + rightPad;
-const chartHeight = topPad + plotHeight + bottomPad;
+const chartHeight = computed(() => topPad + plotHeight.value + bottomPad);
 
 const minFollowers = computed(() =>
     props.points.length ? Math.min(...props.points.map((point) => point.followers)) : 0,
@@ -44,7 +52,7 @@ function yFor(followers: number): number {
     const paddedMax = min === max ? max + span : max;
     const range = paddedMax - paddedMin;
 
-    return topPad + (1 - (followers - paddedMin) / range) * plotHeight;
+    return topPad + (1 - (followers - paddedMin) / range) * plotHeight.value;
 }
 
 const dots = computed(() =>
@@ -79,18 +87,18 @@ const yTicks = computed(() => {
 
 <template>
     <div class="flex h-full flex-col">
-        <div class="flex items-baseline justify-between gap-3">
+        <div v-if="!hideTitle" class="flex items-baseline justify-between gap-3">
             <p class="snitch-ink-label">Followers</p>
             <p class="text-xs text-snitch-ink/55">
                 {{ points.length === 1 ? 'First recorded count' : `${points.length} counts` }}
             </p>
         </div>
-        <p class="mt-1 text-xs text-snitch-ink/55">
+        <p v-if="!hideTitle" class="mt-1 text-xs text-snitch-ink/55">
             {{ scopeLabel }}
         </p>
         <svg
             v-if="points.length"
-            class="mt-2 w-full overflow-visible"
+            class="mt-1 max-h-40 w-full overflow-visible"
             :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
             role="img"
             :aria-label="`Follower counts, ${points.length} points`"

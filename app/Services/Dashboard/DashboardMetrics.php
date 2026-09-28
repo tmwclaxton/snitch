@@ -66,6 +66,7 @@ class DashboardMetrics
                 'last_refreshed_at' => null,
                 'next_refresh_at' => null,
                 'has_non_instagram_trackers' => false,
+                'hidden_likes_count' => 0,
             ],
             'onboarding' => CardResult::ok([
                 'steps' => [
@@ -257,6 +258,7 @@ class DashboardMetrics
                     ->toIso8601String(),
                 'has_non_instagram_trackers' => $nonIgCount > 0,
                 'ready' => $ready,
+                'hidden_likes_count' => $periodPosts->filter(fn (array $row): bool => $row['hidden_likes'])->count(),
             ],
             'onboarding' => $onboarding,
             'insights' => $insights,
@@ -1200,17 +1202,34 @@ class DashboardMetrics
             ->values()
             ->all();
 
+        $hiddenCount = $periodPosts->filter(fn (array $row): bool => $row['hidden_likes'])->count();
+        $hiddenSpotlight = $showHiddenLikes
+            ? $hiddenExtras
+                ->sortByDesc('pi')
+                ->take(3)
+                ->map(fn (array $row): array => $this->winnerPayload($row))
+                ->values()
+                ->all()
+            : [];
+
+        $meta = [
+            'hidden_likes_count' => $hiddenCount,
+            'hidden_included' => $showHiddenLikes ? $hiddenExtras->count() : 0,
+            'hidden_spotlight' => $hiddenSpotlight,
+        ];
+
         if ($winners === []) {
             return CardResult::empty(
                 'No standout posts this period. Everyone posted close to their usual.',
                 $scored->count(),
-                ['winners' => [], 'flops' => $flops],
+                ['winners' => [], 'flops' => $flops, ...$meta],
             );
         }
 
         return CardResult::ok([
             'winners' => $winners,
             'flops' => $flops,
+            ...$meta,
         ], count($winners));
     }
 

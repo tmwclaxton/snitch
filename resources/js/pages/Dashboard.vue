@@ -2,29 +2,20 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Info } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
+import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
 import CtaLanguage from '@/components/CtaLanguage.vue';
-import ActionList from '@/components/dashboard/ActionList.vue';
-import AttentionBars from '@/components/dashboard/AttentionBars.vue';
 import CaptionPanels from '@/components/dashboard/CaptionPanels.vue';
 import CompareTable from '@/components/dashboard/CompareTable.vue';
 import DashCard from '@/components/dashboard/DashCard.vue';
 import DataNotes from '@/components/dashboard/DataNotes.vue';
-import EfficiencyScatter from '@/components/dashboard/EfficiencyScatter.vue';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
 import FollowerHistoryChart from '@/components/dashboard/FollowerHistoryChart.vue';
-import FormatLift from '@/components/dashboard/FormatLift.vue';
 import FormatMixChart from '@/components/dashboard/FormatMixChart.vue';
 import InsightList from '@/components/dashboard/InsightList.vue';
 import PostingHeatmap from '@/components/dashboard/PostingHeatmap.vue';
 import StatCard from '@/components/dashboard/StatCard.vue';
 import ThemeMatrix from '@/components/dashboard/ThemeMatrix.vue';
-import TimeOfDayChart from '@/components/dashboard/TimeOfDayChart.vue';
-import WeeklyMultiples from '@/components/dashboard/WeeklyMultiples.vue';
-import WeeklyVolumeChart from '@/components/dashboard/WeeklyVolumeChart.vue';
-import WhenHeatmap from '@/components/dashboard/WhenHeatmap.vue';
 import WinnerCard from '@/components/dashboard/WinnerCard.vue';
-import FeedContactCell from '@/components/FeedContactCell.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -55,16 +46,6 @@ type Account = {
     no_posts_in_period?: boolean;
 };
 
-type RailCell = {
-    key: string;
-    label: string;
-    value: string;
-    hint: string;
-    href: string | null;
-    you: number | null;
-    peer: number | null;
-};
-
 type RecentPost = {
     id: number;
     platform: string;
@@ -76,15 +57,6 @@ type RecentPost = {
     media_availability?: string | null;
     metrics?: Record<string, unknown> | null;
     tracked_account?: { id?: number; handle: string; display_name?: string | null } | null;
-    analysis?: {
-        status: string;
-        hook?: string | null;
-        concept?: string | null;
-        topics?: string[] | null;
-        custom_tags?: string[] | null;
-        term_labels?: { dimension: string; slug: string; label: string; section?: string | null }[] | null;
-    } | null;
-    winner_insight?: { score: number } | null;
 };
 
 type WinnerPost = {
@@ -121,33 +93,27 @@ const props = defineProps<{
         next_refresh_at: string | null;
         has_non_instagram_trackers: boolean;
         ready?: boolean;
+        hidden_likes_count?: number;
     };
     onboarding: Card<{
         hide?: boolean;
         steps: { key: string; label: string; done: boolean; suggestions?: string[] }[];
         note?: string | null;
     }>;
-    rail?: { cells: RailCell[]; ready: boolean } | null;
+    rail?: { cells: { key: string; label: string; value: string; hint: string }[]; ready: boolean } | null;
     kpis?: Card<{ cards: Record<string, unknown>[] }> | null;
     insights?: Card<{ items: { category: string; text: string; score: number; n: number; links_to: string }[] }> | null;
     leaderboard?: Card<{ rows: Record<string, unknown>[] }> | null;
-    winners?: Card<{ winners: WinnerPost[]; flops: WinnerPost[] }> | null;
-    growth_series?: Card<{ series: Record<string, unknown>[]; mode: string }> | null;
-    efficiency?: Card<{ points: Record<string, unknown>[]; median_x: number | null; median_y: number | null }> | null;
-    format_mix?: Card<{ rows: Record<string, unknown>[] }> | null;
-    format_lift?: Card<{ rows: Record<string, unknown>[]; peer_median_lift: Record<string, number | null> }> | null;
-    heatmap?: Card<{
-        mode: 'pi' | 'count';
-        days: string[];
-        blocks: string[];
-        cells: Record<string, unknown>[][];
-        own_dots: { dow: number; block: number }[];
+    winners?: Card<{
+        winners: WinnerPost[];
+        flops: WinnerPost[];
+        hidden_likes_count?: number;
+        hidden_included?: number;
+        hidden_spotlight?: WinnerPost[];
     }> | null;
+    format_lift?: Card<{ rows: Record<string, unknown>[]; peer_median_lift: Record<string, number | null> }> | null;
     captions?: Card<Record<string, unknown>> | null;
     themes?: Card<Record<string, unknown>> | null;
-    weekly?: Card<Record<string, unknown>> | null;
-    attention?: Card<Record<string, unknown>> | null;
-    actions?: Card<{ items: { text: string; links_to: string; n: number }[]; peer_only?: boolean }> | null;
     data_notes?: Card<Record<string, unknown>> | null;
     activity?: {
         heatmap: { date: string; count: number }[];
@@ -176,7 +142,12 @@ const showOnboarding = computed(
 );
 
 const hasInstagramSet = computed(() => props.rivals.length > 0 || props.own_account != null);
-const panelReady = computed(() => props.activity != null && props.caption_intel != null);
+
+const hiddenLikesCount = computed(
+    () => props.controls.hidden_likes_count
+        ?? props.winners?.data?.hidden_likes_count
+        ?? 0,
+);
 
 function refreshQuery(next: { accounts?: string[]; period?: number; hidden?: boolean }): void {
     const accounts = next.accounts ?? props.selected;
@@ -233,12 +204,6 @@ function formatUk(iso: string | null): string {
     }
 }
 
-function accountHrefFor(post: RecentPost): string | null {
-    const id = post.tracked_account?.id;
-
-    return id ? competitorShow.url(id) : null;
-}
-
 const winnerList = computed(() => {
     const data = props.winners?.data;
 
@@ -257,13 +222,28 @@ const winnersHaveMore = computed(
     () => !winnersExpanded.value && winnerList.value.length > 6,
 );
 
-const weeklyPostTotal = computed(() =>
-    (props.activity?.weekly ?? []).reduce((sum, row) => sum + row.count, 0),
+const hiddenInWinners = computed(
+    () => winnerList.value.filter((post) => post.likes_hidden).length,
 );
 
-const timeOfDayTotal = computed(() =>
-    (props.activity?.by_time_of_day ?? []).reduce((sum, row) => sum + row.count, 0),
-);
+const hiddenSpotlight = computed(() => {
+    if (!props.show_hidden_likes) {
+        return [] as WinnerPost[];
+    }
+
+    if (hiddenInWinners.value > 0) {
+        return [] as WinnerPost[];
+    }
+
+    return props.winners?.data?.hidden_spotlight ?? [];
+});
+
+const followerPoints = computed(() => props.follower_series ?? []);
+const hasFollowerHistory = computed(() => followerPoints.value.length >= 2);
+
+const recentThumbs = computed(() => (props.recent_posts ?? []).slice(0, 6));
+
+const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? {});
 </script>
 
 <template>
@@ -271,49 +251,53 @@ const timeOfDayTotal = computed(() =>
         <Head title="Dashboard" />
 
         <div class="mx-auto max-w-none space-y-2">
-            <div class="flex flex-nowrap items-center gap-x-1.5 overflow-x-auto border-b border-slate-200 pb-1.5">
-                <h1 class="shrink-0 text-sm font-semibold tracking-tight text-slate-900">Dashboard</h1>
+            <div class="flex min-w-0 items-center gap-x-1.5 border-b border-slate-200 pb-1.5">
+                <h1 class="hidden shrink-0 text-sm font-semibold tracking-tight text-slate-900 sm:block">
+                    Dashboard
+                </h1>
 
-                <button
-                    v-if="own_account"
-                    type="button"
-                    class="inline-flex h-6 shrink-0 items-center gap-1 rounded-full border border-slate-900 bg-slate-900 px-1.5 text-[10px] font-medium text-white"
-                >
-                    <SnitchAvatar
-                        :src="own_account.avatar"
-                        :name="own_account.display_name"
-                        :handle="own_account.handle"
-                        size="sm"
-                        class="!size-4"
-                    />
-                    You
-                </button>
-                <button
-                    v-for="rival in rivals"
-                    :key="rival.id"
-                    type="button"
-                    class="inline-flex h-6 max-w-[8.5rem] shrink-0 items-center gap-1 rounded-full border px-1.5 text-[10px] font-medium"
-                    :class="
-                        selected.includes(rival.handle.toLowerCase())
-                            ? 'border-slate-800 bg-slate-800 text-white'
-                            : rival.no_posts_in_period
-                                ? 'border-slate-200 bg-slate-50 text-slate-400'
-                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                    "
-                    :title="rival.no_posts_in_period ? 'No posts imported yet' : `@${rival.handle}`"
-                    @click="toggleAccount(rival.handle)"
-                >
-                    <SnitchAvatar
-                        :src="rival.avatar"
-                        :name="rival.display_name"
-                        :handle="rival.handle"
-                        size="sm"
-                        class="!size-4"
-                    />
-                    <span class="truncate">@{{ rival.handle }}</span>
-                </button>
+                <div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+                    <button
+                        v-if="own_account"
+                        type="button"
+                        class="inline-flex h-6 max-w-[5.5rem] shrink items-center gap-1 truncate rounded-full border border-slate-900 bg-slate-900 px-1.5 text-[10px] font-medium text-white"
+                    >
+                        <SnitchAvatar
+                            :src="own_account.avatar"
+                            :name="own_account.display_name"
+                            :handle="own_account.handle"
+                            size="sm"
+                            class="!size-4 shrink-0"
+                        />
+                        <span class="truncate">You</span>
+                    </button>
+                    <button
+                        v-for="rival in rivals"
+                        :key="rival.id"
+                        type="button"
+                        class="inline-flex h-6 min-w-0 max-w-[6.5rem] shrink items-center gap-1 truncate rounded-full border px-1.5 text-[10px] font-medium"
+                        :class="
+                            selected.includes(rival.handle.toLowerCase())
+                                ? 'border-slate-800 bg-slate-800 text-white'
+                                : rival.no_posts_in_period
+                                    ? 'border-slate-200 bg-slate-50 text-slate-400'
+                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        "
+                        :title="rival.no_posts_in_period ? 'No posts imported yet' : `@${rival.handle}`"
+                        @click="toggleAccount(rival.handle)"
+                    >
+                        <SnitchAvatar
+                            :src="rival.avatar"
+                            :name="rival.display_name"
+                            :handle="rival.handle"
+                            size="sm"
+                            class="!size-4 shrink-0"
+                        />
+                        <span class="truncate">@{{ rival.handle }}</span>
+                    </button>
+                </div>
 
-                <div class="ml-auto flex shrink-0 items-center gap-1.5">
+                <div class="ml-1 flex shrink-0 items-center gap-1">
                     <label class="group relative inline-flex h-6 cursor-pointer items-center gap-1 text-[10px] text-slate-600">
                         <input
                             type="checkbox"
@@ -331,7 +315,16 @@ const timeOfDayTotal = computed(() =>
                                 :class="show_hidden_likes ? 'translate-x-2.5' : 'translate-x-0'"
                             />
                         </span>
-                        <span class="whitespace-nowrap">Hidden likes</span>
+                        <span class="hidden whitespace-nowrap md:inline">Hidden likes</span>
+                        <span
+                            v-if="hiddenLikesCount > 0"
+                            class="tabular-nums text-slate-400"
+                            :title="show_hidden_likes
+                                ? `${hiddenLikesCount} hidden-likes posts included in lists`
+                                : `${hiddenLikesCount} hidden-likes posts excluded from averages`"
+                        >
+                            {{ show_hidden_likes ? `${hiddenLikesCount} in` : `${hiddenLikesCount}` }}
+                        </span>
                         <span
                             class="relative inline-flex text-slate-400 group-hover:text-slate-700"
                             tabindex="0"
@@ -357,9 +350,6 @@ const timeOfDayTotal = computed(() =>
                         >
                             {{ days }}d
                         </button>
-                    </div>
-                    <div class="hidden text-[10px] text-slate-400 lg:block">
-                        {{ formatUk(controls.last_refreshed_at) }}
                     </div>
                 </div>
             </div>
@@ -482,41 +472,62 @@ const timeOfDayTotal = computed(() =>
                             v-if="caption_intel"
                             class="snitch-dash-soft-in"
                             :formats="caption_intel.format_mix"
+                            :lifts="formatLifts"
                         />
                         <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading format mix" />
                     </div>
                 </section>
 
-                <div
-                    id="growth_series"
-                    class="snitch-scrap snitch-dash-chart-slot relative p-2"
-                >
-                    <div class="mb-1 flex items-baseline justify-between gap-2">
-                        <p class="snitch-ink-label">Followers</p>
-                        <p
-                            v-if="growth_delta?.week_delta != null"
-                            class="tabular-nums text-[10px] text-slate-500"
-                        >
-                            {{ growth_delta.week_delta > 0 ? '+' : '' }}{{ growth_delta.week_delta }}
-                            this week
-                            <template v-if="growth_delta.week_pct != null">
-                                ({{ growth_delta.week_pct > 0 ? '+' : '' }}{{ growth_delta.week_pct }}%)
-                            </template>
-                        </p>
+                <div id="growth_series">
+                    <p
+                        v-if="follower_series && !hasFollowerHistory"
+                        class="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-600"
+                    >
+                        <span class="font-medium text-slate-800">Followers</span>
+                        ·
+                        <template v-if="followerPoints.length === 1">
+                            {{ new Intl.NumberFormat('en-GB').format(followerPoints[0].followers) }}
+                            first snapshot only - growth chart after the next weekly count.
+                        </template>
+                        <template v-else>
+                            No follower snapshots yet.
+                        </template>
+                    </p>
+                    <div
+                        v-else-if="follower_series"
+                        class="snitch-scrap relative max-h-44 p-2"
+                    >
+                        <div class="mb-0.5 flex items-baseline justify-between gap-2">
+                            <p class="snitch-ink-label">Followers</p>
+                            <p
+                                v-if="growth_delta?.week_delta != null"
+                                class="tabular-nums text-[10px] text-slate-500"
+                            >
+                                {{ growth_delta.week_delta > 0 ? '+' : '' }}{{ growth_delta.week_delta }}
+                                this week
+                                <template v-if="growth_delta.week_pct != null">
+                                    ({{ growth_delta.week_pct > 0 ? '+' : '' }}{{ growth_delta.week_pct }}%)
+                                </template>
+                            </p>
+                            <p v-else class="text-[10px] text-slate-400">
+                                {{ followerPoints.length }} counts
+                            </p>
+                        </div>
+                        <FollowerHistoryChart
+                            class="snitch-dash-soft-in"
+                            scope="corpus"
+                            hide-title
+                            compact
+                            :points="followerPoints"
+                        />
                     </div>
-                    <FollowerHistoryChart
-                        v-if="follower_series"
-                        class="snitch-dash-soft-in"
-                        scope="corpus"
-                        :points="follower_series"
-                    />
-                    <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading follower history" />
+                    <SnitchSkeleton v-else variant="scrap" height="2.5rem" label="Loading follower history" />
                 </div>
 
                 <DashCard
                     title="Winning posts"
                     why="Ready-made post ideas already proven with a similar audience (ranked by PI, not raw likes)."
-                    formula="PI = interactions ÷ median of the account's previous 30 posts. Winner ≥ 2.0×."
+                    formula="PI = interactions ÷ median of the account's previous 30 posts. Winner ≥ 2.0×. Hidden-likes posts use comments+views when the toggle is on."
                     anchor="winners"
                 >
                     <div class="mb-1 flex items-center gap-1.5">
@@ -536,22 +547,44 @@ const timeOfDayTotal = computed(() =>
                         >
                             Flops
                         </button>
+                        <span
+                            v-if="show_hidden_likes && (winners?.data?.hidden_included ?? 0) > 0"
+                            class="text-[10px] text-amber-700"
+                        >
+                            {{ winners?.data?.hidden_included }} hidden-likes ranked on comments+views
+                        </span>
                         <Link :href="winnersIndex.url()" class="ml-auto text-[11px] font-medium text-slate-500 hover:text-slate-800">
                             View all →
                         </Link>
                     </div>
                     <EmptyState
-                        v-if="winners && (winners.status !== 'ok' || !winnerItems.length)"
+                        v-if="winners && (winners.status !== 'ok' || !winnerItems.length) && !hiddenSpotlight.length"
                         :reason="winners.reason || 'No posts in this tab.'"
                         compact
                     />
-                    <div v-else-if="winners" class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-6">
+                    <div v-else-if="winnerItems.length" class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-6">
                         <WinnerCard
                             v-for="post in winnerItems"
                             :key="String(post.id)"
                             :post="post as any"
                             compact
                         />
+                    </div>
+                    <div
+                        v-if="hiddenSpotlight.length"
+                        class="mt-1.5"
+                    >
+                        <p class="mb-1 text-[10px] font-medium uppercase tracking-wide text-amber-800/80">
+                            Hidden-likes spotlight (comments+views)
+                        </p>
+                        <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                            <WinnerCard
+                                v-for="post in hiddenSpotlight"
+                                :key="`hidden-${post.id}`"
+                                :post="post as any"
+                                compact
+                            />
+                        </div>
                     </div>
                     <button
                         v-if="winnersHaveMore"
@@ -564,38 +597,13 @@ const timeOfDayTotal = computed(() =>
                     <SnitchSkeleton v-else-if="!winners" variant="scrap" height="6rem" label="Loading winners" />
                 </DashCard>
 
-                <div class="grid items-start gap-2 lg:grid-cols-3">
-                    <div class="snitch-scrap snitch-dash-chart-slot relative p-2">
-                        <TimeOfDayChart
-                            v-if="activity"
-                            class="snitch-dash-soft-in"
-                            compact
-                            :hours="activity.by_time_of_day"
-                        />
-                        <p
-                            v-if="activity"
-                            class="mt-1 text-right text-[10px] tabular-nums text-slate-500"
-                        >
-                            {{ timeOfDayTotal }} posts · 12 wks
-                        </p>
-                        <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading time of day" />
-                    </div>
-                    <div class="snitch-scrap snitch-dash-chart-slot relative p-2">
-                        <WeeklyVolumeChart
-                            v-if="activity"
-                            class="snitch-dash-soft-in"
-                            compact
-                            :weeks="activity.weekly"
-                            :subtitle="`${weeklyPostTotal} posts · 12 wks`"
-                        />
-                        <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading weekly volume" />
-                    </div>
-                    <section id="caption_intel" class="snitch-scrap space-y-2 p-2">
-                        <div>
+                <section id="caption_intel" class="snitch-scrap space-y-1.5 p-2">
+                    <div class="flex flex-wrap items-start gap-x-4 gap-y-1.5">
+                        <div class="min-w-0 flex-1">
                             <p class="snitch-ink-label mb-1">Hashtags</p>
                             <div v-if="caption_intel" class="flex flex-wrap gap-1">
                                 <span
-                                    v-for="row in caption_intel.hashtags.slice(0, 8)"
+                                    v-for="row in caption_intel.hashtags.slice(0, 10)"
                                     :key="`hash-${row.term}`"
                                     class="snitch-glance-tag"
                                 >
@@ -604,21 +612,23 @@ const timeOfDayTotal = computed(() =>
                                 </span>
                                 <p v-if="!caption_intel.hashtags.length" class="text-[11px] text-slate-500">None yet.</p>
                             </div>
-                            <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading hashtags" />
+                            <SnitchSkeleton v-else variant="scrap" height="1.5rem" label="Loading hashtags" />
                         </div>
-                        <CtaLanguage
-                            v-if="caption_intel"
-                            :ctas="caption_intel.ctas"
-                        />
-                        <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading CTA language" />
-                    </section>
-                </div>
+                        <div class="min-w-0 flex-1">
+                            <CtaLanguage
+                                v-if="caption_intel"
+                                :ctas="caption_intel.ctas"
+                            />
+                            <SnitchSkeleton v-else variant="scrap" height="1.5rem" label="Loading CTA language" />
+                        </div>
+                    </div>
+                </section>
 
                 <div
                     id="recent_posts"
                     class="min-w-0"
                 >
-                    <div class="mb-1 flex items-end justify-between gap-2">
+                    <div class="mb-1 flex items-center justify-between gap-2">
                         <h2 class="text-[11px] font-semibold text-slate-900">Latest posts</h2>
                         <Link :href="feedIndex.url()" class="text-[11px] font-medium text-slate-500 hover:text-slate-800">
                             Open feed →
@@ -626,18 +636,32 @@ const timeOfDayTotal = computed(() =>
                     </div>
                     <div
                         v-if="recent_posts"
-                        class="snitch-contact-sheet snitch-contact-sheet-proof-fill snitch-contact-sheet-dash snitch-contact-sheet-dash-clip"
+                        class="grid grid-cols-3 gap-1.5 sm:grid-cols-6"
                     >
-                        <FeedContactCell
-                            v-for="(post, index) in recent_posts"
+                        <a
+                            v-for="post in recentThumbs"
                             :key="post.id"
-                            :post="post as any"
-                            :index="index"
-                            :account-href="accountHrefFor(post)"
-                            compact
-                        />
+                            :href="post.url || feedIndex.url()"
+                            :target="post.url ? '_blank' : undefined"
+                            rel="noreferrer"
+                            class="group overflow-hidden rounded border border-slate-200 bg-white"
+                        >
+                            <div class="aspect-square bg-slate-100">
+                                <img
+                                    v-if="post.cover_url || post.media_url"
+                                    :src="(post.cover_url || post.media_url)!"
+                                    alt=""
+                                    class="size-full object-cover"
+                                    loading="lazy"
+                                    decoding="async"
+                                >
+                            </div>
+                            <p class="truncate px-1 py-0.5 text-[10px] text-slate-600">
+                                @{{ post.tracked_account?.handle || 'post' }}
+                            </p>
+                        </a>
                     </div>
-                    <SnitchSkeleton v-else variant="scrap" height="10rem" label="Loading latest posts" />
+                    <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading latest posts" />
                     <p
                         v-if="recent_posts && !recent_posts.length"
                         class="mt-1 text-[11px] text-slate-500"
@@ -646,97 +670,9 @@ const timeOfDayTotal = computed(() =>
                     </p>
                 </div>
 
-                <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                <div class="grid gap-2 xl:grid-cols-5">
                     <DashCard
-                        v-if="!panelReady || efficiency"
-                        title="Efficiency map"
-                        why="Volume vs quality - post more, or post better?"
-                        formula="x = posts/week · y = median ER/follower · bubble = followers"
-                        anchor="efficiency"
-                    >
-                        <EfficiencyScatter
-                            v-if="efficiency"
-                            :status="efficiency.status"
-                            :reason="efficiency.reason"
-                            :points="(efficiency.data?.points as any) || []"
-                            :median-x="efficiency.data?.median_x ?? null"
-                            :median-y="efficiency.data?.median_y ?? null"
-                        />
-                        <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading efficiency" />
-                    </DashCard>
-
-                    <DashCard
-                        title="Format lift"
-                        why="Which formats beat each account's usual."
-                        formula="median ER(format) ÷ median ER(account); need n≥3 per format"
-                        anchor="format_lift"
-                    >
-                        <FormatLift
-                            v-if="format_lift"
-                            :status="format_lift.status"
-                            :reason="format_lift.reason"
-                            :rows="(format_lift.data?.rows as any) || []"
-                            :peer-median-lift="format_lift.data?.peer_median_lift || {}"
-                        />
-                        <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading format lift" />
-                    </DashCard>
-
-                    <DashCard
-                        title="Share of attention"
-                        why="Who gets outsized attention per post (proxy, not true SOV)."
-                        formula="eng_share = Σinteractions(a)/Σall · post_share = posts(a)/posts(all)"
-                        anchor="attention"
-                    >
-                        <AttentionBars
-                            v-if="attention"
-                            :status="attention.status"
-                            :reason="attention.reason"
-                            :rows="(attention.data?.rows as any) || []"
-                        />
-                        <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading attention" />
-                    </DashCard>
-                </div>
-
-                <div class="grid gap-2 xl:grid-cols-2">
-                    <DashCard
-                        title="When posts do best"
-                        why="Peer timing evidence in Europe/London, not generic '5 AM' advice."
-                        formula="Cell = median Performance Index. Grey when n < 3. Your posts as dots."
-                        anchor="heatmap"
-                    >
-                        <WhenHeatmap
-                            v-if="heatmap"
-                            :status="heatmap.status"
-                            :reason="heatmap.reason"
-                            :days="heatmap.data?.days"
-                            :blocks="heatmap.data?.blocks"
-                            :cells="(heatmap.data?.cells as any) || []"
-                            :own-dots="heatmap.data?.own_dots || []"
-                            :mode="heatmap.data?.mode || 'pi'"
-                        />
-                        <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading timing heatmap" />
-                    </DashCard>
-
-                    <DashCard
-                        title="Your next 3 moves"
-                        why="Closes the loop from analysis to action."
-                        formula="Top gap rules where You is below peer median and n ≥ 5."
-                        anchor="actions"
-                    >
-                        <ActionList
-                            v-if="actions"
-                            :status="actions.status"
-                            :reason="actions.reason"
-                            :items="actions.data?.items"
-                            :peer-only="!!actions.data?.peer_only"
-                        />
-                        <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading actions" />
-                    </DashCard>
-                </div>
-
-                <div class="grid gap-2 xl:grid-cols-3">
-                    <DashCard
-                        class="xl:col-span-2"
+                        class="xl:col-span-3"
                         title="Captions and hooks"
                         why="Free changes to how posts are written."
                         formula="Length excludes trailing hashtags. CTA via regex. Hooks from top PI winners."
@@ -751,43 +687,28 @@ const timeOfDayTotal = computed(() =>
                             :hashtag-buckets="(captions.data?.hashtag_buckets as any) || []"
                             :hooks="(captions.data?.hooks as any) || []"
                         />
-                        <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading captions" />
+                        <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading captions" />
                     </DashCard>
 
                     <DashCard
-                        title="Week-over-week"
-                        why="What changed since you last looked."
-                        formula="ISO weeks Mon-Sun in Europe/London."
-                        anchor="weekly"
+                        class="xl:col-span-2"
+                        title="Topics and themes"
+                        why="Topic gaps peers win with that you skip. Top 5 themes only."
+                        formula="share = posts(theme)/posts · colour = median PI"
+                        anchor="themes"
                     >
-                        <WeeklyMultiples
-                            v-if="weekly"
-                            :status="weekly.status"
-                            :reason="weekly.reason"
-                            :weeks="(weekly.data?.weeks as any) || []"
-                            :series="(weekly.data?.series as any) || []"
-                            :deltas="(weekly.data?.deltas as any) || null"
+                        <ThemeMatrix
+                            v-if="themes"
+                            :status="themes.status"
+                            :reason="themes.reason"
+                            :accounts="(themes.data?.accounts as any) || []"
+                            :matrix="(themes.data?.matrix as any) || []"
+                            :gaps="(themes.data?.gaps as any) || []"
+                            :max-themes="5"
                         />
-                        <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading weekly" />
+                        <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading themes" />
                     </DashCard>
                 </div>
-
-                <DashCard
-                    title="Topics and themes"
-                    why="Topic gaps peers win with that you skip."
-                    formula="share = posts(theme)/posts · colour = median PI"
-                    anchor="themes"
-                >
-                    <ThemeMatrix
-                        v-if="themes"
-                        :status="themes.status"
-                        :reason="themes.reason"
-                        :accounts="(themes.data?.accounts as any) || []"
-                        :matrix="(themes.data?.matrix as any) || []"
-                        :gaps="(themes.data?.gaps as any) || []"
-                    />
-                    <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading themes" />
-                </DashCard>
 
                 <DashCard
                     title="Data notes"
@@ -806,7 +727,7 @@ const timeOfDayTotal = computed(() =>
                         :note="(data_notes.data?.note as string) || null"
                         :format-uk="formatUk"
                     />
-                    <SnitchSkeleton v-else variant="scrap" height="3rem" label="Loading data notes" />
+                    <SnitchSkeleton v-else variant="scrap" height="1.5rem" label="Loading data notes" />
                 </DashCard>
             </template>
 

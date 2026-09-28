@@ -14,23 +14,21 @@ defineProps<{
 </script>
 
 <template>
-    <div class="text-[11px] leading-relaxed text-slate-500">
-        <p>
-            Analysed
-            <span
-                v-for="(account, index) in accounts || []"
-                :key="account.handle"
-            >
-                <template v-if="index > 0"> · </template>
-                {{ account.is_own_account ? 'You' : `@${account.handle}` }}
-                {{ account.posts }}
-            </span>
-            <template v-if="range"> · {{ range }}</template>
-            <template v-if="lastRefreshedAt && formatUk"> · refreshed {{ formatUk(lastRefreshedAt) }}</template>
-        </p>
-        <p v-if="(excludedHiddenLikes ?? 0) > 0" class="mt-0.5">
-            Excluded {{ excludedHiddenLikes }} post{{ excludedHiddenLikes === 1 ? '' : 's' }} with hidden likes from engagement averages.
-        </p>
-        <p v-if="note" class="mt-0.5">{{ note }}</p>
-    </div>
+    <p class="truncate text-[11px] leading-snug text-slate-500">
+        Analysed
+        <span
+            v-for="(account, index) in accounts || []"
+            :key="account.handle"
+        >
+            <template v-if="index > 0"> · </template>
+            {{ account.is_own_account ? 'You' : `@${account.handle}` }}
+            {{ account.posts }}
+        </span>
+        <template v-if="range"> · {{ range }}</template>
+        <template v-if="lastRefreshedAt && formatUk"> · refreshed {{ formatUk(lastRefreshedAt) }}</template>
+        <template v-if="(excludedHiddenLikes ?? 0) > 0">
+            · excluded {{ excludedHiddenLikes }} hidden-likes from averages
+        </template>
+        <template v-if="note"> · {{ note }}</template>
+    </p>
 </template>

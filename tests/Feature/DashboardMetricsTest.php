@@ -333,6 +333,7 @@ class DashboardMetricsTest extends TestCase
         $withHidden = app(DashboardMetrics::class)->forUser($user, [], 30, true);
 
         $this->assertTrue($withHidden['show_hidden_likes']);
+        $this->assertGreaterThan(0, $withHidden['controls']['hidden_likes_count'] ?? 0);
         $hiddenEr = collect($withHidden['leaderboard']['data']['rows'])->firstWhere('handle', 'goodgym');
         $this->assertNull($hiddenEr['er'], 'ER averages stay null even when the toggle is on');
 
@@ -341,6 +342,8 @@ class DashboardMetricsTest extends TestCase
             $hiddenWinners->contains(fn (array $row): bool => ($row['handle'] ?? null) === 'goodgym' && ($row['likes_hidden'] ?? false)),
             'Toggle on includes hidden-like posts in Winning posts with a likes_hidden badge',
         );
+        $this->assertGreaterThan(0, $withHidden['winners']['data']['hidden_included'] ?? 0);
+        $this->assertNotEmpty($withHidden['winners']['data']['hidden_spotlight'] ?? []);
 
         $hiddenRecent = collect($withHidden['recent_posts'])
             ->filter(fn (array $post): bool => (bool) ($post['metrics']['like_count_hidden'] ?? false));
@@ -399,7 +402,9 @@ class DashboardMetricsTest extends TestCase
         $this->assertSame('rail', $rules->resolveAnchor('kpis'));
         $this->assertSame('captions', $rules->resolveAnchor('captions'));
         $this->assertSame('themes', $rules->resolveAnchor('themes'));
-        $this->assertSame('heatmap', $rules->resolveAnchor('heatmap'));
+        $this->assertSame('activity', $rules->resolveAnchor('heatmap'));
+        $this->assertSame('format_mix', $rules->resolveAnchor('format_lift'));
+        $this->assertSame('insights', $rules->resolveAnchor('actions'));
         $this->assertSame('/winners', $rules->resolveAnchor('/winners'));
     }
 

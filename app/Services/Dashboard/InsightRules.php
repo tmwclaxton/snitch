@@ -24,6 +24,12 @@ class InsightRules
      */
     public const ANCHOR_ALIASES = [
         'kpis' => 'rail',
+        'efficiency' => 'leaderboard',
+        'format_lift' => 'format_mix',
+        'heatmap' => 'activity',
+        'actions' => 'insights',
+        'attention' => 'leaderboard',
+        'weekly' => 'activity',
     ];
 
     /**
@@ -40,17 +46,11 @@ class InsightRules
         'winners',
         'growth_series',
         'activity',
-        'efficiency',
         'format_mix',
-        'format_lift',
-        'heatmap',
         'captions',
         'caption_intel',
         'recent_posts',
         'themes',
-        'weekly',
-        'attention',
-        'actions',
         'data_notes',
     ];
 
