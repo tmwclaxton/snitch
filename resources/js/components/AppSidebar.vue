@@ -10,6 +10,7 @@ import {
     Settings,
     Shield,
     Store,
+    TrendingUp,
     Trophy,
     Users,
 } from '@lucide/vue';
@@ -19,6 +20,7 @@ import { index as brief } from '@/actions/App/Http/Controllers/BriefController';
 import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as explore } from '@/actions/App/Http/Controllers/ExploreController';
 import { index as feed } from '@/actions/App/Http/Controllers/FeedController';
+import { index as growth } from '@/actions/App/Http/Controllers/GrowthController';
 import { index as winners } from '@/actions/App/Http/Controllers/WinnerController';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -78,6 +80,11 @@ const mainNavItems: NavItem[] = [
         title: 'This week',
         href: brief(),
         icon: CalendarDays,
+    },
+    {
+        title: 'Growth',
+        href: growth(),
+        icon: TrendingUp,
     },
     {
         title: 'Explore',

@@ -15,10 +15,13 @@ use App\Http\Controllers\CompetitorController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExploreController;
 use App\Http\Controllers\FeedController;
+use App\Http\Controllers\GrowthController;
 use App\Http\Controllers\InfluencerController;
 use App\Http\Controllers\Marketing\ContactController;
 use App\Http\Controllers\Marketing\PricingController;
+use App\Http\Controllers\MonthlyReportController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\PublicReportController;
 use App\Http\Controllers\Settings\WinnerRuleController;
 use App\Http\Controllers\WatchingYouController;
 use App\Http\Controllers\WinnerController;
@@ -63,6 +66,10 @@ Route::get('/analytics.json', [AnalyticsController::class, 'json'])->name('analy
 
 Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
 Route::get('/blog/{blog:slug}', [BlogController::class, 'show'])->name('blog.show');
+
+Route::get('/r/{token}', [PublicReportController::class, 'show'])
+    ->where('token', '[A-Za-z0-9]{32,64}')
+    ->name('reports.public');
 
 Route::get('/contact', [ContactController::class, 'create'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])
@@ -184,6 +191,15 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
             ->name('brief.generate');
         Route::post('/brief/ideas/{idea}/used', [BriefController::class, 'markUsed'])
             ->name('brief.ideas.used');
+
+        Route::get('/growth', [GrowthController::class, 'index'])->name('growth.index');
+        Route::get('/growth/report', [MonthlyReportController::class, 'show'])->name('growth.report');
+        Route::post('/growth/report/{report}/share', [MonthlyReportController::class, 'share'])
+            ->name('growth.report.share');
+        Route::post('/growth/report/{report}/revoke', [MonthlyReportController::class, 'revoke'])
+            ->name('growth.report.revoke');
+        Route::get('/growth/report/{report}/pdf', [MonthlyReportController::class, 'pdf'])
+            ->name('growth.report.pdf');
 
         Route::get('/winners', [WinnerController::class, 'index'])->name('winners.index');
         Route::post('/winners/rescore', [WinnerController::class, 'rescore'])->name('winners.rescore');

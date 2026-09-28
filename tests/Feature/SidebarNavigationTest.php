@@ -20,7 +20,7 @@ class SidebarNavigationTest extends TestCase
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
 
         $this->assertNotFalse($sidebar);
-        foreach (['Dashboard', 'Brand', 'Competitors', 'Feed', 'Winners', 'This week', 'Explore'] as $title) {
+        foreach (['Dashboard', 'Brand', 'Competitors', 'Feed', 'Winners', 'This week', 'Growth', 'Explore'] as $title) {
             $this->assertStringContainsString("title: '{$title}'", $sidebar);
         }
 
@@ -64,6 +64,7 @@ class SidebarNavigationTest extends TestCase
             'feed.index',
             'winners.index',
             'brief.index',
+            'growth.index',
             'explore.index',
         ];
 
