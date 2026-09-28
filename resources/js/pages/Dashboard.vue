@@ -17,6 +17,7 @@ import StatCard from '@/components/dashboard/StatCard.vue';
 import ThemeMatrix from '@/components/dashboard/ThemeMatrix.vue';
 import WinnerCard from '@/components/dashboard/WinnerCard.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
+import SnitchImage from '@/components/SnitchImage.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
@@ -662,14 +663,14 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                             class="group overflow-hidden rounded border border-slate-200 bg-white"
                         >
                             <div class="h-[100px] bg-slate-100">
-                                <img
-                                    v-if="post.cover_url || post.media_url"
-                                    :src="(post.cover_url || post.media_url)!"
+                                <SnitchImage
+                                    :src="post.cover_url"
                                     alt=""
-                                    class="size-full object-cover"
-                                    loading="lazy"
-                                    decoding="async"
-                                >
+                                    class="size-full"
+                                    img-class="size-full object-cover"
+                                    aspect-ratio="1 / 1"
+                                    fallback="paper"
+                                />
                             </div>
                             <p class="break-all px-1 py-0.5 text-[10px] leading-snug text-slate-600">
                                 @{{ post.tracked_account?.handle || 'post' }}

@@ -6,6 +6,8 @@ use App\Enums\Platform;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Services\Apify\Contracts\PlatformAdapter;
+use App\Services\Apify\PlatformAdapterManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
@@ -86,5 +88,61 @@ class MirrorImagesCommandTest extends TestCase
         $avatar = $account->socialAccount?->fresh()?->avatar;
         $this->assertIsString($avatar);
         $this->assertStringStartsWith('/storage/avatars/', $avatar);
+    }
+
+    public function test_fetch_refreshes_dead_avatar_via_platform_adapter(): void
+    {
+        Storage::fake('public');
+        Http::fake([
+            'https://cdn.example.com/expired.jpg' => Http::response('gone', 403),
+            'https://cdn.example.com/fresh-avatar.jpg' => Http::response(self::JPEG, 200, ['Content-Type' => 'image/jpeg']),
+        ]);
+
+        $account = TrackedAccount::factory()->for(User::factory())->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'rivalbakery',
+            'avatar' => 'https://cdn.example.com/expired.jpg',
+            'avatar_source_url' => 'https://cdn.example.com/expired.jpg',
+        ]);
+        $account->socialAccount?->forceFill([
+            'avatar' => 'https://cdn.example.com/expired.jpg',
+            'avatar_source_url' => 'https://cdn.example.com/expired.jpg',
+            'handle' => 'rivalbakery',
+            'platform' => Platform::Instagram,
+        ])->save();
+
+        $adapter = \Mockery::mock(PlatformAdapter::class);
+        $adapter->shouldReceive('resolveProfile')
+            ->once()
+            ->with('rivalbakery')
+            ->andReturn([
+                'external_id' => 'ig_1',
+                'handle' => 'rivalbakery',
+                'url' => 'https://instagram.com/rivalbakery',
+                'display_name' => 'Rival Bakery',
+                'avatar' => 'https://cdn.example.com/fresh-avatar.jpg',
+                'followers' => 1000,
+            ]);
+
+        $manager = \Mockery::mock(PlatformAdapterManager::class);
+        $manager->shouldReceive('for')
+            ->once()
+            ->with(\Mockery::on(fn ($platform): bool => $platform === Platform::Instagram
+                || (is_string($platform) && $platform === Platform::Instagram->value)
+                || ($platform instanceof Platform && $platform === Platform::Instagram)))
+            ->andReturn($adapter);
+        $this->app->instance(PlatformAdapterManager::class, $manager);
+
+        $exit = Artisan::call('snitch:mirror-images', [
+            '--avatars' => true,
+            '--fetch' => true,
+            '--tracked' => [$account->id],
+        ]);
+
+        $this->assertSame(0, $exit);
+        $avatar = $account->socialAccount?->fresh()?->avatar;
+        $this->assertIsString($avatar);
+        $this->assertStringStartsWith('/storage/avatars/', $avatar);
+        $this->assertSame('https://cdn.example.com/fresh-avatar.jpg', $account->socialAccount?->fresh()?->avatar_source_url);
     }
 }

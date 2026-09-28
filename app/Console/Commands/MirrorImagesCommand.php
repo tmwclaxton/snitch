@@ -372,7 +372,7 @@ class MirrorImagesCommand extends Command
         }
 
         try {
-            $profile = $adapters->driverFor($platform)->resolveProfile($handle);
+            $profile = $adapters->for($platform)->resolveProfile($handle);
         } catch (Throwable $e) {
             $this->line('profile refresh failed: '.$e->getMessage());
 
