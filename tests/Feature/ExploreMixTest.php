@@ -210,16 +210,9 @@ class ExploreMixTest extends TestCase
     }
 
     #[Test]
-    public function explore_different_seeds_change_order_among_strong_peers(): void
+    public function explore_best_sort_is_stable_across_seeds(): void
     {
         $this->seed(AnalysisTermSeeder::class);
-
-        config([
-            'snitch.explore.mix_enabled' => true,
-            'snitch.explore.min_quality_ratio' => 0.2,
-            'snitch.explore.jitter' => 0.95,
-            'snitch.explore.weight_exponent' => 1.1,
-        ]);
 
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -231,25 +224,18 @@ class ExploreMixTest extends TestCase
         }
 
         $orderA = $this->orderForSeed($user, 11);
-        $foundDifferent = false;
+        $orderB = $this->orderForSeed($user, 99);
 
-        foreach ([22, 33, 44, 55, 66, 77, 88, 99, 111, 222] as $seed) {
-            $orderB = $this->orderForSeed($user, $seed);
-            $this->assertEqualsCanonicalizing($orderA, $orderB);
-
-            if ($orderA !== $orderB) {
-                $foundDifferent = true;
-                break;
-            }
-        }
-
-        $this->assertTrue($foundDifferent, 'Expected at least one seed to rotate strong peer order.');
+        $this->assertSame($orderA, $orderB);
+        $this->assertNotEmpty($orderA);
     }
 
     #[Test]
-    public function explore_bare_visit_mints_a_new_seed_each_request(): void
+    public function explore_bare_visit_reuses_stable_bucket_seed(): void
     {
         $this->seed(AnalysisTermSeeder::class);
+
+        config(['snitch.explore.seed_bucket_hours' => 6]);
 
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -257,21 +243,13 @@ class ExploreMixTest extends TestCase
         $post = $this->completedPost($account, now()->subDay());
         WinnerInsight::factory()->forPost($post)->create(['score' => 77]);
 
+        $expected = app(ExploreMixService::class)->seedFor((int) $user->id);
+
         $first = $this->actingAs($user)->get(route('explore.index'))->assertOk();
         $second = $this->actingAs($user)->get(route('explore.index'))->assertOk();
 
-        $seedA = (int) $first->inertiaProps('filters.explore_seed');
-        $seedB = (int) $second->inertiaProps('filters.explore_seed');
-
-        $this->assertGreaterThan(0, $seedA);
-        $this->assertGreaterThan(0, $seedB);
-        $this->assertNotSame($seedA, $seedB);
-
-        $bucket = app(ExploreMixService::class)->seedFor((int) $user->id);
-        $this->assertTrue(
-            $seedA !== $bucket || $seedB !== $bucket,
-            'Bare visits should not rely only on the 6h bucket seed.',
-        );
+        $this->assertSame($expected, (int) $first->inertiaProps('filters.explore_seed'));
+        $this->assertSame($expected, (int) $second->inertiaProps('filters.explore_seed'));
     }
 
     #[Test]

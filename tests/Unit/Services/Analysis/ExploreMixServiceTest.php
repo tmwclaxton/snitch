@@ -128,18 +128,19 @@ class ExploreMixServiceTest extends TestCase
     }
 
     #[Test]
-    public function resolve_seed_mints_fresh_seed_on_bare_visit(): void
+    public function resolve_seed_uses_bucket_on_bare_visit(): void
     {
+        config(['snitch.explore.seed_bucket_hours' => 6]);
+
         $mix = new ExploreMixService;
+        $t0 = 1_700_000_000;
+        $a = $mix->resolveSeed(null, userId: 9, hasQueryParams: false, now: $t0);
+        $b = $mix->resolveSeed(null, userId: 9, hasQueryParams: false, now: $t0 + 60);
+        $later = $mix->resolveSeed(null, userId: 9, hasQueryParams: false, now: $t0 + (6 * 3600) + 1);
 
-        $a = $mix->resolveSeed(null, userId: 9, hasQueryParams: false, entropy: 100);
-        $b = $mix->resolveSeed(null, userId: 9, hasQueryParams: false, entropy: 101);
-        $again = $mix->resolveSeed(null, userId: 9, hasQueryParams: false, entropy: 100);
-
-        $this->assertNotSame($a, $b);
-        $this->assertSame($a, $again);
-        $this->assertSame($a, $mix->freshSeed(9, 100));
-        $this->assertNotSame($a, $mix->seedFor(9, 1_700_000_000));
+        $this->assertSame($a, $b);
+        $this->assertSame($mix->seedFor(9, $t0), $a);
+        $this->assertNotSame($a, $later);
     }
 
     #[Test]

@@ -21,9 +21,10 @@ class WinnerRuleFactory extends Factory
         return [
             'user_id' => User::factory(),
             'preset' => 'balanced',
-            'min_engagement_rate' => 3,
-            'min_views' => 1000,
-            'min_likes' => 100,
+            'min_engagement_rate' => 0,
+            'min_views' => 0,
+            'min_likes' => 0,
+            'min_multiplier' => 2.0,
             'recency_days' => 30,
             'weights' => [
                 'views' => 0.4,

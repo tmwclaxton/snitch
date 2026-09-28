@@ -40,6 +40,7 @@ type UsageSummary = {
     all_time_spend_pence: number;
     vendors: Record<string, VendorUsage>;
     recent: ChargeRow[];
+    customer_recent?: ChargeRow[];
     recent_total: number;
     recent_has_more: boolean;
     credit_expiry: CreditExpiryBreakdownType;
@@ -77,10 +78,15 @@ const props = defineProps<{
     usage: UsageSummary;
     spendSeries?: SpendSeries | null;
     creditPacks: CreditPack[];
+    isAdmin?: boolean;
     platform: { fee_pence: number; bonus_pence: number; has_checkout: boolean };
 }>();
 
 const spendSeriesLoaded = computed(() => props.spendSeries != null);
+const isAdmin = computed(() => Boolean(props.isAdmin));
+const customerRecent = computed(
+    () => props.usage.customer_recent ?? props.usage.recent ?? [],
+);
 
 defineOptions({
     layout: AppLayout,
@@ -209,7 +215,10 @@ function vendorAccent(key: SpendVendorKey): string {
                     </div>
                 </section>
 
-                <section class="snitch-scrap relative space-y-4 p-5 pt-6 sm:p-6">
+                <section
+                    v-if="isAdmin"
+                    class="snitch-scrap relative space-y-4 p-5 pt-6 sm:p-6"
+                >
                     <span class="snitch-tape right-4 -top-2" aria-hidden="true" />
                     <h2 class="snitch-display text-2xl text-snitch-ink">Usage this period</h2>
                     <p class="text-sm text-snitch-ink/70">
@@ -242,6 +251,17 @@ function vendorAccent(key: SpendVendorKey): string {
                         </div>
                     </div>
                 </section>
+                <section
+                    v-else
+                    class="snitch-scrap relative space-y-4 p-5 pt-6 sm:p-6"
+                >
+                    <span class="snitch-tape right-4 -top-2" aria-hidden="true" />
+                    <h2 class="snitch-display text-2xl text-snitch-ink">Usage this period</h2>
+                    <p class="text-sm text-snitch-ink/70">
+                        Charged {{ formatMoney(usage.period_spend_pence) }} this month ·
+                        {{ formatMoney(usage.all_time_spend_pence) }} all time
+                    </p>
+                </section>
             </div>
 
             <CreditExpiryBreakdown
@@ -249,7 +269,10 @@ function vendorAccent(key: SpendVendorKey): string {
                 :breakdown="usage.credit_expiry"
             />
 
-            <section class="snitch-scrap relative mt-4 p-5 pt-6 sm:p-6">
+            <section
+                v-if="isAdmin"
+                class="snitch-scrap relative mt-4 p-5 pt-6 sm:p-6"
+            >
                 <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
                 <div
                     class="snitch-seg mb-4 flex flex-wrap gap-1"
@@ -334,38 +357,64 @@ function vendorAccent(key: SpendVendorKey): string {
                         </Link>
                     </div>
                     <ul
-                        v-if="usage.recent.length"
+                        v-if="isAdmin ? usage.recent.length : customerRecent.length"
                         class="divide-y divide-snitch-ink/10 text-sm"
                     >
-                        <li
-                            v-for="row in usage.recent"
-                            :key="row.id"
-                            class="flex items-start justify-between gap-3 py-2"
-                        >
-                            <span class="min-w-0">
-                                <span class="snitch-ink-label mr-2 inline-flex items-center gap-1.5">
-                                    <img
-                                        :src="vendorIconSrc(row.vendor)"
-                                        alt=""
-                                        class="snitch-platform-logo size-3.5 shrink-0 object-contain"
-                                        width="14"
-                                        height="14"
+                        <template v-if="isAdmin">
+                            <li
+                                v-for="row in usage.recent"
+                                :key="row.id"
+                                class="flex items-start justify-between gap-3 py-2"
+                            >
+                                <span class="min-w-0">
+                                    <span class="snitch-ink-label mr-2 inline-flex items-center gap-1.5">
+                                        <img
+                                            :src="vendorIconSrc(row.vendor ?? '')"
+                                            alt=""
+                                            class="snitch-platform-logo size-3.5 shrink-0 object-contain"
+                                            width="14"
+                                            height="14"
+                                        >
+                                        {{ vendorLabel(row.vendor ?? '') }}
+                                    </span>
+                                    <span class="text-snitch-ink/90">{{ row.description }}</span>
+                                    <Link
+                                        v-if="rowLinkHref(row)"
+                                        :href="rowLinkHref(row)"
+                                        class="mt-0.5 block text-xs text-snitch-ink/55 underline decoration-snitch-spot/80 underline-offset-2 hover:text-snitch-ink"
                                     >
-                                    {{ vendorLabel(row.vendor) }}
+                                        {{ row.link?.label }}
+                                    </Link>
                                 </span>
-                                <span class="text-snitch-ink/90">{{ row.description }}</span>
-                                <Link
-                                    v-if="rowLinkHref(row)"
-                                    :href="rowLinkHref(row)"
-                                    class="mt-0.5 block text-xs text-snitch-ink/55 underline decoration-snitch-spot/80 underline-offset-2 hover:text-snitch-ink"
-                                >
-                                    {{ row.link?.label }}
-                                </Link>
-                            </span>
-                            <span class="shrink-0 tabular-nums text-snitch-ink">
-                                {{ formatMoney(row.amount_pence) }}
-                            </span>
-                        </li>
+                                <span class="shrink-0 tabular-nums text-snitch-ink">
+                                    {{ formatMoney(row.amount_pence ?? 0) }}
+                                </span>
+                            </li>
+                        </template>
+                        <template v-else>
+                            <li
+                                v-for="row in customerRecent"
+                                :key="row.key ?? row.id"
+                                class="flex items-start justify-between gap-3 py-2"
+                            >
+                                <span class="min-w-0">
+                                    <span class="text-snitch-ink/90">{{ row.description }}</span>
+                                    <span
+                                        v-if="row.date"
+                                        class="mt-0.5 block text-xs text-snitch-ink/45"
+                                    >
+                                        {{ row.date }}
+                                    </span>
+                                    <Link
+                                        v-if="rowLinkHref(row)"
+                                        :href="rowLinkHref(row)"
+                                        class="mt-0.5 block text-xs text-snitch-ink/55 underline decoration-snitch-spot/80 underline-offset-2 hover:text-snitch-ink"
+                                    >
+                                        {{ row.link?.label }}
+                                    </Link>
+                                </span>
+                            </li>
+                        </template>
                     </ul>
                     <p v-else class="text-sm text-snitch-ink/60">No usage yet.</p>
                     <p

@@ -29,20 +29,24 @@ class WinnerController extends Controller
     {
         $user = $request->user();
         $presets = config('snitch.winners.presets');
+        $accountId = $request->integer('account') ?: null;
 
         if ($this->productAccessBlocked($user)) {
             $balanced = is_array($presets['balanced'] ?? null) ? $presets['balanced'] : [];
 
             return Inertia::render('winners/Index', [
                 'winners' => [],
+                'accounts' => [],
+                'filters' => ['account' => null],
                 'rule' => [
                     'preset' => 'balanced',
+                    'min_multiplier' => (float) ($balanced['min_multiplier'] ?? 2),
                     'min_engagement_rate' => (int) ($balanced['min_engagement_rate'] ?? 0),
                     'min_views' => (int) ($balanced['min_views'] ?? 0),
                     'min_likes' => (int) ($balanced['min_likes'] ?? 0),
                     'recency_days' => (int) ($balanced['recency_days'] ?? 30),
                     'weights' => is_array($balanced['weights'] ?? null) ? $balanced['weights'] : [],
-                    'advanced' => ['require_hook' => true, 'require_sfx' => false, 'min_score' => 40],
+                    'advanced' => ['require_hook' => true, 'require_sfx' => false, 'min_score' => 0],
                 ],
                 'presets' => $presets,
                 'rescoreRun' => null,
@@ -50,7 +54,9 @@ class WinnerController extends Controller
         }
 
         return Inertia::render('winners/Index', [
-            'winners' => Inertia::defer(fn () => $this->winnersFor($user)),
+            'winners' => Inertia::defer(fn () => $this->winnersFor($user, $accountId)),
+            'accounts' => $this->accountOptions($user),
+            'filters' => ['account' => $accountId],
             'rule' => $scorer->ruleFor($user),
             'presets' => $presets,
             'rescoreRun' => ScoreWinnersJob::activeRunFor($user->id),
@@ -58,20 +64,49 @@ class WinnerController extends Controller
     }
 
     /**
-     * @return Collection<int, WinnerInsight>
+     * @return list<array{id: int, handle: string, is_own_account: bool}>
      */
-    private function winnersFor(User $user): Collection
+    private function accountOptions(User $user): array
     {
         $inQuotaIds = $this->entitlements->inQuotaTrackedAccountIds($user);
-        $socialIds = $inQuotaIds === []
-            ? []
-            : TrackedAccount::query()
-                ->whereIn('id', $inQuotaIds)
-                ->pluck('social_account_id')
-                ->filter()
-                ->map(fn (mixed $id): int => (int) $id)
-                ->values()
-                ->all();
+
+        if ($inQuotaIds === []) {
+            return [];
+        }
+
+        return TrackedAccount::query()
+            ->whereIn('id', $inQuotaIds)
+            ->orderByDesc('is_own_account')
+            ->orderBy('handle')
+            ->get(['id', 'handle', 'is_own_account'])
+            ->map(fn (TrackedAccount $account): array => [
+                'id' => (int) $account->id,
+                'handle' => (string) $account->handle,
+                'is_own_account' => (bool) $account->is_own_account,
+            ])
+            ->all();
+    }
+
+    /**
+     * @return Collection<int, WinnerInsight>
+     */
+    private function winnersFor(User $user, ?int $accountId = null): Collection
+    {
+        $inQuotaIds = $this->entitlements->inQuotaTrackedAccountIds($user);
+        $tracked = $inQuotaIds === []
+            ? collect()
+            : TrackedAccount::query()->whereIn('id', $inQuotaIds)->get();
+
+        if ($accountId !== null) {
+            $tracked = $tracked->where('id', $accountId)->values();
+        }
+
+        $socialIds = $tracked
+            ->pluck('social_account_id')
+            ->filter()
+            ->map(fn (mixed $id): int => (int) $id)
+            ->values()
+            ->all();
 
         $winners = WinnerInsight::query()
             ->where('user_id', $user->id)
@@ -85,6 +120,7 @@ class WinnerController extends Controller
                 $query->whereIn('social_account_id', $socialIds);
             })
             ->with(['post.socialAccount', 'post.analysis'])
+            ->orderByDesc('performance_multiplier')
             ->orderByDesc('score')
             ->get();
 

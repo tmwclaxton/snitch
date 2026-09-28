@@ -39,6 +39,7 @@ type RescoreStatusResponse = {
 type Winner = {
     id: number;
     score: number;
+    performance_multiplier?: number | null;
     why: string;
     how_to_copy: string;
     how_to_copy_html?: string | null;
@@ -50,7 +51,7 @@ type Winner = {
         platform: string;
         metrics?: PostMetrics | null;
         embed?: EmbedConfig | null;
-        tracked_account?: { id?: number; handle: string };
+        tracked_account?: { id?: number; handle: string; is_own_account?: boolean };
         analysis?: {
             hook: string | null;
             concept?: string | null;
@@ -59,8 +60,16 @@ type Winner = {
     };
 };
 
+type AccountOption = {
+    id: number;
+    handle: string;
+    is_own_account: boolean;
+};
+
 const props = defineProps<{
     winners?: Winner[] | null;
+    accounts?: AccountOption[];
+    filters?: { account: number | null };
     rule: WinnerRuleFormData;
     presets: Record<string, WinnerRulePreset>;
     rescoreRun?: RescoreRun | null;
@@ -68,6 +77,25 @@ const props = defineProps<{
 
 const winnersList = computed<Winner[]>(() => props.winners ?? []);
 const winnersLoaded = computed(() => Array.isArray(props.winners));
+const accountOptions = computed(() => props.accounts ?? []);
+
+function multiplierLabel(winner: Winner): string {
+    const value = winner.performance_multiplier ?? (winner.score > 0 ? winner.score / 10 : null);
+
+    if (value == null || !Number.isFinite(value)) {
+        return 'Winner';
+    }
+
+    return `${value.toFixed(1)}× usual`;
+}
+
+function onAccountFilter(value: string): void {
+    router.get(
+        '/winners',
+        { account: value === 'all' ? undefined : Number(value) },
+        { preserveState: true, preserveScroll: true },
+    );
+}
 
 defineOptions({
     layout: AppLayout,
@@ -223,11 +251,30 @@ onUnmounted(() => {
                         Winners
                     </h1>
                     <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
-                        Preset {{ rule.preset }} · min {{ rule.min_views }} views /
-                        {{ rule.min_likes }} likes
+                        At least {{ Number(rule.min_multiplier ?? 2).toFixed(1) }}× each account's usual
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
+                    <label
+                        v-if="accountOptions.length"
+                        class="inline-flex items-center gap-2 text-sm text-snitch-ink/70"
+                    >
+                        <span class="sr-only">Filter by account</span>
+                        <select
+                            class="snitch-field py-1.5 text-sm"
+                            :value="filters?.account ?? 'all'"
+                            @change="onAccountFilter(($event.target as HTMLSelectElement).value)"
+                        >
+                            <option value="all">All accounts</option>
+                            <option
+                                v-for="account in accountOptions"
+                                :key="account.id"
+                                :value="account.id"
+                            >
+                                {{ account.is_own_account ? 'You' : `@${account.handle}` }}
+                            </option>
+                        </select>
+                    </label>
                     <button
                         type="button"
                         class="snitch-btn snitch-btn-ghost"
@@ -334,16 +381,21 @@ onUnmounted(() => {
                                     :href="competitorShow.url(winner.post.tracked_account.id)"
                                     class="snitch-glance-account-link"
                                 >
-                                    @{{ winner.post.tracked_account.handle }}
+                                    <template v-if="winner.post.tracked_account.is_own_account">You</template>
+                                    <template v-else>@{{ winner.post.tracked_account.handle }}</template>
                                 </Link>
                                 <span v-else-if="winner.post.tracked_account">
-                                    @{{ winner.post.tracked_account.handle }}
+                                    <template v-if="winner.post.tracked_account.is_own_account">You</template>
+                                    <template v-else>@{{ winner.post.tracked_account.handle }}</template>
                                 </span>
                                 <span> · {{ platformLabel(winner.post.platform) }}</span>
                             </p>
                             <div class="snitch-topic-row">
+                                <span class="snitch-topic-chip font-semibold">
+                                    {{ multiplierLabel(winner) }}
+                                </span>
                                 <span
-                                    v-for="pill in winnerStatPills(winner.score, winner.post.metrics)"
+                                    v-for="pill in winnerStatPills(winner.score, winner.post.metrics).filter((p) => p.key !== 'score')"
                                     :key="pill.key"
                                     class="snitch-topic-chip"
                                 >{{ pill.label }}</span>

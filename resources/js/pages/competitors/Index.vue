@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { Trash2, User } from '@lucide/vue';
+import { MoreHorizontal, User } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import {
     destroy,
@@ -10,6 +10,13 @@ import {
     unmarkOwn,
 } from '@/actions/App/Http/Controllers/CompetitorController';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatAppDate } from '@/lib/dates';
 import { formatFollowers } from '@/lib/metrics';
@@ -29,7 +36,7 @@ type Account = {
     is_own_account?: boolean;
 };
 
-defineProps<{
+const props = defineProps<{
     accounts?: Account[];
     platforms?: string[];
     suggestPlatforms?: string[];
@@ -43,6 +50,9 @@ defineProps<{
 
 const handle = ref('');
 const handleReady = computed(() => handle.value.trim().length > 0);
+const hasOwnAccount = computed(
+    () => (props.accounts ?? []).some((account) => account.is_own_account),
+);
 
 function confirmRemove(event: Event, name: string): void {
     if (!window.confirm(`Remove @${name}?`)) {
@@ -90,7 +100,12 @@ function refreshLabel(value: string | null): string {
                     Track account
                 </button>
             </Form>
-            <Form v-bind="store.form()" class="sm:shrink-0" @success="handle = ''">
+            <Form
+                v-if="!hasOwnAccount"
+                v-bind="store.form()"
+                class="sm:shrink-0"
+                @success="handle = ''"
+            >
                 <input type="hidden" name="platform" value="instagram" />
                 <input type="hidden" name="handle" :value="handle" />
                 <input type="hidden" name="is_own_account" value="1" />
@@ -105,7 +120,12 @@ function refreshLabel(value: string | null): string {
                 </button>
             </Form>
             <p class="w-full text-xs text-neutral-500 sm:basis-full">
-                Tip: type a handle, then use Track account for a rival or Add your account for your own profile (needed for gap analysis).
+                <template v-if="!hasOwnAccount">
+                    Tip: type a handle, then use Track account for a rival or Add your account for your own profile (needed for gap analysis).
+                </template>
+                <template v-else>
+                    Tip: type a handle, then use Track account for a rival. Your own account is marked with a You badge.
+                </template>
             </p>
         </div>
 
@@ -144,9 +164,9 @@ function refreshLabel(value: string | null): string {
                                             @{{ account.handle }}
                                             <span
                                                 v-if="account.is_own_account"
-                                                class="border border-neutral-200 bg-neutral-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-neutral-500"
+                                                class="rounded-sm bg-snitch-spot/90 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-snitch-ink"
                                             >
-                                                you
+                                                You
                                             </span>
                                         </div>
                                         <div v-if="account.display_name" class="text-xs text-neutral-500">
@@ -165,29 +185,44 @@ function refreshLabel(value: string | null): string {
                                 {{ refreshLabel(account.last_synced_at) }}
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <div class="inline-flex gap-1">
-                                    <Form
-                                        v-if="account.is_own_account"
-                                        v-bind="unmarkOwn.form(account.id)"
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger
+                                        class="inline-flex size-8 items-center justify-center border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                                        :aria-label="`Actions for @${account.handle}`"
                                     >
-                                        <button type="submit" class="border border-neutral-200 px-2 py-1 text-xs hover:bg-neutral-50">
-                                            Not my account
-                                        </button>
-                                    </Form>
-                                    <Form v-else v-bind="markOwn.form(account.id)">
-                                        <button type="submit" class="border border-neutral-200 px-2 py-1 text-xs hover:bg-neutral-50">
-                                            This is my account
-                                        </button>
-                                    </Form>
-                                    <Form
-                                        v-bind="destroy.form(account.id)"
-                                        @submit="confirmRemove($event, account.handle)"
-                                    >
-                                        <button type="submit" :aria-label="`Remove @${account.handle}`" class="border border-neutral-200 px-2 py-1 text-xs hover:bg-neutral-50">
-                                            <Trash2 class="h-3 w-3" />
-                                        </button>
-                                    </Form>
-                                </div>
+                                        <MoreHorizontal class="size-4" />
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" class="w-48">
+                                        <Form
+                                            v-if="account.is_own_account"
+                                            v-bind="unmarkOwn.form(account.id)"
+                                        >
+                                            <DropdownMenuItem as-child>
+                                                <button type="submit" class="w-full cursor-pointer">
+                                                    Unmark as my account
+                                                </button>
+                                            </DropdownMenuItem>
+                                        </Form>
+                                        <Form v-else v-bind="markOwn.form(account.id)">
+                                            <DropdownMenuItem as-child>
+                                                <button type="submit" class="w-full cursor-pointer">
+                                                    Mark as my account
+                                                </button>
+                                            </DropdownMenuItem>
+                                        </Form>
+                                        <DropdownMenuSeparator />
+                                        <Form
+                                            v-bind="destroy.form(account.id)"
+                                            @submit="confirmRemove($event, account.handle)"
+                                        >
+                                            <DropdownMenuItem as-child variant="destructive">
+                                                <button type="submit" class="w-full cursor-pointer">
+                                                    Remove
+                                                </button>
+                                            </DropdownMenuItem>
+                                        </Form>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </td>
                         </tr>
                     </tbody>
@@ -200,45 +235,70 @@ function refreshLabel(value: string | null): string {
                     :key="`m-${account.id}`"
                     class="border border-neutral-200 bg-white p-4"
                 >
-                    <Link :href="competitorShow.url(account.id)" class="flex items-center gap-3">
-                        <SnitchAvatar
-                            :src="account.avatar"
-                            :name="account.display_name"
-                            :handle="account.handle"
-                            size="sm"
-                            :alt="account.display_name || account.handle"
-                        />
-                        <div class="min-w-0">
-                            <div class="truncate font-medium">@{{ account.handle }}</div>
-                            <div class="text-xs text-neutral-500">
-                                {{ formatFollowers(account.followers) }} followers ·
-                                {{ account.posts_count ?? 0 }} posts ·
-                                {{ refreshLabel(account.last_synced_at) }}
+                    <div class="flex items-start justify-between gap-2">
+                        <Link :href="competitorShow.url(account.id)" class="flex min-w-0 flex-1 items-center gap-3">
+                            <SnitchAvatar
+                                :src="account.avatar"
+                                :name="account.display_name"
+                                :handle="account.handle"
+                                size="sm"
+                                :alt="account.display_name || account.handle"
+                            />
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2 font-medium">
+                                    <span class="truncate">@{{ account.handle }}</span>
+                                    <span
+                                        v-if="account.is_own_account"
+                                        class="rounded-sm bg-snitch-spot/90 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-snitch-ink"
+                                    >
+                                        You
+                                    </span>
+                                </div>
+                                <div class="text-xs text-neutral-500">
+                                    {{ formatFollowers(account.followers) }} followers ·
+                                    {{ account.posts_count ?? 0 }} posts ·
+                                    {{ refreshLabel(account.last_synced_at) }}
+                                </div>
                             </div>
-                        </div>
-                    </Link>
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        <Form
-                            v-if="account.is_own_account"
-                            v-bind="unmarkOwn.form(account.id)"
-                        >
-                            <button type="submit" class="border border-neutral-200 px-2 py-1 text-xs hover:bg-neutral-50">
-                                Not my account
-                            </button>
-                        </Form>
-                        <Form v-else v-bind="markOwn.form(account.id)">
-                            <button type="submit" class="border border-neutral-200 px-2 py-1 text-xs hover:bg-neutral-50">
-                                This is my account
-                            </button>
-                        </Form>
-                        <Form
-                            v-bind="destroy.form(account.id)"
-                            @submit="confirmRemove($event, account.handle)"
-                        >
-                            <button type="submit" class="border border-neutral-200 px-2 py-1 text-xs hover:bg-neutral-50">
-                                Remove
-                            </button>
-                        </Form>
+                        </Link>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger
+                                class="inline-flex size-8 shrink-0 items-center justify-center border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                                :aria-label="`Actions for @${account.handle}`"
+                            >
+                                <MoreHorizontal class="size-4" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" class="w-48">
+                                <Form
+                                    v-if="account.is_own_account"
+                                    v-bind="unmarkOwn.form(account.id)"
+                                >
+                                    <DropdownMenuItem as-child>
+                                        <button type="submit" class="w-full cursor-pointer">
+                                            Unmark as my account
+                                        </button>
+                                    </DropdownMenuItem>
+                                </Form>
+                                <Form v-else v-bind="markOwn.form(account.id)">
+                                    <DropdownMenuItem as-child>
+                                        <button type="submit" class="w-full cursor-pointer">
+                                            Mark as my account
+                                        </button>
+                                    </DropdownMenuItem>
+                                </Form>
+                                <DropdownMenuSeparator />
+                                <Form
+                                    v-bind="destroy.form(account.id)"
+                                    @submit="confirmRemove($event, account.handle)"
+                                >
+                                    <DropdownMenuItem as-child variant="destructive">
+                                        <button type="submit" class="w-full cursor-pointer">
+                                            Remove
+                                        </button>
+                                    </DropdownMenuItem>
+                                </Form>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </li>
             </ul>

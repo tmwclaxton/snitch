@@ -46,8 +46,7 @@ class ExploreMixService
     /**
      * Explore seed policy:
      * - explicit explore_seed always wins (pagination / filter session)
-     * - bare /explore (no query params): fresh seed every full visit
-     * - any other query (filters, page, …) without seed: stable 6h bucket
+     * - otherwise a stable bucket seed (default 6h) so reloads keep order
      */
     public function resolveSeed(
         mixed $raw,
@@ -60,10 +59,6 @@ class ExploreMixService
 
         if ($explicit !== null) {
             return $explicit;
-        }
-
-        if (! $hasQueryParams) {
-            return $this->freshSeed($userId, $entropy);
         }
 
         return $this->seedFor($userId, $now);

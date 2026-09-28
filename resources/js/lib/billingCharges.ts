@@ -12,14 +12,18 @@ export type ChargeLink = {
 };
 
 export type ChargeRow = {
-    id: number;
-    action: string;
+    id?: number;
+    key?: string;
+    action?: string;
     description: string;
     link: ChargeLink | null;
-    vendor: string;
-    amount_pence: number;
+    vendor?: string;
+    amount_pence?: number;
+    credits?: number;
+    count?: number;
     balance_after_pence?: number;
     created_at: string | null;
+    date?: string | null;
 };
 
 export function chargeLinkHref(link: ChargeLink | null | undefined): string | null {

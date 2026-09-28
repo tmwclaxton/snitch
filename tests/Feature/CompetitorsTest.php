@@ -295,7 +295,10 @@ class CompetitorsTest extends TestCase
         $this->assertStringContainsString('Add your account', $indexVue);
         $this->assertStringContainsString('is_own_account', $indexVue);
         $this->assertStringContainsString('Last refresh', $indexVue);
-        $this->assertStringContainsString('This is my account', $indexVue);
+        $this->assertStringContainsString('Mark as my account', $indexVue);
+        $this->assertStringContainsString('Unmark as my account', $indexVue);
+        $this->assertStringContainsString('hasOwnAccount', $indexVue);
+        $this->assertStringNotContainsString('This is my account', $indexVue);
         $this->assertStringContainsString('Track public Instagram accounts', $indexVue);
         $this->assertStringNotContainsString('Auto sync', $indexVue);
         $this->assertStringNotContainsString('nextSyncLabel', $indexVue);

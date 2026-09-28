@@ -255,22 +255,24 @@ return [
     'winners' => [
         'copy_model' => env('SNITCH_WINNER_COPY_MODEL', 'deepseek/deepseek-v4-flash'),
         'presets' => [
-            'conservative' => [
-                'min_engagement_rate' => 5,
-                'min_views' => 5000,
-                'min_likes' => 500,
-                'recency_days' => 14,
+            'gentle' => [
+                'min_multiplier' => 1.5,
+                'min_engagement_rate' => 0,
+                'min_views' => 0,
+                'min_likes' => 0,
+                'recency_days' => 60,
                 'weights' => [
-                    'views' => 0.35,
-                    'likes' => 0.35,
+                    'views' => 0.4,
+                    'likes' => 0.3,
                     'comments' => 0.2,
                     'shares' => 0.1,
                 ],
             ],
             'balanced' => [
-                'min_engagement_rate' => 3,
-                'min_views' => 1000,
-                'min_likes' => 100,
+                'min_multiplier' => 2.0,
+                'min_engagement_rate' => 0,
+                'min_views' => 0,
+                'min_likes' => 0,
                 'recency_days' => 30,
                 'weights' => [
                     'views' => 0.4,
@@ -279,14 +281,15 @@ return [
                     'shares' => 0.1,
                 ],
             ],
-            'aggressive' => [
-                'min_engagement_rate' => 1,
-                'min_views' => 200,
-                'min_likes' => 20,
-                'recency_days' => 60,
+            'strict' => [
+                'min_multiplier' => 3.0,
+                'min_engagement_rate' => 0,
+                'min_views' => 0,
+                'min_likes' => 0,
+                'recency_days' => 30,
                 'weights' => [
-                    'views' => 0.45,
-                    'likes' => 0.25,
+                    'views' => 0.4,
+                    'likes' => 0.3,
                     'comments' => 0.2,
                     'shares' => 0.1,
                 ],

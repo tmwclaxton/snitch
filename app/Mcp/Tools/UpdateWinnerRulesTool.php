@@ -13,7 +13,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('update_winner_rules')]
-#[Description('Update winner scoring rules for the authenticated user.')]
+#[Description('Update winner scoring rules for the authenticated user. Threshold is relative (min_multiplier × usual).')]
 class UpdateWinnerRulesTool extends Tool
 {
     public function handle(Request $request): Response
@@ -24,10 +24,8 @@ class UpdateWinnerRulesTool extends Tool
         }
 
         $data = $request->validate([
-            'preset' => ['nullable', 'string', 'in:conservative,balanced,aggressive'],
-            'min_engagement_rate' => ['nullable', 'numeric', 'min:0'],
-            'min_views' => ['nullable', 'integer', 'min:0'],
-            'min_likes' => ['nullable', 'integer', 'min:0'],
+            'preset' => ['nullable', 'string', 'in:gentle,balanced,strict'],
+            'min_multiplier' => ['nullable', 'numeric', 'min:1', 'max:20'],
             'recency_days' => ['nullable', 'integer', 'min:1', 'max:365'],
         ]);
 
@@ -38,9 +36,10 @@ class UpdateWinnerRulesTool extends Tool
             ['user_id' => $user->id],
             [
                 'preset' => $preset,
-                'min_engagement_rate' => $data['min_engagement_rate'] ?? ($defaults['min_engagement_rate'] ?? 3),
-                'min_views' => $data['min_views'] ?? ($defaults['min_views'] ?? 1000),
-                'min_likes' => $data['min_likes'] ?? ($defaults['min_likes'] ?? 100),
+                'min_multiplier' => $data['min_multiplier'] ?? ($defaults['min_multiplier'] ?? 2.0),
+                'min_engagement_rate' => $defaults['min_engagement_rate'] ?? 0,
+                'min_views' => $defaults['min_views'] ?? 0,
+                'min_likes' => $defaults['min_likes'] ?? 0,
                 'recency_days' => $data['recency_days'] ?? ($defaults['recency_days'] ?? 30),
                 'weights' => $defaults['weights'] ?? [
                     'views' => 0.4,
@@ -52,7 +51,7 @@ class UpdateWinnerRulesTool extends Tool
         );
 
         return Response::json(['rules' => $rule->only([
-            'preset', 'min_engagement_rate', 'min_views', 'min_likes', 'recency_days', 'weights',
+            'preset', 'min_multiplier', 'recency_days', 'weights',
         ])]);
     }
 
@@ -61,9 +60,7 @@ class UpdateWinnerRulesTool extends Tool
     {
         return [
             'preset' => $schema->string()->nullable(),
-            'min_engagement_rate' => $schema->number()->nullable(),
-            'min_views' => $schema->integer()->nullable(),
-            'min_likes' => $schema->integer()->nullable(),
+            'min_multiplier' => $schema->number()->nullable(),
             'recency_days' => $schema->integer()->nullable(),
         ];
     }

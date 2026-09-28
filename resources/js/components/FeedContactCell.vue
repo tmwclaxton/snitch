@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { AlertCircle, Ban, Hourglass } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { Component } from 'vue';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import AnalysisTermChip from '@/components/AnalysisTermChip.vue';
@@ -67,6 +67,49 @@ const platform = computed(
 const frameIndex = computed(() => String(props.index + 1).padStart(2, '0'));
 const metrics = computed(() => metricPairs(props.post.metrics));
 const analysisCompleted = computed(() => props.post.analysis?.status === 'completed');
+const captionExpanded = ref(false);
+
+const captionSource = computed(() => props.post.caption?.trim() || '');
+
+const displayCaption = computed(() => {
+    if (captionSource.value) {
+        return captionSource.value;
+    }
+
+    return postPrimaryTitle({
+        caption: null,
+        hook: completedHook.value,
+        concept: completedConcept.value,
+        type: props.post.type,
+        maxLength: 280,
+    });
+});
+
+const captionNeedsToggle = computed(() => {
+    const raw = captionSource.value;
+
+    if (!raw) {
+        return false;
+    }
+
+    return raw.length > 220 || raw.split(/\n/).length > 4;
+});
+
+const completedHook = computed(() => {
+    if (!analysisCompleted.value) {
+        return null;
+    }
+
+    return props.post.analysis?.hook?.trim() || null;
+});
+
+const completedConcept = computed(() => {
+    if (!analysisCompleted.value) {
+        return null;
+    }
+
+    return props.post.analysis?.concept?.trim() || null;
+});
 
 const tags = computed(() => {
     if (!analysisCompleted.value) {
@@ -105,34 +148,7 @@ const statusStamp = computed((): { label: string; icon: Component } | null => {
     return null;
 });
 
-const completedHook = computed(() => {
-    if (!analysisCompleted.value) {
-        return null;
-    }
-
-    return props.post.analysis?.hook?.trim() || null;
-});
-
-const completedConcept = computed(() => {
-    if (!analysisCompleted.value) {
-        return null;
-    }
-
-    return props.post.analysis?.concept?.trim() || null;
-});
-
-const primaryTitle = computed(() =>
-    postPrimaryTitle({
-        caption: props.post.caption,
-        hook: completedHook.value,
-        concept: completedConcept.value,
-        type: props.post.type,
-        maxLength: 72,
-    }),
-);
-
 const hookLine = computed(() => {
-    // Caption owns the primary line when present; otherwise hook/concept is the title.
     if (!props.post.caption?.trim() || !completedHook.value) {
         return null;
     }
@@ -149,6 +165,12 @@ const winnerScore = computed(() => {
 
     return score.toFixed(1);
 });
+
+function toggleCaption(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    captionExpanded.value = !captionExpanded.value;
+}
 </script>
 
 <template>
@@ -157,7 +179,7 @@ const winnerScore = computed(() => {
             :href="feedShow.url(post.id)"
             class="snitch-contact-cell-hit"
         >
-            <span class="sr-only">{{ primaryTitle }}</span>
+            <span class="sr-only">{{ displayCaption }}</span>
         </Link>
         <header class="snitch-contact-cell-header">
             <span class="snitch-contact-cell-index">{{ frameIndex }}</span>
@@ -195,9 +217,22 @@ const winnerScore = computed(() => {
             </div>
         </div>
         <div class="snitch-contact-cell-body">
-            <p class="snitch-glance-title line-clamp-2">
-                {{ primaryTitle }}
-            </p>
+            <div class="min-w-0">
+                <p
+                    class="snitch-glance-title whitespace-pre-wrap break-words"
+                    :class="captionExpanded ? '' : 'line-clamp-4'"
+                >
+                    {{ displayCaption }}
+                </p>
+                <button
+                    v-if="captionNeedsToggle"
+                    type="button"
+                    class="mt-0.5 text-[11px] font-medium text-snitch-ink/55 underline-offset-2 hover:text-snitch-ink hover:underline"
+                    @click="toggleCaption"
+                >
+                    {{ captionExpanded ? 'less' : 'more' }}
+                </button>
+            </div>
             <ul
                 v-if="metrics.length"
                 class="snitch-glance-metrics"
@@ -208,11 +243,13 @@ const winnerScore = computed(() => {
                     class="snitch-glance-metric"
                     :title="metric.value === 'hidden' ? 'Like count hidden on Instagram' : `${metric.value} ${metric.label}`"
                 >
-                    <span
-                        class="snitch-glance-metric-value"
-                        :class="metric.value === 'hidden' ? 'rounded bg-amber-50 px-1 font-medium text-amber-700' : 'tabular-nums'"
-                    >{{ metric.value }}</span>
-                    <span class="snitch-glance-metric-label">{{ metric.label }}</span>
+                    <template v-if="metric.value === 'hidden'">
+                        <span class="snitch-glance-metric-value text-snitch-ink/45">likes hidden</span>
+                    </template>
+                    <template v-else>
+                        <span class="snitch-glance-metric-value tabular-nums">{{ metric.value }}</span>
+                        <span class="snitch-glance-metric-label">{{ metric.label }}</span>
+                    </template>
                 </li>
             </ul>
             <p

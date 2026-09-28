@@ -22,6 +22,7 @@ class UsageBillingService
 
     public function __construct(
         private LedgerChargePresenter $presenter,
+        private CustomerChargePresenter $customerCharges,
     ) {}
 
     public function balancePence(User $user): float
@@ -785,6 +786,16 @@ class UsageBillingService
             ->map(fn (CreditLedgerEntry $entry): array => $this->mapLedgerEntry($entry))
             ->all();
 
+        $customerRecentSource = (clone $recentQuery)
+            ->orderByDesc('id')
+            ->limit(self::RECENT_PREVIEW_LIMIT * 5)
+            ->get();
+        $customerRecent = array_slice(
+            $this->customerCharges->groupEntries($customerRecentSource),
+            0,
+            self::RECENT_PREVIEW_LIMIT,
+        );
+
         return [
             'balance_pence' => $this->balancePence($user),
             'subscribed' => $this->hasPlatformSubscription($user),
@@ -797,10 +808,52 @@ class UsageBillingService
             'period_spend_pence' => $periodSpend,
             'all_time_spend_pence' => $allTimeSpend,
             'recent' => $recent,
+            'customer_recent' => $customerRecent,
             'recent_total' => $recentTotal,
             'recent_has_more' => $recentTotal > self::RECENT_PREVIEW_LIMIT,
             'credit_expiry' => $this->creditExpiryBreakdown($user),
         ];
+    }
+
+    /**
+     * Customer-facing charge lines (no vendors): group ledger rows by day + action.
+     *
+     * @param  array{vendor?: string|null, action?: string|null, days?: int|null}  $filters
+     * @return LengthAwarePaginator<int, array<string, mixed>>
+     */
+    public function paginatedCustomerCharges(User $user, array $filters = [], int $perPage = self::CHARGES_PER_PAGE): LengthAwarePaginator
+    {
+        $query = CreditLedgerEntry::query()
+            ->where('user_id', $user->id)
+            ->where('amount_pence', '!=', 0)
+            ->orderByDesc('id');
+
+        $action = $filters['action'] ?? null;
+        if (is_string($action) && $action !== '') {
+            $query->where('action', $action);
+        }
+
+        $days = $filters['days'] ?? null;
+        if (is_int($days) && $days > 0) {
+            $query->where('created_at', '>=', now()->subDays($days)->startOfDay());
+        }
+
+        $entries = $query->limit(2000)->get();
+        $lines = $this->customerCharges->groupEntries($entries);
+        $page = max(1, (int) request()->integer('page', 1));
+        $total = count($lines);
+        $slice = array_slice($lines, ($page - 1) * $perPage, $perPage);
+
+        return new \Illuminate\Pagination\LengthAwarePaginator(
+            $slice,
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ],
+        );
     }
 
     /**

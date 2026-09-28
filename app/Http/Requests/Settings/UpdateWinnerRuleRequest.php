@@ -19,7 +19,8 @@ class UpdateWinnerRuleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'preset' => ['required', Rule::in(['conservative', 'balanced', 'aggressive', 'custom'])],
+            'preset' => ['required', Rule::in(['gentle', 'balanced', 'strict', 'custom'])],
+            'min_multiplier' => ['nullable', 'numeric', 'min:1', 'max:20'],
             'min_engagement_rate' => ['nullable', 'integer', 'min:0', 'max:100'],
             'min_views' => ['nullable', 'integer', 'min:0'],
             'min_likes' => ['nullable', 'integer', 'min:0'],

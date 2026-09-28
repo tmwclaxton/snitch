@@ -67,6 +67,7 @@ const props = defineProps<{
         topics: string[];
         visual_crafts: string[];
         platform: string | null;
+        sort: string;
         explore_seed: number;
         per_page: number;
     };
@@ -76,6 +77,7 @@ const props = defineProps<{
         visual_craft: AnalysisTermOption[];
     } | null;
     platforms: string[];
+    trackedPlatforms?: string[];
 }>();
 
 defineOptions({
@@ -100,16 +102,32 @@ watch(
     },
 );
 
-const platformOptions = computed(() => [
-    { value: 'all', label: 'All platforms' },
-    ...props.platforms.map((platform) => ({
-        value: platform,
-        label: platformLabel(platform),
-        iconSrc: platformIconSrc(platform),
-    })),
-]);
+const platformOptions = computed(() => {
+    const tracked = new Set(props.trackedPlatforms ?? []);
+    const ordered = [
+        ...props.platforms.filter((platform) => tracked.has(platform)),
+        ...props.platforms.filter((platform) => !tracked.has(platform)),
+    ];
+
+    return [
+        { value: 'all', label: 'All platforms' },
+        ...ordered.map((platform) => ({
+            value: platform,
+            label: platformLabel(platform),
+            iconSrc: platformIconSrc(platform),
+        })),
+    ];
+});
 
 const selectedPlatform = computed(() => props.filters.platform ?? 'all');
+
+const sortOptions = [
+    { value: 'best', label: 'Best' },
+    { value: 'newest', label: 'Newest' },
+    { value: 'views', label: 'Most viewed' },
+];
+
+const selectedSort = computed(() => props.filters.sort ?? 'best');
 
 const termsLoaded = computed(() => props.terms != null);
 const postsLoaded = computed(() => props.posts != null);
@@ -257,7 +275,7 @@ const activeChips = computed(() => {
             key: 'platform',
             label: platformLabel(props.filters.platform),
             icon: analysisDimensionIcon('custom'),
-            clear: () => visitFilters(currentFilters({ platform: null })),
+            clear: () => visitFilters(currentFilters({ platform: 'all' })),
         });
     }
 
@@ -271,6 +289,7 @@ function visitFilters(next: {
     topics: string[];
     visual_crafts: string[];
     platform: string | null;
+    sort: string;
     explore_seed: number;
     per_page: number;
 }, page = 1): void {
@@ -291,12 +310,14 @@ function exploreQuery(next: {
     topics: string[];
     visual_crafts: string[];
     platform: string | null;
+    sort: string;
     explore_seed: number;
     per_page: number;
 }, page = 1): Record<string, string | number | string[] | null | undefined> {
     const query: Record<string, string | number | string[]> = {
         explore_seed: next.explore_seed,
         per_page: next.per_page,
+        sort: next.sort || 'best',
     };
 
     if (next.q) {
@@ -321,6 +342,8 @@ function exploreQuery(next: {
 
     if (next.platform) {
         query.platform = next.platform;
+    } else {
+        query.platform = 'all';
     }
 
     if (page > 1) {
@@ -337,6 +360,7 @@ function currentFilters(overrides: Partial<{
     topics: string[];
     visual_crafts: string[];
     platform: string | null;
+    sort: string;
     explore_seed: number;
     per_page: number;
 }> = {}) {
@@ -347,6 +371,7 @@ function currentFilters(overrides: Partial<{
         topics: props.filters.topics,
         visual_crafts: props.filters.visual_crafts,
         platform: props.filters.platform,
+        sort: props.filters.sort ?? 'best',
         explore_seed: props.filters.explore_seed,
         per_page: props.filters.per_page,
         ...overrides,
@@ -359,7 +384,11 @@ function onSearchSubmit(): void {
 }
 
 function onPlatformChange(value: string): void {
-    visitFilters(currentFilters({ platform: value === 'all' ? null : value }));
+    visitFilters(currentFilters({ platform: value === 'all' ? 'all' : value }));
+}
+
+function onSortChange(value: string): void {
+    visitFilters(currentFilters({ sort: value || 'best' }));
 }
 
 function onHookTypesChange(value: string[]): void {
@@ -382,7 +411,8 @@ function clearFilters(): void {
         hook_types: [],
         topics: [],
         visual_crafts: [],
-        platform: null,
+        platform: 'all',
+        sort: 'best',
         explore_seed: props.filters.explore_seed,
         per_page: props.filters.per_page,
     });
@@ -698,6 +728,16 @@ function paginationLabel(label: string): string {
                         :options="platformOptions"
                         aria-label="Filter by platform"
                         @update:model-value="onPlatformChange"
+                    />
+                </label>
+                <label class="snitch-filter-field">
+                    <span>Sort</span>
+                    <PaperSelect
+                        id="explore-filter-sort"
+                        :model-value="selectedSort"
+                        :options="sortOptions"
+                        aria-label="Sort explore results"
+                        @update:model-value="onSortChange"
                     />
                 </label>
             </form>

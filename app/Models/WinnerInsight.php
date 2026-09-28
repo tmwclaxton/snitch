@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'user_id',
     'post_id',
     'score',
+    'performance_multiplier',
     'why',
     'how_to_copy',
 ])]
@@ -27,6 +28,7 @@ class WinnerInsight extends Model
     {
         return [
             'score' => 'float',
+            'performance_multiplier' => 'float',
         ];
     }
 

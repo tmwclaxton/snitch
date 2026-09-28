@@ -22,9 +22,10 @@ class WinnerRuleController extends Controller
 
         $rule->fill([
             'preset' => $data['preset'],
+            'min_multiplier' => $data['min_multiplier'] ?? $rule->min_multiplier ?? 2.0,
             'min_engagement_rate' => $data['min_engagement_rate'] ?? $rule->min_engagement_rate,
-            'min_views' => $data['min_views'] ?? $rule->min_views,
-            'min_likes' => $data['min_likes'] ?? $rule->min_likes,
+            'min_views' => $data['min_views'] ?? $rule->min_views ?? 0,
+            'min_likes' => $data['min_likes'] ?? $rule->min_likes ?? 0,
             'recency_days' => $data['recency_days'] ?? $rule->recency_days,
             'weights' => $data['weights'] ?? $rule->weights,
             'advanced' => $data['advanced'] ?? $rule->advanced,

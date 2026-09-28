@@ -50,11 +50,16 @@ class BillingController extends Controller
             ->values()
             ->all();
 
+        $isAdmin = $user->isAdmin();
+
         return Inertia::render('billing/Index', [
             'subscription' => $this->entitlements->sharedSummary($user),
             'usage' => $this->usage->summary($user),
-            'spendSeries' => Inertia::defer(fn () => $this->usage->spendSeries($user, $grain), 'chart'),
+            'spendSeries' => $isAdmin
+                ? Inertia::defer(fn () => $this->usage->spendSeries($user, $grain), 'chart')
+                : null,
             'creditPacks' => $packs,
+            'isAdmin' => $isAdmin,
             'platform' => [
                 'fee_pence' => (int) config('billing.platform_fee_pence', 1900),
                 'bonus_pence' => (int) config('billing.subscription_bonus_pence', 3000),
@@ -67,18 +72,28 @@ class BillingController extends Controller
     {
         $user = $request->user();
         $filters = $request->filters();
+        $isAdmin = $user->isAdmin();
+
+        if (! $isAdmin) {
+            $filters['vendor'] = null;
+        }
 
         return Inertia::render('billing/Charges', [
-            'charges' => Inertia::defer(fn () => $this->usage->paginatedCharges($user, $filters)),
+            'charges' => Inertia::defer(fn () => $isAdmin
+                ? $this->usage->paginatedCharges($user, $filters)
+                : $this->usage->paginatedCustomerCharges($user, $filters)),
             'filters' => $filters,
-            'vendors' => collect(BillingVendor::cases())
-                ->map(fn (BillingVendor $vendor): string => $vendor->value)
-                ->values()
-                ->all(),
+            'vendors' => $isAdmin
+                ? collect(BillingVendor::cases())
+                    ->map(fn (BillingVendor $vendor): string => $vendor->value)
+                    ->values()
+                    ->all()
+                : [],
             'actions' => $this->usage->ledgerActionOptions(),
             'usage' => [
                 'balance_pence' => $this->usage->balancePence($user),
             ],
+            'isAdmin' => $isAdmin,
             'creditExpiry' => $this->usage->creditExpiryBreakdown($user),
             'creditExpiryNote' => $this->usage->creditExpiryFilterNote($filters['action'] ?? null),
             'topupExpiryMonths' => max(1, (int) config('billing.topup_expiry_months', 3)),

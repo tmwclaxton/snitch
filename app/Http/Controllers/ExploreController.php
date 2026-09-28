@@ -11,11 +11,13 @@ use App\Exceptions\PlatformSubscriptionRequiredException;
 use App\Http\Controllers\Concerns\OmitsProductDataWhenPaywalled;
 use App\Models\AnalysisTerm;
 use App\Models\Post;
+use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Analysis\AnalysisEmbeddingService;
 use App\Services\Analysis\AnalysisTermCatalogue;
 use App\Services\Analysis\ExploreMixService;
 use App\Services\Billing\ExploreBillingService;
+use App\Services\Dashboard\DashboardMath;
 use App\Services\Tracking\PostCoverHydrator;
 use App\Support\PlatformEmbed;
 use App\Support\PostAccountPresenter;
@@ -37,6 +39,7 @@ class ExploreController extends Controller
         private ExploreMixService $exploreMix,
         private ExploreBillingService $exploreBilling,
         private PostCoverHydrator $covers,
+        private DashboardMath $math,
     ) {}
 
     public function index(Request $request): Response|RedirectResponse
@@ -48,7 +51,9 @@ class ExploreController extends Controller
         $hookTypes = $this->slugList($request, 'hook_types', 'hook_type');
         $topics = $this->slugList($request, 'topics', 'topic');
         $visualCrafts = $this->slugList($request, 'visual_crafts', 'visual_craft');
-        $platform = $this->nullableString($request->query('platform'));
+        $trackedPlatforms = $this->trackedPlatforms($user);
+        $platform = $this->resolvePlatformFilter($request, $trackedPlatforms);
+        $sort = $this->resolveSort($request);
         $queryText = $this->nullableString($request->query('q'));
         $customTag = $this->nullableString($request->query('custom_tag'));
 
@@ -62,6 +67,7 @@ class ExploreController extends Controller
                     'topics' => $topics,
                     'visual_crafts' => $visualCrafts,
                     'platform' => $platform,
+                    'sort' => $sort,
                     'explore_seed' => null,
                     'per_page' => $this->explorePerPage($request),
                 ],
@@ -71,6 +77,7 @@ class ExploreController extends Controller
                     'visual_craft' => [],
                 ],
                 'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
+                'trackedPlatforms' => $trackedPlatforms,
             ]);
         }
 
@@ -98,8 +105,7 @@ class ExploreController extends Controller
             }
         }
 
-        // Bare /explore: new seed every reload. Any query (filters, page, seed):
-        // reuse explore_seed when present, otherwise the 6h bucket seed.
+        // Stable bucket seed (and explicit explore_seed for pagination).
         $mixSeed = $this->exploreMix->resolveSeed(
             $request->query('explore_seed'),
             (int) $user->id,
@@ -113,6 +119,7 @@ class ExploreController extends Controller
             'topics' => $topics,
             'visual_crafts' => $visualCrafts,
             'platform' => $platform,
+            'sort' => $sort,
             'explore_seed' => $mixSeed,
             'per_page' => $this->explorePerPage($request),
         ];
@@ -128,11 +135,65 @@ class ExploreController extends Controller
                 $queryText,
                 $customTag,
                 $mixSeed,
+                $sort,
             )),
             'filters' => $filters,
             'terms' => Inertia::defer(fn () => $this->termCatalogue(), 'terms'),
             'platforms' => collect(Platform::cases())->map(fn (Platform $p) => $p->value)->values(),
+            'trackedPlatforms' => $trackedPlatforms,
         ]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function trackedPlatforms(User $user): array
+    {
+        return TrackedAccount::query()
+            ->where('user_id', $user->id)
+            ->whereNotNull('platform')
+            ->pluck('platform')
+            ->map(function (mixed $platform): ?string {
+                if ($platform instanceof Platform) {
+                    return $platform->value;
+                }
+
+                return is_string($platform) ? strtolower($platform) : null;
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  list<string>  $trackedPlatforms
+     */
+    private function resolvePlatformFilter(Request $request, array $trackedPlatforms): ?string
+    {
+        if ($request->query->has('platform')) {
+            $raw = $this->nullableString($request->query('platform'));
+
+            if ($raw === null || $raw === 'all') {
+                return null;
+            }
+
+            return in_array($raw, array_column(Platform::cases(), 'value'), true) ? $raw : null;
+        }
+
+        // First visit (no platform key): default to the sole tracked platform.
+        if (count($trackedPlatforms) === 1) {
+            return $trackedPlatforms[0];
+        }
+
+        return null;
+    }
+
+    private function resolveSort(Request $request): string
+    {
+        $sort = $this->nullableString($request->query('sort')) ?? 'best';
+
+        return in_array($sort, ['best', 'newest', 'views'], true) ? $sort : 'best';
     }
 
     /**
@@ -151,6 +212,7 @@ class ExploreController extends Controller
         ?string $queryText,
         ?string $customTag,
         int $mixSeed,
+        string $sort = 'best',
     ): LengthAwarePaginator {
         $query = $this->corpusCompletedReelsQuery();
 
@@ -181,10 +243,11 @@ class ExploreController extends Controller
                 $customTag,
                 $queryText,
                 $mixSeed,
+                $sort,
             );
         }
 
-        $posts ??= $this->paginateQualityMix($request, $query, $mixSeed);
+        $posts ??= $this->paginateQualityMix($request, $query, $mixSeed, $sort);
 
         $posts->getCollection()->transform(function (Post $post): Post {
             // Archive from payload / cover_source_url only - do not hit Instagram
@@ -275,7 +338,7 @@ class ExploreController extends Controller
      * @param  Builder<Post>  $query
      * @return LengthAwarePaginator<int, Post>
      */
-    private function paginateQualityMix(Request $request, Builder $query, int $mixSeed): LengthAwarePaginator
+    private function paginateQualityMix(Request $request, Builder $query, int $mixSeed, string $sort = 'best'): LengthAwarePaginator
     {
         $maxCandidates = max(1, (int) config('snitch.explore.max_candidates', 500));
         $candidates = (clone $query)
@@ -283,16 +346,48 @@ class ExploreController extends Controller
             ->limit($maxCandidates)
             ->get();
 
-        $scored = [];
-        foreach ($candidates as $post) {
-            $scored[(int) $post->id] = $this->exploreMix->qualityScore($post);
+        if ($sort === 'newest') {
+            $rankedIds = $candidates
+                ->sortByDesc(fn (Post $post): int => $post->posted_at?->getTimestamp() ?? 0)
+                ->values()
+                ->map(fn (Post $post): int => (int) $post->id)
+                ->all();
+
+            return $rankedIds === []
+                ? $query->paginate($this->explorePerPage($request))->appends(array_merge($request->query(), ['explore_seed' => $mixSeed, 'sort' => $sort]))
+                : $this->paginateByIds($request, $rankedIds, $mixSeed);
         }
 
-        $rankedIds = $this->exploreMix->mix($scored, $mixSeed);
+        if ($sort === 'views') {
+            $rankedIds = $candidates
+                ->sortByDesc(fn (Post $post): int => $this->math->views($post))
+                ->values()
+                ->map(fn (Post $post): int => (int) $post->id)
+                ->all();
+
+            return $rankedIds === []
+                ? $query->paginate($this->explorePerPage($request))->appends(array_merge($request->query(), ['explore_seed' => $mixSeed, 'sort' => $sort]))
+                : $this->paginateByIds($request, $rankedIds, $mixSeed);
+        }
+
+        // Default: best = performance multiplier (PI), falling back to quality mix.
+        $bySocial = $candidates->groupBy(fn (Post $post): int => (int) $post->social_account_id);
+        $scored = [];
+
+        foreach ($candidates as $post) {
+            $accountPosts = $bySocial->get((int) $post->social_account_id, collect());
+            $pi = $this->math->performanceIndex($post, $accountPosts)['pi'];
+            $scored[(int) $post->id] = $pi !== null
+                ? (float) $pi * 10
+                : $this->exploreMix->qualityScore($post);
+        }
+
+        arsort($scored, SORT_NUMERIC);
+        $rankedIds = array_map('intval', array_keys($scored));
 
         if ($rankedIds === []) {
             return $query->paginate($this->explorePerPage($request))->appends(
-                array_merge($request->query(), ['explore_seed' => $mixSeed]),
+                array_merge($request->query(), ['explore_seed' => $mixSeed, 'sort' => $sort]),
             );
         }
 
@@ -310,6 +405,7 @@ class ExploreController extends Controller
         ?string $customTag,
         ?string $queryText,
         int $mixSeed,
+        string $sort = 'best',
     ): LengthAwarePaginator {
         $exactIds = $customTag !== null
             ? $this->exactCustomTagPostIds(clone $query, $customTag)
@@ -341,7 +437,7 @@ class ExploreController extends Controller
             $this->constrainByLikeSearch($fallback, $queryText);
         }
 
-        return $this->paginateQualityMix($request, $fallback, $mixSeed);
+        return $this->paginateQualityMix($request, $fallback, $mixSeed, $sort);
     }
 
     /**
