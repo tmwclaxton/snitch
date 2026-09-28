@@ -96,22 +96,28 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('Post this next', $dashboard);
         $this->assertStringContainsString('break-words text-slate-800', $dashboard);
         $this->assertStringNotContainsString('truncate text-slate-800', $dashboard);
-        $this->assertStringContainsString('lg:h-0 lg:min-h-full', $dashboard);
         $this->assertStringContainsString('snitch-dash-heatmap-panel', $dashboard);
         $this->assertStringNotContainsString('mt-auto p-2', $dashboard);
         $this->assertStringNotContainsString('overflow-y-auto', $dashboard);
-        $this->assertStringContainsString('overflow-hidden lg:h-0 lg:min-h-full', $dashboard);
-        $this->assertStringContainsString('mt-auto shrink-0 border-t', $dashboard);
+        $this->assertStringNotContainsString('fit-height', $dashboard);
+        $this->assertStringNotContainsString('mt-auto shrink-0', $dashboard);
+        $this->assertStringContainsString('items-start gap-2 lg:grid-cols-2', $dashboard);
+        $this->assertStringContainsString('id="format_mix"', $dashboard);
         $this->assertStringContainsString(':collapsed-count="5"', $dashboard);
-        $this->assertStringContainsString('fit-height', $dashboard);
+        // Format mix sits under insights on the left, not under the leaderboard.
+        $formatPos = strpos($dashboard, 'id="format_mix"');
+        $leaderPos = strpos($dashboard, 'anchor="leaderboard"');
+        $this->assertNotFalse($formatPos);
+        $this->assertNotFalse($leaderPos);
+        $this->assertLessThan($leaderPos, $formatPos);
 
         $insightList = file_get_contents(resource_path('js/components/dashboard/InsightList.vue'));
         $this->assertNotFalse($insightList);
         $this->assertStringContainsString('data-tracker-id', $insightList);
         $this->assertStringContainsString('competitorShow.url(id)', $insightList);
         $this->assertStringContainsString('Show all', $insightList);
-        $this->assertStringContainsString('fitHeight', $insightList);
         $this->assertStringContainsString('collapsedCount: 5', $insightList);
+        $this->assertStringNotContainsString('fitHeight', $insightList);
         $this->assertStringNotContainsString('line-clamp-', $insightList);
 
         $compare = file_get_contents(resource_path('js/components/dashboard/CompareTable.vue'));

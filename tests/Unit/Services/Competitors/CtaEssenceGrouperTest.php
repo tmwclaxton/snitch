@@ -11,7 +11,7 @@ use Tests\TestCase;
 class CtaEssenceGrouperTest extends TestCase
 {
     #[Test]
-    public function test_model_groups_real_lines_and_drops_invented_phrases(): void
+    public function test_model_groups_map_onto_fixed_plain_labels(): void
     {
         config([
             'snitch.cta_essence.force' => true,
@@ -45,31 +45,29 @@ class CtaEssenceGrouperTest extends TestCase
             $comment => 1,
         ]);
 
-        $this->assertSame('Watch the full episode', $grouped[0]['term']);
-        $this->assertSame(5, $grouped[0]['count']);
-        $this->assertSame(
-            ['Watch the full episode on youtube now', 'Listen or watch the full podcast recorded at the studio'],
-            array_column($grouped[0]['lines'], 'text'),
-        );
-        $this->assertSame('Comment for the guide', $grouped[1]['term']);
-        $this->assertSame($comment, mb_strtolower($grouped[1]['lines'][0]['text']));
+        $terms = array_column($grouped, 'term');
+        $this->assertContains('Comment a keyword', $terms);
+        $this->assertContains('Other', $terms);
+        $this->assertNotContains('Watch the full episode', $terms);
+        $this->assertNotContains('Comment for the guide', $terms);
 
-        app(CtaEssenceGrouper::class)->group([
-            $listen => 2,
-            $watch => 3,
-            $comment => 1,
-        ]);
+        $commentRow = collect($grouped)->firstWhere('term', 'Comment a keyword');
+        $this->assertSame(1, $commentRow['count']);
+        $this->assertSame($comment, mb_strtolower($commentRow['lines'][0]['text']));
+
+        $otherRow = collect($grouped)->firstWhere('term', 'Other');
+        $this->assertSame(5, $otherRow['count']);
     }
 
     #[Test]
-    public function test_failed_model_keeps_each_line_under_a_short_label(): void
+    public function test_failed_model_classifies_phrases_onto_fixed_labels(): void
     {
         config([
             'snitch.cta_essence.force' => true,
             'snitch.nanogpt.api_key' => 'test-key',
         ]);
 
-        $phrase = 'listen or watch the full podcast recorded at the studio tonight';
+        $phrase = 'comment YES and we will send the checklist tonight';
 
         $nano = $this->createMock(NanoGptClient::class);
         $nano->expects($this->once())
@@ -81,11 +79,24 @@ class CtaEssenceGrouperTest extends TestCase
             $phrase => 4,
         ]);
 
-        $this->assertSame('Listen or watch the full podcast', $grouped[0]['term']);
+        $this->assertSame('Comment a keyword', $grouped[0]['term']);
         $this->assertSame(4, $grouped[0]['count']);
         $this->assertSame(
-            'Listen or watch the full podcast recorded at the studio tonight',
+            'Comment YES and we will send the checklist tonight',
             $grouped[0]['lines'][0]['text'],
         );
+    }
+
+    #[Test]
+    public function test_canonical_label_maps_garbled_free_text(): void
+    {
+        $grouper = app(CtaEssenceGrouper::class);
+
+        $this->assertSame('Tag a friend', $grouper->canonicalLabel('Comment which friend luxury'));
+        $this->assertSame('Join the event', $grouper->canonicalLabel('Get involved in area'));
+        $this->assertSame('Other', $grouper->canonicalLabel('Check out local resource'));
+        $this->assertSame('Link in bio', $grouper->canonicalLabel('Grab ticket via bio'));
+        $this->assertSame('Comment a keyword', $grouper->canonicalLabel('Comment to receive details'));
+        $this->assertSame('Other', $grouper->canonicalLabel('Other asks'));
     }
 }
