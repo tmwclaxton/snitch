@@ -479,48 +479,54 @@ const trackerIdsByHandle = computed(() => {
                 </div>
 
                 <div class="grid items-stretch gap-2 lg:grid-cols-2">
-                    <DashCard
-                        class="flex h-full min-h-0 flex-col"
-                        title="This week in 30 seconds"
-                        why="Do-this-next lines from peer gaps for a busy organiser."
-                        formula="score = |effect| × min(1, n/20); top 6, max 1 per category; n ≥ 5."
-                        anchor="insights"
-                    >
-                        <div class="flex min-h-0 flex-1 flex-col gap-1">
-                            <InsightList
-                                v-if="insights"
-                                :status="insights.status"
-                                :reason="insights.reason"
-                                :items="insights.data?.items"
-                                :tracker-ids="trackerIdsByHandle"
-                            />
-                            <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading insights" />
+                    <!--
+                      h-0 + min-h-full: row height comes from the right stack
+                      (Leaderboard + Format mix); insights scroll inside that height.
+                    -->
+                    <div class="min-h-[14rem] lg:h-0 lg:min-h-full">
+                        <DashCard
+                            class="flex h-full min-h-0 flex-col overflow-hidden"
+                            title="This week in 30 seconds"
+                            why="Do-this-next lines from peer gaps for a busy organiser."
+                            formula="score = |effect| × min(1, n/20); top 6, max 1 per category; n ≥ 5."
+                            anchor="insights"
+                        >
+                            <div class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+                                <InsightList
+                                    v-if="insights"
+                                    :status="insights.status"
+                                    :reason="insights.reason"
+                                    :items="insights.data?.items"
+                                    :tracker-ids="trackerIdsByHandle"
+                                />
+                                <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading insights" />
 
-                            <p
-                                v-if="showFollowerNote"
-                                id="growth_series"
-                                class="border-t border-slate-100 pt-1 text-sm leading-snug text-slate-600"
-                            >
-                                <span class="font-medium text-slate-800">Followers</span>
-                                ·
-                                <template v-if="followerPoints.length === 1">
-                                    {{ new Intl.NumberFormat('en-GB').format(followerPoints[0].followers) }}
-                                    first snapshot only - growth chart after the next weekly count.
-                                </template>
-                                <template v-else>
-                                    No follower snapshots yet.
-                                </template>
-                            </p>
-                            <p
-                                v-else-if="!follower_series"
-                                id="growth_series"
-                            >
-                                <SnitchSkeleton variant="scrap" height="1.25rem" label="Loading follower note" />
-                            </p>
-                        </div>
-                    </DashCard>
+                                <p
+                                    v-if="showFollowerNote"
+                                    id="growth_series"
+                                    class="border-t border-slate-100 pt-1 text-sm leading-snug text-slate-600"
+                                >
+                                    <span class="font-medium text-slate-800">Followers</span>
+                                    ·
+                                    <template v-if="followerPoints.length === 1">
+                                        {{ new Intl.NumberFormat('en-GB').format(followerPoints[0].followers) }}
+                                        first snapshot only - growth chart after the next weekly count.
+                                    </template>
+                                    <template v-else>
+                                        No follower snapshots yet.
+                                    </template>
+                                </p>
+                                <p
+                                    v-else-if="!follower_series"
+                                    id="growth_series"
+                                >
+                                    <SnitchSkeleton variant="scrap" height="1.25rem" label="Loading follower note" />
+                                </p>
+                            </div>
+                        </DashCard>
+                    </div>
 
-                    <div class="flex h-full min-w-0 flex-col gap-1.5">
+                    <div class="flex min-w-0 flex-col gap-1.5">
                         <DashCard
                             title="Leaderboard"
                             why="One glance shows who is ahead, and on what."
@@ -549,22 +555,24 @@ const trackerIdsByHandle = computed(() => {
                 </div>
 
                 <div class="grid items-stretch gap-2 lg:grid-cols-2">
-                    <section id="activity" class="snitch-scrap snitch-dash-heatmap-panel relative flex h-full min-w-0 flex-col p-1.5">
-                        <div class="mb-0 flex shrink-0 items-baseline justify-between gap-2">
-                            <p class="snitch-ink-label">Posting heat map</p>
-                            <p class="tabular-nums text-xs text-slate-500">16 wks</p>
-                        </div>
-                        <PostingHeatmap
-                            v-if="activity"
-                            class="snitch-heatmap--dash snitch-dash-soft-in min-h-0 flex-1"
-                            :days="activity.heatmap"
-                        />
-                        <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading heat map" />
-                    </section>
+                    <div class="min-h-[12rem] lg:h-0 lg:min-h-full">
+                        <section id="activity" class="snitch-scrap snitch-dash-heatmap-panel relative flex h-full min-w-0 flex-col p-1.5">
+                            <div class="mb-0 flex shrink-0 items-baseline justify-between gap-2">
+                                <p class="snitch-ink-label">Posting heat map</p>
+                                <p class="tabular-nums text-xs text-slate-500">16 wks</p>
+                            </div>
+                            <PostingHeatmap
+                                v-if="activity"
+                                class="snitch-heatmap--dash snitch-dash-soft-in min-h-0 flex-1"
+                                :days="activity.heatmap"
+                            />
+                            <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading heat map" />
+                        </section>
+                    </div>
 
                     <section
                         id="caption_intel"
-                        class="snitch-scrap snitch-dash-chip-stack flex h-full min-w-0 flex-col gap-2 p-2"
+                        class="snitch-scrap snitch-dash-chip-stack flex min-w-0 flex-col gap-2 p-2"
                     >
                         <div class="min-w-0">
                             <p class="snitch-ink-label mb-1">Hashtags</p>

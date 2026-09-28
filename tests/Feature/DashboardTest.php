@@ -94,7 +94,7 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString(':tracker-ids="trackerIdsByHandle"', $dashboard);
         $this->assertStringContainsString('weekly_brief.ideas', $dashboard);
         $this->assertStringContainsString('Post this next', $dashboard);
-        $this->assertStringContainsString('items-stretch', $dashboard);
+        $this->assertStringContainsString('lg:h-0 lg:min-h-full', $dashboard);
         $this->assertStringContainsString('snitch-dash-heatmap-panel', $dashboard);
         $this->assertStringNotContainsString('mt-auto p-2', $dashboard);
 
