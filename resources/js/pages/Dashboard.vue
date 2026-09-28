@@ -538,9 +538,9 @@ const trackerIdsByHandle = computed(() => {
                         </div>
                     </div>
 
-                    <div class="flex min-h-0 min-w-0 flex-col">
+                    <div class="flex min-h-0 min-w-0 flex-col lg:h-0 lg:min-h-full">
                         <DashCard
-                            class="flex h-full min-h-0 flex-col"
+                            class="flex h-full min-h-0 flex-1 flex-col"
                             title="Leaderboard"
                             why="One glance shows who is ahead, and on what."
                             formula="Engagement rate = median per-follower engagement. Hidden likes and all-zero samples show as -."
@@ -559,7 +559,11 @@ const trackerIdsByHandle = computed(() => {
                 </div>
 
                 <div class="grid items-stretch gap-2 lg:grid-cols-2">
-                    <div class="min-h-[12rem] lg:h-0 lg:min-h-full">
+                    <!--
+                      Left sizes the row (heat map intrinsic height).
+                      Right uses h-0/min-h-full so Hashtags+CTA stretch to match.
+                    -->
+                    <div class="min-h-[12rem] min-w-0">
                         <section id="activity" class="snitch-scrap snitch-dash-heatmap-panel relative flex h-full min-w-0 flex-col p-1.5">
                             <div class="mb-0 flex shrink-0 items-baseline justify-between gap-2">
                                 <p class="snitch-ink-label">Posting heat map</p>

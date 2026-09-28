@@ -72,11 +72,11 @@ function formatUnderHandle(row: Row): string | null {
 </script>
 
 <template>
-    <div class="flex h-full min-h-0 min-w-0 flex-col">
+    <div class="flex h-full min-h-0 min-w-0 flex-1 flex-col">
         <EmptyState v-if="status !== 'ok' || !rows?.length" :reason="reason" compact />
         <table
             v-else
-            class="h-full w-full table-fixed text-left text-sm"
+            class="h-full min-h-0 w-full flex-1 table-fixed text-left text-sm"
             :style="{ '--lb-rows': String(rows?.length || 1) }"
         >
             <colgroup>
