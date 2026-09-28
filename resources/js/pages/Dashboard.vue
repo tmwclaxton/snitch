@@ -421,49 +421,22 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                 </div>
 
                 <div class="grid items-start gap-2 lg:grid-cols-2">
-                    <div class="flex min-w-0 flex-col gap-2">
-                        <DashCard
-                            title="This week in 30 seconds"
-                            why="Do-this-next lines from peer gaps for a busy organiser."
-                            formula="score = |effect| × min(1, n/20); top 5, max 1 per category; n ≥ 5."
-                            anchor="insights"
-                        >
-                            <InsightList
-                                v-if="insights"
-                                :status="insights.status"
-                                :reason="insights.reason"
-                                :items="insights.data?.items"
-                            />
-                            <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading insights" />
-                        </DashCard>
+                    <DashCard
+                        title="This week in 30 seconds"
+                        why="Do-this-next lines from peer gaps for a busy organiser."
+                        formula="score = |effect| × min(1, n/20); top 5, max 1 per category; n ≥ 5."
+                        anchor="insights"
+                    >
+                        <InsightList
+                            v-if="insights"
+                            :status="insights.status"
+                            :reason="insights.reason"
+                            :items="insights.data?.items"
+                        />
+                        <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading insights" />
+                    </DashCard>
 
-                        <section id="caption_intel" class="snitch-scrap space-y-1.5 p-2">
-                            <div>
-                                <p class="snitch-ink-label mb-1">Hashtags</p>
-                                <div v-if="caption_intel" class="flex flex-wrap gap-1">
-                                    <span
-                                        v-for="row in caption_intel.hashtags.slice(0, 12)"
-                                        :key="`hash-${row.term}`"
-                                        class="snitch-glance-tag"
-                                    >
-                                        #{{ row.term }}
-                                        <span class="tabular-nums text-slate-500">{{ row.count }}</span>
-                                    </span>
-                                    <p v-if="!caption_intel.hashtags.length" class="text-[11px] text-slate-500">None yet.</p>
-                                </div>
-                                <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading hashtags" />
-                            </div>
-                            <div>
-                                <CtaLanguage
-                                    v-if="caption_intel"
-                                    :ctas="caption_intel.ctas"
-                                />
-                                <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading CTA language" />
-                            </div>
-                        </section>
-                    </div>
-
-                    <div class="flex min-w-0 flex-col gap-2">
+                    <div class="flex min-w-0 flex-col gap-1.5">
                         <DashCard
                             title="Leaderboard"
                             why="One glance shows who is ahead, and on what."
@@ -502,6 +475,34 @@ const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? 
                         :days="activity.heatmap"
                     />
                     <SnitchSkeleton v-else variant="scrap" height="4rem" label="Loading heat map" />
+                </section>
+
+                <section
+                    id="caption_intel"
+                    class="snitch-scrap grid items-start gap-x-4 gap-y-1.5 p-2 sm:grid-cols-2"
+                >
+                    <div class="min-w-0">
+                        <p class="snitch-ink-label mb-1">Hashtags</p>
+                        <div v-if="caption_intel" class="flex flex-wrap gap-1">
+                            <span
+                                v-for="row in caption_intel.hashtags.slice(0, 14)"
+                                :key="`hash-${row.term}`"
+                                class="snitch-glance-tag"
+                            >
+                                #{{ row.term }}
+                                <span class="tabular-nums text-slate-500">{{ row.count }}</span>
+                            </span>
+                            <p v-if="!caption_intel.hashtags.length" class="text-[11px] text-slate-500">None yet.</p>
+                        </div>
+                        <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading hashtags" />
+                    </div>
+                    <div class="min-w-0">
+                        <CtaLanguage
+                            v-if="caption_intel"
+                            :ctas="caption_intel.ctas"
+                        />
+                        <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading CTA language" />
+                    </div>
                 </section>
 
                 <div id="growth_series">
