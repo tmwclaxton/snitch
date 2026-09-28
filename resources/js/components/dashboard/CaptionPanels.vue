@@ -67,7 +67,7 @@ defineProps<{
             <EmptyState v-if="!(hooks || []).length" reason="No winner hooks yet" compact />
             <ul
                 v-else
-                class="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-5"
+                class="grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-1.5"
             >
                 <li
                     v-for="(hook, idx) in hooks"

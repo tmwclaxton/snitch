@@ -141,7 +141,7 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('followDashboardLink', file_get_contents(base_path('resources/js/components/dashboard/InsightList.vue')) ?: '');
         $captions = file_get_contents(base_path('resources/js/components/dashboard/CaptionPanels.vue'));
         $this->assertIsString($captions);
-        $this->assertStringContainsString('xl:grid-cols-5', $captions);
+        $this->assertStringContainsString('auto-fit,minmax(9.5rem,1fr)', $captions);
         $this->assertStringContainsString('Winning hooks', $captions);
 
         $css = file_get_contents(base_path('resources/css/app.css'));
