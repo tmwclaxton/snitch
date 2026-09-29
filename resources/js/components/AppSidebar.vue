@@ -153,11 +153,15 @@ const accountNavItems = computed<NavItem[]>(() => {
 
         <SidebarContent class="gap-4 overflow-y-auto">
             <NavMain :items="mainNavItems" label="Platform" />
-            <NavMain :items="accountNavItems" label="Account" />
         </SidebarContent>
 
-        <SidebarFooter class="mt-auto shrink-0 border-t border-neutral-200">
-            <NavUser />
+        <SidebarFooter class="mt-auto shrink-0 gap-0 border-t border-neutral-200 p-0">
+            <div class="pt-2">
+                <NavMain :items="accountNavItems" label="Account" />
+            </div>
+            <div class="border-t border-neutral-200 p-2">
+                <NavUser />
+            </div>
         </SidebarFooter>
     </Sidebar>
     <slot />

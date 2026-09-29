@@ -32,6 +32,26 @@ class SidebarNavigationTest extends TestCase
         ) ?: '');
     }
 
+    public function test_account_nav_sits_above_the_profile(): void
+    {
+        $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
+
+        $this->assertNotFalse($sidebar);
+
+        $platform = strpos($sidebar, '<NavMain :items="mainNavItems" label="Platform" />');
+        $footer = strpos($sidebar, '<SidebarFooter');
+        $account = strpos($sidebar, '<NavMain :items="accountNavItems" label="Account" />');
+        $profile = strpos($sidebar, '<NavUser />');
+
+        $this->assertNotFalse($platform);
+        $this->assertNotFalse($footer);
+        $this->assertNotFalse($account);
+        $this->assertNotFalse($profile);
+        $this->assertLessThan($footer, $platform);
+        $this->assertLessThan($account, $footer);
+        $this->assertLessThan($profile, $account);
+    }
+
     public function test_nested_url_helper_matches_child_routes(): void
     {
         $source = file_get_contents(resource_path('js/composables/useCurrentUrl.ts'));
