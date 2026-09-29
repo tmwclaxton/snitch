@@ -107,10 +107,6 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
     Route::get('/onboarding/autofill/{autofillId}', [OnboardingController::class, 'autofillStatus'])
         ->name('onboarding.autofill.status');
 
-    Route::post('/agents/token', [AgentsController::class, 'rotateToken'])
-        ->middleware('throttle:10,1')
-        ->name('agents.token');
-
     Route::middleware(EnsureAdmin::class)->prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [AdminOverviewController::class, 'index'])->name('overview');
         Route::get('/activity', [AdminActivityController::class, 'index'])->name('activity');

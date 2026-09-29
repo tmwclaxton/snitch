@@ -28,7 +28,7 @@ class McpConnectionGuide
                     'name' => 'Cursor',
                     'blurb' => 'Add Snitch in Cursor Settings → MCP, or merge into your project mcp.json.',
                     'steps' => [
-                        'Mint an API token on the Agents page.',
+                        'Mint an API token in Settings, under MCP.',
                         'Open Cursor Settings → MCP and add snitch with the config below.',
                         'Reload MCP servers, then call whoami.',
                     ],
@@ -62,7 +62,7 @@ class McpConnectionGuide
                     'name' => 'Claude Desktop / Claude Code',
                     'blurb' => 'HTTP MCP with a bearer token, same pattern as Cursor.',
                     'steps' => [
-                        'Mint an API token on the Agents page.',
+                        'Mint an API token in Settings, under MCP.',
                         'Add an HTTP MCP server with the config below.',
                         'Restart Claude and call whoami.',
                     ],
@@ -83,7 +83,7 @@ class McpConnectionGuide
                     'name' => 'Codex',
                     'blurb' => 'Any Codex or OpenAI agent harness that supports remote HTTP MCP.',
                     'steps' => [
-                        'Mint an API token on the Agents page.',
+                        'Mint an API token in Settings, under MCP.',
                         'Register the Snitch MCP URL with the bearer header below.',
                         'Call whoami, then workflow_guide for tool order.',
                     ],
@@ -97,7 +97,7 @@ class McpConnectionGuide
                     'name' => 'Windsurf',
                     'blurb' => 'Same HTTP + bearer pattern as Cursor.',
                     'steps' => [
-                        'Mint an API token on the Agents page.',
+                        'Mint an API token in Settings, under MCP.',
                         'Open Windsurf MCP settings and add snitch with the config below.',
                         'Call whoami to confirm.',
                     ],
@@ -117,7 +117,7 @@ class McpConnectionGuide
                 'title' => 'General MCP',
                 'blurb' => 'Any MCP client over HTTPS can connect to production Snitch.',
                 'steps' => [
-                    'Mint an API token on the Agents page, or call create_account on the register endpoint.',
+                    'Mint an API token in Settings, under MCP, or call create_account on the register endpoint.',
                     'Paste the config into your MCP client (see tabs above).',
                     'Call whoami to confirm the connection.',
                     'If an agent created the account, open the claim URL in your browser.',

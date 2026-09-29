@@ -38,29 +38,12 @@ class AgentsPageTest extends TestCase
             ->assertRedirect('/agents');
     }
 
-    public function test_authenticated_agents_page_can_rotate_token(): void
+    public function test_authenticated_agents_page_redirects_into_settings(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user)
             ->get(route('agents'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('agents/Index')
-                ->where('has_mcp_token', false));
-
-        $this->actingAs($user)
-            ->post(route('agents.token'))
-            ->assertRedirect();
-
-        $this->assertTrue($user->sanctumTokens()->where('name', 'mcp')->exists());
-
-        $this->actingAs($user)
-            ->get(route('agents'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('agents/Index')
-                ->where('has_mcp_token', true)
-                ->where('plain_token', fn ($token) => is_string($token) && $token !== ''));
+            ->assertRedirect(route('settings.mcp.show'));
     }
 }

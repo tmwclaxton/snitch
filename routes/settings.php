@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Settings\BillingController;
+use App\Http\Controllers\Settings\McpController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Middleware\ValidateSessionWithWorkOS;
 use Illuminate\Support\Facades\Route;
@@ -16,6 +17,11 @@ Route::middleware([
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::inertia('settings/appearance', 'settings/Appearance')->name('appearance.edit');
+
+    Route::get('settings/mcp', [McpController::class, 'show'])->name('settings.mcp.show');
+    Route::post('settings/mcp/token', [McpController::class, 'rotateToken'])
+        ->middleware('throttle:10,1')
+        ->name('settings.mcp.token');
 
     Route::get('billing', [BillingController::class, 'index'])->name('billing.edit');
     Route::get('billing/charges', [BillingController::class, 'charges'])->name('billing.charges');

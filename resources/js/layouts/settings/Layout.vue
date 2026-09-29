@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Palette, User } from '@lucide/vue';
+import { Bot, Palette, User } from '@lucide/vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editProfile } from '@/routes/profile';
+import { show as editMcp } from '@/routes/settings/mcp';
 import type { NavItem } from '@/types';
 
 const sidebarNavItems: NavItem[] = [
@@ -17,6 +18,11 @@ const sidebarNavItems: NavItem[] = [
         title: 'Appearance',
         href: editAppearance(),
         icon: Palette,
+    },
+    {
+        title: 'MCP',
+        href: editMcp(),
+        icon: Bot,
     },
 ];
 
@@ -31,7 +37,7 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                 Settings
             </h1>
             <p class="mt-1.5 text-sm text-neutral-500 sm:text-base">
-                Profile and appearance preferences.
+                Profile, appearance, and MCP.
             </p>
         </header>
 
@@ -60,7 +66,10 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                 </nav>
             </aside>
 
-            <div class="min-w-0 flex-1 md:max-w-2xl">
+            <div
+                class="min-w-0 flex-1"
+                :class="isCurrentOrParentUrl(editMcp()) ? 'max-w-5xl' : 'md:max-w-2xl'"
+            >
                 <slot />
             </div>
         </div>

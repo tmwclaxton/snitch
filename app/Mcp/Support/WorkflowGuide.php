@@ -62,7 +62,7 @@ final class WorkflowGuide
         return [
             'summary' => 'Call workflow_guide with a specific workflow before discovery or billable work. Always start sessions with whoami + billing_status.',
             'prerequisites' => [
-                'Sanctum bearer token (Agents page or create_account on /mcp/register).',
+                'Sanctum bearer token (Settings → MCP, or create_account on /mcp/register).',
                 'Local async jobs need php artisan queue:work (or composer run dev).',
             ],
             'do_not_skip' => [

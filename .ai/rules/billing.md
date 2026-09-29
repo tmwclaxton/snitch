@@ -16,8 +16,11 @@ paths:
   - 'resources/js/pages/marketing/Pricing.vue'
   - 'resources/js/pages/marketing/Agents.vue'
   - 'resources/js/pages/agents/**'
+  - 'resources/js/pages/settings/Mcp.vue'
+  - 'resources/js/layouts/settings/Layout.vue'
   - 'resources/js/components/agents/**'
   - 'app/Http/Controllers/AgentsController.php'
+  - 'app/Http/Controllers/Settings/McpController.php'
   - 'app/Http/Controllers/Marketing/PricingController.php'
   - 'app/Support/McpConnectionGuide.php'
   - 'resources/js/pages/claim/**'
@@ -61,7 +64,7 @@ Prefer real upstream usage (Apify `usageTotalUsd`, NanoGPT `usage.prompt_tokens`
 - Authenticated `/billing` - balance, platform subscribe, credit packs, vendor usage, stacked stipple chart of Apify/NanoGPT/Firecrawl/TikHub/Snitch spend (`UsageBillingService::spendSeries`) with `grain=day|week|month` (default day). Chart bars use coloured stipple dots (`VENDOR_CHART_FILL`) with a paper hover tip naming the vendor (+ amount / period); legend uses mini vendor logos on paper plates (Snitch = mascot-mark). Short recent-charges preview (8 rows) links to the full list. **`UsageBillingService::creditExpiryBreakdown`** drives a "When your credit expires" scrap panel: unexpired lots grouped by expiry bucket (soonest first, never last), per-lot labels (starter / plan / top-up), amounts via `formatPenceAsGbp`, and `topup_expiry_months` from config.
 - Authenticated `/billing/charges` (`billing.charges`) - paginated ledger breakdown (`UsageBillingService::paginatedCharges`, 25/page) with vendor / action / days filters; amounts only (no COGS/markup). Rows include derived `description` + optional `link` (see below). Same **`creditExpiryBreakdown`** (compact) plus **`creditExpiryFilterNote`** when filtering `claim_bonus`, `subscription_bonus`, or `credits.topup`.
 - Public `/pricing` (`PricingController`) - platform fee + credit packs copy, plus **live tool averages** from `UsageBillingService::globalVendorAverages()` (ledger mean charge per run per spend vendor across all users; same vendor keys as billing `summary()`). Display averages with `formatPenceAsGbp(..., { decimals: 4 })`. Do not invent a second catalog of fake averages.
-- Public + auth `/agents` (MCP connect docs; auth also mints/rotates Sanctum token). `/for-agents` redirects to `/agents`
+- Public `/agents` (MCP connect docs, noindex). Signed-in users are redirected to `/settings/mcp`, a settings subpage that mints/rotates the Sanctum token. It is not in the product sidebar. `/for-agents` redirects to `/agents`
 
 ## Charge descriptions and links
 Ledger `meta` JSON carries link targets (`post_id`, `tracked_account_id`, `social_account_id`, `suggest_id`, `run_id`, `platform`, `post_type`, `handle`, `account_kind`). `LedgerChargePresenter` derives a human `description` and optional `link` `{type,id?,label}` in `UsageBillingService::mapLedgerEntry` for billing preview + charges table. Prefer storing context IDs at charge time; optional `meta.description` overrides the derived line. Old rows without meta fall back to action labels (e.g. "Analyzed post"). NanoGPT `embed.analysis` shows as "Indexed post analysis"; new rows store `post_id`, and legacy rows that only have `post_analysis_id` still resolve a feed link via that id. Explore search/view get dedicated copy; search links to Explore. Link types: `post` → feed show, `tracked_account` → competitors show (also influencers), `competitors` / `influencers` / `brand` / `explore` index pages. Never show markup/COGS in UI.
