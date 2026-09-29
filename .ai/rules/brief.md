@@ -6,6 +6,17 @@ paths:
   - app/Http/Controllers/BriefController.php
   - resources/js/pages/brief/**
   - tests/Feature/Brief/**
+  - app/Mcp/Tools/GetWeeklyBriefTool.php
+  - app/Mcp/Tools/MarkWeeklyBriefIdeaUsedTool.php
+  - app/Mcp/Tools/GetGrowthTool.php
+  - app/Mcp/Tools/GetMonthlyReportTool.php
+  - app/Mcp/Tools/ShareMonthlyReportTool.php
+  - app/Mcp/Tools/RevokeMonthlyReportTool.php
+  - app/Support/WeeklyBriefPresenter.php
+  - app/Http/Controllers/GrowthController.php
+  - app/Http/Controllers/MonthlyReportController.php
+  - resources/js/pages/growth/**
+  - tests/Feature/Mcp/WeeklyBriefAndGrowthToolsTest.php
 ---
 
 # Weekly brief (Post this next)
@@ -15,6 +26,9 @@ paths:
 
 ## Dashboard and /brief UX
 Dashboard `weekly_brief` teaser is null unless a ready brief exists (current or most recent week). No empty state or generate button on the dashboard. On `/brief` without a brief, show only the automatic-wait copy. Manual generate is admin-only regenerate (billable when force).
+
+## MCP
+`get_weekly_brief` reads `/brief` (optional `week` as Y-m-d, snapped to Monday) including ideas, best times, history, and `app_url`. `mark_weekly_brief_idea_used` toggles `used_at` the same way as the website. Agents must not force a regenerate. Growth charts and the monthly report are separate tools: `get_growth`, `get_monthly_report`, `share_monthly_report`, `revoke_monthly_report`.
 
 ## Force regenerate
 Admin POST `brief.generate` with `force` queues `GenerateWeeklyBriefJob` with `billable: true`. Ops may use `snitch:generate-weekly-briefs --force --billable` when charging is intended; omit `--billable` for free ops runs. Non-admins never see the regenerate control (`canRegenerate` is admin-only).

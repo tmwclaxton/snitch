@@ -19,18 +19,24 @@ use App\Mcp\Tools\ExplorePostsTool;
 use App\Mcp\Tools\FindInfluencersTool;
 use App\Mcp\Tools\GenerateInfluencerBriefTool;
 use App\Mcp\Tools\GetBrandTool;
+use App\Mcp\Tools\GetGrowthTool;
+use App\Mcp\Tools\GetMonthlyReportTool;
 use App\Mcp\Tools\GetPostTool;
+use App\Mcp\Tools\GetWeeklyBriefTool;
 use App\Mcp\Tools\InfluencerSearchStatusTool;
 use App\Mcp\Tools\KeepInfluencerTool;
 use App\Mcp\Tools\ListCompetitorsTool;
 use App\Mcp\Tools\ListFeedTool;
 use App\Mcp\Tools\ListInfluencersTool;
 use App\Mcp\Tools\ListWinnersTool;
+use App\Mcp\Tools\MarkWeeklyBriefIdeaUsedTool;
 use App\Mcp\Tools\RemoveCompetitorTool;
 use App\Mcp\Tools\RemoveInfluencerTool;
 use App\Mcp\Tools\RescoreWinnersStatusTool;
 use App\Mcp\Tools\RescoreWinnersTool;
+use App\Mcp\Tools\RevokeMonthlyReportTool;
 use App\Mcp\Tools\RotateTokenTool;
+use App\Mcp\Tools\ShareMonthlyReportTool;
 use App\Mcp\Tools\StartBrandAutofillTool;
 use App\Mcp\Tools\SuggestCompetitorsStatusTool;
 use App\Mcp\Tools\SuggestCompetitorsTool;
@@ -46,7 +52,7 @@ use Laravel\Mcp\Server\Attributes\Version;
 
 #[Name('Snitch')]
 #[Version('1.0.0')]
-#[Instructions('Snitch is the social marketing data layer for agents. Authenticate with a Sanctum bearer token from create_account (or Settings → MCP on the website). Call workflow_guide first (workflow=overview or a specific flow such as content_plan), then whoami: check runtime.app_url (local vs https://www.snitchsocial.net), brand_warnings, and queue warnings. Local MCP (localhost) uses a different database and credits than production. Async tools need php artisan queue:work. Billable tools need a credit balance above 20p - subscribe for monthly plan value or top up credits. Prefer sync/analyze/find tools explicitly - nothing is auto-scheduled. Never paste bearer tokens into public chats; prefer rotate_token after exposure. Snitch discovery must complete the full loop: suggest_competitors → poll suggest_competitors_status → confirm_competitor_suggestions with selected handles (or dismiss_competitor_suggestions). Suggestions are cache-only until confirmed; they are NOT tracked snitches. Influencer discovery: find_influencers → influencer_search_status → keep_influencer / discard_influencer, or dismiss_influencer_suggestions for shortlist/report without tracking. Follower min/max bands require known in-band counts. Post payloads include snitch_url deep links. Fix brand_warnings before discovery so suggestions match the intended company.')]
+#[Instructions('Snitch is the social marketing data layer for agents. Authenticate with a Sanctum bearer token from create_account (or Settings → MCP on the website). Call workflow_guide first (workflow=overview or a specific flow such as content_plan, weekly_brief, or growth). This week is get_weekly_brief then mark_weekly_brief_idea_used. Growth is get_growth and get_monthly_report (share_monthly_report / revoke_monthly_report). then whoami: check runtime.app_url (local vs https://www.snitchsocial.net), brand_warnings, and queue warnings. Local MCP (localhost) uses a different database and credits than production. Async tools need php artisan queue:work. Billable tools need a credit balance above 20p - subscribe for monthly plan value or top up credits. Prefer sync/analyze/find tools explicitly - nothing is auto-scheduled. Never paste bearer tokens into public chats; prefer rotate_token after exposure. Snitch discovery must complete the full loop: suggest_competitors → poll suggest_competitors_status → confirm_competitor_suggestions with selected handles (or dismiss_competitor_suggestions). Suggestions are cache-only until confirmed; they are NOT tracked snitches. Influencer discovery: find_influencers → influencer_search_status → keep_influencer / discard_influencer, or dismiss_influencer_suggestions for shortlist/report without tracking. Follower min/max bands require known in-band counts. Post payloads include snitch_url deep links. Fix brand_warnings before discovery so suggestions match the intended company.')]
 class SnitchServer extends Server
 {
     public int $defaultPaginationLength = 50;
@@ -87,6 +93,12 @@ class SnitchServer extends Server
         UpdateWinnerRulesTool::class,
         RescoreWinnersTool::class,
         RescoreWinnersStatusTool::class,
+        GetWeeklyBriefTool::class,
+        MarkWeeklyBriefIdeaUsedTool::class,
+        GetGrowthTool::class,
+        GetMonthlyReportTool::class,
+        ShareMonthlyReportTool::class,
+        RevokeMonthlyReportTool::class,
         ExplorePostsTool::class,
     ];
 

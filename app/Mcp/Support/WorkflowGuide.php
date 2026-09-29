@@ -13,6 +13,8 @@ final class WorkflowGuide
         'billing',
         'explore',
         'content_plan',
+        'weekly_brief',
+        'growth',
     ];
 
     /**
@@ -38,6 +40,8 @@ final class WorkflowGuide
             'billing' => self::billing(),
             'explore' => self::explore(),
             'content_plan' => self::contentPlan(),
+            'weekly_brief' => self::weeklyBrief(),
+            'growth' => self::growth(),
             default => self::overview(),
         };
 
@@ -73,12 +77,12 @@ final class WorkflowGuide
                 self::step(1, 'whoami', 'Confirm user, runtime.app_url, brand_warnings, queue warnings.'),
                 self::step(2, 'billing_status', 'Confirm can_run_billable (balance above 20p) before sync/suggest/find/analyze.'),
                 self::step(3, 'get_brand', 'Verify name + website; fix with update_brand or start_brand_autofill → autofill_status.'),
-                self::step(4, 'workflow_guide', 'Pick brand | competitors | influencers | sync_analyze | billing | explore | content_plan and follow that guide.'),
+                self::step(4, 'workflow_guide', 'Pick brand | competitors | influencers | sync_analyze | billing | explore | content_plan | weekly_brief | growth and follow that guide.'),
             ],
             'notes' => [
                 'Localhost and production are different databases and credit balances.',
                 'Nothing is auto-scheduled - agents/users trigger sync, suggest, find, analyze, winners.',
-                'Use workflow=content_plan for winner remakes + collab shortlists without leaving Snitch tooling.',
+                'Use workflow=weekly_brief for /brief, workflow=growth for charts and the monthly report, and workflow=content_plan for winner remakes + collab shortlists.',
                 'On local artisan serve prefer short wait_seconds (8-12) on dispatch tools and re-poll status tools - long waits stall the browser UI.',
                 'Remote MCP clients (Claude.ai) time out around 10-15s - dispatch tools default wait_seconds=0; poll status tools until completed.',
                 'Never paste bearer tokens into public chats; use rotate_token if exposed.',
@@ -342,16 +346,84 @@ final class WorkflowGuide
                 self::step(1, 'whoami', 'Confirm production vs local and brand_warnings.'),
                 self::step(2, 'billing_status', 'Confirm can_run_billable.'),
                 self::step(3, 'get_brand', 'Confirm niche context for filters and briefs.'),
-                self::step(4, 'list_winners', 'Pass q and/or topics (e.g. ai_tools, seo). Read how_to_copy + snitch_url.'),
-                self::step(5, 'get_post', 'Optional deeper analysis for selected winner post_ids.'),
-                self::step(6, 'find_influencers', 'Pass platform + brief + min/max followers band. Poll influencer_search_status.'),
-                self::step(7, 'dismiss_influencer_suggestions', 'For shortlist/report: clear the run. Or keep_influencer for selected fits.'),
-                self::step(8, 'explore_posts', 'Optional corpus ideas via topics/q outside tracked accounts.'),
+                self::step(4, 'get_weekly_brief', 'Read this week\'s ideas, best times, and app_url. Briefs are automatic and free.'),
+                self::step(5, 'list_winners', 'Pass q and/or topics (e.g. ai_tools, seo). Read how_to_copy + snitch_url.'),
+                self::step(6, 'get_post', 'Optional deeper analysis for selected winner post_ids.'),
+                self::step(7, 'find_influencers', 'Pass platform + brief + min/max followers band. Poll influencer_search_status.'),
+                self::step(8, 'dismiss_influencer_suggestions', 'For shortlist/report: clear the run. Or keep_influencer for selected fits.'),
+                self::step(9, 'explore_posts', 'Optional corpus ideas via topics/q outside tracked accounts.'),
+                self::step(10, 'mark_weekly_brief_idea_used', 'Toggle an idea once it has been posted.'),
             ],
             'notes' => [
                 'Follower bands require known in-band counts - oversized creators with null followers no longer slip through.',
                 'Thin influencer finds may return partial=true with fewer than min_suggestions.',
                 'Prefer staying on Snitch tools; do not fall back to external scrapers for follower checks.',
+            ],
+        ];
+    }
+
+    /**
+     * @return array{
+     *     summary: string,
+     *     prerequisites: list<string>,
+     *     do_not_skip: list<string>,
+     *     steps: list<array{order: int, tool: string, action: string}>,
+     *     notes: list<string>
+     * }
+     */
+    private static function weeklyBrief(): array
+    {
+        return [
+            'summary' => 'Read the This week page (/brief): ideas, best posting times, and which ideas are already used.',
+            'prerequisites' => [
+                'whoami so runtime.app_url matches the account you expect.',
+                'Tracked competitors synced and posts analysed. Briefs appear on their own once thresholds are met.',
+            ],
+            'do_not_skip' => [
+                'Do not invent a regenerate. Automatic briefs are free; only admins can force a billable rebuild on the website.',
+                'Mark ideas used so the next session does not repeat a posted hook.',
+            ],
+            'steps' => [
+                self::step(1, 'get_weekly_brief', 'Omit week for the current Monday. Read ideas, best_times, and app_url.'),
+                self::step(2, 'get_post', 'Optional: open inspired_by post ids for the source winner.'),
+                self::step(3, 'mark_weekly_brief_idea_used', 'Toggle idea_id after the post goes live. Call again to undo.'),
+            ],
+            'notes' => [
+                'history lists recent weeks. Pass week as Y-m-d (any day in that week snaps to Monday).',
+                'An empty brief means there is not enough data yet, or generation is still queued (generating=true).',
+            ],
+        ];
+    }
+
+    /**
+     * @return array{
+     *     summary: string,
+     *     prerequisites: list<string>,
+     *     do_not_skip: list<string>,
+     *     steps: list<array{order: int, tool: string, action: string}>,
+     *     notes: list<string>
+     * }
+     */
+    private static function growth(): array
+    {
+        return [
+            'summary' => 'Read /growth charts and the monthly report, including a public share link when you want one.',
+            'prerequisites' => [
+                'Tracked accounts with follower snapshots. Thin data is normal until a second Monday snapshot lands.',
+            ],
+            'do_not_skip' => [
+                'Own accounts stay in the series even when you pass a rival account filter.',
+                'share_monthly_report replaces the previous live link for that report.',
+            ],
+            'steps' => [
+                self::step(1, 'get_growth', 'period=30d, 90d, or all. Optional accounts[] of tracked ids.'),
+                self::step(2, 'get_monthly_report', 'Omit month for the current month so far. Read report payload and share_url.'),
+                self::step(3, 'share_monthly_report', 'Optional. Pass report_id to mint a public URL.'),
+                self::step(4, 'revoke_monthly_report', 'Optional. Pass report_id to turn the public link off.'),
+            ],
+            'notes' => [
+                'PDF download stays on the website report page (app_url). MCP returns the same JSON payload and share link.',
+                'Charts need at least two follower snapshots before week-over-week deltas are meaningful.',
             ],
         ];
     }

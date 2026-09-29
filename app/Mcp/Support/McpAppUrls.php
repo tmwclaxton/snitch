@@ -23,6 +23,30 @@ final class McpAppUrls
         return rtrim((string) config('app.url'), '/').'/explore';
     }
 
+    public static function brief(?string $week = null): string
+    {
+        $url = self::origin().'/brief';
+
+        return $week === null || $week === '' ? $url : $url.'?week='.$week;
+    }
+
+    public static function growth(string $period = '30d'): string
+    {
+        return self::origin().'/growth?period='.$period;
+    }
+
+    public static function monthlyReport(?string $month = null): string
+    {
+        $url = self::origin().'/growth/report';
+
+        return $month === null || $month === '' ? $url : $url.'?month='.$month;
+    }
+
+    private static function origin(): string
+    {
+        return rtrim((string) config('app.url'), '/');
+    }
+
     /**
      * @param  iterable<int, Post>  $posts
      */

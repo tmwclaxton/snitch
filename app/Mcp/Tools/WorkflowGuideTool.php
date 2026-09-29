@@ -12,7 +12,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('workflow_guide')]
-#[Description('Ordered how-to for Snitch MCP workflows. Call first (or when unsure). Optional workflow (alias: topic): overview | brand | competitors | influencers | sync_analyze | billing | explore (default overview). Returns steps with tool names, do_not_skip, prerequisites, and notes (queue, whoami, confirm loops).')]
+#[Description('Ordered how-to for Snitch MCP workflows. Call first (or when unsure). Optional workflow (alias: topic): overview | brand | competitors | influencers | sync_analyze | billing | explore | content_plan | weekly_brief | growth (default overview). Returns steps with tool names, do_not_skip, prerequisites, and notes.')]
 class WorkflowGuideTool extends Tool
 {
     public function handle(Request $request): Response

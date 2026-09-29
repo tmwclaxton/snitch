@@ -20,7 +20,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Dockerfile, docker/production/**, app/Console/Commands/WarmWorkOsJwkCommand.php, app/Support/WorkOs/**, app/Providers/AppServiceProvider.php, compose.prod.yaml | .ai/rules/production-web.md |
 | app/Jobs/** | .ai/rules/jobs.md |
 | app/Services/Winners/**, app/Jobs/ScoreWinnersJob.php, app/Http/Controllers/WinnerController.php | .ai/rules/winners.md |
-| app/Services/Brief/**, app/Jobs/GenerateWeeklyBriefJob.php, app/Console/Commands/GenerateWeeklyBriefsCommand.php, app/Http/Controllers/BriefController.php, resources/js/pages/brief/**, tests/Feature/Brief/** | .ai/rules/brief.md |
+| app/Services/Brief/**, app/Jobs/GenerateWeeklyBriefJob.php, app/Console/Commands/GenerateWeeklyBriefsCommand.php, app/Http/Controllers/BriefController.php, app/Http/Controllers/GrowthController.php, app/Http/Controllers/MonthlyReportController.php, app/Mcp/Tools/GetWeeklyBriefTool.php, app/Mcp/Tools/MarkWeeklyBriefIdeaUsedTool.php, app/Mcp/Tools/GetGrowthTool.php, app/Mcp/Tools/GetMonthlyReportTool.php, app/Mcp/Tools/ShareMonthlyReportTool.php, app/Mcp/Tools/RevokeMonthlyReportTool.php, app/Support/WeeklyBriefPresenter.php, resources/js/pages/brief/**, resources/js/pages/growth/**, tests/Feature/Brief/**, tests/Feature/Mcp/WeeklyBriefAndGrowthToolsTest.php | .ai/rules/brief.md |
 | app/Models/Post.php, app/Models/SocialAccount.php, app/Models/TrackedAccount.php, app/Services/SocialAccounts/** | .ai/rules/models.md |
 | resources/css/app.css, resources/js/**/*.{vue,ts,css}, resources/views/app.blade.php | .ai/rules/frontend-dark-mode.md |
 | resources/js/app.ts, vite.config.ts | .ai/rules/inertia-ssr.md |
