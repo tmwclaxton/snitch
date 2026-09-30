@@ -12,10 +12,10 @@ defineOptions({
 <template>
     <div class="px-4 py-14 sm:px-8 sm:py-20">
         <article class="mx-auto max-w-3xl">
-            <h1 class="text-4xl font-semibold tracking-tight text-neutral-950 sm:text-5xl">
+            <h1 class="snitch-hero-display text-4xl text-snitch-caution-fog sm:text-5xl">
                 Built for people who ship content, or want to learn how.
             </h1>
-            <div class="mt-8 space-y-5 text-base leading-relaxed text-neutral-600">
+            <div class="mt-8 space-y-5 text-base leading-relaxed text-snitch-caution-fog/80">
                 <p>
                     Snitch is a personal tracker for public Instagram accounts.
                     Add rival handles, sync recent public posts into one place,
@@ -33,7 +33,7 @@ defineOptions({
                     board. Out here we publish practical notes on the
                     <Link
                         :href="blog()"
-                        class="font-medium text-neutral-950 underline decoration-[#F0C400]/70 underline-offset-2"
+                        class="font-medium text-snitch-caution-fog underline decoration-snitch-caution-yellow/80 underline-offset-2 hover:text-snitch-caution-yellow"
                         prefetch
                     >
                         Blog
@@ -41,7 +41,7 @@ defineOptions({
                     ,
                     <Link
                         :href="howItWorks()"
-                        class="font-medium text-neutral-950 underline decoration-[#F0C400]/70 underline-offset-2"
+                        class="font-medium text-snitch-caution-fog underline decoration-snitch-caution-yellow/80 underline-offset-2 hover:text-snitch-caution-yellow"
                         prefetch
                     >
                         how it works
@@ -49,7 +49,7 @@ defineOptions({
                     , and
                     <Link
                         :href="pricing()"
-                        class="font-medium text-neutral-950 underline decoration-[#F0C400]/70 underline-offset-2"
+                        class="font-medium text-snitch-caution-fog underline decoration-snitch-caution-yellow/80 underline-offset-2 hover:text-snitch-caution-yellow"
                         prefetch
                     >
                         pricing

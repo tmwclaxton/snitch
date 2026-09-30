@@ -123,7 +123,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="bg-white text-neutral-950">
+    <div class="snitch-light bg-white text-neutral-950">
         <main>
             <section class="snitch-hero relative overflow-hidden border-b border-neutral-200">
                 <div

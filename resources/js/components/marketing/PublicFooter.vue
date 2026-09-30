@@ -15,7 +15,7 @@ const isHome = computed(() => {
 
 <template>
     <footer class="border-t border-white/10 bg-snitch-caution-ink">
-        <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-4 px-4 py-8 text-[11px] text-snitch-caution-fog/60">
+        <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-4 px-4 py-8 text-sm text-snitch-caution-fog/75">
             <Link :href="home()" class="hover:text-snitch-caution-fog">Snitch</Link>
             <span aria-hidden="true">·</span>
             <Link :href="pricing()" class="hover:text-snitch-caution-fog">Pricing</Link>
@@ -31,7 +31,7 @@ const isHome = computed(() => {
             <a href="mailto:hello@snitchsocial.net" class="hover:text-snitch-caution-fog">Contact</a>
         </div>
         <p
-            class="text-center text-[11px] text-snitch-caution-fog/45"
+            class="text-center text-sm text-snitch-caution-fog/60"
             :class="isHome ? 'pb-24' : 'pb-6'"
         >
             © {{ year }} Snitch

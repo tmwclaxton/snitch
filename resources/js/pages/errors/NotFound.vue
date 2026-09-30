@@ -35,15 +35,19 @@ defineOptions({
                 Head home or sign in to keep tracking snitches.
             </p>
             <div class="mt-8 flex flex-wrap gap-3">
-                <Link :href="home()" class="snitch-btn">
-                    <span class="relative z-10 inline-flex items-center gap-2">
-                        <House class="size-3.5 shrink-0" aria-hidden="true" />
-                        Back home
-                    </span>
+                <Link
+                    :href="home()"
+                    class="inline-flex items-center gap-2 bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-caution-ink hover:opacity-90"
+                >
+                    <House class="size-4 shrink-0" aria-hidden="true" />
+                    Back home
                 </Link>
-                <Link :href="login()" class="snitch-btn snitch-btn-ghost">
-                    <LogIn class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
-                    <span class="relative z-10">Log in</span>
+                <Link
+                    :href="login()"
+                    class="inline-flex items-center gap-2 border border-snitch-caution-fog/40 px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-caution-fog transition-colors hover:border-snitch-caution-yellow hover:text-snitch-caution-yellow"
+                >
+                    <LogIn class="size-4 shrink-0" aria-hidden="true" />
+                    Log in
                 </Link>
             </div>
         </div>

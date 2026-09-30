@@ -285,8 +285,47 @@ class PublicPagesTest extends TestCase
 
         $this->assertNotFalse($contents, 'Missing Contact.vue source');
         $this->assertStringContainsString('contact-annotation', $contents);
-        $this->assertStringContainsString('text-neutral-950', $contents);
+        $this->assertStringContainsString('text-snitch-caution-fog', $contents);
+        $this->assertStringNotContainsString('text-neutral-950', $contents);
         $this->assertStringContainsString('hello@snitchsocial.net', $contents);
+    }
+
+    public function test_public_shell_is_pinned_to_caution_tape_night_in_every_colour_scheme(): void
+    {
+        $layout = file_get_contents(resource_path('js/layouts/PublicLayout.vue'));
+        $css = file_get_contents(resource_path('css/app.css'));
+
+        $this->assertNotFalse($layout);
+        $this->assertNotFalse($css);
+        $this->assertMatchesRegularExpression('/class="snitch-public-shell dark\b/', $layout);
+        $this->assertMatchesRegularExpression('/html:has\(\.snitch-public-shell\)\s*\{[^}]*background-color:\s*#0e0e10/s', $css);
+        $this->assertStringContainsString(":root,\n.snitch-light {", $css);
+        $this->assertStringContainsString('.snitch-public-shell .snitch-btn {', $css);
+
+        $beta = file_get_contents(resource_path('js/pages/marketing/Beta.vue'));
+        $this->assertNotFalse($beta);
+        $this->assertStringContainsString('snitch-light bg-white', $beta);
+
+        $darkShellPages = [
+            'js/pages/marketing/Pricing.vue',
+            'js/pages/marketing/About.vue',
+            'js/pages/marketing/HowItWorks.vue',
+            'js/pages/marketing/Contact.vue',
+            'js/pages/blog/Index.vue',
+            'js/pages/blog/Show.vue',
+            'js/components/marketing/LegalDocument.vue',
+        ];
+
+        foreach ($darkShellPages as $relative) {
+            $contents = file_get_contents(resource_path($relative));
+
+            $this->assertNotFalse($contents, "Missing {$relative}");
+            $this->assertStringNotContainsString('text-neutral-950', $contents, "{$relative} paints near-black type on the black public shell");
+            $this->assertDoesNotMatchRegularExpression('/\\bbg-white(?![\\/\\w-])/', $contents, "{$relative} paints white blocks on the black public shell");
+            $this->assertStringNotContainsString('text-xs', $contents, "{$relative} drops below the 14px type floor");
+            $this->assertStringNotContainsString('line-clamp', $contents, "{$relative} truncates copy");
+            $this->assertStringContainsString('text-snitch-caution-fog', $contents);
+        }
     }
 
     public function test_landing_uses_start_tracking_cta_and_platform_price(): void

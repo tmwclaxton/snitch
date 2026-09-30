@@ -24,3 +24,9 @@ Appearance is light / dark / system via `useAppearance`, the `appearance` cookie
 - Spot highlighter stays `#FFD60A` in both modes. Alert stays `#E5341D`.
 - Caution Tape tokens (`--snitch-caution-*`) stay fixed for landing accents.
 - Chart stipple / heat high levels use `--snitch-stipple-spot` (spot mixed with press) so marks stay AA-readable on cream; do not use bright `--snitch-spot` alone for thin chart strokes (prefer ink `#141414` for "You" series).
+
+## Public shell is pinned to Caution Tape night
+
+- `PublicLayout` carries `snitch-public-shell dark`, so every public page (landing, pricing, blog, legal, contact, 404, agents, analytics, onboarding) renders the night snitch tokens and `dark:` variants whatever the OS / appearance cookie. Light and dark visitors see the same page; only the logged-in app follows the appearance setting.
+- Public page copy uses Caution Tape classes (`text-snitch-caution-fog` + `/70`-`/85` for secondary, `snitch-hero-display` headings, `border-white/10 bg-[#141416]` panels, yellow `bg-snitch-caution-yellow` primary / fog-outline secondary buttons). Never `text-neutral-950`, `bg-white` cards, `text-xs`, or `line-clamp` on the black shell.
+- Sections that are deliberately cream/white (e.g. `/beta`) add `snitch-light` to re-scope the day tokens.

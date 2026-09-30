@@ -49,11 +49,11 @@ function formatDate(date: string): string {
     <div class="px-4 py-14 sm:px-8 sm:py-20">
         <div class="mx-auto max-w-6xl">
             <header>
-                <p class="text-xs font-medium uppercase tracking-wide text-neutral-500">Blog</p>
-                <h1 class="mt-2 text-pretty text-4xl font-semibold tracking-tight text-neutral-950 sm:text-5xl">
+                <p class="font-mono text-sm uppercase tracking-[0.18em] text-snitch-caution-yellow">Blog</p>
+                <h1 class="snitch-hero-display mt-3 text-pretty text-4xl text-snitch-caution-fog sm:text-5xl">
                     Instagram competitor notes worth keeping.
                 </h1>
-                <p class="mt-4 max-w-2xl text-base leading-relaxed text-neutral-600">
+                <p class="mt-5 max-w-2xl text-base leading-relaxed text-snitch-caution-fog/80 md:text-lg">
                     Hooks, remakes, and tracking workflows for brands and
                     agencies who watch rivals on Instagram.
                 </p>
@@ -67,7 +67,7 @@ function formatDate(date: string): string {
                     v-for="post in posts.data"
                     :key="post.id"
                     :href="show(post.slug)"
-                    class="group flex flex-col overflow-hidden border border-neutral-200 bg-white shadow-[0_20px_50px_-15px_rgba(0,0,0,0.10)] transition hover:-translate-y-0.5"
+                    class="group flex flex-col overflow-hidden border border-white/10 bg-[#141416] transition hover:-translate-y-0.5 hover:border-snitch-caution-yellow/60"
                     prefetch
                 >
                     <SnitchImage
@@ -86,19 +86,19 @@ function formatDate(date: string): string {
                             <span
                                 v-for="tag in post.tags.slice(0, 3)"
                                 :key="tag"
-                                class="text-[0.65rem] font-medium uppercase tracking-wide text-neutral-500"
+                                class="font-mono text-sm uppercase tracking-wide text-snitch-caution-fog/70"
                             >
                                 {{ tag }}
                             </span>
                         </div>
-                        <h2 class="text-xl font-semibold tracking-tight text-neutral-950 group-hover:underline sm:text-2xl">
+                        <h2 class="text-xl font-semibold tracking-tight text-snitch-caution-fog group-hover:underline group-hover:decoration-snitch-caution-yellow sm:text-2xl">
                             {{ post.title }}
                         </h2>
-                        <p class="text-sm leading-relaxed text-neutral-600">
+                        <p class="text-sm leading-relaxed text-snitch-caution-fog/80">
                             {{ post.excerpt }}
                         </p>
                         <div
-                            class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500"
+                            class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-snitch-caution-fog/70"
                         >
                             <span class="inline-flex items-center gap-1.5">
                                 <CalendarDays
@@ -120,12 +120,12 @@ function formatDate(date: string): string {
 
             <div
                 v-else
-                class="mx-auto mt-10 max-w-xl border border-neutral-200 bg-neutral-50 p-8 text-center"
+                class="mx-auto mt-10 max-w-xl border border-white/10 bg-[#141416] p-8 text-center"
             >
-                <p class="text-2xl font-semibold tracking-tight text-neutral-950">
+                <p class="text-2xl font-semibold tracking-tight text-snitch-caution-fog">
                     No posts yet.
                 </p>
-                <p class="mt-2 text-sm text-neutral-600">
+                <p class="mt-2 text-sm text-snitch-caution-fog/80">
                     Check back soon for Instagram competitor tracking notes and remake
                     ideas.
                 </p>
@@ -143,8 +143,8 @@ function formatDate(date: string): string {
                         class="inline-flex px-3 py-2 text-sm font-medium"
                         :class="
                             link.active
-                                ? 'bg-[#F0C400] text-neutral-950'
-                                : 'border border-neutral-200 text-neutral-700 hover:border-neutral-400'
+                                ? 'bg-snitch-caution-yellow text-snitch-caution-ink'
+                                : 'border border-white/20 text-snitch-caution-fog/80 hover:border-snitch-caution-yellow hover:text-snitch-caution-fog'
                         "
                         prefetch
                     >
@@ -152,7 +152,7 @@ function formatDate(date: string): string {
                     </Link>
                     <span
                         v-else
-                        class="inline-flex pointer-events-none border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-400 opacity-40"
+                        class="inline-flex pointer-events-none border border-white/10 px-3 py-2 text-sm font-medium text-snitch-caution-fog/50"
                     >
                         <span v-html="link.label" />
                     </span>

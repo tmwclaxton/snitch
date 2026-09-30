@@ -255,7 +255,7 @@ function followerLabel(count: number | null): string {
                     <input
                         v-model="ownHandle"
                         type="text"
-                        class="mt-1.5 w-full rounded border border-snitch-ink/15 bg-white px-3 py-2 text-[14px] outline-none focus:border-snitch-ink/40"
+                        class="mt-1.5 w-full rounded border border-snitch-ink/15 bg-[var(--snitch-lift)] px-3 py-2 text-snitch-ink text-[14px] outline-none focus:border-snitch-ink/40"
                         placeholder="@yourbrand"
                         data-test="onboarding-own-handle"
                     >
@@ -267,7 +267,7 @@ function followerLabel(count: number | null): string {
                         <input
                             v-model="query"
                             type="search"
-                            class="w-full rounded border border-snitch-ink/15 bg-white px-3 py-2 text-[14px] outline-none focus:border-snitch-ink/40"
+                            class="w-full rounded border border-snitch-ink/15 bg-[var(--snitch-lift)] px-3 py-2 text-snitch-ink text-[14px] outline-none focus:border-snitch-ink/40"
                             placeholder="Search by name, @handle, or profile URL"
                             data-test="onboarding-search"
                             @keyup.enter="runSearch"
@@ -282,7 +282,7 @@ function followerLabel(count: number | null): string {
                         </button>
                         <button
                             type="button"
-                            class="rounded border border-snitch-ink/20 bg-white px-3 py-2 text-[14px]"
+                            class="rounded border border-snitch-ink/20 bg-[var(--snitch-lift)] px-3 py-2 text-snitch-ink text-[14px]"
                             :disabled="lookingUp"
                             data-test="onboarding-lookup"
                             @click="runLookup"
@@ -307,7 +307,7 @@ function followerLabel(count: number | null): string {
                     <li
                         v-for="row in results"
                         :key="`${row.platform}:${row.handle}`"
-                        class="flex items-center gap-3 rounded border border-snitch-ink/10 bg-white px-3 py-2"
+                        class="flex items-center gap-3 rounded border border-snitch-ink/10 bg-[var(--snitch-lift)] px-3 py-2"
                     >
                         <img
                             v-if="row.avatar"
