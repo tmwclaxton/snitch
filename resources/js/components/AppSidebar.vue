@@ -6,14 +6,18 @@ import {
     Clapperboard,
     Compass,
     CreditCard,
-    LayoutGrid,
+    FileText,
+    HelpCircle,
     Lightbulb,
+    Megaphone,
+    MessageSquare,
     Settings,
     Shield,
     Store,
+    Target,
     TrendingUp,
-    Trophy,
     Users,
+    Vote,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import { edit as brand } from '@/actions/App/Http/Controllers/BrandProfileController';
@@ -22,7 +26,7 @@ import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorC
 import { index as explore } from '@/actions/App/Http/Controllers/ExploreController';
 import { index as feed } from '@/actions/App/Http/Controllers/FeedController';
 import { index as growth } from '@/actions/App/Http/Controllers/GrowthController';
-import { index as winners } from '@/actions/App/Http/Controllers/WinnerController';
+import { show as monthlyReport } from '@/actions/App/Http/Controllers/MonthlyReportController';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -46,18 +50,59 @@ import type { NavItem } from '@/types';
 const page = usePage();
 const isAdmin = computed(() => Boolean(page.props.auth?.user?.is_admin));
 
+const trackedBy = computed(() => {
+    const raw = (page.props as { trackedBy?: { count: number; since?: string | null } | null }).trackedBy;
+
+    return raw ?? null;
+});
+
 /*
- * Core product nav sold on pricing: Tracking, Feed, Explore, Winners.
- * Brand rounds out the marketer loop. Ad Library stays behind
- * config('features.ad_library') until Meta ads sync is GA-ready.
- * Influencers and Backlog stay off the sidebar.
+ * Dashboard is organised as four questions (+ vote). Hash links jump to
+ * sections; Winners lives inside How are they performing?
+ * Ad Library content is the Are they running ads? section.
  */
+const questionNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [
+        {
+            title: 'What should we post?',
+            href: `${dashboard.url()}#what-to-post`,
+            icon: HelpCircle,
+            section: 'what-to-post',
+        },
+        {
+            title: 'How are they performing?',
+            href: `${dashboard.url()}#performance`,
+            icon: Target,
+            section: 'performance',
+        },
+        {
+            title: 'Are they running ads?',
+            href: `${dashboard.url()}#ads`,
+            icon: Megaphone,
+            section: 'ads',
+        },
+    ];
+
+    if (trackedBy.value != null && trackedBy.value.count > 0) {
+        items.push({
+            title: 'Is anyone tracking you?',
+            href: `${dashboard.url()}#tracked-by`,
+            icon: MessageSquare,
+            section: 'tracked-by',
+        });
+    }
+
+    items.push({
+        title: 'Cast your vote',
+        href: `${dashboard.url()}#vote`,
+        icon: Vote,
+        section: 'vote',
+    });
+
+    return items;
+});
+
 const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
     {
         title: 'Brand',
         href: brand(),
@@ -74,11 +119,6 @@ const mainNavItems: NavItem[] = [
         icon: Clapperboard,
     },
     {
-        title: 'Winners',
-        href: winners(),
-        icon: Trophy,
-    },
-    {
         title: 'This week',
         href: brief(),
         icon: CalendarDays,
@@ -87,6 +127,11 @@ const mainNavItems: NavItem[] = [
         title: 'Growth',
         href: growth(),
         icon: TrendingUp,
+    },
+    {
+        title: 'Monthly report',
+        href: monthlyReport(),
+        icon: FileText,
     },
     {
         title: 'Explore',
@@ -159,6 +204,7 @@ const accountNavItems = computed<NavItem[]>(() => {
         </SidebarHeader>
 
         <SidebarContent class="gap-4 overflow-y-auto">
+            <NavMain :items="questionNavItems" label="Dashboard" />
             <NavMain :items="mainNavItems" label="Platform" />
         </SidebarContent>
 

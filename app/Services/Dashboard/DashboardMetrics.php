@@ -110,6 +110,11 @@ class DashboardMetrics
                 'cta_clicks' => ['posts_with_cta' => 0, 'posts' => 0],
                 'format_mix' => [],
             ],
+            'ads_panel' => [
+                'running_ads' => 0,
+                'accounts' => [],
+                'recommendation' => 'None of your rivals advertise, so organic is enough for now.',
+            ],
         ];
     }
 
@@ -208,6 +213,7 @@ class DashboardMetrics
         $followerSeries = $this->competitorInsights->followerSeriesForIds(array_map('intval', $socialIds));
         $growthDelta = $this->growthDeltaFromSnapshots($visibleAccounts, $snapshots);
         $captionIntel = $this->captionIntelForAccounts($user, $socialIds, $since);
+        $adsPanel = $this->adsPanel($user, $visibleAccounts);
         $rail = $this->railCard(
             $visibleAccounts,
             $ownRow,
@@ -268,6 +274,78 @@ class DashboardMetrics
             'follower_series' => $followerSeries,
             'growth_delta' => $growthDelta,
             'caption_intel' => $captionIntel,
+            'ads_panel' => $adsPanel,
+        ];
+    }
+
+    /**
+     * Meta Ad Library rows for the dashboard ads section, grouped by rival.
+     *
+     * @param  Collection<int, TrackedAccount>  $visibleAccounts
+     * @return array{
+     *     running_ads: int,
+     *     accounts: list<array{
+     *         tracked_account_id: int,
+     *         handle: string,
+     *         count: int,
+     *         ads: list<array{id: int, title: string, body: string|null, url: string, platform: string, last_seen_at: string|null}>
+     *     }>,
+     *     recommendation: string
+     * }
+     */
+    private function adsPanel(User $user, Collection $visibleAccounts): array
+    {
+        $socialIds = $visibleAccounts
+            ->pluck('social_account_id')
+            ->filter()
+            ->map(fn (mixed $id): int => (int) $id)
+            ->values()
+            ->all();
+
+        $catalogue = $this->competitorInsights->adsCatalogue($user, $socialIds, 48);
+        $byHandle = [];
+
+        foreach ($catalogue as $ad) {
+            $handle = (string) ($ad['tracked_account']['handle'] ?? 'unknown');
+            $trackerId = isset($ad['tracked_account']['id']) ? (int) $ad['tracked_account']['id'] : 0;
+            $byHandle[$handle] ??= [
+                'tracked_account_id' => $trackerId,
+                'handle' => $handle,
+                'count' => 0,
+                'ads' => [],
+            ];
+            $byHandle[$handle]['count']++;
+
+            if (count($byHandle[$handle]['ads']) < 3) {
+                $byHandle[$handle]['ads'][] = [
+                    'id' => (int) $ad['id'],
+                    'title' => (string) $ad['title'],
+                    'body' => $ad['body'] ?? null,
+                    'url' => (string) $ad['url'],
+                    'platform' => (string) $ad['platform'],
+                    'last_seen_at' => $ad['last_seen_at'] ?? null,
+                ];
+            }
+        }
+
+        $accounts = array_values($byHandle);
+        usort($accounts, fn (array $left, array $right): int => $right['count'] <=> $left['count']);
+        $running = array_sum(array_column($accounts, 'count'));
+        $top = $accounts[0]['handle'] ?? null;
+
+        $recommendation = $running === 0
+            ? 'None of your rivals advertise, so organic is enough for now.'
+            : sprintf(
+                'Rivals are running %d ad%s%s.',
+                $running,
+                $running === 1 ? '' : 's',
+                $top !== null ? '; @'.$top.' is the most active' : '',
+            );
+
+        return [
+            'running_ads' => $running,
+            'accounts' => $accounts,
+            'recommendation' => $recommendation,
         ];
     }
 
@@ -877,19 +955,8 @@ class DashboardMetrics
             return CardResult::empty('Add Instagram accounts to see KPIs.');
         }
 
+        // Followers aggregate tile removed - a summed count across accounts is meaningless.
         $cards = [
-            $this->kpiStat(
-                key: 'followers_growth',
-                label: 'Followers · 30d',
-                why: 'Followers · 30d growth: Are you growing as fast as similar clubs?',
-                formula: 'F_now; (F_now − F_30d) / F_30d × 100. Real snapshots only.',
-                you: $ownRow,
-                peers: $peerRows,
-                valueKey: 'growth_pct',
-                displayKey: 'followers',
-                unit: 'pct',
-                emptyGrowth: true,
-            ),
             $this->kpiStat(
                 key: 'posts_per_week',
                 label: 'Posts / week',

@@ -277,12 +277,28 @@ class WeeklyBriefGenerator
             })
             ->all();
 
+        $bestTimes = collect(is_array($brief->best_times) ? $brief->best_times : [])
+            ->take(3)
+            ->values()
+            ->map(function (mixed $slot): array {
+                $row = is_array($slot) ? $slot : [];
+
+                return [
+                    'label' => (string) ($row['label'] ?? ''),
+                    'score' => isset($row['score']) && is_numeric($row['score']) ? (float) $row['score'] : 0.0,
+                ];
+            })
+            ->filter(fn (array $slot): bool => $slot['label'] !== '')
+            ->values()
+            ->all();
+
         return [
             'id' => (int) $brief->id,
             'week_start' => $brief->week_start?->toDateString(),
             'idea_count' => $brief->ideas->count(),
             'hook' => $ideas[0]['hook'] ?? null,
             'ideas' => $ideas,
+            'best_times' => $bestTimes,
         ];
     }
 

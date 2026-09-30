@@ -62,6 +62,7 @@ class DashboardController extends Controller
         'follower_series',
         'growth_delta',
         'caption_intel',
+        'ads_panel',
     ];
 
     public function __invoke(

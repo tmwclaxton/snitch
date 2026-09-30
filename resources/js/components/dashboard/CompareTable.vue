@@ -72,12 +72,11 @@ function formatUnderHandle(row: Row): string | null {
 </script>
 
 <template>
-    <div class="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+    <div class="min-w-0 pb-1">
         <EmptyState v-if="status !== 'ok' || !rows?.length" :reason="reason" compact />
         <table
             v-else
-            class="h-full min-h-0 w-full flex-1 table-fixed text-left text-sm"
-            :style="{ '--lb-rows': String(rows?.length || 1) }"
+            class="w-full table-fixed text-left text-sm"
         >
             <colgroup>
                 <col :style="{ width: showGrowth ? '40%' : '44%' }">
@@ -110,7 +109,7 @@ function formatUnderHandle(row: Row): string | null {
                     <th class="py-1 pl-2 pr-1 text-right font-medium leading-tight">Win</th>
                 </tr>
             </thead>
-            <tbody class="h-full">
+            <tbody>
                 <tr
                     v-for="row in rows"
                     :key="row.handle"
@@ -119,9 +118,8 @@ function formatUnderHandle(row: Row): string | null {
                         row.is_own_account ? 'bg-slate-50' : '',
                         row.no_posts_in_period ? 'text-slate-400' : '',
                     ]"
-                    :style="{ height: `calc(100% / var(--lb-rows))` }"
                 >
-                <td class="py-1.5 pr-3 align-middle">
+                <td class="py-2 pr-3 align-middle">
                     <div class="flex min-w-0 items-start gap-1.5" :title="row.row_note || undefined">
                         <SnitchAvatar
                             :src="row.avatar"
@@ -158,26 +156,26 @@ function formatUnderHandle(row: Row): string | null {
                     </div>
                 </td>
                 <td
-                    class="py-1.5 pl-2 pr-1 text-right align-middle tabular-nums"
+                    class="py-2 pl-2 pr-1 text-right align-middle tabular-nums"
                     :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-700'"
                 >
                     {{ followers(row.followers) }}
                 </td>
                 <td
                     v-if="showGrowth"
-                    class="py-1.5 pl-2 pr-1 text-right align-middle tabular-nums"
+                    class="py-2 pl-2 pr-1 text-right align-middle tabular-nums"
                     :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-700'"
                 >
                     {{ row.no_posts_in_period ? '-' : pct(row.growth_pct) }}
                 </td>
                 <td
-                    class="py-1.5 pl-2 pr-1 text-right align-middle tabular-nums"
+                    class="py-2 pl-2 pr-1 text-right align-middle tabular-nums"
                     :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-700'"
                 >
                     {{ row.no_posts_in_period ? '-' : num(row.posts_per_week) }}
                 </td>
                 <td
-                    class="py-1.5 pl-2 pr-1 text-right align-middle tabular-nums"
+                    class="py-2 pl-2 pr-1 text-right align-middle tabular-nums"
                     :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-700'"
                 >
                     <span
@@ -188,7 +186,7 @@ function formatUnderHandle(row: Row): string | null {
                     <span v-else>{{ row.er.toFixed(1) }}%</span>
                 </td>
                 <td
-                    class="py-1.5 pl-2 pr-1 text-right align-middle tabular-nums"
+                    class="py-2 pl-2 pr-1 text-right align-middle tabular-nums"
                     :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-700'"
                 >
                     {{ row.no_posts_in_period ? '-' : row.winners }}

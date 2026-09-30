@@ -11,4 +11,6 @@ export type NavItem = {
     href: NonNullable<InertiaLinkProps['href']>;
     icon?: Component;
     isActive?: boolean;
+    /** Dashboard section hash without #; used for scroll-spy active state. */
+    section?: string;
 };

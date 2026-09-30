@@ -1065,8 +1065,14 @@
 
     @media (min-width: 1280px) {
         .snitch-dash-kpi-strip {
-            grid-template-columns: repeat(5, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
         }
+    }
+
+    /* /brief heat grid: about half the former square-cell height. */
+    .snitch-brief-heat-cell {
+        height: 0.5rem;
+        min-height: 0.5rem;
     }
 
     /* Soft fade only on the dash sheet - keep transform stagger off so rows do not jump. */
