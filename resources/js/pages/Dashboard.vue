@@ -531,8 +531,8 @@ const trackerIdsByHandle = computed(() => {
                         </div>
                     </div>
 
-                    <div class="grid items-start gap-2 lg:grid-cols-2">
-                        <div class="snitch-scrap space-y-2 p-3">
+                    <div class="grid items-stretch gap-2 lg:grid-cols-2">
+                        <div class="snitch-scrap h-full space-y-2 p-3">
                             <p class="snitch-ink-label">Best posting times</p>
                             <ol
                                 v-if="(weekly_brief?.best_times?.length || 0) > 0"
