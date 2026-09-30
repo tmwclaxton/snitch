@@ -76,12 +76,13 @@ const displayCaption = computed(() => {
         return captionSource.value;
     }
 
+    // Full hook/concept - never truncate with ellipsis.
     return postPrimaryTitle({
         caption: null,
         hook: completedHook.value,
         concept: completedConcept.value,
         type: props.post.type,
-        maxLength: 280,
+        maxLength: Number.POSITIVE_INFINITY,
     });
 });
 
@@ -92,7 +93,7 @@ const captionNeedsToggle = computed(() => {
         return false;
     }
 
-    return raw.length > 220 || raw.split(/\n/).length > 4;
+    return raw.length > 320 || raw.split(/\n/).length > 8;
 });
 
 const completedHook = computed(() => {
@@ -227,17 +228,17 @@ function toggleCaption(event: Event): void {
             <div class="min-w-0">
                 <p
                     class="snitch-glance-title whitespace-pre-wrap break-words"
-                    :class="captionExpanded ? '' : 'line-clamp-4'"
+                    :class="!captionExpanded && captionNeedsToggle ? 'snitch-glance-collapsed' : ''"
                 >
                     {{ displayCaption }}
                 </p>
                 <button
                     v-if="captionNeedsToggle"
                     type="button"
-                    class="mt-0.5 text-[11px] font-medium text-snitch-ink/55 underline-offset-2 hover:text-snitch-ink hover:underline"
+                    class="relative z-10 mt-0.5 text-sm font-medium text-snitch-ink/55 underline-offset-2 hover:text-snitch-ink hover:underline"
                     @click="toggleCaption"
                 >
-                    {{ captionExpanded ? 'less' : 'more' }}
+                    {{ captionExpanded ? 'Show less' : 'Show more' }}
                 </button>
             </div>
             <ul
@@ -261,7 +262,7 @@ function toggleCaption(event: Event): void {
             </ul>
             <p
                 v-if="hookLine && !compact"
-                class="snitch-glance-hook line-clamp-2"
+                class="snitch-glance-hook whitespace-pre-wrap break-words"
             >
                 {{ hookLine }}
             </p>

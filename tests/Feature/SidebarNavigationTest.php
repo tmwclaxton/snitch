@@ -36,8 +36,10 @@ class SidebarNavigationTest extends TestCase
         $this->assertStringContainsString('activeDashboardSection', $navMain);
         $this->assertStringContainsString('item.exact', $navMain);
         $this->assertStringContainsString('exact: true', $sidebar);
-        $this->assertStringContainsString('overflow-visible', $sidebar);
-        $this->assertStringNotContainsString('overflow-y-auto', $sidebar);
+        $this->assertStringContainsString('overflow-y-auto', $sidebar);
+        $this->assertStringContainsString('adminNavItems', $sidebar);
+        $this->assertStringContainsString('label="Admin"', $sidebar);
+        $this->assertStringContainsString('label="Account"', $sidebar);
     }
 
     public function test_account_nav_sits_above_the_profile(): void
@@ -47,17 +49,26 @@ class SidebarNavigationTest extends TestCase
         $this->assertNotFalse($sidebar);
 
         $platform = strpos($sidebar, '<NavMain :items="mainNavItems" label="Platform" />');
-        $footer = strpos($sidebar, '<SidebarFooter');
         $account = strpos($sidebar, '<NavMain :items="accountNavItems" label="Account" />');
+        $admin = strpos($sidebar, 'label="Admin"');
+        $footer = strpos($sidebar, '<SidebarFooter');
         $profile = strpos($sidebar, '<NavUser />');
 
         $this->assertNotFalse($platform);
-        $this->assertNotFalse($footer);
         $this->assertNotFalse($account);
+        $this->assertNotFalse($admin);
+        $this->assertNotFalse($footer);
         $this->assertNotFalse($profile);
-        $this->assertLessThan($footer, $platform);
-        $this->assertLessThan($account, $footer);
-        $this->assertLessThan($profile, $account);
+        $this->assertLessThan($account, $platform);
+        $this->assertLessThan($account, $admin);
+        $this->assertLessThan($footer, $account);
+        $this->assertLessThan($profile, $footer);
+        $this->assertStringContainsString('title: \'Explore\'', $sidebar);
+        $explore = strpos($sidebar, "title: 'Explore'");
+        $adminTitle = strpos($sidebar, "title: 'Admin'");
+        $this->assertNotFalse($explore);
+        $this->assertNotFalse($adminTitle);
+        $this->assertLessThan($adminTitle, $explore);
     }
 
     public function test_nested_url_helper_matches_child_routes(): void

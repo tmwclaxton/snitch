@@ -93,12 +93,15 @@ const showHistoryMenu = computed(() => props.history.length >= 2);
 
 function heatStyle(value: number | null): Record<string, string> {
     if (value == null) {
-        return { background: 'transparent' };
+        return {};
     }
 
-    const alpha = Math.min(0.85, 0.15 + (value / heatMax.value) * 0.7);
+    const ratio = Math.min(1, Math.max(0, value / heatMax.value));
+    const mix = Math.round(32 + ratio * 68);
 
-    return { background: `rgba(240, 196, 0, ${alpha})` };
+    return {
+        background: `color-mix(in oklab, var(--snitch-spot) ${mix}%, var(--snitch-brief-heat-empty, var(--snitch-lift)))`,
+    };
 }
 
 function formatHour(hour: number | null): string {
@@ -244,7 +247,7 @@ function regenerate(): void {
                     </h3>
                     <p
                         v-if="idea.visual"
-                        class="mt-1 text-sm text-snitch-ink/50"
+                        class="mt-1 text-sm text-snitch-ink/50 dark:text-snitch-ink/85"
                     >
                         {{ idea.visual }}
                     </p>
@@ -374,7 +377,7 @@ function regenerate(): void {
                             <span
                                 v-for="hour in 24"
                                 :key="`h-${hour}`"
-                                class="text-center text-[10px] leading-none text-snitch-ink/45"
+                                class="snitch-brief-heat-axis text-center"
                             >
                                 {{ hourLabel(hour - 1) }}
                             </span>
@@ -382,13 +385,13 @@ function regenerate(): void {
                                 v-for="(row, dow) in brief.heat_grid"
                                 :key="`d-${dow}`"
                             >
-                                <span class="pr-1 text-right text-xs text-snitch-ink/55">
+                                <span class="snitch-brief-heat-axis snitch-brief-heat-axis-day pr-1 text-right">
                                     {{ days[dow] }}
                                 </span>
                                 <span
                                     v-for="(cell, hour) in row"
                                     :key="`c-${dow}-${hour}`"
-                                    class="snitch-brief-heat-cell w-full border border-snitch-ink/5"
+                                    class="snitch-brief-heat-cell w-full border border-snitch-ink/5 dark:border-[#2c2c31]"
                                     :style="heatStyle(cell)"
                                     :title="cell == null ? '' : `${days[dow]} ${hour}:00 · ${cell}×`"
                                 />

@@ -19,14 +19,17 @@ class EmbedLoadQueueContractTest extends TestCase
     }
 
     #[Test]
-    public function feed_contact_cell_shows_covers_not_iframes(): void
+    public function feed_contact_cell_does_not_ellipsis_clamp_copy(): void
     {
         $source = file_get_contents(base_path('resources/js/components/FeedContactCell.vue'));
 
         $this->assertIsString($source);
-        $this->assertStringContainsString('<PlatformEmbed', $source);
-        $this->assertStringContainsString(':cover-url="post.cover_url"', $source);
-        $this->assertStringNotContainsString('<iframe', $source);
+        $this->assertStringNotContainsString('line-clamp-', $source);
+        $this->assertStringContainsString('Show more', $source);
+        $this->assertStringContainsString('snitch-glance-collapsed', $source);
+        $this->assertStringContainsString('whitespace-pre-wrap break-words', $source);
+        $this->assertStringContainsString('POSITIVE_INFINITY', $source);
+        $this->assertDoesNotMatchRegularExpression('/snitch-glance-hook[^>]*(line-clamp|snitch-glance-collapsed)/', $source);
     }
 
     #[Test]

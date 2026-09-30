@@ -1359,8 +1359,35 @@ html:has(.snitch-public-shell) {
 
     /* /brief heat grid: about half the former square-cell height. */
     .snitch-brief-heat-cell {
+        --snitch-brief-heat-empty: var(--snitch-lift);
         height: 0.5rem;
         min-height: 0.5rem;
+        box-sizing: border-box;
+    }
+
+    .snitch-brief-heat-axis {
+        color: color-mix(in oklab, var(--snitch-ink) 45%, transparent);
+        font-size: 0.625rem; /* 10px - light hour labels */
+        line-height: 1.2;
+    }
+
+    .snitch-brief-heat-axis-day {
+        color: color-mix(in oklab, var(--snitch-ink) 55%, transparent);
+        font-size: 0.75rem; /* text-xs */
+        line-height: 1.2;
+    }
+
+    .dark .snitch-brief-heat-cell {
+        --snitch-brief-heat-empty: #1f1f23;
+        background: #1f1f23;
+        border-color: #2c2c31;
+    }
+
+    .dark .snitch-brief-heat-axis,
+    .dark .snitch-brief-heat-axis-day {
+        color: color-mix(in oklab, var(--snitch-fog, var(--snitch-ink)) 78%, transparent);
+        font-size: 0.875rem; /* 14px fog */
+        line-height: 1.2;
     }
 
     /* Soft fade only on the dash sheet - keep transform stagger off so rows do not jump. */
@@ -1897,6 +1924,7 @@ html:has(.snitch-public-shell) {
         z-index: 1;
         display: flex;
         flex-direction: column;
+        height: 100%;
         min-width: 0;
         overflow: hidden;
         background: color-mix(in oklab, var(--snitch-paper) 92%, var(--snitch-lift));
@@ -2068,6 +2096,7 @@ html:has(.snitch-public-shell) {
 
     .snitch-contact-cell-body {
         display: flex;
+        flex: 1 1 auto;
         flex-direction: column;
         gap: 0.55rem;
         min-width: 0;
@@ -2084,6 +2113,12 @@ html:has(.snitch-public-shell) {
         line-height: 1.3;
         letter-spacing: -0.01em;
         color: var(--snitch-ink);
+    }
+
+    /* Collapse without ellipsis - full caption behind Show more. */
+    .snitch-glance-collapsed {
+        max-height: 6.5em; /* ~5 lines at 1.3 */
+        overflow: hidden;
     }
 
     .snitch-contact-cell:hover .snitch-glance-title {

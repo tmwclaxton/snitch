@@ -142,49 +142,47 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-const accountNavItems = computed<NavItem[]>(() => {
-    const items: NavItem[] = [];
-
-    if (isAdmin.value) {
-        items.push(
-            {
-                title: 'Admin',
-                href: adminOverview(),
-                icon: Shield,
-            },
-            {
-                title: 'Activity',
-                href: adminActivity(),
-                icon: Activity,
-            },
-            {
-                title: 'Users',
-                href: adminUsersIndex(),
-                icon: Users,
-            },
-            {
-                title: 'Features',
-                href: adminFeaturesIndex(),
-                icon: Lightbulb,
-            },
-        );
+const adminNavItems = computed<NavItem[]>(() => {
+    if (! isAdmin.value) {
+        return [];
     }
 
-    items.push(
+    return [
         {
-            title: 'Billing',
-            href: billing(),
-            icon: CreditCard,
+            title: 'Admin',
+            href: adminOverview(),
+            icon: Shield,
         },
         {
-            title: 'Settings',
-            href: appearance(),
-            icon: Settings,
+            title: 'Activity',
+            href: adminActivity(),
+            icon: Activity,
         },
-    );
-
-    return items;
+        {
+            title: 'Users',
+            href: adminUsersIndex(),
+            icon: Users,
+        },
+        {
+            title: 'Features',
+            href: adminFeaturesIndex(),
+            icon: Lightbulb,
+        },
+    ];
 });
+
+const accountNavItems: NavItem[] = [
+    {
+        title: 'Billing',
+        href: billing(),
+        icon: CreditCard,
+    },
+    {
+        title: 'Settings',
+        href: appearance(),
+        icon: Settings,
+    },
+];
 </script>
 
 <template>
@@ -193,7 +191,7 @@ const accountNavItems = computed<NavItem[]>(() => {
         variant="sidebar"
         class="border-r border-snitch-ink/10 bg-snitch-paper"
     >
-        <SidebarHeader class="border-b border-snitch-ink/10">
+        <SidebarHeader class="shrink-0 border-b border-snitch-ink/10">
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
@@ -205,18 +203,19 @@ const accountNavItems = computed<NavItem[]>(() => {
             </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent class="gap-2 overflow-visible">
+        <SidebarContent class="min-h-0 flex-1 gap-2 overflow-y-auto">
             <NavMain :items="questionNavItems" label="Dashboard" />
             <NavMain :items="mainNavItems" label="Platform" />
+            <NavMain
+                v-if="adminNavItems.length"
+                :items="adminNavItems"
+                label="Admin"
+            />
+            <NavMain :items="accountNavItems" label="Account" />
         </SidebarContent>
 
-        <SidebarFooter class="mt-auto shrink-0 gap-0 border-t border-snitch-ink/10 p-0">
-            <div class="pt-2">
-                <NavMain :items="accountNavItems" label="Account" />
-            </div>
-            <div class="border-t border-snitch-ink/10 p-2">
-                <NavUser />
-            </div>
+        <SidebarFooter class="shrink-0 border-t border-snitch-ink/10 p-2">
+            <NavUser />
         </SidebarFooter>
     </Sidebar>
     <slot />
