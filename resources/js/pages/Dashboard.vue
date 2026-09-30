@@ -16,6 +16,8 @@ import InsightList from '@/components/dashboard/InsightList.vue';
 import PostingHeatmap from '@/components/dashboard/PostingHeatmap.vue';
 import StatCard from '@/components/dashboard/StatCard.vue';
 import ThemeMatrix from '@/components/dashboard/ThemeMatrix.vue';
+import TrackedBySection from '@/components/dashboard/TrackedBySection.vue';
+import VoteSection from '@/components/dashboard/VoteSection.vue';
 import WinnerCard from '@/components/dashboard/WinnerCard.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
@@ -119,6 +121,15 @@ const props = defineProps<{
         hook: string | null;
         ideas?: { format: string; hook: string; slot: string }[];
     } | null;
+    trackedBy?: { count: number; since: string } | null;
+    featureSuggestions?: Array<{
+        id: number;
+        title: string;
+        body: string;
+        status: string;
+        votes_count: number;
+        voted: boolean;
+    }>;
     caption_intel?: {
         hashtags: { term: string; count: number }[];
         keywords: { term: string; count: number }[];
@@ -260,6 +271,10 @@ const trackerIdsByHandle = computed(() => {
         <Head title="Dashboard" />
 
         <div class="mx-auto max-w-none space-y-2">
+            <TrackedBySection :tracked-by="trackedBy ?? null" />
+
+            <VoteSection :suggestions="featureSuggestions ?? []" />
+
             <div
                 v-if="weekly_brief"
                 class="flex min-w-0 items-start gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5"
