@@ -17,8 +17,19 @@ const props = defineProps<{
 
 const open = ref(false);
 
-const handle = computed(() =>
-    props.post.is_own_account ? 'You' : `@${props.post.handle ?? 'unknown'}`,
+/** Bare handle (no @) with soft wrap only after . or _. Full handle always visible. */
+const handle = computed(() => {
+    if (props.post.is_own_account) {
+        return 'You';
+    }
+
+    const bare = (props.post.handle ?? 'unknown').replace(/^@/, '');
+
+    return bare.replace(/([._])/g, '$1\u200b');
+});
+
+const handleLabel = computed(() =>
+    props.post.is_own_account ? 'You' : (props.post.handle ?? 'unknown').replace(/^@/, ''),
 );
 
 const piLabel = computed(() => `${props.post.pi.toFixed(1)}× usual`);
@@ -38,7 +49,7 @@ const piLabel = computed(() => `${props.post.pi.toFixed(1)}× usual`);
             <SnitchImage
                 v-if="post.thumbnail_url"
                 :src="post.thumbnail_url"
-                :alt="handle"
+                :alt="handleLabel"
                 class="absolute inset-0 block size-full"
                 img-class="size-full object-cover"
             />
@@ -56,7 +67,7 @@ const piLabel = computed(() => `${props.post.pi.toFixed(1)}× usual`);
             </div>
         </div>
         <div class="space-y-0.5 p-2">
-            <p class="truncate whitespace-nowrap text-sm font-medium text-snitch-ink">
+            <p class="text-[13px] font-medium leading-snug break-words text-snitch-ink">
                 {{ handle }}
             </p>
             <p class="font-display text-base font-semibold tabular-nums text-snitch-ink">

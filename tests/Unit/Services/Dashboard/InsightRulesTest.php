@@ -145,4 +145,34 @@ class InsightRulesTest extends TestCase
         $this->assertStringNotContainsString('…', $winner['text']);
         $this->assertStringContainsString('@peerbrand', $winner['text']);
     }
+
+    public function test_format_lift_leads_with_the_stronger_format(): void
+    {
+        $rules = new InsightRules;
+
+        $items = $rules->top([
+            'own' => [
+                'posts_n' => 20,
+                'posts_per_week' => 2,
+                'er' => 2.0,
+                'format_share' => ['Reel' => 40, 'Carousel' => 40],
+            ],
+            'rival_rows' => [],
+            'peer_posts_per_week' => 2,
+            'peer_er' => 2,
+            'rival_posts_n' => 20,
+            'peer_format_lift' => [
+                'Reel' => ['lift' => 0.9, 'n' => 12],
+                'Carousel' => ['lift' => 1.8, 'n' => 12],
+            ],
+        ]);
+
+        $format = collect($items)->firstWhere('category', 'format_lift');
+        $this->assertNotNull($format);
+        $this->assertSame(
+            'Carousels beat reels across your competitors (**1.8×** vs **0.9×**).',
+            $format['text'],
+        );
+        $this->assertStringNotContainsString('Reels do', $format['text']);
+    }
 }

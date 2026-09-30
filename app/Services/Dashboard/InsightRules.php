@@ -230,55 +230,62 @@ class InsightRules
     private function formatLift(array $context): array
     {
         $lifts = $context['peer_format_lift'] ?? [];
-        $out = [];
 
-        foreach ($lifts as $format => $row) {
-            if (! is_array($row)) {
-                continue;
-            }
-
-            $lift = (float) ($row['lift'] ?? 0);
-            $n = (int) ($row['n'] ?? 0);
-
-            if ($n < 8 || $lift < 1.3) {
-                continue;
-            }
-
-            $parts = [];
-
-            foreach ($lifts as $f => $r) {
-                if (! is_array($r) || ($r['n'] ?? 0) < 3) {
-                    continue;
-                }
-
-                if (! is_numeric($r['lift'] ?? null)) {
-                    continue;
-                }
-
-                $label = strtolower((string) $f);
-                $plural = str_ends_with($label, 's') ? $label : $label.'s';
-                $parts[] = sprintf('%s do %s×', $plural, $this->x((float) $r['lift']));
-            }
-
-            if (count($parts) < 2) {
-                continue;
-            }
-
-            $out[] = [
-                'category' => 'format_lift',
-                'text' => 'Across your competitors, **'.implode(', ', [
-                    ucfirst($parts[0] ?? ''),
-                    ...array_slice($parts, 1),
-                ]).'**.',
-                'score' => ($lift - 1) * min(1, $n / 20),
-                'n' => $n,
-                'links_to' => 'format_lift',
-            ];
-
-            break;
+        if (! is_array($lifts) || $lifts === []) {
+            return [];
         }
 
-        return $out;
+        $ranked = [];
+
+        foreach ($lifts as $format => $row) {
+            if (! is_array($row) || ($row['n'] ?? 0) < 3 || ! is_numeric($row['lift'] ?? null)) {
+                continue;
+            }
+
+            $ranked[] = [
+                'format' => (string) $format,
+                'lift' => (float) $row['lift'],
+                'n' => (int) $row['n'],
+            ];
+        }
+
+        if (count($ranked) < 2) {
+            return [];
+        }
+
+        usort($ranked, static fn (array $a, array $b): int => $b['lift'] <=> $a['lift']);
+
+        $best = $ranked[0];
+        $worst = $ranked[array_key_last($ranked)];
+
+        if ($best['n'] < 8 || $best['lift'] < 1.3 || $best['format'] === $worst['format']) {
+            return [];
+        }
+
+        return [[
+            'category' => 'format_lift',
+            'text' => sprintf(
+                '%s beat %s across your competitors (**%s×** vs **%s×**).',
+                ucfirst($this->pluralFormat($best['format'])),
+                $this->pluralFormat($worst['format']),
+                $this->x($best['lift']),
+                $this->x($worst['lift']),
+            ),
+            'score' => ($best['lift'] - 1) * min(1, $best['n'] / 20),
+            'n' => $best['n'],
+            'links_to' => 'format_lift',
+        ]];
+    }
+
+    private function pluralFormat(string $label): string
+    {
+        $base = strtolower(trim($label));
+
+        if ($base === '') {
+            return 'posts';
+        }
+
+        return str_ends_with($base, 's') ? $base : $base.'s';
     }
 
     /**

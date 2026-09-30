@@ -94,7 +94,7 @@ class ExecutiveDashboardTest extends TestCase
                             'n' => 20,
                         ],
                         [
-                            'text' => 'Across your competitors, **Reels do 0.9×, carousels do 1.8×**.',
+                            'text' => 'Carousels beat reels across your competitors (**1.8×** vs **0.9×**).',
                             'score' => 1.8,
                             'n' => 20,
                         ],
@@ -108,9 +108,9 @@ class ExecutiveDashboardTest extends TestCase
         );
 
         $this->assertCount(1, $brief['what_to_post']['takeaways']);
-        $this->assertSame('0.9×', $brief['what_to_post']['takeaways'][0]['metric']);
+        $this->assertSame('1.8×', $brief['what_to_post']['takeaways'][0]['metric']);
         $this->assertSame(
-            'Across your competitors, Reels do 0.9×, carousels do 1.8×.',
+            'Carousels beat reels across your competitors (1.8× vs 0.9×).',
             $brief['what_to_post']['takeaways'][0]['text'],
         );
         $this->assertStringNotContainsString('do .', $brief['what_to_post']['takeaways'][0]['text']);
@@ -126,6 +126,13 @@ class ExecutiveDashboardTest extends TestCase
         $this->assertStringContainsString('ExecRankBars', $dashboard);
         $this->assertStringContainsString('ExecWinnerThumb', $dashboard);
         $this->assertStringContainsString('ExecWhatWorks', $dashboard);
+
+        $winnerThumb = file_get_contents(resource_path('js/components/dashboard/ExecWinnerThumb.vue'));
+        $this->assertIsString($winnerThumb);
+        $this->assertDoesNotMatchRegularExpression('/\\btruncate\\b/', $winnerThumb);
+        $this->assertStringNotContainsString('whitespace-nowrap', $winnerThumb);
+        $this->assertStringContainsString('\\u200b', $winnerThumb);
+        $this->assertStringContainsString('text-[13px]', $winnerThumb);
         $this->assertStringContainsString('whatToPostHeadline', $dashboard);
         $this->assertStringContainsString('performanceHeadline', $dashboard);
         $this->assertStringContainsString('executive?.what_to_post?.headline', $dashboard);

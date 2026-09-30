@@ -10,7 +10,7 @@ class DashboardCache
     public const TTL_SECONDS = 12 * 60 * 60;
 
     /** Bump when cached payload shape or executive headline inputs change. */
-    public const KEY_VERSION = 'v2';
+    public const KEY_VERSION = 'v3';
 
     public function key(User $user, string $period, array $selectedHandles, bool $showHiddenLikes = false): string
     {
