@@ -3,7 +3,6 @@ import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
 import { useAccountColours } from '@/composables/useAccountColours';
-import { snitchAxisLabel, snitchAxisMuted, snitchInk } from '@/lib/snitchTheme';
 
 type Point = { date: string; followers: number; pct_change: number | null };
 type Series = { handle: string; is_own_account: boolean; points: Point[] };
@@ -31,23 +30,23 @@ const colours = computed(() =>
 );
 
 const options = computed(() => ({
-    chart: { type: 'line' as const, height: 180, toolbar: { show: false }, zoom: { enabled: false }, fontFamily: 'inherit', background: 'transparent' },
+    chart: { type: 'line' as const, height: 180, toolbar: { show: false }, zoom: { enabled: false }, fontFamily: 'inherit' },
     colors: colours.value,
     stroke: { width: 2, curve: 'straight' as const },
     markers: { size: 3 },
-    grid: { borderColor: snitchAxisMuted(), strokeDashArray: 3 },
+    grid: { borderColor: '#e2e8f0', strokeDashArray: 3 },
     xaxis: {
         type: 'category' as const,
-        labels: { style: { colors: snitchAxisLabel(), fontSize: '14px' } },
+        labels: { style: { colors: '#64748b', fontSize: '10px' } },
     },
     yaxis: {
         labels: {
-            style: { colors: snitchAxisLabel(), fontSize: '14px' },
+            style: { colors: '#64748b', fontSize: '10px' },
             formatter: (value: number) => `${value.toFixed(1)}%`,
         },
-        title: { text: '% vs start', style: { color: snitchAxisLabel(), fontSize: '14px' } },
+        title: { text: '% vs start', style: { color: '#94a3b8', fontSize: '10px' } },
     },
-    legend: { fontSize: '14px', labels: { colors: snitchInk('#141414') } },
+    legend: { fontSize: '11px', labels: { colors: '#475569' } },
     tooltip: {
         y: { formatter: (value: number) => `${value.toFixed(1)}%` },
     },

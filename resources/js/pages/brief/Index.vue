@@ -223,7 +223,7 @@ function regenerate(): void {
                 >
                     <span class="snitch-tape right-5 -top-2" aria-hidden="true" />
                     <div class="flex items-start justify-between gap-2">
-                        <span class="snitch-format-tag text-xs">
+                        <span class="rounded-sm bg-snitch-spot/40 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-snitch-ink">
                             {{ idea.format }}
                         </span>
                         <Form

@@ -132,10 +132,8 @@ export function glanceTermChips(input: {
         }
 
         const key = (chip.searchValue ?? chip.slug ?? chip.label).toLowerCase();
-        // Drop seed / OCR junk like single-letter "h" / "x" chips.
-        const meaningful = (chip.label ?? '').replace(/[^a-z0-9]/gi, '');
 
-        if (!key || seen.has(key) || meaningful.length < 2) {
+        if (!key || seen.has(key)) {
             return;
         }
 

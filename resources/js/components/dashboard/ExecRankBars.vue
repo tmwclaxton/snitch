@@ -68,11 +68,11 @@ const ranked = computed(() => {
                 >
                     {{ row.label }}
                 </span>
-                <div class="snitch-meter h-3">
+                <div class="h-3 overflow-hidden rounded-sm bg-snitch-ink/8">
                     <div
                         v-if="row.hasData"
                         class="h-full rounded-sm"
-                        :class="row.is_own_account ? 'snitch-meter-fill-lead' : 'snitch-meter-fill'"
+                        :class="row.is_own_account ? 'bg-snitch-spot' : 'bg-snitch-ink'"
                         :style="{ width: row.width }"
                     />
                 </div>

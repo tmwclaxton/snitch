@@ -1,14 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
-import {
-    snitchAxisLabel,
-    snitchAxisMuted,
-    snitchInk,
-    snitchPeerSeries,
-    snitchRivalColours,
-    snitchYouSeries,
-} from '@/lib/snitchTheme';
+import { snitchAxisLabel, snitchAxisMuted, snitchInk } from '@/lib/snitchTheme';
 
 type Point = { date: string; value: number | null };
 type Series = {
@@ -28,20 +21,22 @@ const props = defineProps<{
     tableFallback?: boolean;
 }>();
 
+/** Evidence File: ink for You (AA on cream/night); muted peer; palette rivals. */
+const PEER_COLOUR = '#8A8478';
+const RIVAL_COLOURS = ['#3A5F6B', '#E5341D', '#5B7C99', '#8B5A2B', '#2F6F4E', '#6B4C7A', '#B45309', '#0F766E'];
+
 const colourByName = computed(() => {
     const map = new Map<string, string>();
     let rivalIndex = 0;
-    const youColour = snitchYouSeries();
-    const peerColour = snitchPeerSeries();
-    const rivals = snitchRivalColours();
+    const youColour = snitchInk('#141414');
 
     for (const row of props.series ?? []) {
         if (row.is_own_account || row.name === 'You') {
             map.set(row.name, youColour);
         } else if (row.is_peer_median || row.name === 'Peer median' || row.name === "Rivals' average") {
-            map.set(row.name, peerColour);
+            map.set(row.name, PEER_COLOUR);
         } else {
-            map.set(row.name, rivals[rivalIndex % rivals.length] ?? rivals[0]);
+            map.set(row.name, RIVAL_COLOURS[rivalIndex % RIVAL_COLOURS.length]);
             rivalIndex++;
         }
     }
@@ -92,7 +87,7 @@ const strokeDashes = computed(() =>
 );
 
 const colours = computed(() =>
-    activeSeries.value.map((row) => colourByName.value.get(row.name) ?? snitchPeerSeries()),
+    activeSeries.value.map((row) => colourByName.value.get(row.name) ?? PEER_COLOUR),
 );
 
 const chartKey = computed(() =>

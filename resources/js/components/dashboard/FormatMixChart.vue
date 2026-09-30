@@ -102,12 +102,11 @@ const tip = computed(() => {
                     </span>
                 </div>
                 <div
-                    class="snitch-meter mt-1.5 h-3"
+                    class="mt-1.5 h-3 overflow-hidden rounded-sm bg-snitch-ink/8"
                     :title="`${postTypeLabel(row.type)}: ${row.count} posts`"
                 >
                     <div
-                        class="h-full rounded-sm"
-                        :class="peakByLift?.type === row.type ? 'snitch-meter-fill-lead' : 'snitch-meter-fill'"
+                        class="h-full rounded-sm bg-snitch-ink"
                         :style="{ width: barWidth(row.count) }"
                     />
                 </div>

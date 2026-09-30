@@ -404,7 +404,7 @@ const detailsOpen = ref(false);
                 <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1">
                     <div
                         v-if="own_account"
-                        class="snitch-choice snitch-choice-active h-7 rounded-full px-2 text-sm font-medium"
+                        class="inline-flex h-7 items-center gap-1 rounded-full border border-snitch-ink bg-snitch-ink px-2 text-sm font-medium text-white"
                     >
                         <SnitchAvatar
                             :src="own_account.avatar"
@@ -423,13 +423,13 @@ const detailsOpen = ref(false);
                     <div
                         v-for="rival in rivals"
                         :key="rival.id"
-                        class="snitch-choice h-7 rounded-full px-2 text-sm font-medium"
+                        class="inline-flex h-7 items-center gap-1 rounded-full border px-2 text-sm font-medium"
                         :class="
                             selected.includes(rival.handle.toLowerCase())
-                                ? 'snitch-choice-active'
+                                ? 'border-snitch-ink bg-snitch-ink text-white'
                                 : rival.no_posts_in_period
-                                    ? 'opacity-50'
-                                    : ''
+                                    ? 'border-snitch-ink/15 bg-snitch-lift text-snitch-ink/40'
+                                    : 'border-snitch-ink/15 bg-snitch-lift text-snitch-ink'
                         "
                         :title="rival.no_posts_in_period ? 'No posts imported yet' : `@${rival.handle}`"
                     >
@@ -466,14 +466,12 @@ const detailsOpen = ref(false);
                             @change="refreshQuery({ hidden: !show_hidden_likes })"
                         >
                         <span
-                            class="relative inline-flex h-3.5 w-6 shrink-0 items-center rounded-full bg-snitch-ink/15 transition-colors peer-checked:bg-snitch-spot peer-focus-visible:ring-2 peer-focus-visible:ring-snitch-spot/40 dark:bg-[#1a1a1d] dark:peer-checked:bg-snitch-spot"
+                            class="relative inline-flex h-3.5 w-6 shrink-0 items-center rounded-full bg-snitch-ink/15 transition-colors peer-checked:bg-snitch-ink peer-focus-visible:ring-2 peer-focus-visible:ring-snitch-ink/30"
                             aria-hidden="true"
                         >
                             <span
-                                class="ml-0.5 inline-block size-2.5 rounded-full transition-transform"
-                                :class="[
-                                    show_hidden_likes ? 'translate-x-2.5 bg-snitch-on-spot' : 'translate-x-0 bg-snitch-paper dark:bg-snitch-ink',
-                                ]"
+                                class="ml-0.5 inline-block size-2.5 rounded-full bg-snitch-lift transition-transform"
+                                :class="show_hidden_likes ? 'translate-x-2.5' : 'translate-x-0'"
                             />
                         </span>
                         <span class="hidden whitespace-nowrap md:inline">Hidden likes</span>
@@ -497,13 +495,13 @@ const detailsOpen = ref(false);
                             </span>
                         </span>
                     </label>
-                    <div class="flex items-center gap-0.5 rounded border border-snitch-ink/15 p-0.5 dark:border-snitch-ink/28">
+                    <div class="flex items-center gap-0.5 rounded border border-snitch-ink/15 p-0.5">
                         <button
                             v-for="days in periods"
                             :key="days"
                             type="button"
-                            class="snitch-choice rounded px-2 py-1 text-sm font-medium"
-                            :class="period === days ? 'snitch-choice-active' : ''"
+                            class="rounded px-2 py-1 text-sm font-medium"
+                            :class="period === days ? 'bg-snitch-ink text-white' : 'text-snitch-ink/70 hover:bg-snitch-ink/5'"
                             @click="refreshQuery({ period: days })"
                         >
                             {{ days }}d
@@ -538,7 +536,7 @@ const detailsOpen = ref(false);
                 <Link
                     v-if="rivals.length === 0"
                     :href="competitors()"
-                    class="snitch-btn mt-3 inline-flex px-3 py-1.5 text-sm font-medium"
+                    class="mt-3 inline-flex rounded bg-snitch-ink px-3 py-1.5 text-sm font-medium text-white"
                 >
                     Go to Tracking
                 </Link>
@@ -580,7 +578,7 @@ const detailsOpen = ref(false);
                                 class="flex min-w-0 flex-col gap-2 rounded border border-snitch-ink/10 bg-snitch-lift p-3 hover:border-snitch-ink/30"
                             >
                                 <div class="flex flex-wrap items-center gap-2 text-sm">
-                                    <span class="snitch-format-tag text-sm">
+                                    <span class="rounded bg-snitch-ink px-1.5 py-0.5 font-medium uppercase tracking-wide text-white">
                                         {{ idea.format }}
                                     </span>
                                     <span class="whitespace-nowrap tabular-nums text-snitch-ink/55">{{ idea.slot }}</span>
@@ -599,15 +597,14 @@ const detailsOpen = ref(false);
                         </p>
                         <ul class="mt-3 space-y-2">
                             <li
-                                v-for="(slot, slotIndex) in postingTimeBars"
+                                v-for="slot in postingTimeBars"
                                 :key="slot.label"
                                 class="grid grid-cols-[7rem_1fr_auto] items-center gap-2"
                             >
                                 <span class="whitespace-nowrap text-sm font-medium text-snitch-ink">{{ slot.label }}</span>
-                                <div class="snitch-meter h-3">
+                                <div class="h-3 overflow-hidden rounded-sm bg-snitch-ink/8">
                                     <div
-                                        class="h-full rounded-sm"
-                                        :class="slotIndex === 0 ? 'snitch-meter-fill-lead' : 'snitch-meter-fill'"
+                                        class="h-full rounded-sm bg-snitch-ink"
                                         :style="{ width: slot.width }"
                                     />
                                 </div>
@@ -756,16 +753,16 @@ const detailsOpen = ref(false);
                             <h3 class="text-sm font-semibold text-snitch-ink">Winning posts</h3>
                             <button
                                 type="button"
-                                class="snitch-choice rounded px-2 py-0.5 text-sm font-medium"
-                                :class="winnerTab === 'winners' ? 'snitch-choice-active' : ''"
+                                class="rounded px-2 py-0.5 text-sm font-medium"
+                                :class="winnerTab === 'winners' ? 'bg-snitch-ink text-white' : 'bg-snitch-ink/5 text-snitch-ink/70'"
                                 @click="winnerTab = 'winners'"
                             >
                                 Winners
                             </button>
                             <button
                                 type="button"
-                                class="snitch-choice rounded px-2 py-0.5 text-sm font-medium"
-                                :class="winnerTab === 'flops' ? 'snitch-choice-active' : ''"
+                                class="rounded px-2 py-0.5 text-sm font-medium"
+                                :class="winnerTab === 'flops' ? 'bg-snitch-ink text-white' : 'bg-snitch-ink/5 text-snitch-ink/70'"
                                 @click="winnerTab = 'flops'"
                             >
                                 Flops
@@ -890,7 +887,7 @@ const detailsOpen = ref(false);
                 </p>
                 <Link
                     :href="competitors()"
-                    class="snitch-btn mt-4 inline-block px-3 py-1.5 text-sm"
+                    class="mt-4 inline-block rounded bg-snitch-ink px-3 py-1.5 text-sm text-white"
                 >
                     Go to Tracking
                 </Link>

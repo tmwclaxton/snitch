@@ -55,13 +55,13 @@ const piLabel = computed(() => `${props.post.pi.toFixed(1)}× usual`);
             />
             <div
                 v-else
-                class="flex size-full items-center justify-center bg-snitch-fog/40 p-2"
+                class="flex size-full items-center justify-center text-sm uppercase tracking-wide text-snitch-ink/40"
             >
-                <span class="snitch-format-tag text-sm">{{ post.format }}</span>
+                {{ post.format }}
             </div>
             <div
                 v-if="open && post.hook"
-                class="absolute inset-0 overflow-y-auto bg-[#0e0e10]/92 p-2 text-sm leading-snug text-[#edeae2]"
+                class="absolute inset-0 overflow-y-auto bg-snitch-ink/92 p-2 text-sm leading-snug text-white"
             >
                 {{ post.hook }}
             </div>

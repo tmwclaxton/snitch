@@ -63,8 +63,12 @@ function submitIdea(): void {
             >
                 <button
                     type="button"
-                    class="snitch-vote-btn flex min-w-12 shrink-0 flex-col items-center justify-center rounded px-1.5 py-1 text-[14px] font-semibold transition"
-                    :class="row.voted ? 'snitch-vote-btn-active' : ''"
+                    class="flex min-w-12 shrink-0 flex-col items-center justify-center rounded border px-1.5 py-1 text-[14px] font-semibold transition"
+                    :class="
+                        row.voted
+                            ? 'border-amber-400 bg-amber-300 text-snitch-ink'
+                            : 'border-snitch-ink/10 bg-snitch-lift text-snitch-ink/80 hover:border-snitch-ink/20'
+                    "
                     :aria-pressed="row.voted"
                     :aria-label="row.voted ? 'Remove upvote' : 'Upvote'"
                     data-test="vote-toggle"
@@ -82,10 +86,10 @@ function submitIdea(): void {
                         <span
                             class="rounded px-1.5 py-0.5 text-[12px] font-semibold uppercase tracking-wide"
                             :class="{
-                                'snitch-status-open': row.status === 'open',
-                                'snitch-status-planned': row.status === 'planned',
-                                'snitch-status-building': row.status === 'building',
-                                'snitch-status-shipped': row.status === 'shipped',
+                                'bg-snitch-fog text-snitch-ink/80': row.status === 'open',
+                                'bg-sky-100 text-sky-800': row.status === 'planned',
+                                'bg-amber-100 text-amber-900': row.status === 'building',
+                                'bg-emerald-100 text-emerald-800': row.status === 'shipped',
                             }"
                         >
                             {{ statusText(row.status) }}

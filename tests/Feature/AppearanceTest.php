@@ -120,11 +120,6 @@ class AppearanceTest extends TestCase
         $this->assertStringContainsString('.snitch-highlight', $css);
         $this->assertStringContainsString('.snitch-alert-badge', $css);
         $this->assertStringContainsString('.snitch-hero-display', $css);
-        $this->assertStringContainsString('.snitch-choice-active', $css);
-        $this->assertStringContainsString('.snitch-format-tag', $css);
-        $this->assertStringContainsString('.snitch-meter-fill-lead', $css);
-        $this->assertStringContainsString('.dark .snitch-choice-active', $css);
-        $this->assertStringContainsString('background: var(--snitch-spot);', $css);
     }
 
     public function test_yellow_button_hover_uses_charcoal_on_spot_type(): void

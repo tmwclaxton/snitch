@@ -1,12 +1,13 @@
-import { snitchRivalColours, snitchYouSeries } from '@/lib/snitchTheme';
+import { snitchInk } from '@/lib/snitchTheme';
+
+const RIVAL_COLOURS = ['#3A5F6B', '#E5341D', '#5B7C99', '#8B5A2B', '#0F766E'] as const;
 
 export function useAccountColours() {
     function colourFor(handle: string | null | undefined, isOwn = false): string {
         if (isOwn) {
-            return snitchYouSeries();
+            return snitchInk('#141414');
         }
 
-        const rivals = snitchRivalColours();
         const key = (handle ?? '').toLowerCase();
         let hash = 0;
 
@@ -14,8 +15,8 @@ export function useAccountColours() {
             hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
         }
 
-        return rivals[hash % rivals.length] ?? rivals[0];
+        return RIVAL_COLOURS[hash % RIVAL_COLOURS.length] ?? RIVAL_COLOURS[0];
     }
 
-    return { colourFor, rivalColours: snitchRivalColours() };
+    return { colourFor, rivalColours: RIVAL_COLOURS };
 }
