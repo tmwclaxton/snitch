@@ -9,6 +9,9 @@ class DashboardCache
 {
     public const TTL_SECONDS = 12 * 60 * 60;
 
+    /** Bump when cached payload shape or executive headline inputs change. */
+    public const KEY_VERSION = 'v2';
+
     public function key(User $user, string $period, array $selectedHandles, bool $showHiddenLikes = false): string
     {
         $handles = collect($selectedHandles)
@@ -21,7 +24,7 @@ class DashboardCache
 
         $hidden = $showHiddenLikes ? 'h1' : 'h0';
 
-        return "dashboard:metrics:{$user->id}:{$period}:{$handles}:{$hidden}";
+        return 'dashboard:metrics:'.self::KEY_VERSION.":{$user->id}:{$period}:{$handles}:{$hidden}";
     }
 
     public function forgetForUser(User|int $user): void

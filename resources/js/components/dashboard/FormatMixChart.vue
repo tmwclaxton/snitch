@@ -74,7 +74,7 @@ const tip = computed(() => {
 </script>
 
 <template>
-    <div class="snitch-format-mix">
+    <div class="snitch-format-mix flex h-full min-h-0 flex-col">
         <div class="flex flex-wrap items-baseline justify-between gap-3">
             <div>
                 <p class="snitch-ink-label">Format vs results</p>
@@ -86,7 +86,7 @@ const tip = computed(() => {
 
         <ul
             v-if="formats.length"
-            class="mt-3 grid gap-2 sm:grid-cols-2"
+            class="mt-3 grid flex-1 content-start gap-2 sm:grid-cols-2"
         >
             <li
                 v-for="row in formats"
@@ -120,7 +120,7 @@ const tip = computed(() => {
         </p>
         <p
             v-if="tip"
-            class="mt-3 rounded border border-snitch-spot/60 bg-snitch-spot/35 px-2.5 py-2 text-sm text-snitch-ink"
+            class="mt-auto pt-3 rounded border border-snitch-spot/60 bg-snitch-spot/35 px-2.5 py-2 text-sm text-snitch-ink"
         >
             {{ tip }}
         </p>
