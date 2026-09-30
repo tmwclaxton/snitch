@@ -16,7 +16,7 @@ import TrackedBySection from '@/components/dashboard/TrackedBySection.vue';
 import VoteSection from '@/components/dashboard/VoteSection.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
-import { activeDashboardSection, useDashboardScrollSpy } from '@/composables/useDashboardScrollSpy';
+import { activateDashboardSection, useDashboardScrollSpy } from '@/composables/useDashboardScrollSpy';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { scrollToDashboardAnchor } from '@/lib/dashboardAnchors';
 import { formatAppDate } from '@/lib/dates';
@@ -200,13 +200,13 @@ const sectionIds = computed(() => {
     return ids;
 });
 
-useDashboardScrollSpy(sectionIds.value);
+useDashboardScrollSpy(sectionIds);
 
 onMounted(() => {
     const hash = window.location.hash.replace(/^#/, '');
 
     if (hash && sectionIds.value.includes(hash)) {
-        activeDashboardSection.value = hash;
+        activateDashboardSection(hash);
         void scrollToDashboardAnchor(hash);
     }
 });

@@ -31,6 +31,15 @@ class DashboardQuestionSectionsTest extends TestCase
             $this->assertStringContainsString("'{$id}'", $scrollSpy);
         }
 
+        $this->assertStringContainsString('resolveActiveDashboardSection', $scrollSpy);
+        $this->assertStringContainsString('DASHBOARD_SPY_MARKER_RATIO = 0.3', $scrollSpy);
+        $this->assertStringContainsString('scrollY >= maxScroll - epsilon', $scrollSpy);
+        $this->assertStringContainsString('activateDashboardSection', $scrollSpy);
+        $this->assertStringContainsString('activateDashboardSection', file_get_contents(
+            resource_path('js/components/NavMain.vue'),
+        ) ?: '');
+        $this->assertStringContainsString('useDashboardScrollSpy(sectionIds)', $dashboard);
+
         $this->assertStringContainsString('See full brief', $dashboard);
         $this->assertStringContainsString('executive?.ads?.headline', $dashboard);
         $this->assertStringContainsString('ads_panel', $dashboard);
@@ -39,6 +48,87 @@ class DashboardQuestionSectionsTest extends TestCase
         $this->assertStringContainsString('activeDashboardSection', file_get_contents(
             resource_path('js/components/NavMain.vue'),
         ) ?: '');
+    }
+
+    public function test_resolve_active_dashboard_section_algorithm(): void
+    {
+        // Mirror the TS picker so the 30% marker + bottom-lock stay covered in CI.
+        $resolve = static function (array $sections, array $options): ?string {
+            if ($sections === []) {
+                return null;
+            }
+
+            $viewportHeight = max(1, (int) $options['viewportHeight']);
+            $marker = $viewportHeight * 0.3;
+            $epsilon = 8;
+            $maxScroll = max(0, (int) $options['scrollHeight'] - $viewportHeight);
+
+            if ((int) $options['scrollY'] >= $maxScroll - $epsilon) {
+                return $sections[array_key_last($sections)]['id'];
+            }
+
+            $active = $sections[0]['id'];
+
+            foreach ($sections as $section) {
+                if ($section['top'] <= $marker) {
+                    $active = $section['id'];
+                }
+            }
+
+            return $active;
+        };
+
+        $sections = [
+            ['id' => 'what-to-post', 'top' => 100],
+            ['id' => 'performance', 'top' => 400],
+            ['id' => 'ads', 'top' => 900],
+            ['id' => 'vote', 'top' => 1200],
+        ];
+
+        $this->assertSame('what-to-post', $resolve($sections, [
+            'viewportHeight' => 800,
+            'scrollY' => 0,
+            'scrollHeight' => 4000,
+        ]));
+
+        // Marker at 240px: performance top (200) has crossed; ads (500) has not.
+        $mid = [
+            ['id' => 'what-to-post', 'top' => -200],
+            ['id' => 'performance', 'top' => 200],
+            ['id' => 'ads', 'top' => 500],
+            ['id' => 'vote', 'top' => 900],
+        ];
+        $this->assertSame('performance', $resolve($mid, [
+            'viewportHeight' => 800,
+            'scrollY' => 600,
+            'scrollHeight' => 4000,
+        ]));
+
+        // Short ads section: only its top has crossed the marker.
+        $ads = [
+            ['id' => 'what-to-post', 'top' => -900],
+            ['id' => 'performance', 'top' => -400],
+            ['id' => 'ads', 'top' => 100],
+            ['id' => 'vote', 'top' => 700],
+        ];
+        $this->assertSame('ads', $resolve($ads, [
+            'viewportHeight' => 800,
+            'scrollY' => 1400,
+            'scrollHeight' => 4000,
+        ]));
+
+        // Near document bottom → last section even if its top is still below the marker.
+        $bottom = [
+            ['id' => 'what-to-post', 'top' => -2000],
+            ['id' => 'performance', 'top' => -1200],
+            ['id' => 'ads', 'top' => -400],
+            ['id' => 'vote', 'top' => 500],
+        ];
+        $this->assertSame('vote', $resolve($bottom, [
+            'viewportHeight' => 800,
+            'scrollY' => 3195,
+            'scrollHeight' => 4000,
+        ]));
     }
 
     public function test_dashboard_brief_teaser_includes_best_times(): void

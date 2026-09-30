@@ -8,7 +8,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
-import { activeDashboardSection } from '@/composables/useDashboardScrollSpy';
+import { activateDashboardSection, activeDashboardSection } from '@/composables/useDashboardScrollSpy';
 import { scrollToDashboardAnchor } from '@/lib/dashboardAnchors';
 import { toUrl } from '@/lib/utils';
 import type { NavItem } from '@/types';
@@ -54,7 +54,7 @@ function onNavClick(event: MouseEvent, item: NavItem): void {
     }
 
     event.preventDefault();
-    activeDashboardSection.value = item.section;
+    activateDashboardSection(item.section);
     window.history.replaceState(null, '', `#${item.section}`);
     void scrollToDashboardAnchor(item.section);
 }
