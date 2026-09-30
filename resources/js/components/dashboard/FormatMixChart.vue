@@ -78,9 +78,6 @@ const tip = computed(() => {
         <div class="flex flex-wrap items-baseline justify-between gap-3">
             <div>
                 <p class="snitch-ink-label">Format vs results</p>
-                <p class="mt-0.5 text-sm text-snitch-ink/55">
-                    Share of posts and how each format performs vs the account's usual.
-                </p>
             </div>
             <p class="font-mono text-sm tabular-nums text-snitch-ink/55">
                 {{ total }} posts

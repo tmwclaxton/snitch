@@ -57,6 +57,7 @@ class DashboardTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
                 ->has('rivals', 1)
+                ->has('executive.what_to_post.headline')
                 ->where('rivals.0.handle', 'rivalbakery')
                 ->where('rivals.0.id', $account->id)
                 ->where('show_hidden_likes', false)
@@ -75,23 +76,24 @@ class DashboardTest extends TestCase
     {
         $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
         $winnerCard = file_get_contents(resource_path('js/components/dashboard/WinnerCard.vue'));
+        $winnerThumb = file_get_contents(resource_path('js/components/dashboard/ExecWinnerThumb.vue'));
 
         $this->assertNotFalse($dashboard);
         $this->assertNotFalse($winnerCard);
+        $this->assertNotFalse($winnerThumb);
         $this->assertStringNotContainsString('Latest posts', $dashboard);
         $this->assertStringNotContainsString('recent_posts', $dashboard);
         $this->assertStringContainsString('competitorShow.url(rival.id)', $dashboard);
         $this->assertStringContainsString('xl:grid-cols-4', $dashboard);
-        $this->assertStringContainsString('performance vs usual', strtolower($dashboard));
+        $this->assertStringContainsString('whatToPostHeadline', $dashboard);
+        $this->assertStringContainsString('ExecStatTile', $dashboard);
         $this->assertStringContainsString('feedShow.url(post.id)', $winnerCard);
         $this->assertStringContainsString('competitorShow.url(props.post.tracked_account_id)', $winnerCard);
         $this->assertStringContainsString('their usual', $winnerCard);
         $this->assertStringContainsString('Open on Instagram', $winnerCard);
-        $this->assertStringContainsString('aspect-[4/5]', $winnerCard);
-        $this->assertStringNotContainsString('…', $winnerCard);
-        $this->assertStringNotContainsString('...', $winnerCard);
-        $this->assertStringContainsString('trackerIdsByHandle', $dashboard);
-        $this->assertStringContainsString(':tracker-ids="trackerIdsByHandle"', $dashboard);
+        $this->assertStringContainsString('aspect-[4/5]', $winnerThumb);
+        $this->assertStringNotContainsString('…', $winnerThumb);
+        $this->assertStringNotContainsString('...', $winnerThumb);
         $this->assertStringContainsString('weekly_brief.ideas', $dashboard);
         $this->assertStringContainsString('Post this next', $dashboard);
         $this->assertStringContainsString('What should we post?', $dashboard);
@@ -103,21 +105,19 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('TrackedBySection', $dashboard);
         $this->assertStringContainsString('VoteSection', $dashboard);
         $this->assertStringContainsString('See full brief', $dashboard);
-        $this->assertStringContainsString('break-words text-slate-800', $dashboard);
-        $this->assertStringNotContainsString('truncate text-slate-800', $dashboard);
-        $this->assertStringContainsString('snitch-dash-heatmap-panel', $dashboard);
+        $this->assertStringContainsString('ExecWhatWorks', $dashboard);
+        $this->assertStringContainsString('snitch-heatmap--dash', $dashboard);
         $this->assertStringNotContainsString('mt-auto p-2', $dashboard);
         $this->assertStringNotContainsString('overflow-y-auto', $dashboard);
         $this->assertStringNotContainsString('fit-height', $dashboard);
         $this->assertStringNotContainsString('mt-auto shrink-0', $dashboard);
         $this->assertStringContainsString('id="format_mix"', $dashboard);
-        $this->assertStringContainsString(':collapsed-count="5"', $dashboard);
+        $this->assertStringContainsString('ExecTakeaways', $dashboard);
         $this->assertStringContainsString('Best posting times', $dashboard);
         $this->assertStringNotContainsString('Follower history', $dashboard);
         $this->assertStringContainsString('Cast your <span class="snitch-highlight">vote</span>', $dashboard);
-        // Leaderboard then Format mix (stacked, no empty side panel).
         $formatPos = strpos($dashboard, 'id="format_mix"');
-        $leaderPos = strpos($dashboard, 'anchor="leaderboard"');
+        $leaderPos = strpos($dashboard, 'id="leaderboard"');
         $this->assertNotFalse($formatPos);
         $this->assertNotFalse($leaderPos);
         $this->assertLessThan($formatPos, $leaderPos);
@@ -185,7 +185,7 @@ class DashboardTest extends TestCase
 
         $this->assertNotFalse($dashboard);
         $this->assertStringContainsString('No Instagram competitors yet', $dashboard);
-        $this->assertStringContainsString('Only Instagram accounts appear here', $dashboard);
+        $this->assertStringContainsString('Add Instagram competitor handles on Tracking', $dashboard);
         $this->assertStringContainsString('No rivals to compare yet', $dashboard);
         $this->assertStringContainsString('legacy_non_instagram_count', $dashboard);
         $this->assertStringContainsString('Show hidden-likes posts', $dashboard);

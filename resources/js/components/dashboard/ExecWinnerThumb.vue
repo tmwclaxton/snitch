@@ -1,0 +1,66 @@
+<script setup lang="ts">
+import { computed, ref } from 'vue';
+import SnitchImage from '@/components/SnitchImage.vue';
+
+const props = defineProps<{
+    post: {
+        id: number;
+        handle: string | null;
+        is_own_account?: boolean;
+        format: string;
+        pi: number;
+        hook: string | null;
+        thumbnail_url: string | null;
+        url: string | null;
+    };
+}>();
+
+const open = ref(false);
+
+const handle = computed(() =>
+    props.post.is_own_account ? 'You' : `@${props.post.handle ?? 'unknown'}`,
+);
+
+const piLabel = computed(() => `${props.post.pi.toFixed(1)}× usual`);
+</script>
+
+<template>
+    <button
+        type="button"
+        class="group relative flex min-w-0 flex-col overflow-hidden rounded border border-snitch-ink/10 bg-white text-left"
+        @click="open = !open"
+        @mouseenter="open = true"
+        @mouseleave="open = false"
+        @focus="open = true"
+        @blur="open = false"
+    >
+        <div class="relative aspect-[4/5] w-full bg-snitch-ink/5">
+            <SnitchImage
+                v-if="post.thumbnail_url"
+                :src="post.thumbnail_url"
+                :alt="handle"
+                class="size-full object-cover"
+            />
+            <div
+                v-else
+                class="flex size-full items-center justify-center text-sm uppercase tracking-wide text-snitch-ink/40"
+            >
+                {{ post.format }}
+            </div>
+            <div
+                v-if="open && post.hook"
+                class="absolute inset-0 overflow-y-auto bg-snitch-ink/92 p-2 text-sm leading-snug text-white"
+            >
+                {{ post.hook }}
+            </div>
+        </div>
+        <div class="space-y-0.5 p-2">
+            <p class="whitespace-nowrap text-sm font-medium text-snitch-ink">
+                {{ handle }}
+            </p>
+            <p class="font-display text-base font-semibold tabular-nums text-snitch-ink">
+                {{ piLabel }}
+            </p>
+        </div>
+    </button>
+</template>

@@ -32,6 +32,9 @@ class InsightRules
         'weekly' => 'activity',
         'recent_posts' => 'winners',
         'growth_series' => '/growth',
+        'captions' => 'caption_intel',
+        'themes' => 'caption_intel',
+        'data_notes' => 'activity',
     ];
 
     /**
@@ -48,10 +51,7 @@ class InsightRules
         'winners',
         'activity',
         'format_mix',
-        'captions',
         'caption_intel',
-        'themes',
-        'data_notes',
     ];
 
     public function resolveAnchor(string $linksTo): string

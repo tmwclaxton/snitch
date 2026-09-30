@@ -4,20 +4,16 @@ import { Info } from '@lucide/vue';
 import { computed, onMounted, ref } from 'vue';
 import { index as briefIndex } from '@/actions/App/Http/Controllers/BriefController';
 import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
-import CtaLanguage from '@/components/CtaLanguage.vue';
-import CaptionPanels from '@/components/dashboard/CaptionPanels.vue';
-import CompareTable from '@/components/dashboard/CompareTable.vue';
-import DashCard from '@/components/dashboard/DashCard.vue';
-import DataNotes from '@/components/dashboard/DataNotes.vue';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
+import ExecRankBars from '@/components/dashboard/ExecRankBars.vue';
+import ExecStatTile from '@/components/dashboard/ExecStatTile.vue';
+import ExecTakeaways from '@/components/dashboard/ExecTakeaways.vue';
+import ExecWhatWorks from '@/components/dashboard/ExecWhatWorks.vue';
+import ExecWinnerThumb from '@/components/dashboard/ExecWinnerThumb.vue';
 import FormatMixChart from '@/components/dashboard/FormatMixChart.vue';
-import InsightList from '@/components/dashboard/InsightList.vue';
 import PostingHeatmap from '@/components/dashboard/PostingHeatmap.vue';
-import StatCard from '@/components/dashboard/StatCard.vue';
-import ThemeMatrix from '@/components/dashboard/ThemeMatrix.vue';
 import TrackedBySection from '@/components/dashboard/TrackedBySection.vue';
 import VoteSection from '@/components/dashboard/VoteSection.vue';
-import WinnerCard from '@/components/dashboard/WinnerCard.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import { activeDashboardSection, useDashboardScrollSpy } from '@/composables/useDashboardScrollSpy';
@@ -86,6 +82,12 @@ type AdsAccount = {
     ads: AdCard[];
 };
 
+type Gap = {
+    type: 'pp' | 'x';
+    value: number;
+    lower?: boolean;
+};
+
 const props = defineProps<{
     period: number;
     periods: number[];
@@ -140,6 +142,11 @@ const props = defineProps<{
         ideas?: { format: string; hook: string; slot: string }[];
         best_times?: { label: string; score: number }[];
     } | null;
+    executive?: {
+        what_to_post?: { headline: string; takeaways?: Array<{ metric: string; text: string }> };
+        performance?: { headline: string };
+        ads?: { headline: string };
+    } | null;
     trackedBy?: { count: number; since: string } | null;
     featureSuggestions?: Array<{
         id: number;
@@ -164,7 +171,6 @@ const props = defineProps<{
 }>();
 
 const winnerTab = ref<'winners' | 'flops'>('winners');
-const winnersExpanded = ref(false);
 
 const showOnboarding = computed(
     () => props.onboarding.status === 'ok' && !(props.onboarding.data?.hide ?? false),
@@ -241,25 +247,6 @@ function toggleAccount(handle: string): void {
     refreshQuery({ accounts: next });
 }
 
-function formatUk(iso: string | null): string {
-    if (!iso) {
-        return '-';
-    }
-
-    try {
-        return new Intl.DateTimeFormat('en-GB', {
-            timeZone: props.timezone || 'Europe/London',
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-        }).format(new Date(iso));
-    } catch {
-        return iso;
-    }
-}
-
 function seenLabel(iso: string | null): string | null {
     return formatAppDate(iso, {
         month: 'short',
@@ -267,53 +254,54 @@ function seenLabel(iso: string | null): string | null {
     });
 }
 
+function formatKpiValue(card: Record<string, unknown>): string {
+    const you = card.you as number | null | undefined;
+    const display = card.you_display as number | string | null | undefined;
+    const unit = String(card.unit ?? '');
+
+    if (display != null && String(card.label ?? '').startsWith('Followers')) {
+        return typeof display === 'number'
+            ? new Intl.NumberFormat('en-GB').format(display)
+            : String(display);
+    }
+
+    if (you == null) {
+        return '-';
+    }
+
+    if (unit === 'pct') {
+        return `${new Intl.NumberFormat('en-GB', { maximumFractionDigits: 1 }).format(you)}%`;
+    }
+
+    return new Intl.NumberFormat('en-GB', { maximumFractionDigits: 1 }).format(you);
+}
+
 const winnerList = computed(() => {
     const data = props.winners?.data;
 
-    if (!data) {
+    if (! data) {
         return [] as WinnerPost[];
     }
 
     return winnerTab.value === 'flops' ? (data.flops ?? []) : (data.winners ?? []);
 });
 
-const winnerItems = computed(() =>
-    winnersExpanded.value ? winnerList.value.slice(0, 12) : winnerList.value.slice(0, 6),
-);
-
-const winnersHaveMore = computed(
-    () => !winnersExpanded.value && winnerList.value.length > 6,
-);
-
-const hiddenInWinners = computed(
-    () => winnerList.value.filter((post) => post.likes_hidden).length,
-);
-
-const hiddenSpotlight = computed(() => {
-    if (!props.show_hidden_likes) {
-        return [] as WinnerPost[];
-    }
-
-    if (hiddenInWinners.value > 0) {
-        return [] as WinnerPost[];
-    }
-
-    return props.winners?.data?.hidden_spotlight ?? [];
-});
-
+const winnerItems = computed(() => winnerList.value.slice(0, 6));
 
 const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? {});
 
 const visibleKpiCards = computed(() => {
     const cards = (props.kpis?.data?.cards ?? []) as Array<Record<string, unknown>>;
 
-    return cards.filter((card) => {
-        if (card.key === 'reel_reach' && card.you == null && card.you_display == null) {
-            return false;
-        }
+    return cards
+        .filter((card) => {
+            if (card.key === 'reel_reach' && card.you == null && card.you_display == null) {
+                return false;
+            }
 
-        return true;
-    });
+            return true;
+        })
+        .slice(0, 4);
 });
 
 const peakHours = computed(() => {
@@ -322,38 +310,99 @@ const peakHours = computed(() => {
     return [...hours]
         .filter((row) => row.count > 0)
         .sort((a, b) => b.count - a.count)
-        .slice(0, 3);
+        .slice(0, 4);
 });
 
-const trackerIdsByHandle = computed(() => {
-    const map: Record<string, number> = {};
+const postingTimeBars = computed(() => {
+    const fromBrief = (props.weekly_brief?.best_times ?? []).map((slot) => ({
+        label: slot.label,
+        value: slot.score,
+        suffix: `${slot.score.toFixed(1)}×`,
+    }));
 
-    if (props.own_account) {
-        map[props.own_account.handle.toLowerCase()] = props.own_account.id;
+    if (fromBrief.length) {
+        const max = Math.max(...fromBrief.map((row) => row.value), 0.01);
+
+        return fromBrief.map((row) => ({
+            ...row,
+            width: `${Math.max(10, (row.value / max) * 100)}%`,
+        }));
     }
 
-    for (const rival of props.rivals) {
-        map[rival.handle.toLowerCase()] = rival.id;
-    }
+    const max = Math.max(...peakHours.value.map((row) => row.count), 1);
 
-    return map;
+    return peakHours.value.map((row) => ({
+        label: row.label,
+        value: row.count,
+        suffix: `${row.count} posts`,
+        width: `${Math.max(10, (row.count / max) * 100)}%`,
+    }));
 });
+
+const whatToPostHeadline = computed(() => {
+    const idea = props.weekly_brief?.ideas?.[0];
+    const slot = props.weekly_brief?.best_times?.[0]?.label
+        ?? postingTimeBars.value[0]?.label
+        ?? null;
+
+    if (idea && slot) {
+        const hook = idea.hook.length > 72
+            ? idea.hook.slice(0, 72).replace(/\s+\S*$/, '').trim()
+            : idea.hook;
+
+        return `Post ${idea.format.toLowerCase()}s around ${slot}: ${hook}`;
+    }
+
+    return props.executive?.what_to_post?.headline
+        ?? 'Sync more posts to get a clear posting plan.';
+});
+
+const performanceHeadline = computed(
+    () => props.executive?.performance?.headline
+        ?? 'Add rivals to see how you compare.',
+);
+
+const adsHeadline = computed(
+    () => props.executive?.ads?.headline
+        ?? props.ads_panel?.recommendation
+        ?? 'None of your rivals run ads.',
+);
+
+const takeaways = computed(
+    () => (props.executive?.what_to_post?.takeaways ?? []).slice(0, 3),
+);
+
+const themeGaps = computed(
+    () => ((props.themes?.data?.gaps as Array<{ theme: string; peer_pi: number; n: number }>) ?? []),
+);
+
+const leaderboardRows = computed(
+    () => ((props.leaderboard?.data?.rows as Array<Record<string, unknown>>) ?? []) as Array<{
+        handle: string;
+        is_own_account?: boolean;
+        er?: number | null;
+        followers?: number | null;
+        posts_per_week?: number | null;
+    }>,
+);
+
+const detailsOpen = ref(false);
 </script>
 
 <template>
     <div class="min-h-full bg-snitch-paper px-2 py-2 sm:px-3">
         <Head title="Dashboard" />
 
-        <div class="mx-auto max-w-none space-y-4">
-            <div class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 border-b border-slate-200 pb-1.5">
-                <h1 class="hidden shrink-0 text-sm font-semibold tracking-tight text-slate-900 sm:block">
+        <div class="mx-auto max-w-none space-y-8">
+            <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 border-b border-snitch-ink/10 pb-2">
+                <h1 class="hidden shrink-0 text-sm font-semibold tracking-tight text-snitch-ink sm:block">
                     Dashboard
                 </h1>
 
                 <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1">
                     <div
                         v-if="own_account"
-                        class="inline-flex h-6 items-center gap-1 rounded-full border border-slate-900 bg-slate-900 px-1.5 text-xs font-medium text-white"
+                        class="inline-flex h-7 items-center gap-1 rounded-full border border-snitch-ink bg-snitch-ink px-2 text-sm font-medium text-white"
                     >
                         <SnitchAvatar
                             :src="own_account.avatar"
@@ -372,13 +421,13 @@ const trackerIdsByHandle = computed(() => {
                     <div
                         v-for="rival in rivals"
                         :key="rival.id"
-                        class="inline-flex h-6 items-center gap-1 rounded-full border px-1.5 text-xs font-medium"
+                        class="inline-flex h-7 items-center gap-1 rounded-full border px-2 text-sm font-medium"
                         :class="
                             selected.includes(rival.handle.toLowerCase())
-                                ? 'border-slate-800 bg-slate-800 text-white'
+                                ? 'border-snitch-ink bg-snitch-ink text-white'
                                 : rival.no_posts_in_period
-                                    ? 'border-slate-200 bg-slate-50 text-slate-400'
-                                    : 'border-slate-200 bg-white text-slate-700'
+                                    ? 'border-snitch-ink/15 bg-white text-snitch-ink/40'
+                                    : 'border-snitch-ink/15 bg-white text-snitch-ink'
                         "
                         :title="rival.no_posts_in_period ? 'No posts imported yet' : `@${rival.handle}`"
                     >
@@ -405,8 +454,8 @@ const trackerIdsByHandle = computed(() => {
                     </div>
                 </div>
 
-                <div class="ml-auto flex shrink-0 flex-wrap items-center gap-1">
-                    <label class="group relative inline-flex h-6 cursor-pointer items-center gap-1 text-xs text-slate-600">
+                <div class="ml-auto flex shrink-0 flex-wrap items-center gap-2">
+                    <label class="group relative inline-flex h-7 cursor-pointer items-center gap-1.5 text-sm text-snitch-ink/70">
                         <input
                             type="checkbox"
                             class="peer sr-only"
@@ -415,7 +464,7 @@ const trackerIdsByHandle = computed(() => {
                             @change="refreshQuery({ hidden: !show_hidden_likes })"
                         >
                         <span
-                            class="relative inline-flex h-3.5 w-6 shrink-0 items-center rounded-full bg-slate-200 transition-colors peer-checked:bg-slate-900 peer-focus-visible:ring-2 peer-focus-visible:ring-slate-400"
+                            class="relative inline-flex h-3.5 w-6 shrink-0 items-center rounded-full bg-snitch-ink/15 transition-colors peer-checked:bg-snitch-ink peer-focus-visible:ring-2 peer-focus-visible:ring-snitch-ink/30"
                             aria-hidden="true"
                         >
                             <span
@@ -426,31 +475,31 @@ const trackerIdsByHandle = computed(() => {
                         <span class="hidden whitespace-nowrap md:inline">Hidden likes</span>
                         <span
                             v-if="hiddenLikesCount > 0"
-                            class="tabular-nums text-slate-400"
+                            class="tabular-nums text-snitch-ink/45"
                         >
-                            {{ show_hidden_likes ? `${hiddenLikesCount} in` : `${hiddenLikesCount}` }}
+                            {{ hiddenLikesCount }}
                         </span>
                         <span
-                            class="relative inline-flex text-slate-400 group-hover:text-slate-700"
+                            class="relative inline-flex text-snitch-ink/40 group-hover:text-snitch-ink"
                             tabindex="0"
                             aria-label="About hidden-likes posts"
                         >
-                            <Info class="h-3 w-3" />
+                            <Info class="h-3.5 w-3.5" />
                             <span
                                 role="tooltip"
-                                class="pointer-events-none absolute right-0 top-full z-20 mt-1.5 w-60 rounded border border-slate-200 bg-white p-2 text-left text-xs leading-snug text-slate-600 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                                class="pointer-events-none absolute right-0 top-full z-20 mt-1.5 w-60 rounded border border-snitch-ink/10 bg-white p-2 text-left text-sm leading-snug text-snitch-ink/70 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
                             >
-                                Some accounts hide their like counts on Instagram. Those posts are left out of engagement averages and winner rankings by default. Turn this on to include them in post lists, ranked on comments and views.
+                                Some accounts hide like counts. Turn this on to include those posts, ranked on comments and views.
                             </span>
                         </span>
                     </label>
-                    <div class="flex items-center gap-0.5 rounded border border-slate-200 p-0.5">
+                    <div class="flex items-center gap-0.5 rounded border border-snitch-ink/15 p-0.5">
                         <button
                             v-for="days in periods"
                             :key="days"
                             type="button"
-                            class="rounded px-1.5 py-0.5 text-xs font-medium"
-                            :class="period === days ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'"
+                            class="rounded px-2 py-1 text-sm font-medium"
+                            :class="period === days ? 'bg-snitch-ink text-white' : 'text-snitch-ink/70 hover:bg-snitch-ink/5'"
                             @click="refreshQuery({ period: days })"
                         >
                             {{ days }}d
@@ -459,415 +508,294 @@ const trackerIdsByHandle = computed(() => {
                 </div>
             </div>
 
-            <DashCard
+            <section
                 v-if="showOnboarding"
-                title="Get ready"
-                why="Complete these steps before the graphs mean anything."
-                formula="Shown until at least one Instagram rival has 5+ posts in the selected period."
-                anchor="onboarding"
+                id="onboarding"
+                class="rounded border border-snitch-ink/10 bg-white p-4"
             >
-                <p v-if="onboarding.data?.note" class="mb-2 text-xs text-slate-600">{{ onboarding.data.note }}</p>
-                <ol class="grid gap-2 sm:grid-cols-3">
+                <h2 class="font-display text-lg font-semibold text-snitch-ink">
+                    Get ready
+                </h2>
+                <ol class="mt-3 grid gap-2 sm:grid-cols-3">
                     <li
                         v-for="(step, index) in onboarding.data?.steps || []"
                         :key="step.key"
-                        class="flex gap-2 rounded-lg border border-slate-200 px-2.5 py-2"
+                        class="flex gap-2 rounded border border-snitch-ink/10 px-3 py-2 text-sm"
                     >
                         <span
-                            class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-                            :class="step.done ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-600'"
+                            class="flex size-5 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+                            :class="step.done ? 'bg-snitch-spot text-snitch-ink' : 'bg-snitch-ink/10 text-snitch-ink/70'"
                         >
                             {{ step.done ? '✓' : index + 1 }}
                         </span>
-                        <div class="min-w-0 text-xs font-medium text-slate-900">{{ step.label }}</div>
+                        <span class="text-snitch-ink">{{ step.label }}</span>
                     </li>
                 </ol>
                 <Link
                     v-if="rivals.length === 0"
                     :href="competitors()"
-                    class="mt-3 inline-flex rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
+                    class="mt-3 inline-flex rounded bg-snitch-ink px-3 py-1.5 text-sm font-medium text-white"
                 >
                     Go to Tracking
                 </Link>
-            </DashCard>
+            </section>
 
             <template v-if="hasInstagramSet">
                 <!-- 1. What should we post? -->
                 <section
                     id="what-to-post"
-                    class="scroll-mt-14 space-y-3 border-t border-slate-100 pt-4"
+                    class="scroll-mt-14 space-y-4 border-t border-snitch-ink/10 pt-6"
                 >
-                    <header class="space-y-0.5">
-                        <p class="font-mono text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
-                            What the data shows
+                    <header class="space-y-2">
+                        <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
+                            What should we post?
                         </p>
-                        <h2 class="font-display text-xl font-semibold tracking-tight text-snitch-ink">
-                            What should we <span class="snitch-highlight">post</span>?
+                        <h2 class="font-display max-w-4xl text-2xl font-semibold tracking-tight text-snitch-ink md:text-3xl">
+                            {{ whatToPostHeadline }}
                         </h2>
                     </header>
 
                     <div
-                        v-if="weekly_brief"
+                        v-if="weekly_brief?.ideas?.length"
                         class="space-y-2"
                     >
                         <div class="flex flex-wrap items-baseline justify-between gap-2">
-                            <h3 class="text-sm font-semibold text-slate-900">Post this next</h3>
+                            <h3 class="text-sm font-semibold text-snitch-ink">Post this next</h3>
                             <Link
                                 :href="briefIndex.url()"
-                                class="text-sm font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
+                                class="text-sm font-medium text-snitch-ink/60 underline-offset-2 hover:text-snitch-ink hover:underline"
                             >
                                 See full brief
                             </Link>
                         </div>
                         <div class="grid gap-2 sm:grid-cols-3">
                             <Link
-                                v-for="(idea, index) in (weekly_brief.ideas || []).slice(0, 3)"
+                                v-for="(idea, index) in weekly_brief.ideas.slice(0, 3)"
                                 :key="`${idea.slot}-${index}`"
                                 :href="briefIndex.url()"
-                                class="flex min-w-0 flex-col gap-1 rounded border border-slate-200 bg-white px-3 py-2.5 text-sm leading-snug text-slate-700 hover:border-slate-400"
+                                class="flex min-w-0 flex-col gap-2 rounded border border-snitch-ink/10 bg-white p-3 hover:border-snitch-ink/30"
                             >
-                                <div class="flex flex-wrap items-center gap-1.5 text-xs">
-                                    <span class="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 font-medium uppercase tracking-wide text-slate-600">
+                                <div class="flex flex-wrap items-center gap-2 text-sm">
+                                    <span class="rounded bg-snitch-ink px-1.5 py-0.5 font-medium uppercase tracking-wide text-white">
                                         {{ idea.format }}
                                     </span>
-                                    <span class="shrink-0 tabular-nums text-slate-500">{{ idea.slot }}</span>
+                                    <span class="whitespace-nowrap tabular-nums text-snitch-ink/55">{{ idea.slot }}</span>
                                 </div>
-                                <span class="break-words text-slate-800">{{ idea.hook }}</span>
+                                <span class="text-sm leading-snug text-snitch-ink">{{ idea.hook }}</span>
                             </Link>
                         </div>
                     </div>
 
-                    <div class="snitch-scrap space-y-2 p-3">
-                        <p class="snitch-ink-label">Best posting times</p>
-                        <ol
-                            v-if="(weekly_brief?.best_times?.length || 0) > 0"
-                            class="flex flex-wrap gap-2"
-                        >
-                            <li
-                                v-for="(slot, index) in weekly_brief?.best_times || []"
-                                :key="slot.label"
-                                class="rounded border border-snitch-ink/10 bg-white px-2.5 py-1.5 text-sm text-snitch-ink"
-                            >
-                                <span class="font-mono tabular-nums text-snitch-ink/55">#{{ index + 1 }}</span>
-                                {{ slot.label }}
-                                <span class="font-mono tabular-nums text-snitch-ink/55">{{ slot.score.toFixed(1) }}×</span>
-                            </li>
-                        </ol>
-                        <ol
-                            v-else-if="peakHours.length"
-                            class="flex flex-wrap gap-2"
-                        >
-                            <li
-                                v-for="(slot, index) in peakHours"
-                                :key="slot.hour"
-                                class="rounded border border-snitch-ink/10 bg-white px-2.5 py-1.5 text-sm text-snitch-ink"
-                            >
-                                <span class="font-mono tabular-nums text-snitch-ink/55">#{{ index + 1 }}</span>
-                                {{ slot.label }}
-                                <span class="font-mono tabular-nums text-snitch-ink/55">{{ slot.count }} posts</span>
-                            </li>
-                        </ol>
-                        <p
-                            v-else
-                            class="text-sm text-slate-500"
-                        >
-                            Sync more posts to rank best times.
+                    <div
+                        v-if="postingTimeBars.length"
+                        class="rounded border border-snitch-ink/10 bg-white p-3"
+                    >
+                        <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
+                            Best posting times
                         </p>
+                        <ul class="mt-3 space-y-2">
+                            <li
+                                v-for="slot in postingTimeBars"
+                                :key="slot.label"
+                                class="grid grid-cols-[7rem_1fr_auto] items-center gap-2"
+                            >
+                                <span class="whitespace-nowrap text-sm font-medium text-snitch-ink">{{ slot.label }}</span>
+                                <div class="h-3 overflow-hidden rounded-sm bg-snitch-ink/8">
+                                    <div
+                                        class="h-full rounded-sm bg-snitch-ink"
+                                        :style="{ width: slot.width }"
+                                    />
+                                </div>
+                                <span class="font-mono text-sm tabular-nums text-snitch-ink/70">{{ slot.suffix }}</span>
+                            </li>
+                        </ul>
                     </div>
 
-                    <DashCard
-                        title="This week in 30 seconds"
-                        why="Do-this-next lines from rival gaps for a busy organiser."
-                        formula="Top insights from rival gaps this week."
-                        anchor="insights"
-                    >
-                        <InsightList
-                            v-if="insights"
-                            :status="insights.status"
-                            :reason="insights.reason"
-                            :items="insights.data?.items"
-                            :tracker-ids="trackerIdsByHandle"
-                            :collapsed-count="5"
+                    <div id="insights">
+                        <ExecTakeaways
+                            v-if="takeaways.length"
+                            :items="takeaways"
                         />
-                        <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading insights" />
-                    </DashCard>
-
-                    <DashCard
-                        title="Captions and hooks"
-                        why="Free changes to how posts are written."
-                        formula="Length excludes trailing hashtags. Call to action via regex. Hooks from top performance winners."
-                        anchor="captions"
-                    >
-                        <CaptionPanels
-                            v-if="captions"
-                            :status="captions.status"
-                            :reason="captions.reason"
-                            :length-buckets="(captions.data?.length_buckets as any) || []"
-                            :ctas="(captions.data?.ctas as any) || []"
-                            :hashtag-buckets="(captions.data?.hashtag_buckets as any) || []"
-                            :hooks="(captions.data?.hooks as any) || []"
+                        <SnitchSkeleton
+                            v-else-if="!insights"
+                            variant="scrap"
+                            height="4rem"
+                            label="Loading takeaways"
                         />
-                        <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading captions" />
-                    </DashCard>
+                    </div>
 
-                    <section
-                        id="caption_intel"
-                        class="snitch-scrap snitch-dash-chip-stack grid gap-3 p-3 lg:grid-cols-2"
-                    >
-                        <div class="min-w-0">
-                            <p class="snitch-ink-label mb-1">Hashtags</p>
-                            <div
-                                v-if="caption_intel"
-                                class="flex flex-wrap gap-1"
-                            >
-                                <span
-                                    v-for="row in caption_intel.hashtags.slice(0, 14)"
-                                    :key="`hash-${row.term}`"
-                                    class="snitch-glance-tag"
-                                >
-                                    #{{ row.term }}
-                                    <span class="tabular-nums text-slate-500">{{ row.count }}</span>
-                                </span>
-                                <p
-                                    v-if="!caption_intel.hashtags.length"
-                                    class="text-sm text-slate-500"
-                                >
-                                    None yet.
-                                </p>
-                            </div>
-                            <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading hashtags" />
-                        </div>
-                        <div class="min-w-0">
-                            <CtaLanguage
-                                v-if="caption_intel"
-                                :ctas="caption_intel.ctas"
-                            />
-                            <SnitchSkeleton v-else variant="scrap" height="2rem" label="Loading CTA language" />
-                        </div>
-                    </section>
-
-                    <DashCard
-                        title="Topics and themes"
-                        why="Topics rivals win with that you skip. Top 5 themes only."
-                        formula="share = posts(theme)/posts · colour = median performance vs usual"
-                        anchor="themes"
-                    >
-                        <ThemeMatrix
-                            v-if="themes"
-                            :status="themes.status"
-                            :reason="themes.reason"
-                            :accounts="(themes.data?.accounts as any) || []"
-                            :matrix="(themes.data?.matrix as any) || []"
-                            :gaps="(themes.data?.gaps as any) || []"
-                            :max-themes="5"
+                    <div id="caption_intel">
+                        <ExecWhatWorks
+                            v-if="caption_intel || themes"
+                            :hashtags="caption_intel?.hashtags"
+                            :ctas="caption_intel?.ctas"
+                            :gaps="themeGaps"
                         />
-                        <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading themes" />
-                    </DashCard>
-
-                    <p class="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                        {{ ads_panel?.recommendation || 'None of your rivals advertise, so organic is enough for now.' }}
-                        <a
-                            href="#ads"
-                            class="ms-1 font-medium text-slate-900 underline-offset-2 hover:underline"
-                            @click.prevent="scrollToDashboardAnchor('ads')"
-                        >
-                            See ads
-                        </a>
-                    </p>
+                        <SnitchSkeleton
+                            v-else
+                            variant="scrap"
+                            height="4rem"
+                            label="Loading what works"
+                        />
+                    </div>
                 </section>
 
                 <!-- 2. How are they performing? -->
                 <section
                     id="performance"
-                    class="scroll-mt-14 space-y-3 border-t border-slate-100 pt-4"
+                    class="scroll-mt-14 space-y-4 border-t border-snitch-ink/10 pt-6"
                 >
-                    <header class="space-y-0.5">
-                        <h2 class="font-display text-xl font-semibold tracking-tight text-snitch-ink">
-                            How are they <span class="snitch-highlight">performing</span>?
+                    <header class="space-y-2">
+                        <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
+                            How are they performing?
+                        </p>
+                        <h2 class="font-display max-w-4xl text-2xl font-semibold tracking-tight text-snitch-ink md:text-3xl">
+                            {{ performanceHeadline }}
                         </h2>
                     </header>
 
                     <div
                         id="rail"
-                        class="snitch-dash-kpi-strip"
+                        class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4"
                     >
                         <template v-if="kpis?.status === 'ok' && visibleKpiCards.length">
-                            <StatCard
+                            <ExecStatTile
                                 v-for="card in visibleKpiCards"
                                 :key="String(card.key)"
                                 :label="String(card.label)"
-                                :why="String(card.why)"
-                                :formula="String(card.formula)"
-                                :status="String(card.status)"
-                                :reason="(card.reason as string | null) || null"
-                                :you="(card.you as number | null) ?? null"
-                                :you-display="(card.you_display as number | string | null) ?? null"
-                                :peer-median="(card.peer_median as number | null) ?? null"
-                                :gap="(card.gap as any) ?? null"
-                                :unit="String(card.unit)"
+                                :value="formatKpiValue(card)"
+                                :gap="(card.gap as Gap | null) ?? null"
                             />
                         </template>
                         <template v-else>
-                            <div
+                            <SnitchSkeleton
                                 v-for="slot in 3"
-                                :key="`kpi-pending-${slot}`"
-                                class="min-w-0 border-r border-slate-200 px-2 py-1.5 last:border-r-0"
-                                aria-hidden="true"
-                            >
-                                <span class="snitch-dash-rail-skel snitch-dash-rail-skel-label" />
-                                <span class="snitch-dash-rail-skel snitch-dash-rail-skel-value" />
-                            </div>
+                                :key="`kpi-${slot}`"
+                                variant="scrap"
+                                height="5.5rem"
+                                :label="`Loading KPI ${slot}`"
+                            />
                         </template>
                     </div>
 
-                    <DashCard
-                        title="Leaderboard"
-                        why="One glance shows who is ahead, and on what."
-                        formula="Engagement rate = median likes + comments per follower. Hidden likes and all-zero samples show as -."
-                        anchor="leaderboard"
-                    >
-                        <CompareTable
-                            v-if="leaderboard"
-                            :status="leaderboard.status"
-                            :reason="leaderboard.reason"
-                            :rows="(leaderboard.data?.rows as any) || []"
-                        />
-                        <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading leaderboard" />
-                    </DashCard>
-
-                    <div
-                        id="format_mix"
-                        class="snitch-scrap relative min-w-0 p-3"
-                    >
-                        <FormatMixChart
-                            v-if="caption_intel"
-                            class="snitch-dash-soft-in"
-                            :formats="caption_intel.format_mix"
-                            :lifts="formatLifts"
-                        />
-                        <SnitchSkeleton v-else variant="scrap" height="4rem" label="Loading format mix" />
+                    <div class="grid items-stretch gap-4 lg:grid-cols-2">
+                        <div
+                            id="leaderboard"
+                            class="flex h-full min-h-[12rem] flex-col rounded border border-snitch-ink/10 bg-white p-3"
+                        >
+                            <ExecRankBars
+                                v-if="leaderboard"
+                                class="flex-1"
+                                :rows="leaderboardRows"
+                            />
+                            <SnitchSkeleton
+                                v-else
+                                variant="scrap"
+                                height="8rem"
+                                label="Loading leaderboard"
+                            />
+                        </div>
+                        <div
+                            id="format_mix"
+                            class="flex h-full min-h-[12rem] flex-col rounded border border-snitch-ink/10 bg-white p-3"
+                        >
+                            <FormatMixChart
+                                v-if="caption_intel"
+                                class="flex-1"
+                                :formats="caption_intel.format_mix"
+                                :lifts="formatLifts"
+                            />
+                            <SnitchSkeleton
+                                v-else
+                                variant="scrap"
+                                height="8rem"
+                                label="Loading format mix"
+                            />
+                        </div>
                     </div>
 
                     <section
                         id="activity"
-                        class="snitch-scrap snitch-dash-heatmap-panel relative flex min-w-0 flex-col p-2"
+                        class="rounded border border-snitch-ink/10 bg-white p-3"
                     >
-                        <div class="mb-1 flex shrink-0 items-baseline justify-between gap-2">
-                            <p class="snitch-ink-label">Posting heat map</p>
-                            <p class="tabular-nums text-xs text-slate-500">16 wks</p>
+                        <div class="mb-2 flex items-baseline justify-between gap-2">
+                            <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
+                                Posting heat map
+                            </p>
+                            <p class="text-sm tabular-nums text-snitch-ink/45">16 wks</p>
                         </div>
                         <PostingHeatmap
                             v-if="activity"
-                            class="snitch-heatmap--dash snitch-dash-soft-in"
+                            class="snitch-heatmap--dash"
                             :days="activity.heatmap"
                         />
-                        <SnitchSkeleton v-else variant="scrap" height="6rem" label="Loading heat map" />
+                        <SnitchSkeleton
+                            v-else
+                            variant="scrap"
+                            height="5rem"
+                            label="Loading heat map"
+                        />
                     </section>
 
-                    <DashCard
-                        title="Winning posts"
-                        why="Ready-made post ideas already proven with a similar audience (ranked by performance vs usual, not raw likes)."
-                        formula="Performance vs usual = interactions ÷ median of the account's previous 30 posts. Winner ≥ 2.0×. Hidden-likes posts use comments+views when the toggle is on."
-                        anchor="winners"
+                    <section
+                        id="winners"
+                        class="space-y-2"
                     >
-                        <div class="mb-1 flex items-center gap-1.5">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h3 class="text-sm font-semibold text-snitch-ink">Winning posts</h3>
                             <button
                                 type="button"
-                                class="rounded px-1 py-0.5 text-xs font-medium"
-                                :class="winnerTab === 'winners' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'"
-                                @click="winnerTab = 'winners'; winnersExpanded = false"
+                                class="rounded px-2 py-0.5 text-sm font-medium"
+                                :class="winnerTab === 'winners' ? 'bg-snitch-ink text-white' : 'bg-snitch-ink/5 text-snitch-ink/70'"
+                                @click="winnerTab = 'winners'"
                             >
                                 Winners
                             </button>
                             <button
                                 type="button"
-                                class="rounded px-1 py-0.5 text-xs font-medium"
-                                :class="winnerTab === 'flops' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'"
-                                @click="winnerTab = 'flops'; winnersExpanded = false"
+                                class="rounded px-2 py-0.5 text-sm font-medium"
+                                :class="winnerTab === 'flops' ? 'bg-snitch-ink text-white' : 'bg-snitch-ink/5 text-snitch-ink/70'"
+                                @click="winnerTab = 'flops'"
                             >
                                 Flops
                             </button>
-                            <span
-                                v-if="show_hidden_likes && (winners?.data?.hidden_included ?? 0) > 0"
-                                class="text-xs text-amber-700"
-                            >
-                                {{ winners?.data?.hidden_included }} hidden-likes ranked on comments+views
-                            </span>
                         </div>
                         <EmptyState
-                            v-if="winners && (winners.status !== 'ok' || !winnerItems.length) && !hiddenSpotlight.length"
+                            v-if="winners && (winners.status !== 'ok' || !winnerItems.length)"
                             :reason="winners.reason || 'No posts in this tab.'"
                             compact
                         />
                         <div
                             v-else-if="winnerItems.length"
-                            class="grid grid-cols-1 items-stretch gap-1.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                            class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6"
                         >
-                            <WinnerCard
+                            <ExecWinnerThumb
                                 v-for="post in winnerItems"
                                 :key="String(post.id)"
-                                :post="post as any"
+                                :post="post"
                             />
                         </div>
-                        <div
-                            v-if="hiddenSpotlight.length"
-                            class="mt-1.5"
-                        >
-                            <p class="mb-1 text-xs font-medium uppercase tracking-wide text-amber-800/80">
-                                Hidden-likes spotlight (comments+views)
-                            </p>
-                            <div class="grid grid-cols-1 items-stretch gap-1.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                <WinnerCard
-                                    v-for="post in hiddenSpotlight"
-                                    :key="`hidden-${post.id}`"
-                                    :post="post as any"
-                                />
-                            </div>
-                        </div>
-                        <button
-                            v-if="winnersHaveMore"
-                            type="button"
-                            class="mt-1 text-xs font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
-                            @click="winnersExpanded = true"
-                        >
-                            Show more ({{ winnerList.length - 6 }})
-                        </button>
-                        <SnitchSkeleton v-else-if="!winners" variant="scrap" height="6rem" label="Loading winners" />
-                    </DashCard>
-
-                    <DashCard
-                        title="Data notes"
-                        why="Trust after the 102% engagement-rate incident."
-                        formula="Posts analysed, range, excluded hidden likes. Reach/saves/shares are private."
-                        anchor="data_notes"
-                    >
-                        <DataNotes
-                            v-if="data_notes"
-                            :status="data_notes.status"
-                            :reason="data_notes.reason"
-                            :accounts="(data_notes.data?.accounts as any) || []"
-                            :range="(data_notes.data?.range as string) || null"
-                            :last-refreshed-at="(data_notes.data?.last_refreshed_at as string) || null"
-                            :excluded-hidden-likes="Number(data_notes.data?.excluded_hidden_likes || 0)"
-                            :note="(data_notes.data?.note as string) || null"
-                            :format-uk="formatUk"
+                        <SnitchSkeleton
+                            v-else-if="!winners"
+                            variant="scrap"
+                            height="8rem"
+                            label="Loading winners"
                         />
-                        <SnitchSkeleton v-else variant="scrap" height="1.5rem" label="Loading data notes" />
-                    </DashCard>
+                    </section>
                 </section>
 
                 <!-- 3. Are they running ads? -->
                 <section
                     id="ads"
-                    class="scroll-mt-14 space-y-3 border-t border-slate-100 pt-4"
+                    class="scroll-mt-14 space-y-4 border-t border-snitch-ink/10 pt-6"
                 >
-                    <header class="space-y-0.5">
-                        <h2 class="font-display text-xl font-semibold tracking-tight text-snitch-ink">
-                            Are they running <span class="snitch-highlight">ads</span>?
-                        </h2>
-                        <p class="text-sm text-slate-600">
-                            Meta Ad Library hits for accounts you track.
+                    <header class="space-y-2">
+                        <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
+                            Are they running ads?
                         </p>
+                        <h2 class="font-display max-w-4xl text-2xl font-semibold tracking-tight text-snitch-ink md:text-3xl">
+                            {{ adsHeadline }}
+                        </h2>
                     </header>
 
                     <div
@@ -879,13 +807,13 @@ const trackerIdsByHandle = computed(() => {
                             v-for="row in 2"
                             :key="`ad-skel-${row}`"
                             variant="scrap"
-                            height="5rem"
+                            height="4rem"
                             :label="`Loading ads ${row}`"
                         />
                     </div>
                     <p
                         v-else-if="!ads_panel.accounts.length"
-                        class="rounded border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600"
+                        class="rounded border border-snitch-ink/10 bg-white px-3 py-3 text-sm text-snitch-ink/70"
                     >
                         No ads found for your competitors.
                     </p>
@@ -893,132 +821,97 @@ const trackerIdsByHandle = computed(() => {
                         v-else
                         class="space-y-3"
                     >
-                        <p class="text-sm tabular-nums text-slate-600">
-                            {{ ads_panel.running_ads }} active ad{{ ads_panel.running_ads === 1 ? '' : 's' }} across
-                            {{ ads_panel.accounts.length }} account{{ ads_panel.accounts.length === 1 ? '' : 's' }}.
-                        </p>
-                        <div
-                            v-for="account in ads_panel.accounts"
-                            :key="account.handle"
-                            class="snitch-scrap space-y-2 p-3"
-                        >
-                            <div class="flex flex-wrap items-baseline justify-between gap-2">
-                                <Link
-                                    v-if="account.tracked_account_id"
-                                    :href="competitorShow.url(account.tracked_account_id)"
-                                    class="text-sm font-semibold text-slate-900 hover:underline"
+                        <details @toggle="detailsOpen = ($event.target as HTMLDetailsElement).open">
+                            <summary class="cursor-pointer text-sm font-medium text-snitch-ink/70 hover:text-snitch-ink">
+                                {{ detailsOpen ? 'Hide ad creatives' : 'See ad creatives' }}
+                            </summary>
+                            <div class="mt-3 space-y-3">
+                                <div
+                                    v-for="account in ads_panel.accounts"
+                                    :key="account.handle"
+                                    class="rounded border border-snitch-ink/10 bg-white p-3"
                                 >
-                                    @{{ account.handle }}
-                                </Link>
-                                <span
-                                    v-else
-                                    class="text-sm font-semibold text-slate-900"
-                                >
-                                    @{{ account.handle }}
-                                </span>
-                                <span class="text-sm tabular-nums text-slate-500">
-                                    {{ account.count }} active
-                                </span>
-                            </div>
-                            <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                <a
-                                    v-for="ad in account.ads"
-                                    :key="ad.id"
-                                    :href="ad.url"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="rounded border border-slate-200 bg-white px-2.5 py-2 hover:border-slate-400"
-                                >
-                                    <p class="text-xs uppercase tracking-wide text-slate-500">
-                                        {{ productPlatformLabel(ad.platform) }}
-                                        <span
-                                            v-if="seenLabel(ad.last_seen_at)"
-                                            class="ms-1 normal-case tabular-nums"
+                                    <div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                                        <Link
+                                            v-if="account.tracked_account_id"
+                                            :href="competitorShow.url(account.tracked_account_id)"
+                                            class="whitespace-nowrap text-sm font-semibold text-snitch-ink hover:underline"
                                         >
-                                            · {{ seenLabel(ad.last_seen_at) }}
+                                            @{{ account.handle }}
+                                        </Link>
+                                        <span class="text-sm tabular-nums text-snitch-ink/55">
+                                            {{ account.count }} active
                                         </span>
-                                    </p>
-                                    <p class="mt-1 text-sm font-medium leading-snug text-slate-900">
-                                        {{ ad.title }}
-                                    </p>
-                                    <p
-                                        v-if="ad.body"
-                                        class="mt-1 text-sm leading-snug text-slate-600"
-                                    >
-                                        {{ ad.body }}
-                                    </p>
-                                </a>
+                                    </div>
+                                    <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                        <a
+                                            v-for="ad in account.ads"
+                                            :key="ad.id"
+                                            :href="ad.url"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="rounded border border-snitch-ink/10 px-2.5 py-2 hover:border-snitch-ink/30"
+                                        >
+                                            <p class="text-sm text-snitch-ink/55">
+                                                {{ productPlatformLabel(ad.platform) }}
+                                                <span
+                                                    v-if="seenLabel(ad.last_seen_at)"
+                                                    class="ms-1 tabular-nums"
+                                                >
+                                                    · {{ seenLabel(ad.last_seen_at) }}
+                                                </span>
+                                            </p>
+                                            <p class="mt-1 text-sm font-medium leading-snug text-snitch-ink">
+                                                {{ ad.title }}
+                                            </p>
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        </details>
                     </div>
                 </section>
-
             </template>
 
             <div
                 v-else-if="!showOnboarding"
-                class="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center"
+                class="rounded border border-dashed border-snitch-ink/20 bg-white p-8 text-center"
             >
-                <h2 class="text-base font-semibold text-slate-900">
+                <h2 class="font-display text-xl font-semibold text-snitch-ink">
                     {{ own_account ? 'No rivals to compare yet' : 'No Instagram competitors yet' }}
                 </h2>
-                <p class="mt-2 text-sm text-slate-500">
-                    <template v-if="own_account">
-                        You have marked
-                        <Link
-                            :href="competitorShow.url(own_account.id)"
-                            class="font-medium text-slate-700 hover:underline"
-                        >
-                            @{{ own_account.handle }}
-                        </Link>
-                        as your account. Add rival Instagram handles on
-                        Tracking to see the gap.
-                    </template>
-                    <template v-else-if="(legacy_non_instagram_count ?? 0) > 0">
-                        Tracking lists {{ legacy_non_instagram_count }} account{{
-                            legacy_non_instagram_count === 1 ? '' : 's'
-                        }}
-                        from older platforms. This dashboard only compares Instagram rivals - add Instagram handles on
-                        Tracking to populate it.
-                    </template>
-                    <template v-else>
-                        Add Instagram competitor handles on Tracking to populate this dashboard. Only Instagram accounts appear here.
-                    </template>
+                <p class="mt-2 text-sm text-snitch-ink/60">
+                    Add Instagram competitor handles on Tracking to populate this dashboard.
                 </p>
                 <Link
                     :href="competitors()"
-                    class="mt-4 inline-block rounded-lg bg-slate-900 px-3 py-1.5 text-sm text-white hover:bg-slate-800"
+                    class="mt-4 inline-block rounded bg-snitch-ink px-3 py-1.5 text-sm text-white"
                 >
                     Go to Tracking
                 </Link>
             </div>
 
-            <!-- 4. Is anyone tracking you? (sibling agent owns TrackedBySection) -->
             <section
                 v-if="showTrackedBy"
                 id="tracked-by"
-                class="scroll-mt-14 space-y-3 border-t border-slate-100 pt-4"
+                class="scroll-mt-14 space-y-3 border-t border-snitch-ink/10 pt-6"
             >
-                <header class="space-y-0.5">
-                    <h2 class="font-display text-xl font-semibold tracking-tight text-snitch-ink">
+                <header>
+                    <h2 class="font-display text-2xl font-semibold tracking-tight text-snitch-ink md:text-3xl">
                         Is anyone <span class="snitch-highlight">tracking you</span>?
                     </h2>
                 </header>
                 <TrackedBySection :tracked-by="trackedBy ?? null" />
             </section>
 
-            <!-- 5. Cast your vote (sibling agent owns VoteSection) -->
             <section
                 id="vote"
-                class="scroll-mt-14 space-y-3 border-t border-slate-100 pt-4"
+                class="scroll-mt-14 space-y-3 border-t border-snitch-ink/10 pt-6"
             >
-                <header class="space-y-0.5">
-                    <h2 class="font-display text-xl font-semibold tracking-tight text-snitch-ink">
+                <header>
+                    <h2 class="font-display text-2xl font-semibold tracking-tight text-snitch-ink md:text-3xl">
                         Cast your <span class="snitch-highlight">vote</span>
                     </h2>
-                    <p class="text-sm text-slate-600">
-                        Upvote what you want next, or pitch your own idea.
-                    </p>
                 </header>
                 <VoteSection :suggestions="featureSuggestions ?? []" />
             </section>

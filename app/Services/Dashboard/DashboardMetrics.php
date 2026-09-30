@@ -23,6 +23,7 @@ class DashboardMetrics
         private DashboardCache $cache,
         private DashboardActivityBuilder $activity,
         private CompetitorInsightsBuilder $competitorInsights,
+        private ExecutiveBriefBuilder $executiveBrief,
     ) {}
 
     /**
@@ -115,6 +116,7 @@ class DashboardMetrics
                 'accounts' => [],
                 'recommendation' => 'None of your rivals advertise, so organic is enough for now.',
             ],
+            'executive' => $this->executiveBrief->empty(),
         ];
     }
 
@@ -225,6 +227,15 @@ class DashboardMetrics
             $lastSynced,
             $periodDays,
         );
+        $executive = $this->executiveBrief->build(
+            is_array($ownRow) ? $ownRow : null,
+            $kpis,
+            $insights,
+            $formatLift,
+            $activity,
+            null,
+            $adsPanel,
+        );
 
         return [
             'period' => $periodDays,
@@ -275,6 +286,7 @@ class DashboardMetrics
             'growth_delta' => $growthDelta,
             'caption_intel' => $captionIntel,
             'ads_panel' => $adsPanel,
+            'executive' => $executive,
         ];
     }
 
@@ -1936,7 +1948,7 @@ class DashboardMetrics
                 ->all();
 
             return CardResult::insufficient(
-                'Add your own account to get personalised actions. Meanwhile, here is what works for peers:',
+                'Add your own account to get personalised actions. Meanwhile, here is what works for rivals:',
                 count($peerOnly),
                 ['items' => $peerOnly, 'peer_only' => true],
             );
@@ -1948,7 +1960,7 @@ class DashboardMetrics
 
         if (is_numeric($peerPosts) && is_numeric($youPosts) && (float) $youPosts < 0.5 * (float) $peerPosts) {
             $items[] = [
-                'text' => sprintf('Post %.1f×/week (peers: %.1f)', max(1, round((float) $peerPosts)), (float) $peerPosts),
+                'text' => sprintf('Post %.1f×/week (rivals: %.1f)', max(1, round((float) $peerPosts)), (float) $peerPosts),
                 'links_to' => $this->insightRules->resolveAnchor('kpis'),
                 'n' => (int) ($ownRow['posts_n'] ?? 0),
             ];

@@ -396,8 +396,8 @@ class DashboardMetricsTest extends TestCase
 
         $rules = app(InsightRules::class);
         $this->assertSame('rail', $rules->resolveAnchor('kpis'));
-        $this->assertSame('captions', $rules->resolveAnchor('captions'));
-        $this->assertSame('themes', $rules->resolveAnchor('themes'));
+        $this->assertSame('caption_intel', $rules->resolveAnchor('captions'));
+        $this->assertSame('caption_intel', $rules->resolveAnchor('themes'));
         $this->assertSame('activity', $rules->resolveAnchor('heatmap'));
         $this->assertSame('format_mix', $rules->resolveAnchor('format_lift'));
         $this->assertSame('insights', $rules->resolveAnchor('actions'));

@@ -36,6 +36,7 @@ class DashboardController extends Controller
         'rail',
         'kpis',
         'weekly_brief',
+        'executive',
         'trackedBy',
         'featureSuggestions',
     ];
