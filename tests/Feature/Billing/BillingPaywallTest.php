@@ -250,12 +250,7 @@ class BillingPaywallTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('winners.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('subscription.paywall.blocked', true)
-                ->where('winners', [])
-                ->where('rescoreRun', null)
-            );
+            ->assertRedirect(route('dashboard').'#performance');
 
         $this->actingAs($user)
             ->get(route('influencers.index'))

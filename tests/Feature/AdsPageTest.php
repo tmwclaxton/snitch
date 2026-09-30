@@ -88,23 +88,24 @@ class AdsPageTest extends TestCase
         $this->assertFileDoesNotExist(resource_path('js/pages/ads/Index.vue'));
     }
 
-    public function test_sidebar_hides_ad_library_when_feature_disabled(): void
+    public function test_sidebar_uses_ads_dashboard_section_not_ad_library_nav(): void
     {
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
 
         $this->assertIsString($sidebar);
-        $this->assertStringContainsString("title: 'Dashboard'", $sidebar);
+        $this->assertStringContainsString("title: 'Are they running ads?'", $sidebar);
         $this->assertStringContainsString("title: 'Competitors'", $sidebar);
         $this->assertStringNotContainsString("title: 'Ad Library'", $sidebar);
         $this->assertStringNotContainsString('AdsController', $sidebar);
-        $this->assertStringContainsString("config('features.ad_library')", $sidebar);
     }
 
-    public function test_dashboard_insights_preview_caps_active_ads_at_two(): void
+    public function test_dashboard_ads_panel_groups_active_ads_per_account(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
-        $account = TrackedAccount::factory()->for($user)->create();
+        $account = TrackedAccount::factory()->for($user)->forPlatform(Platform::Instagram)->create([
+            'handle' => 'adclub',
+        ]);
 
         foreach (range(1, 5) as $n) {
             SocialAd::factory()->create([
@@ -121,6 +122,13 @@ class AdsPageTest extends TestCase
                 ->component('Dashboard')
                 ->missing('insights.ads')
                 ->missing('insights.paid_vs_organic')
+                ->loadDeferredProps('panel', fn (Assert $panel) => $panel
+                    ->where('ads_panel.running_ads', 5)
+                    ->has('ads_panel.accounts', 1)
+                    ->where('ads_panel.accounts.0.handle', 'adclub')
+                    ->has('ads_panel.accounts.0.ads', 3)
+                    ->where('ads_panel.recommendation', fn (string $text): bool => str_contains($text, '5 ads'))
+                )
             );
     }
 }

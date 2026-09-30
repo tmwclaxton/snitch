@@ -94,6 +94,15 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString(':tracker-ids="trackerIdsByHandle"', $dashboard);
         $this->assertStringContainsString('weekly_brief.ideas', $dashboard);
         $this->assertStringContainsString('Post this next', $dashboard);
+        $this->assertStringContainsString('What should we post?', $dashboard);
+        $this->assertStringContainsString('How are they performing?', $dashboard);
+        $this->assertStringContainsString('Are they running ads?', $dashboard);
+        $this->assertStringContainsString('id="what-to-post"', $dashboard);
+        $this->assertStringContainsString('id="performance"', $dashboard);
+        $this->assertStringContainsString('id="ads"', $dashboard);
+        $this->assertStringContainsString('TrackedBySection', $dashboard);
+        $this->assertStringContainsString('VoteSection', $dashboard);
+        $this->assertStringContainsString('See full brief', $dashboard);
         $this->assertStringContainsString('break-words text-slate-800', $dashboard);
         $this->assertStringNotContainsString('truncate text-slate-800', $dashboard);
         $this->assertStringContainsString('snitch-dash-heatmap-panel', $dashboard);
@@ -104,12 +113,12 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('items-stretch gap-2 lg:grid-cols-2', $dashboard);
         $this->assertStringContainsString('id="format_mix"', $dashboard);
         $this->assertStringContainsString(':collapsed-count="5"', $dashboard);
-        // Format mix sits under insights on the left, not under the leaderboard.
+        // Leaderboard left, Format mix right in the performance pair.
         $formatPos = strpos($dashboard, 'id="format_mix"');
         $leaderPos = strpos($dashboard, 'anchor="leaderboard"');
         $this->assertNotFalse($formatPos);
         $this->assertNotFalse($leaderPos);
-        $this->assertLessThan($leaderPos, $formatPos);
+        $this->assertLessThan($formatPos, $leaderPos);
 
         $insightList = file_get_contents(resource_path('js/components/dashboard/InsightList.vue'));
         $this->assertNotFalse($insightList);

@@ -20,14 +20,19 @@ class SidebarNavigationTest extends TestCase
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
 
         $this->assertNotFalse($sidebar);
-        foreach (['Dashboard', 'Brand', 'Competitors', 'Feed', 'Winners', 'This week', 'Growth', 'Explore'] as $title) {
+        foreach (['Brand', 'Competitors', 'Feed', 'This week', 'Growth', 'Monthly report', 'Explore'] as $title) {
             $this->assertStringContainsString("title: '{$title}'", $sidebar);
         }
 
+        $this->assertStringContainsString('label="Dashboard"', $sidebar);
+        $this->assertStringContainsString("title: 'What should we post?'", $sidebar);
+        $this->assertStringContainsString("title: 'How are they performing?'", $sidebar);
+        $this->assertStringContainsString("title: 'Are they running ads?'", $sidebar);
+        $this->assertStringNotContainsString("title: 'Winners'", $sidebar);
         $this->assertStringNotContainsString("title: 'Ad Library'", $sidebar);
         $this->assertStringNotContainsString("title: 'Influencers'", $sidebar);
         $this->assertStringNotContainsString("title: 'Backlog'", $sidebar);
-        $this->assertStringContainsString('isCurrentOrParentUrl', file_get_contents(
+        $this->assertStringContainsString('activeDashboardSection', file_get_contents(
             resource_path('js/components/NavMain.vue'),
         ) ?: '');
     }
@@ -82,9 +87,9 @@ class SidebarNavigationTest extends TestCase
             'brand.edit',
             'competitors.index',
             'feed.index',
-            'winners.index',
             'brief.index',
             'growth.index',
+            'growth.report',
             'explore.index',
         ];
 
@@ -95,7 +100,11 @@ class SidebarNavigationTest extends TestCase
                     ->assertOk();
             }
 
-            // Ad Library stays behind config('features.ad_library'); default off → dashboard.
+            $this->actingAs($user)
+                ->get(route('winners.index'))
+                ->assertRedirect(route('dashboard').'#performance');
+
+            // Standalone Ad Library stays behind config('features.ad_library'); default off → dashboard.
             $this->actingAs($user)
                 ->get(route('ads.index'))
                 ->assertRedirect(route('dashboard'));

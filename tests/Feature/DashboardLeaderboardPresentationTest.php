@@ -91,12 +91,13 @@ class DashboardLeaderboardPresentationTest extends TestCase
         }
 
         $payload = app(DashboardMetrics::class)->forUser($user, [], 30);
-        $er = collect($payload['kpis']['data']['cards'])->firstWhere('key', 'er');
-        $followers = collect($payload['kpis']['data']['cards'])->firstWhere('key', 'followers_growth');
+        $cards = collect($payload['kpis']['data']['cards']);
+        $er = $cards->firstWhere('key', 'er');
 
         $this->assertSame('Engagement rate', $er['label']);
         $this->assertSame('likes + comments per post, as a % of followers', $er['why']);
         $this->assertStringNotContainsString('ER (per follower)', (string) $er['label']);
-        $this->assertSame('growth from next week', $followers['reason']);
+        $this->assertNull($cards->firstWhere('key', 'followers_growth'));
+        $this->assertCount(4, $cards);
     }
 }

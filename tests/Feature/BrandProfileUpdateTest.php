@@ -164,8 +164,9 @@ class BrandProfileUpdateTest extends TestCase
         $this->assertStringContainsString("title: 'Brand'", $sidebar);
         $this->assertStringContainsString("title: 'Competitors'", $sidebar);
         $this->assertStringContainsString("title: 'Feed'", $sidebar);
-        $this->assertStringContainsString("title: 'Winners'", $sidebar);
+        $this->assertStringContainsString("title: 'Monthly report'", $sidebar);
         $this->assertStringContainsString("title: 'Explore'", $sidebar);
+        $this->assertStringNotContainsString("title: 'Winners'", $sidebar);
         $this->assertStringContainsString('BrandProfileController', $sidebar);
         $this->assertStringContainsString('CompetitorController', $sidebar);
         $this->assertStringNotContainsString("title: 'MCP'", $sidebar);

@@ -19,27 +19,28 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
-use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class WinnersTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_winners_tear_rows_use_a_feed_hit_link(): void
+    public function test_winners_index_redirects_to_dashboard_performance(): void
     {
-        $source = file_get_contents(resource_path('js/pages/winners/Index.vue'));
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
 
-        $this->assertIsString($source);
-        $this->assertStringContainsString('snitch-tear-row-hit', $source);
-        $this->assertStringContainsString('feedShow.url(winner.post.id)', $source);
-        $this->assertStringNotContainsString(
-            'class="snitch-tear-row-body relative z-10 block space-y-2.5"',
-            $source,
-        );
+        $this->actingAs($user)
+            ->get(route('winners.index'))
+            ->assertRedirect(route('dashboard').'#performance');
+
+        $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
+        $this->assertIsString($dashboard);
+        $this->assertStringContainsString('id="performance"', $dashboard);
+        $this->assertStringContainsString('anchor="winners"', $dashboard);
     }
 
-    public function test_winners_page_only_shows_matching_posts(): void
+    public function test_winner_scorer_still_persists_matching_posts(): void
     {
         config([
             'snitch.nanogpt.api_key' => 'test-key',
@@ -106,46 +107,6 @@ class WinnersTest extends TestCase
         $this->assertFalse(
             WinnerInsight::query()->where('post_id', $loserPost->id)->exists(),
         );
-
-        $this->actingAs($user)
-            ->get(route('winners.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('winners/Index')
-                ->missing('winners')
-                ->has('presets')
-                ->has('presets.balanced')
-                ->has('presets.gentle')
-                ->has('presets.strict')
-                ->has('rule.preset')
-                ->has('rule.min_multiplier')
-                ->has('rule.min_views')
-                ->has('rule.min_likes')
-                ->has('rule.min_engagement_rate')
-                ->has('rule.advanced')
-                ->loadDeferredProps('default', fn (Assert $page) => $page
-                    ->has('winners', 1)
-                    ->where('winners.0.post.id', $winnerPost->id)
-                    ->where('winners.0.post.metrics.views', 5000)
-                    ->where('winners.0.post.metrics.likes', 400)
-                    ->where('winners.0.performance_multiplier', fn ($m): bool => is_numeric($m) && (float) $m >= 2.0)
-                    ->where('winners.0.post.analysis.hook', 'Strong opening line here')
-                    ->where('winners.0.post.analysis.concept', 'Pattern interrupt with proof')
-                    ->where('winners.0.post.analysis.topics.0', 'social proof with receipts')
-                    ->where('winners.0.post.analysis.topics.1', 'contrast framing')
-                    ->where('winners.0.post.embed.provider', 'tiktok')
-                    ->where(
-                        'winners.0.post.embed.src',
-                        'https://www.tiktok.com/player/v1/6718335390845095173?music_info=0&description=0&autoplay=0',
-                    )
-                    ->where(
-                        'winners.0.how_to_copy_html',
-                        fn (?string $html): bool => is_string($html)
-                            && $html !== ''
-                            && str_contains($html, '<'),
-                    )
-                )
-            );
     }
 
     public function test_winner_rules_can_be_updated(): void
@@ -194,24 +155,15 @@ class WinnersTest extends TestCase
         WinnerRule::factory()->for($user)->create();
 
         $this->actingAs($user)
-            ->from(route('winners.index'))
+            ->from(route('dashboard'))
             ->post(route('winners.rescore'))
-            ->assertRedirect(route('winners.index'));
+            ->assertRedirect(route('dashboard'));
 
         Queue::assertPushed(ScoreWinnersJob::class, fn (ScoreWinnersJob $job) => $job->userId === $user->id);
 
         $run = ScoreWinnersJob::activeRunFor($user->id);
         $this->assertNotNull($run);
         $this->assertSame('pending', $run['status']);
-
-        $this->actingAs($user)
-            ->get(route('winners.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('winners/Index')
-                ->where('rescoreRun.id', $run['id'])
-                ->where('rescoreRun.status', 'pending')
-            );
 
         $this->actingAs($user)
             ->getJson(route('winners.rescore.status', $run['id']))
