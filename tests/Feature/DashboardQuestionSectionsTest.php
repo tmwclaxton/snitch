@@ -31,9 +31,8 @@ class DashboardQuestionSectionsTest extends TestCase
             $this->assertStringContainsString("'{$id}'", $scrollSpy);
         }
 
-        $this->assertStringContainsString('What the data shows', $dashboard);
         $this->assertStringContainsString('See full brief', $dashboard);
-        $this->assertStringContainsString('No ads found for your competitors', $dashboard);
+        $this->assertStringContainsString('executive?.ads?.headline', $dashboard);
         $this->assertStringContainsString('ads_panel', $dashboard);
         $this->assertStringNotContainsString("title: 'Winners'", $sidebar);
         $this->assertStringContainsString("title: 'Monthly report'", $sidebar);

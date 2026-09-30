@@ -307,10 +307,23 @@ const visibleKpiCards = computed(() => {
 const peakHours = computed(() => {
     const hours = props.activity?.by_time_of_day ?? [];
 
-    return [...hours]
-        .filter((row) => row.count > 0)
+    // Prefer daytime/evening slots for the board-slide chart - overnight
+    // noise (e.g. 4am) reads as a bad recommendation.
+    const daytime = hours.filter((row) => {
+        const hour = typeof row.hour === 'number' ? row.hour : Number.parseInt(String(row.label), 10);
+
+        if (Number.isFinite(hour)) {
+            return hour >= 7 && hour <= 22 && row.count > 0;
+        }
+
+        return row.count > 0;
+    });
+
+    const pool = daytime.length ? daytime : hours.filter((row) => row.count > 0);
+
+    return [...pool]
         .sort((a, b) => b.count - a.count)
-        .slice(0, 4);
+        .slice(0, 3);
 });
 
 const postingTimeBars = computed(() => {
@@ -321,17 +334,19 @@ const postingTimeBars = computed(() => {
     }));
 
     if (fromBrief.length) {
-        const max = Math.max(...fromBrief.map((row) => row.value), 0.01);
+        const rows = fromBrief.slice(0, 3);
+        const max = Math.max(...rows.map((row) => row.value), 0.01);
 
-        return fromBrief.map((row) => ({
+        return rows.map((row) => ({
             ...row,
             width: `${Math.max(10, (row.value / max) * 100)}%`,
         }));
     }
 
-    const max = Math.max(...peakHours.value.map((row) => row.count), 1);
+    const rows = peakHours.value.slice(0, 3);
+    const max = Math.max(...rows.map((row) => row.count), 1);
 
-    return peakHours.value.map((row) => ({
+    return rows.map((row) => ({
         label: row.label,
         value: row.count,
         suffix: `${row.count} posts`,
@@ -339,23 +354,10 @@ const postingTimeBars = computed(() => {
     }));
 });
 
-const whatToPostHeadline = computed(() => {
-    const idea = props.weekly_brief?.ideas?.[0];
-    const slot = props.weekly_brief?.best_times?.[0]?.label
-        ?? postingTimeBars.value[0]?.label
-        ?? null;
-
-    if (idea && slot) {
-        const hook = idea.hook.length > 72
-            ? idea.hook.slice(0, 72).replace(/\s+\S*$/, '').trim()
-            : idea.hook;
-
-        return `Post ${idea.format.toLowerCase()}s around ${slot}: ${hook}`;
-    }
-
-    return props.executive?.what_to_post?.headline
-        ?? 'Sync more posts to get a clear posting plan.';
-});
+const whatToPostHeadline = computed(
+    () => props.executive?.what_to_post?.headline
+        ?? 'Sync more posts to get a clear posting plan.',
+);
 
 const performanceHeadline = computed(
     () => props.executive?.performance?.headline
@@ -811,14 +813,8 @@ const detailsOpen = ref(false);
                             :label="`Loading ads ${row}`"
                         />
                     </div>
-                    <p
-                        v-else-if="!ads_panel.accounts.length"
-                        class="rounded border border-snitch-ink/10 bg-white px-3 py-3 text-sm text-snitch-ink/70"
-                    >
-                        No ads found for your competitors.
-                    </p>
                     <div
-                        v-else
+                        v-else-if="ads_panel.accounts.length"
                         class="space-y-3"
                     >
                         <details @toggle="detailsOpen = ($event.target as HTMLDetailsElement).open">

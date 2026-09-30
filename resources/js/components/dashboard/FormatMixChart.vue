@@ -29,7 +29,7 @@ function liftFor(type: string): number | null {
 function liftLabel(type: string): string | null {
     const value = liftFor(type);
 
-    return value == null ? null : `${value.toFixed(1)}x`;
+    return value == null ? null : `${value.toFixed(1)}×`;
 }
 
 function barWidth(count: number): string {
@@ -69,7 +69,7 @@ const tip = computed(() => {
 
     const label = postTypeLabel(peakByLift.value.type);
 
-    return `Rivals get ${peakByLift.value.lift.toFixed(1)}x their usual from ${label} - post more of those.`;
+    return `Rivals get ${peakByLift.value.lift.toFixed(1)}× their usual from ${label}.`;
 });
 </script>
 

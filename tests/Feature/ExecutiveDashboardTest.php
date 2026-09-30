@@ -71,6 +71,8 @@ class ExecutiveDashboardTest extends TestCase
         $this->assertStringContainsString('posting less', strtolower($brief['performance']['headline']));
         $this->assertSame('None of your rivals run ads.', $brief['ads']['headline']);
         $this->assertSame('11.8×', $brief['what_to_post']['takeaways'][0]['metric']);
+        $this->assertSame('@club best post beat their usual engagement.', $brief['what_to_post']['takeaways'][0]['text']);
+        $this->assertLessThanOrEqual(72, mb_strlen($brief['what_to_post']['takeaways'][0]['text']));
         $this->assertStringNotContainsString('n=', $brief['what_to_post']['headline']);
         $this->assertStringNotContainsString('Peer', $brief['performance']['headline']);
     }
@@ -87,11 +89,13 @@ class ExecutiveDashboardTest extends TestCase
         $this->assertStringContainsString('ExecWhatWorks', $dashboard);
         $this->assertStringContainsString('whatToPostHeadline', $dashboard);
         $this->assertStringContainsString('performanceHeadline', $dashboard);
+        $this->assertStringContainsString('executive?.what_to_post?.headline', $dashboard);
         $this->assertStringContainsString('id="what-to-post"', $dashboard);
         $this->assertStringContainsString('id="performance"', $dashboard);
         $this->assertStringContainsString('id="ads"', $dashboard);
         $this->assertStringContainsString('id="vote"', $dashboard);
 
+        $this->assertStringNotContainsString('Post ${idea.format.toLowerCase()}s around', $dashboard);
         $this->assertStringNotContainsString('CaptionPanels', $dashboard);
         $this->assertStringNotContainsString('DataNotes', $dashboard);
         $this->assertStringNotContainsString('ThemeMatrix', $dashboard);

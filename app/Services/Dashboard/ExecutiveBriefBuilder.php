@@ -208,8 +208,8 @@ class ExecutiveBriefBuilder
                 continue;
             }
 
-            $metric = $this->extractMetric($plain) ?? $this->x((float) ($item['score'] ?? 0));
-            $text = $this->oneLine($plain);
+            $metric = $this->extractMetric($plain) ?? $this->x((float) ($item['score'] ?? 0)).'×';
+            $text = $this->takeawayLine($plain);
 
             if ($text === '') {
                 continue;
@@ -354,26 +354,54 @@ class ExecutiveBriefBuilder
         return null;
     }
 
-    private function oneLine(string $plain): string
+    private function takeawayLine(string $plain): string
     {
         $line = trim(preg_replace('/\s+/', ' ', $plain) ?? $plain);
+        // Metric is shown as the bold tile number - drop it from the sentence.
+        $hadMultiplier = preg_match('/\d+(?:\.\d+)?\s*[×xX]/u', $line) === 1;
+        $line = trim(preg_replace('/\d+(?:\.\d+)?\s*[×xX]/u', '', $line) ?? $line);
+        $line = trim(preg_replace('/\s+/', ' ', $line) ?? $line);
+        $line = trim($line, " \t\"'");
 
-        if (mb_strlen($line) <= 96) {
-            return $line;
+        if ($hadMultiplier) {
+            $line = preg_replace('/\bgot\s+their usual\b/iu', 'beat their usual', $line) ?? $line;
         }
 
-        if (preg_match('/^(.{48,96}?[:.])(?:\s|$)/u', $line, $match) === 1) {
-            return rtrim($match[1]);
+        if ($line === '') {
+            return '';
         }
 
-        $slice = mb_substr($line, 0, 96);
+        if (mb_strlen($line) <= 72) {
+            return $this->finishSentence($line);
+        }
+
+        if (preg_match('/^(.{24,72}?)[:.](?:\s|$)/u', $line, $match) === 1) {
+            return $this->finishSentence(rtrim($match[1], ' .'));
+        }
+
+        $slice = mb_substr($line, 0, 72);
         $lastSpace = mb_strrpos($slice, ' ');
 
-        if ($lastSpace !== false && $lastSpace > 48) {
-            return rtrim(mb_substr($slice, 0, $lastSpace), '.,;:-');
+        if ($lastSpace !== false && $lastSpace > 28) {
+            return $this->finishSentence(rtrim(mb_substr($slice, 0, $lastSpace), '.,;:-"\''));
         }
 
-        return rtrim($slice, '.,;:-');
+        return $this->finishSentence(rtrim($slice, '.,;:-"\''));
+    }
+
+    private function finishSentence(string $line): string
+    {
+        $line = trim($line, " \t\"'");
+
+        if ($line === '') {
+            return '';
+        }
+
+        if (! str_ends_with($line, '.') && ! str_ends_with($line, '!')) {
+            return $line.'.';
+        }
+
+        return $line;
     }
 
     private function x(float $value): string
