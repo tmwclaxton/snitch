@@ -24,7 +24,8 @@ Appearance is light / dark / system via `useAppearance`, the `appearance` cookie
 - Use `--snitch-print-blend` (`multiply` light / `soft-light` dark) for print overlays on paper.
 - Light spot stays `#FFD60A`; dark spot is `#FCD700`. Alert stays `#E5341D`.
 - Caution Tape tokens (`--snitch-caution-*`) stay fixed for landing accents and TrackedBy.
-- Chart series read ink / axes from live CSS vars (`snitchTheme.ts`); "You" series uses `--snitch-ink` so it stays AA on paper in both modes.
+- Chart series read live CSS vars (`snitchTheme.ts`). Dark: You = `#FCD700`, rivals = pink/blue/green/orange (`SNITCH_RIVAL_COLOURS_DARK`), rivals' average = dashed fog. Light: You = ink, existing teal/red rival set.
+- Never invert ink↔paper for selected chips in dark (pale pill + pale text). Use `.snitch-choice` / `.snitch-choice-active` (selected = spot yellow + on-spot text; idle = `#1A1A1D` + fog border). Format tags use `.snitch-format-tag`. Meter bars use `.snitch-meter-fill` / `-lead`.
 
 ## Public shell is pinned to Caution Tape night
 

@@ -811,6 +811,192 @@ html:has(.snitch-public-shell) {
     }
 
     /*
+     * Choice chips / period toggles - never invert ink↔paper in dark
+     * (pale pill + pale text). Selected = spot yellow; idle = dark lift.
+     */
+    .snitch-choice {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 15%, transparent);
+        background: var(--snitch-lift);
+        color: var(--snitch-ink);
+    }
+
+    .dark .snitch-choice {
+        border-color: color-mix(in oklab, var(--snitch-ink) 28%, transparent);
+        background: #1a1a1d;
+        color: var(--snitch-ink);
+    }
+
+    .snitch-choice:hover {
+        border-color: color-mix(in oklab, var(--snitch-ink) 30%, transparent);
+        background: color-mix(in oklab, var(--snitch-ink) 5%, var(--snitch-lift));
+    }
+
+    .dark .snitch-choice:hover {
+        border-color: color-mix(in oklab, var(--snitch-ink) 45%, transparent);
+        background: #222226;
+    }
+
+    .snitch-choice-active,
+    .snitch-choice-active:hover {
+        border-color: var(--snitch-ink);
+        background: var(--snitch-ink);
+        color: var(--snitch-paper);
+    }
+
+    .dark .snitch-choice-active,
+    .dark .snitch-choice-active:hover {
+        border-color: var(--snitch-spot);
+        background: var(--snitch-spot);
+        color: var(--snitch-on-spot);
+    }
+
+    .snitch-choice-active .snitch-image-fallback-initials,
+    .snitch-choice-active .snitch-avatar {
+        background: var(--snitch-paper);
+        color: var(--snitch-ink);
+        border-color: transparent;
+    }
+
+    .dark .snitch-choice-active .snitch-image-fallback-initials,
+    .dark .snitch-choice-active .snitch-avatar {
+        background: var(--snitch-on-spot);
+        color: var(--snitch-spot);
+    }
+
+    .snitch-choice .snitch-image-fallback-initials,
+    .snitch-choice .snitch-avatar {
+        background: color-mix(in oklab, var(--snitch-ink) 12%, var(--snitch-lift));
+        color: var(--snitch-ink);
+    }
+
+    .dark .snitch-choice .snitch-image-fallback-initials,
+    .dark .snitch-choice .snitch-avatar {
+        background: #0e0e10;
+        color: var(--snitch-ink);
+        border-color: color-mix(in oklab, var(--snitch-ink) 25%, transparent);
+    }
+
+    /* Format tags (REEL / CAROUSEL) - yellow face in dark, ink face in light */
+    .snitch-format-tag {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 0.25rem;
+        padding: 0.125rem 0.375rem;
+        font-weight: 600;
+        font-size: inherit;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        background: var(--snitch-ink);
+        color: var(--snitch-paper);
+    }
+
+    .dark .snitch-format-tag {
+        background: var(--snitch-spot);
+        color: var(--snitch-on-spot);
+    }
+
+    /* Meter bars: lead = spot; others = ink (light) / dim yellow (dark) */
+    .snitch-meter {
+        overflow: hidden;
+        border-radius: 0.125rem;
+        background: color-mix(in oklab, var(--snitch-ink) 8%, transparent);
+    }
+
+    .snitch-meter-fill {
+        height: 100%;
+        border-radius: 0.125rem;
+        background: var(--snitch-ink);
+    }
+
+    .dark .snitch-meter-fill {
+        background: color-mix(in oklab, var(--snitch-spot) 42%, #3a3510);
+    }
+
+    .snitch-meter-fill-lead {
+        background: var(--snitch-spot);
+    }
+
+    .dark .snitch-meter-fill-lead {
+        background: var(--snitch-spot);
+    }
+
+    /* Vote / status badges - tinted dark in night, pastel OK in light */
+    .snitch-status-open {
+        background: color-mix(in oklab, var(--snitch-ink) 8%, var(--snitch-lift));
+        color: color-mix(in oklab, var(--snitch-ink) 80%, transparent);
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 15%, transparent);
+    }
+
+    .snitch-status-planned {
+        background: #e0f2fe;
+        color: #075985;
+        border: 1px solid transparent;
+    }
+
+    .dark .snitch-status-planned {
+        background: color-mix(in oklab, #4fc3f7 16%, #141416);
+        color: #7dd3fc;
+        border-color: color-mix(in oklab, #4fc3f7 45%, transparent);
+    }
+
+    .snitch-status-building {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid transparent;
+    }
+
+    .dark .snitch-status-building {
+        background: color-mix(in oklab, #fcd700 14%, #141416);
+        color: #fcd700;
+        border-color: color-mix(in oklab, #fcd700 40%, transparent);
+    }
+
+    .snitch-status-shipped {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid transparent;
+    }
+
+    .dark .snitch-status-shipped {
+        background: color-mix(in oklab, #7cffb2 14%, #141416);
+        color: #7cffb2;
+        border-color: color-mix(in oklab, #7cffb2 40%, transparent);
+    }
+
+    .snitch-vote-btn {
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 15%, transparent);
+        background: var(--snitch-lift);
+        color: color-mix(in oklab, var(--snitch-ink) 80%, transparent);
+    }
+
+    .snitch-vote-btn:hover {
+        border-color: color-mix(in oklab, var(--snitch-ink) 28%, transparent);
+    }
+
+    .snitch-vote-btn-active,
+    .snitch-vote-btn-active:hover {
+        border-color: color-mix(in oklab, var(--snitch-spot) 70%, transparent);
+        background: color-mix(in oklab, var(--snitch-spot) 85%, var(--snitch-lift));
+        color: var(--snitch-on-spot);
+    }
+
+    .dark .snitch-vote-btn {
+        border-color: color-mix(in oklab, var(--snitch-ink) 28%, transparent);
+        background: #1a1a1d;
+        color: var(--snitch-ink);
+    }
+
+    .dark .snitch-vote-btn-active,
+    .dark .snitch-vote-btn-active:hover {
+        border-color: var(--snitch-spot);
+        background: color-mix(in oklab, var(--snitch-spot) 22%, #141416);
+        color: var(--snitch-spot);
+    }
+
+    /*
      * Settings side nav - quiet paper links, mustard rule when active.
      */
     .snitch-paper-nav {

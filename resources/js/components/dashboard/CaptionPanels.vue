@@ -94,7 +94,7 @@ function formatMultiplier(value: number | null): string | null {
                             aria-hidden="true"
                         >
                             <div
-                                class="absolute inset-y-0 left-0 rounded-sm bg-snitch-ink/70"
+                                class="snitch-meter-fill absolute inset-y-0 left-0 rounded-sm"
                                 :style="{ width: multiplierBarWidth(row.pi) }"
                             />
                             <div
@@ -138,7 +138,7 @@ function formatMultiplier(value: number | null): string | null {
                             aria-hidden="true"
                         >
                             <div
-                                class="absolute inset-y-0 left-0 rounded-sm bg-snitch-ink/70"
+                                class="snitch-meter-fill absolute inset-y-0 left-0 rounded-sm"
                                 :style="{ width: multiplierBarWidth(row.pi_with) }"
                             />
                             <div
@@ -181,7 +181,7 @@ function formatMultiplier(value: number | null): string | null {
                             aria-hidden="true"
                         >
                             <div
-                                class="absolute inset-y-0 left-0 rounded-sm bg-snitch-ink/70"
+                                class="snitch-meter-fill absolute inset-y-0 left-0 rounded-sm"
                                 :style="{ width: multiplierBarWidth(row.pi) }"
                             />
                             <div

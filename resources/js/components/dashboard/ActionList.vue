@@ -22,7 +22,7 @@ defineProps<{
                 :key="index"
                 class="flex items-start gap-2 rounded border border-snitch-ink/10 bg-snitch-fog/40 px-1.5 py-1 text-sm text-snitch-ink/80"
             >
-                <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-snitch-ink text-xs font-semibold text-snitch-paper">
+                <span class="snitch-format-tag flex h-4 w-4 shrink-0 items-center justify-center rounded-full !px-0 text-xs font-semibold">
                     {{ index + 1 }}
                 </span>
                 <div class="min-w-0 flex-1">

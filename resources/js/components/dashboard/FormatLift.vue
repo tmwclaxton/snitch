@@ -2,6 +2,8 @@
 import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
+import { useAccountColours } from '@/composables/useAccountColours';
+import { snitchAxisLabel, snitchAxisMuted, snitchInk, snitchPeerSeries } from '@/lib/snitchTheme';
 
 type Row = {
     handle: string;
@@ -15,6 +17,8 @@ const props = defineProps<{
     rows?: Row[];
     peerMedianLift?: Record<string, number | null>;
 }>();
+
+const { colourFor } = useAccountColours();
 
 const formats = computed(() => {
     const keys = new Set<string>();
@@ -33,23 +37,33 @@ const chartSeries = computed(() =>
     })),
 );
 
+const colours = computed(() =>
+    (props.rows ?? []).map((row) => colourFor(row.handle, row.is_own_account)),
+);
+
 const options = computed(() => ({
-    chart: { type: 'bar' as const, height: 180, toolbar: { show: false }, fontFamily: 'inherit' },
+    chart: { type: 'bar' as const, height: 180, toolbar: { show: false }, fontFamily: 'inherit', background: 'transparent' },
+    colors: colours.value,
     plotOptions: { bar: { columnWidth: '55%' } },
     dataLabels: { enabled: false },
     xaxis: {
         categories: formats.value,
-        labels: { style: { colors: '#64748b', fontSize: '12px' } },
+        labels: { style: { colors: snitchAxisLabel(), fontSize: '14px' } },
     },
     yaxis: {
-        title: { text: '× usual', style: { color: '#94a3b8', fontSize: '12px' } },
-        labels: { style: { colors: '#64748b', fontSize: '12px' } },
+        title: { text: '× usual', style: { color: snitchAxisLabel(), fontSize: '14px' } },
+        labels: { style: { colors: snitchAxisLabel(), fontSize: '14px' } },
     },
     annotations: {
-        yaxis: [{ y: 1, borderColor: '#94a3b8', strokeDashArray: 4, label: { text: '1.0×', style: { fontSize: '12px' } } }],
+        yaxis: [{
+            y: 1,
+            borderColor: snitchPeerSeries(),
+            strokeDashArray: 4,
+            label: { text: '1.0×', style: { fontSize: '12px', color: snitchAxisLabel(), background: 'transparent' } },
+        }],
     },
-    legend: { fontSize: '12px', labels: { colors: '#475569' } },
-    grid: { borderColor: '#e2e8f0' },
+    legend: { fontSize: '14px', labels: { colors: snitchInk('#141414') } },
+    grid: { borderColor: snitchAxisMuted() },
 }));
 </script>
 

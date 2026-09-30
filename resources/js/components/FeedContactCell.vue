@@ -153,6 +153,13 @@ const hookLine = computed(() => {
         return null;
     }
 
+    // Hide seed / OCR junk (e.g. a lone "h") from the glance row.
+    const meaningful = completedHook.value.replace(/[^a-z0-9]/gi, '');
+
+    if (meaningful.length < 2) {
+        return null;
+    }
+
     return completedHook.value;
 });
 

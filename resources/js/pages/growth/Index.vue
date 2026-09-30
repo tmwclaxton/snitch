@@ -127,15 +127,13 @@ function toggleAccount(id: number): void {
             <span class="text-xs font-medium uppercase tracking-wide text-snitch-ink/55">
                 Range
             </span>
-            <div class="inline-flex items-center gap-0.5 rounded-md border border-snitch-ink/10 bg-snitch-fog p-0.5">
+            <div class="inline-flex items-center gap-0.5 rounded-md border border-snitch-ink/10 bg-snitch-fog p-0.5 dark:border-snitch-ink/28 dark:bg-[#1a1a1d]">
                 <button
                     v-for="row in periods"
                     :key="row.value"
                     type="button"
-                    class="rounded px-2.5 py-1 text-sm font-medium"
-                    :class="period === row.value
-                        ? 'bg-snitch-ink text-snitch-paper shadow-sm'
-                        : 'bg-transparent text-snitch-ink/70 hover:bg-snitch-lift'"
+                    class="snitch-choice rounded px-2.5 py-1 text-sm font-medium"
+                    :class="period === row.value ? 'snitch-choice-active' : ''"
                     @click="visit({ period: row.value })"
                 >
                     {{ row.label }}
@@ -148,10 +146,8 @@ function toggleAccount(id: number): void {
                 v-for="account in rivalOptions"
                 :key="account.id"
                 type="button"
-                class="inline-flex h-7 items-center gap-1.5 rounded-full border px-2 text-sm font-medium"
-                :class="isRivalSelected(account.id)
-                    ? 'border-snitch-ink bg-snitch-ink text-snitch-paper'
-                    : 'border-snitch-ink/10 bg-snitch-lift text-snitch-ink/80'"
+                class="snitch-choice h-7 rounded-full px-2 text-sm font-medium"
+                :class="isRivalSelected(account.id) ? 'snitch-choice-active' : ''"
                 @click="toggleAccount(account.id)"
             >
                 <span
