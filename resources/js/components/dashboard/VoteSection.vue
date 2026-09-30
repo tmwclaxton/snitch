@@ -48,7 +48,7 @@ function submitIdea(): void {
 
 <template>
     <section
-        class="rounded-md border border-slate-200 bg-white px-3 py-3 text-[14px] text-slate-900"
+        class="rounded-md border border-snitch-ink/10 bg-snitch-lift px-3 py-3 text-[14px] text-snitch-ink"
         data-test="vote-section"
     >
         <ul
@@ -58,7 +58,7 @@ function submitIdea(): void {
             <li
                 v-for="row in suggestions"
                 :key="row.id"
-                class="flex gap-3 rounded border border-slate-100 bg-slate-50/70 px-2.5 py-2"
+                class="flex gap-3 rounded border border-snitch-ink/10 bg-snitch-fog/50 px-2.5 py-2"
                 data-test="vote-row"
             >
                 <button
@@ -66,8 +66,8 @@ function submitIdea(): void {
                     class="flex min-w-12 shrink-0 flex-col items-center justify-center rounded border px-1.5 py-1 text-[14px] font-semibold transition"
                     :class="
                         row.voted
-                            ? 'border-amber-400 bg-amber-300 text-slate-900'
-                            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                            ? 'border-amber-400 bg-amber-300 text-snitch-ink'
+                            : 'border-snitch-ink/10 bg-snitch-lift text-snitch-ink/80 hover:border-snitch-ink/20'
                     "
                     :aria-pressed="row.voted"
                     :aria-label="row.voted ? 'Remove upvote' : 'Upvote'"
@@ -80,13 +80,13 @@ function submitIdea(): void {
 
                 <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
-                        <p class="font-medium text-slate-900">
+                        <p class="font-medium text-snitch-ink">
                             {{ row.title }}
                         </p>
                         <span
                             class="rounded px-1.5 py-0.5 text-[12px] font-semibold uppercase tracking-wide"
                             :class="{
-                                'bg-slate-200 text-slate-700': row.status === 'open',
+                                'bg-snitch-fog text-snitch-ink/80': row.status === 'open',
                                 'bg-sky-100 text-sky-800': row.status === 'planned',
                                 'bg-amber-100 text-amber-900': row.status === 'building',
                                 'bg-emerald-100 text-emerald-800': row.status === 'shipped',
@@ -95,7 +95,7 @@ function submitIdea(): void {
                             {{ statusText(row.status) }}
                         </span>
                     </div>
-                    <p class="mt-1 text-[14px] leading-snug text-slate-600">
+                    <p class="mt-1 text-[14px] leading-snug text-snitch-ink/70">
                         {{ row.body }}
                     </p>
                 </div>
@@ -103,11 +103,11 @@ function submitIdea(): void {
         </ul>
 
         <form
-            class="mt-3 space-y-2 rounded border border-dashed border-slate-200 bg-white px-2.5 py-2.5"
+            class="mt-3 space-y-2 rounded border border-dashed border-snitch-ink/10 bg-snitch-lift px-2.5 py-2.5"
             data-test="vote-form"
             @submit.prevent="submitIdea"
         >
-            <p class="text-[12px] font-semibold uppercase tracking-wide text-slate-500">
+            <p class="text-[12px] font-semibold uppercase tracking-wide text-snitch-ink/55">
                 Suggest an idea
             </p>
             <input
@@ -116,7 +116,7 @@ function submitIdea(): void {
                 maxlength="120"
                 required
                 placeholder="Short title"
-                class="w-full rounded border border-slate-200 px-2.5 py-2 text-[14px] outline-none focus:border-slate-400"
+                class="w-full rounded border border-snitch-ink/10 px-2.5 py-2 text-[14px] outline-none focus:border-snitch-ink/30"
             >
             <textarea
                 v-model="form.body"
@@ -124,7 +124,7 @@ function submitIdea(): void {
                 maxlength="2000"
                 required
                 placeholder="What should Snitch do?"
-                class="w-full rounded border border-slate-200 px-2.5 py-2 text-[14px] outline-none focus:border-slate-400"
+                class="w-full rounded border border-snitch-ink/10 px-2.5 py-2 text-[14px] outline-none focus:border-snitch-ink/30"
             />
             <p
                 v-if="form.errors.title || form.errors.body"

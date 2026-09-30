@@ -65,7 +65,7 @@ function escapeHtml(value: string): string {
 
 function htmlText(text: string): string {
     const escaped = escapeHtml(text);
-    const withBold = escaped.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-slate-900">$1</strong>');
+    const withBold = escaped.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-snitch-ink">$1</strong>');
     const ids = props.trackerIds ?? {};
 
     return withBold.replace(/@([a-zA-Z0-9._]+)/g, (match, handle: string) => {
@@ -75,7 +75,7 @@ function htmlText(text: string): string {
             return match;
         }
 
-        return `<a href="${competitorShow.url(id)}" data-tracker-id="${id}" class="font-medium text-slate-800 underline-offset-2 hover:underline">${match}</a>`;
+        return `<a href="${competitorShow.url(id)}" data-tracker-id="${id}" class="font-medium text-snitch-ink underline-offset-2 hover:underline">${match}</a>`;
     });
 }
 
@@ -110,7 +110,7 @@ function onInsightClick(event: MouseEvent): void {
             <li
                 v-for="item in visibleItems"
                 :key="itemKey(item)"
-                class="min-w-0 border-b border-slate-100 py-1 last:border-b-0"
+                class="min-w-0 border-b border-snitch-ink/10 py-1 last:border-b-0"
             >
                 <div class="flex items-start gap-1.5">
                     <span
@@ -118,13 +118,13 @@ function onInsightClick(event: MouseEvent): void {
                         :style="{ backgroundColor: colourFor(handleFromText(item.text)) }"
                     />
                     <p
-                        class="min-w-0 flex-1 text-sm leading-snug text-slate-700"
+                        class="min-w-0 flex-1 text-sm leading-snug text-snitch-ink/80"
                         @click="onInsightClick"
                     >
                         <span v-html="htmlText(item.text)" />
                         <button
                             type="button"
-                            class="ml-1 whitespace-nowrap text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-800 hover:underline"
+                            class="ml-1 whitespace-nowrap text-xs font-medium text-snitch-ink/55 underline-offset-2 hover:text-snitch-ink hover:underline"
                             @click="toggle(item)"
                         >
                             see why →
@@ -133,13 +133,13 @@ function onInsightClick(event: MouseEvent): void {
                 </div>
                 <div
                     v-if="openKey === itemKey(item)"
-                    class="mt-1 ml-3 rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs leading-snug text-slate-600"
+                    class="mt-1 ml-3 rounded border border-snitch-ink/10 bg-snitch-fog px-2 py-1.5 text-xs leading-snug text-snitch-ink/70"
                 >
                     <p>{{ item.detail || `from ${item.n} posts` }}</p>
                     <div class="mt-1 flex flex-wrap gap-2">
                         <button
                             type="button"
-                            class="font-medium text-slate-700 underline-offset-2 hover:underline"
+                            class="font-medium text-snitch-ink/80 underline-offset-2 hover:underline"
                             @click="followDashboardLink(item.links_to)"
                         >
                             Jump to evidence →
@@ -147,7 +147,7 @@ function onInsightClick(event: MouseEvent): void {
                         <Link
                             v-if="item.post_id"
                             :href="feedShow.url(item.post_id)"
-                            class="font-medium text-slate-700 underline-offset-2 hover:underline"
+                            class="font-medium text-snitch-ink/80 underline-offset-2 hover:underline"
                         >
                             Open post →
                         </Link>
@@ -158,7 +158,7 @@ function onInsightClick(event: MouseEvent): void {
         <button
             v-if="hasMore"
             type="button"
-            class="mt-1 text-xs font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
+            class="mt-1 text-xs font-medium text-snitch-ink/70 underline-offset-2 hover:text-snitch-ink hover:underline"
             @click="expanded = !expanded"
         >
             {{ expanded ? 'Show less' : `Show all (${allItems.length})` }}

@@ -395,7 +395,7 @@ function askRemove(): void {
                                 height="16"
                             />
                             <p
-                                class="text-xs font-medium uppercase tracking-wide text-neutral-500"
+                                class="text-xs font-medium uppercase tracking-wide text-snitch-ink/55"
                             >
                                 {{ productPlatformLabel(account.platform) }}
                             </p>
@@ -464,14 +464,14 @@ function askRemove(): void {
                     />
                 </div>
                 <template v-else-if="!hasInsightPosts">
-                    <div class="mt-3 border border-dashed border-neutral-200 bg-neutral-50 p-8 text-center">
-                        <p class="text-sm font-medium text-neutral-950">No posting data yet</p>
-                        <p class="mt-2 text-sm text-neutral-500">
+                    <div class="mt-3 border border-dashed border-snitch-ink/10 bg-snitch-fog p-8 text-center">
+                        <p class="text-sm font-medium text-snitch-ink">No posting data yet</p>
+                        <p class="mt-2 text-sm text-snitch-ink/55">
                             Sync this account to pull recent posts. Charts and averages will appear here once posts land.
                         </p>
                         <button
                             type="button"
-                            class="mt-4 inline-flex items-center gap-2 bg-[#F0C400] px-4 py-2 text-sm font-medium text-neutral-950 hover:opacity-90 disabled:opacity-50"
+                            class="mt-4 inline-flex items-center gap-2 bg-snitch-spot px-4 py-2 text-sm font-medium text-snitch-ink hover:opacity-90 disabled:opacity-50"
                             :disabled="isSyncing || !canRunBillable"
                             @click="syncNow"
                         >

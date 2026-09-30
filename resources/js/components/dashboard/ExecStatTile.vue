@@ -41,17 +41,17 @@ const gapClass = computed(() => {
     if (props.gap.type === 'pp') {
         return props.gap.value >= 0
             ? 'bg-snitch-spot text-snitch-ink'
-            : 'bg-snitch-alert text-white';
+            : 'bg-snitch-alert text-snitch-paper';
     }
 
     return props.gap.lower || props.gap.value < 1
-        ? 'bg-snitch-alert text-white'
+        ? 'bg-snitch-alert text-snitch-paper'
         : 'bg-snitch-spot text-snitch-ink';
 });
 </script>
 
 <template>
-    <div class="flex min-h-[5.5rem] flex-col justify-between rounded border border-snitch-ink/10 bg-white p-3">
+    <div class="flex min-h-[5.5rem] flex-col justify-between rounded border border-snitch-ink/10 bg-snitch-lift p-3">
         <p class="text-sm font-medium text-snitch-ink/55">
             {{ label }}
         </p>

@@ -25,7 +25,7 @@ class AppearanceTest extends TestCase
             $html,
         );
         $this->assertStringContainsString("const appearance = 'dark';", $html);
-        $this->assertStringContainsString('background-color: #141414', $html);
+        $this->assertStringContainsString('background-color: #0e0e10', $html);
     }
 
     public function test_light_appearance_cookie_does_not_force_dark_class(): void
@@ -108,11 +108,12 @@ class AppearanceTest extends TestCase
         $this->assertStringContainsString("'Space Mono'", $css);
         $this->assertStringContainsString("'Archivo Black'", $css);
         $this->assertStringContainsString("'Inter'", $css);
-        $this->assertStringContainsString('--snitch-paper: #141414;', $css);
-        $this->assertStringContainsString('--snitch-ink: #f3eee3;', $css);
-        $this->assertStringContainsString('--snitch-press: #141414;', $css);
-        $this->assertStringContainsString('--snitch-on-spot: #141414;', $css);
-        $this->assertStringContainsString('--snitch-lift: #2a2a2c;', $css);
+        $this->assertStringContainsString('--snitch-paper: #0e0e10;', $css);
+        $this->assertStringContainsString('--snitch-ink: #edeae2;', $css);
+        $this->assertStringContainsString('--snitch-press: #0e0e10;', $css);
+        $this->assertStringContainsString('--snitch-on-spot: #0e0e10;', $css);
+        $this->assertStringContainsString('--snitch-lift: #141416;', $css);
+        $this->assertStringContainsString('--snitch-spot: #fcd700;', $css);
         $this->assertStringContainsString('--snitch-print-blend: soft-light;', $css);
         $this->assertStringContainsString('var(--snitch-lift)', $css);
         $this->assertStringContainsString('var(--snitch-print-blend)', $css);

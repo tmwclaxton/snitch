@@ -428,8 +428,8 @@ const detailsOpen = ref(false);
                             selected.includes(rival.handle.toLowerCase())
                                 ? 'border-snitch-ink bg-snitch-ink text-white'
                                 : rival.no_posts_in_period
-                                    ? 'border-snitch-ink/15 bg-white text-snitch-ink/40'
-                                    : 'border-snitch-ink/15 bg-white text-snitch-ink'
+                                    ? 'border-snitch-ink/15 bg-snitch-lift text-snitch-ink/40'
+                                    : 'border-snitch-ink/15 bg-snitch-lift text-snitch-ink'
                         "
                         :title="rival.no_posts_in_period ? 'No posts imported yet' : `@${rival.handle}`"
                     >
@@ -470,7 +470,7 @@ const detailsOpen = ref(false);
                             aria-hidden="true"
                         >
                             <span
-                                class="ml-0.5 inline-block size-2.5 rounded-full bg-white transition-transform"
+                                class="ml-0.5 inline-block size-2.5 rounded-full bg-snitch-lift transition-transform"
                                 :class="show_hidden_likes ? 'translate-x-2.5' : 'translate-x-0'"
                             />
                         </span>
@@ -489,7 +489,7 @@ const detailsOpen = ref(false);
                             <Info class="h-3.5 w-3.5" />
                             <span
                                 role="tooltip"
-                                class="pointer-events-none absolute right-0 top-full z-20 mt-1.5 w-60 rounded border border-snitch-ink/10 bg-white p-2 text-left text-sm leading-snug text-snitch-ink/70 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                                class="pointer-events-none absolute right-0 top-full z-20 mt-1.5 w-60 rounded border border-snitch-ink/10 bg-snitch-lift p-2 text-left text-sm leading-snug text-snitch-ink/70 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
                             >
                                 Some accounts hide like counts. Turn this on to include those posts, ranked on comments and views.
                             </span>
@@ -513,7 +513,7 @@ const detailsOpen = ref(false);
             <section
                 v-if="showOnboarding"
                 id="onboarding"
-                class="rounded border border-snitch-ink/10 bg-white p-4"
+                class="rounded border border-snitch-ink/10 bg-snitch-lift p-4"
             >
                 <h2 class="font-display text-lg font-semibold text-snitch-ink">
                     Get ready
@@ -575,7 +575,7 @@ const detailsOpen = ref(false);
                                 v-for="(idea, index) in weekly_brief.ideas.slice(0, 3)"
                                 :key="`${idea.slot}-${index}`"
                                 :href="briefIndex.url()"
-                                class="flex min-w-0 flex-col gap-2 rounded border border-snitch-ink/10 bg-white p-3 hover:border-snitch-ink/30"
+                                class="flex min-w-0 flex-col gap-2 rounded border border-snitch-ink/10 bg-snitch-lift p-3 hover:border-snitch-ink/30"
                             >
                                 <div class="flex flex-wrap items-center gap-2 text-sm">
                                     <span class="rounded bg-snitch-ink px-1.5 py-0.5 font-medium uppercase tracking-wide text-white">
@@ -590,7 +590,7 @@ const detailsOpen = ref(false);
 
                     <div
                         v-if="postingTimeBars.length"
-                        class="rounded border border-snitch-ink/10 bg-white p-3"
+                        class="rounded border border-snitch-ink/10 bg-snitch-lift p-3"
                     >
                         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
                             Best posting times
@@ -689,7 +689,7 @@ const detailsOpen = ref(false);
                     <div class="grid items-stretch gap-4 lg:grid-cols-2">
                         <div
                             id="leaderboard"
-                            class="flex h-full min-h-[12rem] flex-col rounded border border-snitch-ink/10 bg-white p-3"
+                            class="flex h-full min-h-[12rem] flex-col rounded border border-snitch-ink/10 bg-snitch-lift p-3"
                         >
                             <ExecRankBars
                                 v-if="leaderboard"
@@ -705,7 +705,7 @@ const detailsOpen = ref(false);
                         </div>
                         <div
                             id="format_mix"
-                            class="flex h-full min-h-[12rem] flex-col rounded border border-snitch-ink/10 bg-white p-3"
+                            class="flex h-full min-h-[12rem] flex-col rounded border border-snitch-ink/10 bg-snitch-lift p-3"
                         >
                             <FormatMixChart
                                 v-if="caption_intel"
@@ -724,7 +724,7 @@ const detailsOpen = ref(false);
 
                     <section
                         id="activity"
-                        class="rounded border border-snitch-ink/10 bg-white p-3"
+                        class="rounded border border-snitch-ink/10 bg-snitch-lift p-3"
                     >
                         <div class="mb-2 flex items-baseline justify-between gap-2">
                             <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
@@ -831,7 +831,7 @@ const detailsOpen = ref(false);
                                 <div
                                     v-for="account in ads_panel.accounts"
                                     :key="account.handle"
-                                    class="rounded border border-snitch-ink/10 bg-white p-3"
+                                    class="rounded border border-snitch-ink/10 bg-snitch-lift p-3"
                                 >
                                     <div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
                                         <Link
@@ -877,7 +877,7 @@ const detailsOpen = ref(false);
 
             <div
                 v-else-if="!showOnboarding"
-                class="rounded border border-dashed border-snitch-ink/20 bg-white p-8 text-center"
+                class="rounded border border-dashed border-snitch-ink/20 bg-snitch-lift p-8 text-center"
             >
                 <h2 class="font-display text-xl font-semibold text-snitch-ink">
                     {{ own_account ? 'No rivals to compare yet' : 'No Instagram competitors yet' }}

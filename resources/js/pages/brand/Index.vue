@@ -18,9 +18,9 @@ defineOptions({
 <template>
     <div class="px-4 py-6 sm:px-8">
         <Head title="Brand" />
-        <div class="mb-6 border-b border-neutral-200 pb-4">
+        <div class="mb-6 border-b border-snitch-ink/10 pb-4">
             <h1 class="text-2xl font-semibold tracking-tight">Brand</h1>
-            <p class="mt-1 text-sm text-neutral-500">
+            <p class="mt-1 text-sm text-snitch-ink/55">
                 Context so Snitch knows who you are - name, description, and your handles.
             </p>
         </div>

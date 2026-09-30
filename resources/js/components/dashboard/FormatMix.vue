@@ -46,7 +46,7 @@ const options = computed(() => ({
 <template>
     <EmptyState v-if="status === 'empty' || !rows?.length" :reason="reason" compact />
     <div v-else>
-        <p v-if="status === 'insufficient'" class="mb-1.5 text-xs text-slate-500">{{ reason }}</p>
+        <p v-if="status === 'insufficient'" class="mb-1.5 text-xs text-snitch-ink/55">{{ reason }}</p>
         <VueApexCharts type="bar" height="180" :options="options" :series="chartSeries" />
     </div>
 </template>

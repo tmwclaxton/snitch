@@ -87,7 +87,7 @@ function formatUnderHandle(row: Row): string | null {
                 <col style="width: 10%">
             </colgroup>
             <thead>
-                <tr class="border-b border-slate-200 text-xs text-slate-500">
+                <tr class="border-b border-snitch-ink/10 text-xs text-snitch-ink/55">
                     <th class="py-1 pr-3 text-left font-medium">Account</th>
                     <th class="py-1 pl-2 pr-1 text-right font-medium leading-tight">Followers</th>
                     <th
@@ -113,10 +113,10 @@ function formatUnderHandle(row: Row): string | null {
                 <tr
                     v-for="row in rows"
                     :key="row.handle"
-                    class="border-b border-slate-100 last:border-b-0"
+                    class="border-b border-snitch-ink/10 last:border-b-0"
                     :class="[
-                        row.is_own_account ? 'bg-slate-50' : '',
-                        row.no_posts_in_period ? 'text-slate-400' : '',
+                        row.is_own_account ? 'bg-snitch-fog' : '',
+                        row.no_posts_in_period ? 'text-snitch-ink/45' : '',
                     ]"
                 >
                 <td class="py-2 pr-3 align-middle">
@@ -134,21 +134,21 @@ function formatUnderHandle(row: Row): string | null {
                                 v-if="row.tracked_account_id"
                                 :href="competitorShow.url(row.tracked_account_id)"
                                 class="whitespace-nowrap font-medium leading-snug hover:underline"
-                                :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-900'"
+                                :class="row.no_posts_in_period ? 'text-snitch-ink/45' : 'text-snitch-ink'"
                             >
                                 {{ accountLabel(row) }}
                             </Link>
                             <span
                                 v-else
                                 class="whitespace-nowrap font-medium leading-snug"
-                                :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-900'"
+                                :class="row.no_posts_in_period ? 'text-snitch-ink/45' : 'text-snitch-ink'"
                             >
                                 {{ accountLabel(row) }}
                             </span>
                             <p
                                 v-if="formatUnderHandle(row)"
                                 class="mt-0.5 text-xs leading-snug"
-                                :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-500'"
+                                :class="row.no_posts_in_period ? 'text-snitch-ink/45' : 'text-snitch-ink/55'"
                             >
                                 {{ formatUnderHandle(row) }}
                             </p>
@@ -157,37 +157,37 @@ function formatUnderHandle(row: Row): string | null {
                 </td>
                 <td
                     class="py-2 pl-2 pr-1 text-right align-middle tabular-nums"
-                    :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-700'"
+                    :class="row.no_posts_in_period ? 'text-snitch-ink/45' : 'text-snitch-ink/80'"
                 >
                     {{ followers(row.followers) }}
                 </td>
                 <td
                     v-if="showGrowth"
                     class="py-2 pl-2 pr-1 text-right align-middle tabular-nums"
-                    :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-700'"
+                    :class="row.no_posts_in_period ? 'text-snitch-ink/45' : 'text-snitch-ink/80'"
                 >
                     {{ row.no_posts_in_period ? '-' : pct(row.growth_pct) }}
                 </td>
                 <td
                     class="py-2 pl-2 pr-1 text-right align-middle tabular-nums"
-                    :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-700'"
+                    :class="row.no_posts_in_period ? 'text-snitch-ink/45' : 'text-snitch-ink/80'"
                 >
                     {{ row.no_posts_in_period ? '-' : num(row.posts_per_week) }}
                 </td>
                 <td
                     class="py-2 pl-2 pr-1 text-right align-middle tabular-nums"
-                    :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-700'"
+                    :class="row.no_posts_in_period ? 'text-snitch-ink/45' : 'text-snitch-ink/80'"
                 >
                     <span
                         v-if="row.no_posts_in_period || row.er == null"
-                        class="text-slate-400"
+                        class="text-snitch-ink/45"
                         :title="row.er_reason || undefined"
                     >-</span>
                     <span v-else>{{ row.er.toFixed(1) }}%</span>
                 </td>
                 <td
                     class="py-2 pl-2 pr-1 text-right align-middle tabular-nums"
-                    :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-700'"
+                    :class="row.no_posts_in_period ? 'text-snitch-ink/45' : 'text-snitch-ink/80'"
                 >
                     {{ row.no_posts_in_period ? '-' : row.winners }}
                 </td>

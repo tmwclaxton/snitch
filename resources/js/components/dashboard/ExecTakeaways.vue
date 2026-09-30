@@ -12,7 +12,7 @@ defineProps<{
         <li
             v-for="(item, index) in items"
             :key="`${item.metric}-${index}`"
-            class="min-w-[14rem] flex-1 rounded border border-snitch-ink/10 bg-white p-3"
+            class="min-w-[14rem] flex-1 rounded border border-snitch-ink/10 bg-snitch-lift p-3"
         >
             <p class="font-display text-2xl font-semibold tabular-nums text-snitch-ink leading-none">
                 {{ item.metric }}

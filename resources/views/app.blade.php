@@ -82,7 +82,7 @@
             }
 
             html.dark {
-                background-color: #141414;
+                background-color: #0e0e10;
             }
         </style>
 

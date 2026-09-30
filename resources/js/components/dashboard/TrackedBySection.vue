@@ -42,7 +42,7 @@ function countPrefix(count: number): string {
             <div class="min-w-0 space-y-2">
                 <div class="flex flex-wrap items-center gap-2">
                     <span
-                        class="rounded-full bg-[#FF3D8B] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white"
+                        class="rounded-full bg-[#FF3D8B] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-snitch-paper"
                     >
                         Watched
                     </span>

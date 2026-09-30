@@ -92,9 +92,9 @@ function toggleCaption(event: Event): void {
 <template>
     <Link
         :href="feedShow.url(post.id)"
-        class="flex h-full flex-col overflow-hidden rounded-md border border-slate-200 bg-white transition hover:border-slate-400 hover:shadow-sm"
+        class="flex h-full flex-col overflow-hidden rounded-md border border-snitch-ink/10 bg-snitch-lift transition hover:border-snitch-ink/30 hover:shadow-sm"
     >
-        <div class="relative aspect-[4/5] w-full overflow-hidden bg-slate-100">
+        <div class="relative aspect-[4/5] w-full overflow-hidden bg-snitch-fog">
             <SnitchImage
                 :src="post.thumbnail_url"
                 alt=""
@@ -104,7 +104,7 @@ function toggleCaption(event: Event): void {
                 fallback="paper"
             />
             <span
-                class="absolute left-1 top-1 rounded bg-white/95 px-1 py-0.5 text-xs font-semibold uppercase tracking-wide text-slate-700"
+                class="absolute left-1 top-1 rounded bg-snitch-lift/95 px-1 py-0.5 text-xs font-semibold uppercase tracking-wide text-snitch-ink/80"
             >
                 {{ post.format }}
             </span>
@@ -119,7 +119,7 @@ function toggleCaption(event: Event): void {
                     class="!size-4 shrink-0"
                 />
                 <div class="min-w-0">
-                    <div class="whitespace-nowrap text-xs font-medium leading-snug text-slate-900">
+                    <div class="whitespace-nowrap text-xs font-medium leading-snug text-snitch-ink">
                         <span
                             v-if="post.tracked_account_id"
                             role="link"
@@ -136,14 +136,14 @@ function toggleCaption(event: Event): void {
                     </div>
                     <div
                         v-if="post.posted_at"
-                        class="text-xs leading-snug text-slate-400"
+                        class="text-xs leading-snug text-snitch-ink/45"
                     >
                         {{ post.posted_at }}
                     </div>
                 </div>
             </div>
 
-            <div class="text-sm font-semibold leading-snug text-slate-900">
+            <div class="text-sm font-semibold leading-snug text-snitch-ink">
                 {{ post.pi.toFixed(1) }}× their usual
                 <span
                     v-if="post.early"
@@ -154,20 +154,20 @@ function toggleCaption(event: Event): void {
             </div>
 
             <div class="min-w-0">
-                <p class="break-words text-sm leading-snug text-slate-600">
+                <p class="break-words text-sm leading-snug text-snitch-ink/70">
                     {{ captionText }}
                 </p>
                 <button
                     v-if="captionNeedsToggle"
                     type="button"
-                    class="mt-0.5 text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-800 hover:underline"
+                    class="mt-0.5 text-xs font-medium text-snitch-ink/55 underline-offset-2 hover:text-snitch-ink hover:underline"
                     @click="toggleCaption"
                 >
                     {{ captionExpanded ? 'less' : 'more' }}
                 </button>
             </div>
 
-            <div class="flex flex-wrap gap-x-1.5 gap-y-0.5 text-xs tabular-nums leading-snug text-slate-500">
+            <div class="flex flex-wrap gap-x-1.5 gap-y-0.5 text-xs tabular-nums leading-snug text-snitch-ink/55">
                 <span v-if="post.likes_hidden" class="rounded bg-amber-50 px-1 text-amber-700">likes hidden</span>
                 <span v-else-if="post.likes != null">{{ fmt.format(post.likes) }} likes</span>
                 <span>{{ fmt.format(post.comments) }} comments</span>
@@ -181,7 +181,7 @@ function toggleCaption(event: Event): void {
                 <span
                     v-for="tag in post.tags"
                     :key="tag"
-                    class="rounded bg-slate-100 px-1 py-px text-xs text-slate-600"
+                    class="rounded bg-snitch-fog px-1 py-px text-xs text-snitch-ink/70"
                 >
                     {{ tag }}
                 </span>
@@ -190,7 +190,7 @@ function toggleCaption(event: Event): void {
             <button
                 v-if="post.url"
                 type="button"
-                class="mt-auto inline-flex items-center gap-0.5 text-xs font-medium text-slate-700 underline-offset-2 hover:underline"
+                class="mt-auto inline-flex items-center gap-0.5 text-xs font-medium text-snitch-ink/80 underline-offset-2 hover:underline"
                 @click="openInstagram"
             >
                 Open on Instagram

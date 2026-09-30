@@ -61,9 +61,9 @@ const options = computed(() => ({
             <li
                 v-for="row in rows"
                 :key="row.handle"
-                class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-slate-600"
+                class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-snitch-ink/70"
             >
-                <span class="font-medium text-slate-800">{{ row.is_own_account ? 'You' : `@${row.handle}` }}</span>
+                <span class="font-medium text-snitch-ink">{{ row.is_own_account ? 'You' : `@${row.handle}` }}</span>
                 <span
                     v-for="format in formats"
                     :key="`${row.handle}-${format}`"
@@ -72,7 +72,7 @@ const options = computed(() => ({
                     {{ format }}
                     <template v-if="row.lifts[format]">
                         {{ row.lifts[format].lift.toFixed(2) }}×
-                        <span class="text-slate-400">(from {{ row.lifts[format].n }} posts)</span>
+                        <span class="text-snitch-ink/45">(from {{ row.lifts[format].n }} posts)</span>
                     </template>
                     <template v-else>-</template>
                 </span>
@@ -80,7 +80,7 @@ const options = computed(() => ({
         </ul>
         <p
             v-if="peerMedianLift && Object.keys(peerMedianLift).length"
-            class="text-xs text-slate-500"
+            class="text-xs text-snitch-ink/55"
         >
             Rivals' average lift:
             <span

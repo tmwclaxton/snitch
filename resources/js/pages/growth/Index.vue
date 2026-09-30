@@ -124,18 +124,18 @@ function toggleAccount(id: number): void {
         </header>
 
         <div class="flex flex-wrap items-center gap-2">
-            <span class="text-xs font-medium uppercase tracking-wide text-slate-500">
+            <span class="text-xs font-medium uppercase tracking-wide text-snitch-ink/55">
                 Range
             </span>
-            <div class="inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-50 p-0.5">
+            <div class="inline-flex items-center gap-0.5 rounded-md border border-snitch-ink/10 bg-snitch-fog p-0.5">
                 <button
                     v-for="row in periods"
                     :key="row.value"
                     type="button"
                     class="rounded px-2.5 py-1 text-sm font-medium"
                     :class="period === row.value
-                        ? 'bg-slate-900 text-white shadow-sm'
-                        : 'bg-transparent text-slate-600 hover:bg-white'"
+                        ? 'bg-snitch-ink text-snitch-paper shadow-sm'
+                        : 'bg-transparent text-snitch-ink/70 hover:bg-snitch-lift'"
                     @click="visit({ period: row.value })"
                 >
                     {{ row.label }}
@@ -150,8 +150,8 @@ function toggleAccount(id: number): void {
                 type="button"
                 class="inline-flex h-7 items-center gap-1.5 rounded-full border px-2 text-sm font-medium"
                 :class="isRivalSelected(account.id)
-                    ? 'border-slate-800 bg-slate-800 text-white'
-                    : 'border-slate-200 bg-white text-slate-700'"
+                    ? 'border-snitch-ink bg-snitch-ink text-snitch-paper'
+                    : 'border-snitch-ink/10 bg-snitch-lift text-snitch-ink/80'"
                 @click="toggleAccount(account.id)"
             >
                 <span
@@ -161,7 +161,7 @@ function toggleAccount(id: number): void {
                 />
                 @{{ account.handle }}
             </button>
-            <p class="w-full text-xs text-slate-500">
+            <p class="w-full text-xs text-snitch-ink/55">
                 Own account always included. Leave rivals unchecked to show all.
             </p>
         </div>

@@ -83,7 +83,7 @@ function setStatus(id: number, status: string): void {
             <li
                 v-for="row in props.suggestions"
                 :key="row.id"
-                class="rounded border border-snitch-ink/10 bg-white px-3 py-3 text-[14px]"
+                class="rounded border border-snitch-ink/10 bg-snitch-lift px-3 py-3 text-[14px]"
             >
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
@@ -101,7 +101,7 @@ function setStatus(id: number, status: string): void {
                     <label class="block text-[12px] font-semibold uppercase tracking-wide text-snitch-ink/60">
                         Status
                         <select
-                            class="mt-1 block min-w-36 rounded border border-snitch-ink/15 bg-white px-2 py-1.5 text-[14px] font-normal normal-case tracking-normal text-snitch-ink"
+                            class="mt-1 block min-w-36 rounded border border-snitch-ink/15 bg-snitch-lift px-2 py-1.5 text-[14px] font-normal normal-case tracking-normal text-snitch-ink"
                             :value="row.status"
                             @change="setStatus(row.id, ($event.target as HTMLSelectElement).value)"
                         >

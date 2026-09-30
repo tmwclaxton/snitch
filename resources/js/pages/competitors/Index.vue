@@ -68,9 +68,9 @@ function refreshLabel(value: string | null): string {
 <template>
     <div class="px-4 py-6 sm:px-8">
         <Head title="Competitors" />
-        <div class="mb-6 border-b border-neutral-200 pb-4">
+        <div class="mb-6 border-b border-snitch-ink/10 pb-4">
             <h1 class="text-2xl font-semibold tracking-tight">Competitors</h1>
-            <p class="mt-1 text-sm text-neutral-500">
+            <p class="mt-1 text-sm text-snitch-ink/55">
                 Track public Instagram accounts. Posts and follower counts refresh weekly.
             </p>
         </div>
@@ -82,20 +82,20 @@ function refreshLabel(value: string | null): string {
                 @success="handle = ''"
             >
                 <input type="hidden" name="platform" value="instagram" />
-                <div class="flex min-w-0 flex-1 items-center border border-neutral-200 bg-white">
-                    <span class="px-3 text-neutral-400">@</span>
+                <div class="flex min-w-0 flex-1 items-center border border-snitch-ink/10 bg-snitch-lift">
+                    <span class="px-3 text-snitch-ink/45">@</span>
                     <input
                         v-model="handle"
                         name="handle"
                         placeholder="instagram_handle"
-                        class="min-w-0 flex-1 bg-transparent py-2 pr-3 text-sm outline-none"
+                        class="min-w-0 flex-1 bg-transparent py-2 pr-3 text-sm text-snitch-ink outline-none placeholder:text-snitch-ink/40"
                         maxlength="30"
                         aria-label="Instagram handle"
                     />
                 </div>
                 <button
                     type="submit"
-                    class="inline-flex items-center justify-center gap-2 bg-neutral-950 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                    class="snitch-btn snitch-btn-spot inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium"
                 >
                     Track account
                 </button>
@@ -112,14 +112,14 @@ function refreshLabel(value: string | null): string {
                 <button
                     type="submit"
                     :disabled="!handleReady"
-                    class="inline-flex w-full items-center justify-center gap-2 border border-neutral-200 px-4 py-2 text-sm hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                    class="inline-flex w-full items-center justify-center gap-2 border border-snitch-ink/10 px-4 py-2 text-sm hover:bg-snitch-fog disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                     :title="handleReady ? 'Mark this handle as your own Instagram account' : 'Enter a handle above first'"
                 >
                     <User class="h-4 w-4" />
                     Add your account
                 </button>
             </Form>
-            <p class="w-full text-xs text-neutral-500 sm:basis-full">
+            <p class="w-full text-xs text-snitch-ink/55 sm:basis-full">
                 <template v-if="!hasOwnAccount">
                     Tip: type a handle, then use Track account for a rival or Add your account for your own profile (needed for gap analysis).
                 </template>
@@ -129,17 +129,17 @@ function refreshLabel(value: string | null): string {
             </p>
         </div>
 
-        <div v-if="accounts === undefined" class="text-sm text-neutral-500">Loading…</div>
+        <div v-if="accounts === undefined" class="text-sm text-snitch-ink/55">Loading…</div>
         <div
             v-else-if="accounts.length === 0"
-            class="border border-dashed border-neutral-200 bg-white p-12 text-center text-sm text-neutral-500"
+            class="border border-dashed border-snitch-ink/10 bg-snitch-lift p-12 text-center text-sm text-snitch-ink/55"
         >
             No competitors tracked yet. Add a handle above.
         </div>
         <template v-else>
-            <div class="hidden overflow-hidden border border-neutral-200 bg-white md:block">
+            <div class="hidden overflow-hidden border border-snitch-ink/10 bg-snitch-lift md:block">
                 <table class="w-full text-sm">
-                    <thead class="bg-neutral-50 text-xs uppercase tracking-wider text-neutral-500">
+                    <thead class="bg-snitch-fog text-xs uppercase tracking-wider text-snitch-ink/55">
                         <tr>
                             <th class="px-4 py-2 text-left font-medium">Account</th>
                             <th class="px-4 py-2 text-right font-medium">Followers</th>
@@ -149,7 +149,7 @@ function refreshLabel(value: string | null): string {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-neutral-200">
-                        <tr v-for="account in accounts" :key="account.id" class="hover:bg-neutral-50">
+                        <tr v-for="account in accounts" :key="account.id" class="hover:bg-snitch-fog">
                             <td class="px-4 py-3">
                                 <Link :href="competitorShow.url(account.id)" class="flex items-center gap-3">
                                     <SnitchAvatar
@@ -169,7 +169,7 @@ function refreshLabel(value: string | null): string {
                                                 You
                                             </span>
                                         </div>
-                                        <div v-if="account.display_name" class="text-xs text-neutral-500">
+                                        <div v-if="account.display_name" class="text-xs text-snitch-ink/55">
                                             {{ account.display_name }}
                                         </div>
                                     </div>
@@ -181,13 +181,13 @@ function refreshLabel(value: string | null): string {
                             <td class="px-4 py-3 text-right tabular-nums">
                                 {{ (account.posts_count ?? 0).toLocaleString('en-GB') }}
                             </td>
-                            <td class="px-4 py-3 text-right text-xs text-neutral-500">
+                            <td class="px-4 py-3 text-right text-xs text-snitch-ink/55">
                                 {{ refreshLabel(account.last_synced_at) }}
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger
-                                        class="inline-flex size-8 items-center justify-center border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                                        class="inline-flex size-8 items-center justify-center border border-snitch-ink/10 text-snitch-ink/70 hover:bg-snitch-fog"
                                         :aria-label="`Actions for @${account.handle}`"
                                     >
                                         <MoreHorizontal class="size-4" />
@@ -233,7 +233,7 @@ function refreshLabel(value: string | null): string {
                 <li
                     v-for="account in accounts"
                     :key="`m-${account.id}`"
-                    class="border border-neutral-200 bg-white p-4"
+                    class="border border-snitch-ink/10 bg-snitch-lift p-4"
                 >
                     <div class="flex items-start justify-between gap-2">
                         <Link :href="competitorShow.url(account.id)" class="flex min-w-0 flex-1 items-center gap-3">
@@ -254,7 +254,7 @@ function refreshLabel(value: string | null): string {
                                         You
                                     </span>
                                 </div>
-                                <div class="text-xs text-neutral-500">
+                                <div class="text-xs text-snitch-ink/55">
                                     {{ formatFollowers(account.followers) }} followers ·
                                     {{ account.posts_count ?? 0 }} posts ·
                                     {{ refreshLabel(account.last_synced_at) }}
@@ -263,7 +263,7 @@ function refreshLabel(value: string | null): string {
                         </Link>
                         <DropdownMenu>
                             <DropdownMenuTrigger
-                                class="inline-flex size-8 shrink-0 items-center justify-center border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                                class="inline-flex size-8 shrink-0 items-center justify-center border border-snitch-ink/10 text-snitch-ink/70 hover:bg-snitch-fog"
                                 :aria-label="`Actions for @${account.handle}`"
                             >
                                 <MoreHorizontal class="size-4" />

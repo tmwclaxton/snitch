@@ -187,7 +187,7 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('hookDisplay', $captions);
         $this->assertStringContainsString('hookNeedsToggle', $captions);
         $this->assertStringNotContainsString('line-clamp-', $captions);
-        $this->assertStringContainsString('break-all text-slate-500', $captions);
+        $this->assertStringContainsString('break-all text-snitch-ink/55', $captions);
         $insightList = file_get_contents(base_path('resources/js/components/dashboard/InsightList.vue'));
         $this->assertIsString($insightList);
         $this->assertStringContainsString('data-tracker-id', $insightList);

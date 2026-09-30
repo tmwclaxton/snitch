@@ -54,41 +54,41 @@ function hasOwn(dow: number, block: number): boolean {
 <template>
     <EmptyState v-if="status === 'empty'" :reason="reason" compact />
     <div v-else>
-        <p v-if="reason" class="mb-1.5 text-xs text-slate-500">{{ reason }}</p>
+        <p v-if="reason" class="mb-1.5 text-xs text-snitch-ink/55">{{ reason }}</p>
         <div class="grid grid-cols-[2.5rem_repeat(6,minmax(0,1fr))] gap-1 text-xs">
             <div />
             <div
                 v-for="block in blocks || []"
                 :key="block"
-                class="truncate text-center font-medium uppercase tracking-wide text-slate-400"
+                class="truncate text-center font-medium uppercase tracking-wide text-snitch-ink/45"
             >
                 {{ block }}
             </div>
             <template v-for="(day, dow) in days || []" :key="day">
-                <div class="flex items-center font-medium text-slate-500">{{ day }}</div>
+                <div class="flex items-center font-medium text-snitch-ink/55">{{ day }}</div>
                 <div
                     v-for="(cell, block) in cells?.[dow] || []"
                     :key="`${day}-${block}`"
-                    class="relative flex h-6 items-center justify-center rounded border border-slate-100"
+                    class="relative flex h-6 items-center justify-center rounded border border-snitch-ink/10"
                     :style="{ backgroundColor: bg(cell) }"
                     :title="`${day} ${blocks?.[block]} · from ${cell.n || cell.count} posts${cell.pi != null ? ` · ${cell.pi}× usual` : ''}`"
                 >
                     <span
                         v-if="(mode ?? 'pi') === 'pi' && cell.pi != null && cell.n >= 3"
                         class="font-medium tabular-nums"
-                        :class="cell.pi >= 1.2 ? 'text-white' : 'text-slate-700'"
+                        :class="cell.pi >= 1.2 ? 'text-snitch-paper' : 'text-snitch-ink/80'"
                     >
                         {{ cell.pi.toFixed(1) }}
                     </span>
                     <span
                         v-else-if="(mode ?? 'pi') === 'count' && cell.count > 0"
-                        class="tabular-nums text-white"
+                        class="tabular-nums text-snitch-paper"
                     >
                         {{ cell.count }}
                     </span>
                     <span
                         v-if="hasOwn(dow, block)"
-                        class="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-slate-900"
+                        class="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-snitch-ink"
                     />
                 </div>
             </template>

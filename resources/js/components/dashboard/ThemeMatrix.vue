@@ -85,8 +85,8 @@ function accountHeading(account: Account): string {
         <div class="min-w-0 overflow-x-auto">
             <table class="w-full min-w-[36rem] text-left text-sm">
                 <thead>
-                    <tr class="border-b border-slate-200 text-xs text-slate-500">
-                        <th class="sticky left-0 bg-white py-1 pr-2 font-medium uppercase">Theme</th>
+                    <tr class="border-b border-snitch-ink/10 text-xs text-snitch-ink/55">
+                        <th class="sticky left-0 bg-snitch-lift py-1 pr-2 font-medium uppercase">Theme</th>
                         <th
                             v-for="account in accounts || []"
                             :key="account.handle"
@@ -109,8 +109,8 @@ function accountHeading(account: Account): string {
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="row in visibleMatrix" :key="row.theme_key" class="border-b border-slate-100">
-                        <td class="sticky left-0 break-words bg-white py-1 pr-2 font-medium leading-snug text-slate-700">{{ row.theme }}</td>
+                    <tr v-for="row in visibleMatrix" :key="row.theme_key" class="border-b border-snitch-ink/10">
+                        <td class="sticky left-0 break-words bg-snitch-lift py-1 pr-2 font-medium leading-snug text-snitch-ink/80">{{ row.theme }}</td>
                         <td
                             v-for="cell in row.cells"
                             :key="cell.handle"
@@ -123,20 +123,20 @@ function accountHeading(account: Account): string {
                     </tr>
                 </tbody>
             </table>
-            <p v-if="otherHeavy" class="mt-1 text-xs text-slate-400">
+            <p v-if="otherHeavy" class="mt-1 text-xs text-snitch-ink/45">
                 "Other" is high for You - theme tags are still coarse.
             </p>
         </div>
         <div v-if="hasGaps">
-            <p class="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Topics you skip</p>
+            <p class="mb-1 text-xs font-medium uppercase tracking-wide text-snitch-ink/55">Topics you skip</p>
             <ul class="space-y-1">
                 <li
                     v-for="gap in gaps"
                     :key="gap.theme"
-                    class="rounded border border-slate-100 bg-slate-50 px-1.5 py-0.5 text-sm text-slate-700"
+                    class="rounded border border-snitch-ink/10 bg-snitch-fog px-1.5 py-0.5 text-sm text-snitch-ink/80"
                 >
                     <span class="font-medium">{{ gap.theme }}</span>
-                    <span class="text-slate-500"> · rivals {{ gap.peer_pi.toFixed(1) }}x · from {{ gap.n }} posts</span>
+                    <span class="text-snitch-ink/55"> · rivals {{ gap.peer_pi.toFixed(1) }}x · from {{ gap.n }} posts</span>
                 </li>
             </ul>
         </div>

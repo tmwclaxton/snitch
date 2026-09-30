@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
+import { snitchAxisLabel, snitchAxisMuted, snitchInk } from '@/lib/snitchTheme';
 
 type Point = { date: string; value: number | null };
 type Series = {
@@ -20,18 +21,18 @@ const props = defineProps<{
     tableFallback?: boolean;
 }>();
 
-/** Evidence File: ink for You (AA on cream); dashed fog for peer median; palette rivals. */
-const YOU_COLOUR = '#141414';
+/** Evidence File: ink for You (AA on cream/night); muted peer; palette rivals. */
 const PEER_COLOUR = '#8A8478';
 const RIVAL_COLOURS = ['#3A5F6B', '#E5341D', '#5B7C99', '#8B5A2B', '#2F6F4E', '#6B4C7A', '#B45309', '#0F766E'];
 
 const colourByName = computed(() => {
     const map = new Map<string, string>();
     let rivalIndex = 0;
+    const youColour = snitchInk('#141414');
 
     for (const row of props.series ?? []) {
         if (row.is_own_account || row.name === 'You') {
-            map.set(row.name, YOU_COLOUR);
+            map.set(row.name, youColour);
         } else if (row.is_peer_median || row.name === 'Peer median' || row.name === "Rivals' average") {
             map.set(row.name, PEER_COLOUR);
         } else {
@@ -144,7 +145,7 @@ const options = computed(() => ({
         hover: { size: 4 },
     },
     grid: {
-        borderColor: '#d6cbb8',
+        borderColor: snitchAxisMuted(),
         strokeDashArray: 0,
         padding: { left: 8, right: 12, bottom: 0 },
     },
@@ -153,17 +154,17 @@ const options = computed(() => ({
         categories: categories.value,
         tickPlacement: 'on' as const,
         labels: {
-            style: { colors: '#5c5346', fontSize: '12px' },
+            style: { colors: snitchAxisLabel(), fontSize: '14px' },
             rotate: categories.value.length > 8 ? -35 : 0,
             hideOverlappingLabels: false,
             formatter: (value: string) => formatAxisDate(String(value)),
         },
-        axisBorder: { color: '#d6cbb8' },
-        axisTicks: { color: '#d6cbb8' },
+        axisBorder: { color: snitchAxisMuted() },
+        axisTicks: { color: snitchAxisMuted() },
     },
     yaxis: {
         labels: {
-            style: { colors: '#5c5346', fontSize: '12px' },
+            style: { colors: snitchAxisLabel(), fontSize: '14px' },
             formatter: (value: number) => {
                 const suffix = props.unit === '%' ? '%' : props.unit === 'x' ? '×' : '';
 
@@ -172,8 +173,8 @@ const options = computed(() => ({
         },
     },
     legend: {
-        fontSize: '12px',
-        labels: { colors: '#1C1B1A' },
+        fontSize: '14px',
+        labels: { colors: snitchInk('#1C1B1A') },
         position: 'top' as const,
         showForSingleSeries: true,
     },

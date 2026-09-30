@@ -81,11 +81,11 @@ const gapClass = computed(() => {
     if (props.gap.type === 'pp') {
         return props.gap.value >= 0
             ? 'bg-snitch-spot/50 text-snitch-ink'
-            : 'bg-snitch-alert text-white';
+            : 'bg-snitch-alert text-snitch-paper';
     }
 
     return props.gap.lower || props.gap.value < 1
-        ? 'bg-snitch-alert text-white'
+        ? 'bg-snitch-alert text-snitch-paper'
         : 'bg-snitch-spot/50 text-snitch-ink';
 });
 
@@ -122,7 +122,7 @@ const growthHint = computed(() => {
                 <Info class="h-3 w-3" />
                 <div
                     v-if="open"
-                    class="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-snitch-ink/10 bg-white p-2 text-left text-sm text-snitch-ink/70 shadow-sm"
+                    class="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-snitch-ink/10 bg-snitch-lift p-2 text-left text-sm text-snitch-ink/70 shadow-sm"
                 >
                     <p class="mb-1 text-snitch-ink">{{ why }}</p>
                     <p class="text-snitch-ink/55">{{ formula }}</p>

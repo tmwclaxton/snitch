@@ -207,69 +207,71 @@
 
 .dark {
     /*
-      Evidence File night - invert paper/ink, keep highlighter + alert.
+      Authenticated night shell - Caution Tape night (matches live /pricing).
+      Paper #0E0E10, fog type, bold yellow spot, thin white/10 borders.
       Press / stock / on-spot stay near-black + cream for film and yellow fills.
+      Light mode (:root) keeps Evidence File cream unchanged.
     */
-    --snitch-paper: #141414;
-    --snitch-fog: #1c1c1e;
-    --snitch-ink: #f3eee3;
-    --snitch-press: #141414;
-    --snitch-stock: #f3eee3;
-    --snitch-on-spot: #141414;
-    --snitch-lift: #2a2a2c;
+    --snitch-paper: #0e0e10;
+    --snitch-fog: #141416;
+    --snitch-ink: #edeae2;
+    --snitch-press: #0e0e10;
+    --snitch-stock: #edeae2;
+    --snitch-on-spot: #0e0e10;
+    --snitch-lift: #141416;
     --snitch-print-blend: soft-light;
-    --snitch-spot: #ffd60a;
-    --snitch-accent: #ffd60a;
-    --snitch-marker: #ffd60a;
+    --snitch-spot: #fcd700;
+    --snitch-accent: #fcd700;
+    --snitch-marker: #fcd700;
     --snitch-alert: #e5341d;
-    --snitch-stipple-spot: color-mix(in oklab, var(--snitch-spot) 48%, var(--snitch-stock));
+    --snitch-stipple-spot: color-mix(in oklab, var(--snitch-spot) 55%, var(--snitch-stock));
     --snitch-teal: #7a9aa6;
     --snitch-caution-ink: #0e0e10;
     --snitch-caution-yellow: #fcd700;
     --snitch-caution-pink: #ff3d8b;
     --snitch-caution-fog: #edeae2;
-    --snitch-grade-tint: rgba(255, 214, 10, 0.14);
-    --snitch-grade-shadow: rgba(0, 0, 0, 0.55);
-    --snitch-grade-fade: rgba(20, 20, 20, 0.5);
-    --snitch-grade-warm: rgba(255, 214, 10, 0.08);
-    --snitch-halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Ccircle cx='2' cy='2' r='1.1' fill='%23f3eee3' fill-opacity='0.14'/%3E%3C/svg%3E");
-    --snitch-tape: rgba(255, 214, 10, 0.38);
-    --snitch-washi: rgba(28, 28, 30, 0.78);
-    --snitch-washi-fill: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='32' viewBox='0 0 64 32'%3E%3Crect width='64' height='32' fill='%23ffd60a' fill-opacity='0.28'/%3E%3Cg stroke='%23c9a000' stroke-opacity='0.32' stroke-width='0.5'%3E%3Cpath d='M0 6h64M0 12h64M0 18h64M0 24h64'/%3E%3C/g%3E%3C/svg%3E");
+    --snitch-grade-tint: rgba(252, 215, 0, 0.16);
+    --snitch-grade-shadow: rgba(0, 0, 0, 0.6);
+    --snitch-grade-fade: rgba(14, 14, 16, 0.55);
+    --snitch-grade-warm: rgba(252, 215, 0, 0.1);
+    --snitch-halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Ccircle cx='2' cy='2' r='1.1' fill='%23edeae2' fill-opacity='0.12'/%3E%3C/svg%3E");
+    --snitch-tape: rgba(252, 215, 0, 0.4);
+    --snitch-washi: rgba(20, 20, 22, 0.82);
+    --snitch-washi-fill: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='32' viewBox='0 0 64 32'%3E%3Crect width='64' height='32' fill='%23fcd700' fill-opacity='0.28'/%3E%3Cg stroke='%23c9a000' stroke-opacity='0.35' stroke-width='0.5'%3E%3Cpath d='M0 6h64M0 12h64M0 18h64M0 24h64'/%3E%3C/g%3E%3C/svg%3E");
 
-    --background: #141414;
-    --foreground: #f3eee3;
-    --card: #1c1c1e;
-    --card-foreground: #f3eee3;
-    --popover: #1c1c1e;
-    --popover-foreground: #f3eee3;
-    --primary: #f3eee3;
-    --primary-foreground: #141414;
-    --secondary: #2a2a2c;
-    --secondary-foreground: #f3eee3;
-    --muted: #2a2a2c;
+    --background: #0e0e10;
+    --foreground: #edeae2;
+    --card: #141416;
+    --card-foreground: #edeae2;
+    --popover: #141416;
+    --popover-foreground: #edeae2;
+    --primary: #fcd700;
+    --primary-foreground: #0e0e10;
+    --secondary: #1c1c1f;
+    --secondary-foreground: #edeae2;
+    --muted: #1c1c1f;
     --muted-foreground: #b8b2a6;
-    --accent: #ffd60a;
-    --accent-foreground: #141414;
+    --accent: #fcd700;
+    --accent-foreground: #0e0e10;
     --destructive: #e5341d;
     --destructive-foreground: #ffffff;
-    --border: rgb(243 238 227 / 0.12);
-    --input: #2a2a2c;
-    --ring: #ffd60a;
-    --chart-1: #ffd60a;
+    --border: rgb(255 255 255 / 0.1);
+    --input: #1c1c1f;
+    --ring: #fcd700;
+    --chart-1: #fcd700;
     --chart-2: #7a9aa6;
     --chart-3: #e5341d;
     --chart-4: #c4a574;
     --chart-5: #8eb0c4;
-    --sidebar-background: #141414;
-    --sidebar-foreground: #f3eee3;
-    --sidebar-primary: #f3eee3;
-    --sidebar-primary-foreground: #141414;
-    --sidebar-accent: #ffd60a;
-    --sidebar-accent-foreground: #141414;
-    --sidebar-border: rgb(243 238 227 / 0.12);
-    --sidebar-ring: #ffd60a;
-    --sidebar: #141414;
+    --sidebar-background: #0e0e10;
+    --sidebar-foreground: #edeae2;
+    --sidebar-primary: #fcd700;
+    --sidebar-primary-foreground: #0e0e10;
+    --sidebar-accent: #fcd700;
+    --sidebar-accent-foreground: #0e0e10;
+    --sidebar-border: rgb(255 255 255 / 0.1);
+    --sidebar-ring: #fcd700;
+    --sidebar: #0e0e10;
 }
 
 /*
@@ -514,6 +516,31 @@ html:has(.snitch-public-shell) {
     .snitch-app-chrome .snitch-btn.snitch-btn-spot {
         background: var(--snitch-spot);
         color: var(--snitch-on-spot);
+    }
+
+    /* Night shell: yellow primary + fog outline secondary (matches /pricing). */
+    .dark .snitch-app-chrome .snitch-btn {
+        background: var(--snitch-spot);
+        color: var(--snitch-on-spot);
+    }
+
+    .dark .snitch-app-chrome .snitch-btn:hover {
+        color: var(--snitch-on-spot);
+        opacity: 0.92;
+    }
+
+    .dark .snitch-app-chrome .snitch-btn-ghost,
+    .dark .snitch-app-chrome .snitch-btn-ghost-light {
+        background: transparent;
+        color: var(--snitch-ink);
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 28%, transparent);
+    }
+
+    .dark .snitch-app-chrome .snitch-btn-ghost:hover,
+    .dark .snitch-app-chrome .snitch-btn-ghost-light:hover {
+        background: color-mix(in oklab, var(--snitch-ink) 8%, transparent);
+        border-color: color-mix(in oklab, var(--snitch-ink) 45%, transparent);
+        color: var(--snitch-ink);
     }
 
     .snitch-app-chrome .snitch-ink-label {
@@ -1747,10 +1774,10 @@ html:has(.snitch-public-shell) {
         gap: 0.4rem;
         flex: 1 1 auto;
         min-width: 0;
-        font-size: 0.6rem;
+        font-size: 0.875rem;
         font-weight: 600;
-        letter-spacing: 0.14em;
-        line-height: 1.2;
+        letter-spacing: 0.08em;
+        line-height: 1.25;
         text-transform: uppercase;
         color: color-mix(in oklab, var(--snitch-ink) 60%, transparent);
     }
@@ -1763,9 +1790,8 @@ html:has(.snitch-public-shell) {
 
     .snitch-contact-cell-platform-text {
         min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        overflow-wrap: anywhere;
+        white-space: normal;
     }
 
     .snitch-glance-winner {
@@ -1883,14 +1909,14 @@ html:has(.snitch-public-shell) {
 
     .snitch-glance-metrics {
         display: flex;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         align-items: baseline;
-        gap: 0.55rem;
+        gap: 0.35rem 0.55rem;
         margin: 0;
         padding: 0;
         list-style: none;
         min-width: 0;
-        overflow: hidden;
+        overflow: visible;
         background: transparent;
         border: 0;
         box-shadow: none;
@@ -1898,47 +1924,42 @@ html:has(.snitch-public-shell) {
 
     .snitch-glance-metric {
         display: inline-flex;
-        flex: 0 0 auto;
+        flex: 0 1 auto;
         flex-direction: row;
         align-items: baseline;
         gap: 0.22rem;
         min-width: 0;
-        line-height: 1;
-        white-space: nowrap;
+        line-height: 1.2;
+        white-space: normal;
     }
 
     .snitch-glance-metric + .snitch-glance-metric::before {
         content: '·';
         margin-right: 0.02rem;
         color: color-mix(in oklab, var(--snitch-ink) 35%, transparent);
-        font-size: 0.7rem;
+        font-size: 0.875rem;
         line-height: 1;
     }
 
     .snitch-glance-metric-value {
         font-family: var(--font-display);
-        font-size: 0.82rem;
+        font-size: 0.875rem;
         color: var(--snitch-ink);
-        line-height: 1;
+        line-height: 1.2;
         letter-spacing: 0.01em;
         font-variant-numeric: tabular-nums;
         white-space: nowrap;
     }
 
     .snitch-glance-metric-label {
-        font-size: 0.54rem;
+        font-size: 0.875rem;
         font-weight: 600;
-        letter-spacing: 0.08em;
-        line-height: 1;
+        letter-spacing: 0.06em;
+        line-height: 1.2;
         text-transform: uppercase;
         color: color-mix(in oklab, var(--snitch-ink) 55%, transparent);
-        white-space: nowrap;
-    }
-
-    @container (max-width: 11.5rem) {
-        .snitch-glance-metric-label {
-            display: none;
-        }
+        white-space: normal;
+        overflow-wrap: anywhere;
     }
 
     .snitch-glance-hook {
@@ -2030,19 +2051,17 @@ html:has(.snitch-public-shell) {
 
     .snitch-contact-cell .snitch-glance-tag > span {
         min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        overflow-wrap: anywhere;
+        white-space: normal;
     }
 
     .snitch-glance-account-link {
         display: inline-block;
         min-width: 0;
         max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-size: 0.78rem;
+        overflow-wrap: anywhere;
+        white-space: normal;
+        font-size: 0.875rem;
         letter-spacing: 0.01em;
         color: var(--snitch-ink);
         text-decoration: underline;

@@ -38,7 +38,7 @@ const piLabel = computed(() => `${props.post.pi.toFixed(1)}× usual`);
 <template>
     <button
         type="button"
-        class="group relative flex h-full min-w-0 flex-col overflow-hidden rounded border border-snitch-ink/10 bg-white text-left"
+        class="group relative flex h-full min-w-0 flex-col overflow-hidden rounded border border-snitch-ink/10 bg-snitch-lift text-left"
         @click="open = !open"
         @mouseenter="open = true"
         @mouseleave="open = false"

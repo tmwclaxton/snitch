@@ -91,7 +91,7 @@ const tip = computed(() => {
             <li
                 v-for="row in formats"
                 :key="row.type"
-                class="rounded border border-snitch-ink/10 bg-white px-2.5 py-2"
+                class="rounded border border-snitch-ink/10 bg-snitch-lift px-2.5 py-2"
             >
                 <div class="flex items-baseline justify-between gap-2">
                     <span class="whitespace-nowrap text-sm font-medium text-snitch-ink">

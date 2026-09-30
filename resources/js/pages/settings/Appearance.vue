@@ -25,11 +25,14 @@ defineOptions({
                 Appearance
             </h2>
             <p class="relative z-10 mt-1.5 text-sm text-snitch-ink/65">
-                Pick light, dark, or follow the system.
+                Light keeps the cream Evidence File look. Dark uses the Caution Tape night shell (same as Pricing). System follows your device. Default is system.
             </p>
             <div class="relative z-10 mt-5">
                 <AppearanceTabs />
             </div>
+            <p class="relative z-10 mt-4 text-sm text-snitch-ink/55">
+                Find this anytime under Account → Settings → Appearance.
+            </p>
         </div>
     </div>
 </template>

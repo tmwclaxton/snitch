@@ -114,7 +114,7 @@ function captionText(row: { caption: string; caption_preview?: string }): string
                     Growth charts
                 </a>
                 <label class="inline-flex items-center gap-2 text-sm text-snitch-ink/70">
-                    <span class="text-xs font-medium uppercase tracking-wide text-slate-500">Month</span>
+                    <span class="text-xs font-medium uppercase tracking-wide text-snitch-ink/55">Month</span>
                     <select
                         class="rounded border border-snitch-ink/20 bg-snitch-paper px-2 py-1 text-sm text-snitch-ink"
                         :value="month"

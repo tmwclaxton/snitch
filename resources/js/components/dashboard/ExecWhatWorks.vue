@@ -33,7 +33,7 @@ function gapLabel(gap: Gap): string {
 </script>
 
 <template>
-    <section class="rounded border border-snitch-ink/10 bg-white p-3">
+    <section class="rounded border border-snitch-ink/10 bg-snitch-lift p-3">
         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
             What works
         </p>

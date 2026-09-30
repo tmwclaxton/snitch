@@ -11,19 +11,20 @@ Appearance is light / dark / system via `useAppearance`, the `appearance` cookie
 
 ## Palettes
 
-- **Logged-in app (Evidence File):** cream paper `#F3EEE3`, near-black ink `#141414`, highlighter yellow `#FFD60A`, alert red `#E5341D`. Cards are white / light cream with `ink/10` borders. Fonts: Inter (body), Bricolage Grotesque (`font-display` headings), Space Mono (`font-mono` labels, stats, numbers ≥14px).
-- **Landing (Caution Tape):** black `#0E0E10`, bold yellow `#FCD700`, pink `#FF3D8B` sparingly, fog `#EDEAE2`. Hero headlines use Archivo Black (`font-hero` / `.snitch-hero-display`) in caps. TrackedBy may keep its own Caution Tape treatment.
+- **Logged-in light (Evidence File):** cream paper `#F3EEE3`, near-black ink `#141414`, highlighter yellow `#FFD60A`, alert red `#E5341D`. Cards use `--snitch-lift` (white) with `ink/10` borders. Fonts: Inter (body), Bricolage Grotesque (`font-display` headings), Space Mono (`font-mono` labels, stats, numbers ≥14px).
+- **Logged-in dark (Caution Tape night):** paper `#0E0E10`, fog type `#EDEAE2`, panels `#141416`, bold yellow `#FCD700`, thin `white/10` borders. Yellow primary buttons + outline secondary (matches live `/pricing`). Follows appearance light / dark / system (system default).
+- **Public shell (Caution Tape):** same night tokens, pinned via `PublicLayout` `snitch-public-shell dark` so appearance does not flip marketing pages. Hero headlines use Archivo Black (`font-hero` / `.snitch-hero-display`) in caps. TrackedBy keeps its own Caution Tape treatment in both app modes.
 
 ## Token rules
 
-- Flip `--snitch-paper`, `--snitch-ink`, `--snitch-fog` (and related grade / halftone / washi) under `.dark` so `snitch-*` utilities and `text-snitch-ink` / `bg-snitch-paper` work everywhere without per-page `dark:` classes.
-- Keep `--snitch-press` (near-black) and `--snitch-stock` (cream) stable for film gutters, ticket rings, and type on press.
-- Keep `--snitch-on-spot` near-black for text on highlighter fills (seg active, spot buttons, yellow chips). Never leave cream type on a yellow face.
+- Flip `--snitch-paper`, `--snitch-ink`, `--snitch-fog`, `--snitch-spot`, and related grade / halftone / washi under `.dark` so `snitch-*` utilities and `text-snitch-ink` / `bg-snitch-paper` / `bg-snitch-lift` work everywhere without per-page `dark:` classes.
+- Prefer `bg-snitch-lift` over bare `bg-white` for cards and panels.
+- Keep `--snitch-on-spot` near-black for text on yellow fills. Never leave fog/cream type on a yellow face.
 - Use `--snitch-lift` instead of bare `white` in `color-mix` surface lifts.
 - Use `--snitch-print-blend` (`multiply` light / `soft-light` dark) for print overlays on paper.
-- Spot highlighter stays `#FFD60A` in both modes. Alert stays `#E5341D`.
-- Caution Tape tokens (`--snitch-caution-*`) stay fixed for landing accents.
-- Chart stipple / heat high levels use `--snitch-stipple-spot` (spot mixed with press) so marks stay AA-readable on cream; do not use bright `--snitch-spot` alone for thin chart strokes (prefer ink `#141414` for "You" series).
+- Light spot stays `#FFD60A`; dark spot is `#FCD700`. Alert stays `#E5341D`.
+- Caution Tape tokens (`--snitch-caution-*`) stay fixed for landing accents and TrackedBy.
+- Chart series read ink / axes from live CSS vars (`snitchTheme.ts`); "You" series uses `--snitch-ink` so it stays AA on paper in both modes.
 
 ## Public shell is pinned to Caution Tape night
 
