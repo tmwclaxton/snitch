@@ -658,7 +658,13 @@ const detailsOpen = ref(false);
 
                     <div
                         id="rail"
-                        class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4"
+                        class="grid gap-2"
+                        :class="{
+                            'sm:grid-cols-2 xl:grid-cols-4': visibleKpiCards.length >= 4,
+                            'sm:grid-cols-3': visibleKpiCards.length === 3,
+                            'sm:grid-cols-2': visibleKpiCards.length === 2,
+                            'grid-cols-1': visibleKpiCards.length <= 1,
+                        }"
                     >
                         <template v-if="kpis?.status === 'ok' && visibleKpiCards.length">
                             <ExecStatTile

@@ -27,19 +27,20 @@ const piLabel = computed(() => `${props.post.pi.toFixed(1)}× usual`);
 <template>
     <button
         type="button"
-        class="group relative flex min-w-0 flex-col overflow-hidden rounded border border-snitch-ink/10 bg-white text-left"
+        class="group relative flex h-full min-w-0 flex-col overflow-hidden rounded border border-snitch-ink/10 bg-white text-left"
         @click="open = !open"
         @mouseenter="open = true"
         @mouseleave="open = false"
         @focus="open = true"
         @blur="open = false"
     >
-        <div class="relative aspect-[4/5] w-full bg-snitch-ink/5">
+        <div class="relative aspect-[4/5] w-full shrink-0 overflow-hidden bg-snitch-ink/5">
             <SnitchImage
                 v-if="post.thumbnail_url"
                 :src="post.thumbnail_url"
                 :alt="handle"
-                class="size-full object-cover"
+                class="absolute inset-0 block size-full"
+                img-class="size-full object-cover"
             />
             <div
                 v-else
@@ -55,7 +56,7 @@ const piLabel = computed(() => `${props.post.pi.toFixed(1)}× usual`);
             </div>
         </div>
         <div class="space-y-0.5 p-2">
-            <p class="whitespace-nowrap text-sm font-medium text-snitch-ink">
+            <p class="truncate whitespace-nowrap text-sm font-medium text-snitch-ink">
                 {{ handle }}
             </p>
             <p class="font-display text-base font-semibold tabular-nums text-snitch-ink">

@@ -65,8 +65,10 @@ class ExecutiveDashboardTest extends TestCase
             ],
         );
 
-        $this->assertStringContainsString('carousel', strtolower($brief['what_to_post']['headline']));
-        $this->assertStringContainsString('Monday', $brief['what_to_post']['headline']);
+        $this->assertSame(
+            'Post carousels on Monday at 8pm: they get 1.8× the usual.',
+            $brief['what_to_post']['headline'],
+        );
         $this->assertStringContainsString('engagement', strtolower($brief['performance']['headline']));
         $this->assertStringContainsString('posting less', strtolower($brief['performance']['headline']));
         $this->assertSame('None of your rivals run ads.', $brief['ads']['headline']);
@@ -75,6 +77,43 @@ class ExecutiveDashboardTest extends TestCase
         $this->assertLessThanOrEqual(72, mb_strlen($brief['what_to_post']['takeaways'][0]['text']));
         $this->assertStringNotContainsString('n=', $brief['what_to_post']['headline']);
         $this->assertStringNotContainsString('Peer', $brief['performance']['headline']);
+    }
+
+    #[Test]
+    public function builder_hides_takeaways_with_blank_interpolated_values(): void
+    {
+        $brief = app(ExecutiveBriefBuilder::class)->build(
+            ownRow: null,
+            kpis: ['data' => ['cards' => []]],
+            insights: [
+                'data' => [
+                    'items' => [
+                        [
+                            'text' => 'Across your competitors, **Reels do . carousels do .**.',
+                            'score' => 0.9,
+                            'n' => 20,
+                        ],
+                        [
+                            'text' => 'Across your competitors, **Reels do 0.9×, carousels do 1.8×**.',
+                            'score' => 1.8,
+                            'n' => 20,
+                        ],
+                    ],
+                ],
+            ],
+            formatLift: ['data' => ['peer_median_lift' => []]],
+            activity: null,
+            bestTimes: null,
+            adsPanel: ['running_ads' => 0, 'recommendation' => ''],
+        );
+
+        $this->assertCount(1, $brief['what_to_post']['takeaways']);
+        $this->assertSame('0.9×', $brief['what_to_post']['takeaways'][0]['metric']);
+        $this->assertSame(
+            'Across your competitors, Reels do 0.9×, carousels do 1.8×.',
+            $brief['what_to_post']['takeaways'][0]['text'],
+        );
+        $this->assertStringNotContainsString('do .', $brief['what_to_post']['takeaways'][0]['text']);
     }
 
     #[Test]

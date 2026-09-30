@@ -83,8 +83,8 @@ class ExecutiveBriefBuilder
 
         if ($format !== null && $slot !== null) {
             return sprintf(
-                'Post %ss on %s: they get %s× your usual.',
-                strtolower($format['label']),
+                'Post %s on %s: they get %s× the usual.',
+                $this->pluralFormat($format['label']),
                 $slot,
                 $this->x($format['lift']),
             );
@@ -92,14 +92,16 @@ class ExecutiveBriefBuilder
 
         if ($format !== null) {
             return sprintf(
-                'Lean into %ss: they get %s× your usual.',
-                strtolower($format['label']),
+                'Lean into %s: they get %s× the usual.',
+                $this->pluralFormat($format['label']),
                 $this->x($format['lift']),
             );
         }
 
         if ($slot !== null) {
-            return sprintf('Post next around %s - that slot leads your rivals.', $slot);
+            $preposition = preg_match('/^\d{1,2}(am|pm)$/i', $slot) === 1 ? 'around' : 'on';
+
+            return sprintf('Post next %s %s - that slot leads your rivals.', $preposition, $slot);
         }
 
         return 'Sync more posts to get a clear posting plan.';
@@ -209,9 +211,9 @@ class ExecutiveBriefBuilder
             }
 
             $metric = $this->extractMetric($plain) ?? $this->x((float) ($item['score'] ?? 0)).'×';
-            $text = $this->takeawayLine($plain);
+            $text = $this->takeawayLine($plain, $metric);
 
-            if ($text === '') {
+            if ($text === '' || $this->takeawayIncomplete($text)) {
                 continue;
             }
 
@@ -312,25 +314,63 @@ class ExecutiveBriefBuilder
 
     private function humanSlot(string $label): string
     {
-        // "Mon 20:00" / "7pm" / "Monday 20:00"
-        if (preg_match('/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(\d{1,2}):(\d{2})$/i', $label, $m) === 1) {
-            $hour = (int) $m[2];
-            $period = $hour >= 12 ? 'evenings' : 'mornings';
-            $day = match (strtolower($m[1])) {
-                'mon' => 'Monday',
-                'tue' => 'Tuesday',
-                'wed' => 'Wednesday',
-                'thu' => 'Thursday',
-                'fri' => 'Friday',
-                'sat' => 'Saturday',
-                'sun' => 'Sunday',
-                default => $m[1],
-            };
+        // "Mon 20:00" / "Monday 20:00"
+        if (preg_match('/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+(\d{1,2}):(\d{2})$/i', $label, $m) === 1) {
+            $day = $this->fullDayName($m[1]);
 
-            return "{$day} {$period}";
+            return "{$day} at ".$this->hour12((int) $m[2]);
+        }
+
+        // "9am" / "8pm"
+        if (preg_match('/^(\d{1,2})\s*(am|pm)$/i', $label, $m) === 1) {
+            return strtolower($m[1].$m[2]);
         }
 
         return $label;
+    }
+
+    private function fullDayName(string $day): string
+    {
+        return match (strtolower($day)) {
+            'mon', 'monday' => 'Monday',
+            'tue', 'tuesday' => 'Tuesday',
+            'wed', 'wednesday' => 'Wednesday',
+            'thu', 'thursday' => 'Thursday',
+            'fri', 'friday' => 'Friday',
+            'sat', 'saturday' => 'Saturday',
+            'sun', 'sunday' => 'Sunday',
+            default => $day,
+        };
+    }
+
+    private function hour12(int $hour): string
+    {
+        $hour = (($hour % 24) + 24) % 24;
+
+        if ($hour === 0) {
+            return '12am';
+        }
+
+        if ($hour === 12) {
+            return '12pm';
+        }
+
+        return $hour < 12 ? $hour.'am' : ($hour - 12).'pm';
+    }
+
+    private function pluralFormat(string $label): string
+    {
+        $base = strtolower(trim($label));
+
+        if ($base === '') {
+            return 'post';
+        }
+
+        if (str_ends_with($base, 's')) {
+            return $base;
+        }
+
+        return $base.'s';
     }
 
     private function stripMarkdown(string $text): string
@@ -354,32 +394,35 @@ class ExecutiveBriefBuilder
         return null;
     }
 
-    private function takeawayLine(string $plain): string
+    private function takeawayLine(string $plain, string $metric): string
     {
         $line = trim(preg_replace('/\s+/', ' ', $plain) ?? $plain);
-        // Metric is shown as the bold tile number - drop it from the sentence.
-        $hadMultiplier = preg_match('/\d+(?:\.\d+)?\s*[×xX]/u', $line) === 1;
-        $line = trim(preg_replace('/\d+(?:\.\d+)?\s*[×xX]/u', '', $line) ?? $line);
-        $line = trim(preg_replace('/\s+/', ' ', $line) ?? $line);
-        $line = trim($line, " \t\"'");
+        $multiplierCount = preg_match_all('/\d+(?:\.\d+)?\s*[×xX]/u', $line);
 
-        if ($hadMultiplier) {
+        // Only strip the tile metric when it is the sole × in the sentence.
+        // Comparison lines keep every × so "Reels do 0.9×, carousels do 1.8×" stays intact.
+        if ($multiplierCount === 1) {
+            $metricPattern = preg_quote(rtrim($metric, '×xX'), '/');
+            $line = trim(preg_replace('/'.$metricPattern.'\s*[×xX]/u', '', $line, 1) ?? $line);
+            $line = trim(preg_replace('/\s+/', ' ', $line) ?? $line);
             $line = preg_replace('/\bgot\s+their usual\b/iu', 'beat their usual', $line) ?? $line;
         }
+
+        $line = trim($line, " \t\"'");
 
         if ($line === '') {
             return '';
         }
 
-        if (mb_strlen($line) <= 72) {
+        if (mb_strlen($line) <= 96) {
             return $this->finishSentence($line);
         }
 
-        if (preg_match('/^(.{24,72}?)[:.](?:\s|$)/u', $line, $match) === 1) {
+        if (preg_match('/^(.{24,96}?)[:.](?:\s|$)/u', $line, $match) === 1) {
             return $this->finishSentence(rtrim($match[1], ' .'));
         }
 
-        $slice = mb_substr($line, 0, 72);
+        $slice = mb_substr($line, 0, 96);
         $lastSpace = mb_strrpos($slice, ' ');
 
         if ($lastSpace !== false && $lastSpace > 28) {
@@ -387,6 +430,20 @@ class ExecutiveBriefBuilder
         }
 
         return $this->finishSentence(rtrim($slice, '.,;:-"\''));
+    }
+
+    private function takeawayIncomplete(string $text): bool
+    {
+        // e.g. "Reels do . carousels do ." after a blank interpolation
+        if (preg_match('/\bdo\s*\./u', $text) === 1) {
+            return true;
+        }
+
+        if (preg_match('/\s\.\s*[a-z]/u', $text) === 1) {
+            return true;
+        }
+
+        return preg_match('/\s\.\s*\./u', $text) === 1;
     }
 
     private function finishSentence(string $line): string

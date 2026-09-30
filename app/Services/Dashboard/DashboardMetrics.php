@@ -7,6 +7,7 @@ use App\Models\FollowerSnapshot;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Models\WeeklyBrief;
 use App\Services\Competitors\CompetitorInsightsBuilder;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -233,7 +234,7 @@ class DashboardMetrics
             $insights,
             $formatLift,
             $activity,
-            null,
+            $this->briefBestTimes($user),
             $adsPanel,
         );
 
@@ -2335,5 +2336,51 @@ class DashboardMetrics
         }
 
         return "{$peerLabel} {$fmt($peer)}";
+    }
+
+    /**
+     * Same ranked slots the dashboard Best posting times chart uses from the
+     * ready weekly brief, so the executive headline cannot contradict that list.
+     *
+     * @return list<array{label: string, score: float}>|null
+     */
+    private function briefBestTimes(User $user): ?array
+    {
+        $brief = WeeklyBrief::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'ready')
+            ->orderByDesc('week_start')
+            ->first(['best_times']);
+
+        if ($brief === null || ! is_array($brief->best_times) || $brief->best_times === []) {
+            return null;
+        }
+
+        $slots = collect($brief->best_times)
+            ->take(3)
+            ->values()
+            ->map(function (mixed $slot): ?array {
+                if (! is_array($slot)) {
+                    return null;
+                }
+
+                $label = trim((string) ($slot['label'] ?? ''));
+
+                if ($label === '') {
+                    return null;
+                }
+
+                return [
+                    'label' => $label,
+                    'score' => isset($slot['score']) && is_numeric($slot['score'])
+                        ? (float) $slot['score']
+                        : 0.0,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        return $slots === [] ? null : $slots;
     }
 }

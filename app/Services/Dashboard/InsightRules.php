@@ -251,16 +251,22 @@ class InsightRules
                     continue;
                 }
 
-                $parts[] = sprintf('%ss do %s×', strtolower((string) $f), $this->x((float) $r['lift']));
+                if (! is_numeric($r['lift'] ?? null)) {
+                    continue;
+                }
+
+                $label = strtolower((string) $f);
+                $plural = str_ends_with($label, 's') ? $label : $label.'s';
+                $parts[] = sprintf('%s do %s×', $plural, $this->x((float) $r['lift']));
             }
 
-            if ($parts === []) {
+            if (count($parts) < 2) {
                 continue;
             }
 
             $out[] = [
                 'category' => 'format_lift',
-                'text' => 'Across your competitors, **'.implode('. ', [
+                'text' => 'Across your competitors, **'.implode(', ', [
                     ucfirst($parts[0] ?? ''),
                     ...array_slice($parts, 1),
                 ]).'**.',

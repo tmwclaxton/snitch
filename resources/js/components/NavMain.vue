@@ -67,7 +67,7 @@ function hrefFor(item: NavItem): string {
 <template>
     <SidebarGroup class="px-2 py-0">
         <SidebarGroupLabel class="h-7">{{ label }}</SidebarGroupLabel>
-        <SidebarMenu class="gap-0.5">
+        <SidebarMenu class="gap-0">
             <SidebarMenuItem
                 v-for="item in items"
                 :key="item.title"
