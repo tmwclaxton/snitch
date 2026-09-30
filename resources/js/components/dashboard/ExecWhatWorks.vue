@@ -45,7 +45,7 @@ function gapLabel(gap: Gap): string {
                     <span
                         v-for="row in topHashtags"
                         :key="`h-${row.term}`"
-                        class="rounded bg-snitch-ink/5 px-2 py-1 text-sm text-snitch-ink"
+                        class="snitch-choice rounded px-2 py-1 text-sm"
                     >
                         #{{ row.term }}
                     </span>
@@ -61,7 +61,7 @@ function gapLabel(gap: Gap): string {
                     <span
                         v-for="row in topCtas"
                         :key="`c-${row.term}`"
-                        class="rounded bg-snitch-ink/5 px-2 py-1 text-sm text-snitch-ink"
+                        class="snitch-choice rounded px-2 py-1 text-sm"
                     >
                         {{ row.term }}
                     </span>
@@ -102,7 +102,7 @@ function gapLabel(gap: Gap): string {
                     <span
                         v-for="row in restHashtags"
                         :key="`rh-${row.term}`"
-                        class="rounded bg-snitch-ink/5 px-2 py-1 text-sm text-snitch-ink/80"
+                        class="snitch-choice rounded px-2 py-1 text-sm text-snitch-ink/80"
                     >
                         #{{ row.term }}
                     </span>
@@ -111,7 +111,7 @@ function gapLabel(gap: Gap): string {
                     <span
                         v-for="row in restCtas"
                         :key="`rc-${row.term}`"
-                        class="rounded bg-snitch-ink/5 px-2 py-1 text-sm text-snitch-ink/80"
+                        class="snitch-choice rounded px-2 py-1 text-sm text-snitch-ink/80"
                     >
                         {{ row.term }}
                     </span>
@@ -120,7 +120,7 @@ function gapLabel(gap: Gap): string {
                     <span
                         v-for="(gap, index) in restGaps"
                         :key="`rg-${index}`"
-                        class="rounded bg-snitch-ink/5 px-2 py-1 text-sm text-snitch-ink/80"
+                        class="snitch-choice rounded px-2 py-1 text-sm text-snitch-ink/80"
                     >
                         {{ gapLabel(gap) }}
                     </span>
