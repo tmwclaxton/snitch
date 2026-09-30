@@ -302,6 +302,10 @@ class PublicPagesTest extends TestCase
         $this->assertStringContainsString(":root,\n.snitch-light {", $css);
         $this->assertStringContainsString('.snitch-public-shell .snitch-btn {', $css);
 
+        $notFound = file_get_contents(resource_path('js/pages/errors/NotFound.vue'));
+        $this->assertNotFalse($notFound);
+        $this->assertStringNotContainsString('snitch-ink-label', $notFound, '404 label must meet the 14px floor');
+
         $beta = file_get_contents(resource_path('js/pages/marketing/Beta.vue'));
         $this->assertNotFalse($beta);
         $this->assertStringContainsString('snitch-light bg-white', $beta);
@@ -314,6 +318,7 @@ class PublicPagesTest extends TestCase
             'js/pages/blog/Index.vue',
             'js/pages/blog/Show.vue',
             'js/components/marketing/LegalDocument.vue',
+            'js/pages/errors/NotFound.vue',
         ];
 
         foreach ($darkShellPages as $relative) {

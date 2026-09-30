@@ -27,7 +27,7 @@ defineOptions({
                     />
                 </div>
             </div>
-            <p class="snitch-ink-label">404</p>
+            <p class="font-mono text-sm uppercase tracking-[0.18em] text-snitch-caution-yellow">404</p>
             <h1 class="snitch-display relative z-10 mt-2 text-3xl text-snitch-ink">
                 Whoops, the page you wanted is not here.
             </h1>
