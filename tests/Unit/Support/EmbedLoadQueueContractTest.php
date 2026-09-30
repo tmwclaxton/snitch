@@ -164,7 +164,10 @@ class EmbedLoadQueueContractTest extends TestCase
         $winnerThumb = file_get_contents(base_path('resources/js/components/dashboard/ExecWinnerThumb.vue'));
         $this->assertIsString($winnerThumb);
         $this->assertStringContainsString('× usual', $winnerThumb);
-        $this->assertStringContainsString('whitespace-nowrap', $winnerThumb);
+        $this->assertStringContainsString('text-[13px]', $winnerThumb);
+        $this->assertStringContainsString('\\u200b', $winnerThumb);
+        $this->assertDoesNotMatchRegularExpression('/\\btruncate\\b/', $winnerThumb);
+        $this->assertStringNotContainsString('whitespace-nowrap', $winnerThumb);
         $this->assertStringNotContainsString('line-clamp-', $winnerThumb);
         $whatWorks = file_get_contents(base_path('resources/js/components/dashboard/ExecWhatWorks.vue'));
         $this->assertIsString($whatWorks);
