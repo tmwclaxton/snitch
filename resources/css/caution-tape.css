@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600;700&display=swap');
+
+/* Scoped to Caution Tape panels only. Do not reuse for global app chrome. */
+.caution-tape {
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.caution-tape-headline {
+    font-family: 'Archivo Black', Inter, ui-sans-serif, system-ui, sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: #edeae2;
+}
+
+.caution-tape-meta,
+.caution-tape-body {
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.caution-tape-stripes {
+    background: repeating-linear-gradient(
+        -45deg,
+        #fcd700 0 14px,
+        #0e0e10 14px 28px
+    );
+    mix-blend-mode: soft-light;
+    opacity: 0.22;
+}
+
+.caution-tape-radar {
+    animation: caution-tape-scan 3.6s ease-in-out infinite;
+}
+
+.caution-tape-pulse {
+    animation: caution-tape-pulse 2.4s ease-out infinite;
+}
+
+@keyframes caution-tape-scan {
+    0%,
+    100% {
+        transform: translateY(-50%) scale(0.92);
+        opacity: 0.35;
+    }
+    50% {
+        transform: translateY(-50%) scale(1.08);
+        opacity: 0.75;
+    }
+}
+
+@keyframes caution-tape-pulse {
+    0% {
+        transform: translateY(-50%) scale(0.7);
+        opacity: 0.55;
+    }
+    70% {
+        transform: translateY(-50%) scale(1.35);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(-50%) scale(1.35);
+        opacity: 0;
+    }
+}

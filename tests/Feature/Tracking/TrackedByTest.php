@@ -40,6 +40,10 @@ class TrackedByTest extends TestCase
         $source = file_get_contents(resource_path('js/components/dashboard/TrackedBySection.vue'));
         $this->assertIsString($source);
         $this->assertStringContainsString('Counts only', $source);
+        $this->assertStringContainsString('#0E0E10', $source);
+        $this->assertStringContainsString('#FCD700', $source);
+        $this->assertStringContainsString('#FF3D8B', $source);
+        $this->assertStringContainsString('caution-tape-headline', $source);
         $this->assertStringNotContainsString('watcher email', $source);
     }
 

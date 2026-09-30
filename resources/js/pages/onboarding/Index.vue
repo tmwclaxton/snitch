@@ -5,6 +5,7 @@ import OnboardingController from '@/actions/App/Http/Controllers/OnboardingContr
 import BillingController from '@/actions/App/Http/Controllers/Settings/BillingController';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { formatPenceAsGbp } from '@/lib/money';
+import '../../../css/caution-tape.css';
 
 type CompetitorRow = {
     id?: number;
@@ -402,34 +403,60 @@ function followerLabel(count: number | null): string {
 
                 <div
                     v-if="trackedBy && trackedBy.count > 0"
-                    class="mt-5 rounded-md border border-amber-400/40 bg-[#141311] px-4 py-5 text-[14px] text-[#F5F0E6]"
+                    class="caution-tape relative mt-5 overflow-hidden rounded-md border border-[#FCD700]/35 bg-[#0E0E10] px-4 py-5 text-[14px] text-[#EDEAE2]"
                     data-test="onboarding-reveal-watched"
                 >
-                    <p class="text-[12px] font-semibold uppercase tracking-[0.14em] text-amber-300">
-                        Good thing you're here
-                    </p>
-                    <p class="mt-2 font-display text-2xl text-[#FFF8E7]">
-                        Your competitors are already using Snitch
-                    </p>
-                    <p class="mt-2 text-[14px] text-[#E8DFD0]">
-                        {{ trackedBy.count === 1
-                            ? '1 account is already watching you.'
-                            : `${trackedBy.count} accounts are already watching you.` }}
-                        Since {{ trackedBy.since }}.
-                    </p>
+                    <div
+                        class="caution-tape-stripes pointer-events-none absolute inset-0"
+                        aria-hidden="true"
+                    />
+                    <div class="relative z-10 space-y-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p class="caution-tape-meta text-[12px] font-semibold uppercase tracking-[0.14em] text-[#FCD700]">
+                                Good thing you're here
+                            </p>
+                            <span
+                                class="rounded-full bg-[#FF3D8B] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white"
+                            >
+                                Watched
+                            </span>
+                        </div>
+                        <p class="caution-tape-headline text-2xl leading-tight sm:text-3xl">
+                            Your competitors are already using
+                            <span class="text-[#FCD700]">SNITCH</span>
+                        </p>
+                        <p class="caution-tape-body text-[14px] text-[#EDEAE2]/85">
+                            {{ trackedBy.count === 1
+                                ? '1 account is already watching you.'
+                                : `${trackedBy.count} accounts are already watching you.` }}
+                            Since {{ trackedBy.since }}.
+                        </p>
+                    </div>
                 </div>
 
                 <div
                     v-else
-                    class="mt-5 rounded-md border border-snitch-ink/10 bg-white px-4 py-5 text-[14px]"
+                    class="caution-tape relative mt-5 overflow-hidden rounded-md border border-[#FCD700]/35 bg-[#0E0E10] px-4 py-5 text-[14px] text-[#EDEAE2]"
                     data-test="onboarding-reveal-clear"
                 >
-                    <p class="font-display text-2xl text-snitch-ink">
-                        Congrats, you now have the advantage.
-                    </p>
-                    <p class="mt-2 text-snitch-ink/75">
-                        None of your competitors use Snitch.
-                    </p>
+                    <div
+                        class="caution-tape-stripes pointer-events-none absolute inset-0"
+                        aria-hidden="true"
+                    />
+                    <div class="relative z-10 space-y-2">
+                        <span
+                            class="inline-flex rounded-full bg-[#FF3D8B] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white"
+                        >
+                            Clear
+                        </span>
+                        <p class="caution-tape-headline text-2xl leading-tight sm:text-3xl">
+                            Congrats, you now have the
+                            <span class="text-[#FCD700]">ADVANTAGE</span>.
+                        </p>
+                        <p class="caution-tape-body text-[14px] text-[#EDEAE2]/85">
+                            None of your competitors use Snitch.
+                        </p>
+                    </div>
                 </div>
 
                 <button
