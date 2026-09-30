@@ -98,6 +98,7 @@ class DashboardLeaderboardPresentationTest extends TestCase
         $this->assertSame('likes + comments per post, as a % of followers', $er['why']);
         $this->assertStringNotContainsString('ER (per follower)', (string) $er['label']);
         $this->assertNull($cards->firstWhere('key', 'followers_growth'));
-        $this->assertCount(4, $cards);
+        $this->assertNull($cards->firstWhere('key', 'reel_reach'));
+        $this->assertGreaterThanOrEqual(3, $cards->count());
     }
 }

@@ -32,7 +32,7 @@ const colourByName = computed(() => {
     for (const row of props.series ?? []) {
         if (row.is_own_account || row.name === 'You') {
             map.set(row.name, YOU_COLOUR);
-        } else if (row.is_peer_median || row.name === 'Peer median') {
+        } else if (row.is_peer_median || row.name === 'Peer median' || row.name === "Rivals' average") {
             map.set(row.name, PEER_COLOUR);
         } else {
             map.set(row.name, RIVAL_COLOURS[rivalIndex % RIVAL_COLOURS.length]);
@@ -82,7 +82,7 @@ const strokeWidths = computed(() =>
 );
 
 const strokeDashes = computed(() =>
-    activeSeries.value.map((row) => (row.is_peer_median || row.name === 'Peer median' ? 8 : 0)),
+    activeSeries.value.map((row) => (row.is_peer_median || row.name === 'Peer median' || row.name === "Rivals' average" ? 8 : 0)),
 );
 
 const colours = computed(() =>
@@ -95,7 +95,7 @@ const chartKey = computed(() =>
 
 const tableRows = computed(() =>
     (props.series ?? [])
-        .filter((row) => !row.is_peer_median && row.name !== 'Peer median')
+        .filter((row) => !row.is_peer_median && row.name !== 'Peer median' && row.name !== "Rivals' average")
         .map((row) => {
             const last = [...(row.points ?? [])].reverse().find((point) => point.value !== null);
 
@@ -139,7 +139,7 @@ const options = computed(() => ({
         lineCap: 'round' as const,
     },
     markers: {
-        size: activeSeries.value.map((row) => (row.is_peer_median || row.name === 'Peer median' ? 0 : 3)),
+        size: activeSeries.value.map((row) => (row.is_peer_median || row.name === 'Peer median' || row.name === "Rivals' average" ? 0 : 3)),
         strokeWidth: 0,
         hover: { size: 4 },
     },

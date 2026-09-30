@@ -51,20 +51,9 @@ function submitIdea(): void {
         class="rounded-md border border-slate-200 bg-white px-3 py-3 text-[14px] text-slate-900"
         data-test="vote-section"
     >
-        <div class="flex flex-wrap items-end justify-between gap-2">
-            <div>
-                <p class="text-[12px] font-semibold uppercase tracking-wide text-slate-500">
-                    Cast your vote
-                </p>
-                <p class="mt-1 text-[14px] text-slate-600">
-                    Upvote what you want next, or pitch your own idea.
-                </p>
-            </div>
-        </div>
-
         <ul
             v-if="suggestions.length"
-            class="mt-3 space-y-2"
+            class="space-y-2"
         >
             <li
                 v-for="row in suggestions"

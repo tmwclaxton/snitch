@@ -135,7 +135,7 @@ function onInsightClick(event: MouseEvent): void {
                     v-if="openKey === itemKey(item)"
                     class="mt-1 ml-3 rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs leading-snug text-slate-600"
                 >
-                    <p>{{ item.detail || `n=${item.n}` }}</p>
+                    <p>{{ item.detail || `from ${item.n} posts` }}</p>
                     <div class="mt-1 flex flex-wrap gap-2">
                         <button
                             type="button"

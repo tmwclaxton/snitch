@@ -44,62 +44,88 @@ const total = computed(() =>
     props.formats.reduce((sum, row) => sum + row.count, 0),
 );
 
-const peakIndex = computed(() => {
-    let peak = 0;
-    let peakCount = -1;
+const peakByLift = computed(() => {
+    let best: { type: string; lift: number; count: number } | null = null;
 
-    props.formats.forEach((row, index) => {
-        if (row.count > peakCount) {
-            peakCount = row.count;
-            peak = index;
+    for (const row of props.formats) {
+        const lift = liftFor(row.type);
+
+        if (lift == null || row.count <= 0) {
+            continue;
         }
-    });
 
-    return peak;
+        if (best == null || lift > best.lift) {
+            best = { type: row.type, lift, count: row.count };
+        }
+    }
+
+    return best;
+});
+
+const tip = computed(() => {
+    if (! peakByLift.value) {
+        return null;
+    }
+
+    const label = postTypeLabel(peakByLift.value.type);
+
+    return `Rivals get ${peakByLift.value.lift.toFixed(1)}x their usual from ${label} - post more of those.`;
 });
 </script>
 
 <template>
     <div class="snitch-format-mix">
-        <div class="flex items-baseline justify-between gap-3">
-            <p class="snitch-ink-label">Format mix</p>
+        <div class="flex flex-wrap items-baseline justify-between gap-3">
+            <div>
+                <p class="snitch-ink-label">Format vs results</p>
+                <p class="mt-0.5 text-sm text-snitch-ink/55">
+                    Share of posts and how each format performs vs the account's usual.
+                </p>
+            </div>
             <p class="font-mono text-sm tabular-nums text-snitch-ink/55">
                 {{ total }} posts
             </p>
         </div>
 
-        <ul v-if="formats.length" class="mt-1.5 space-y-1.5">
+        <ul
+            v-if="formats.length"
+            class="mt-3 grid gap-2 sm:grid-cols-2"
+        >
             <li
-                v-for="(row, index) in formats"
+                v-for="row in formats"
                 :key="row.type"
-                class="grid grid-cols-[5.5rem_minmax(0,1fr)_2rem_2.75rem] items-center gap-1.5"
+                class="rounded border border-snitch-ink/10 bg-white px-2.5 py-2"
             >
-                <span class="whitespace-nowrap text-sm text-snitch-ink/70">
-                    {{ postTypeLabel(row.type) }}
-                </span>
+                <div class="flex items-baseline justify-between gap-2">
+                    <span class="whitespace-nowrap text-sm font-medium text-snitch-ink">
+                        {{ postTypeLabel(row.type) }}
+                    </span>
+                    <span class="font-mono text-sm tabular-nums text-snitch-ink/70">
+                        {{ liftLabel(row.type) || 'no lift yet' }}
+                    </span>
+                </div>
                 <div
-                    class="h-2 overflow-hidden rounded-sm bg-snitch-ink/8"
-                    :title="`${postTypeLabel(row.type)}: ${row.count}`"
+                    class="mt-1.5 h-3 overflow-hidden rounded-sm bg-snitch-ink/8"
+                    :title="`${postTypeLabel(row.type)}: ${row.count} posts`"
                 >
                     <div
-                        class="h-full rounded-sm"
-                        :class="index === peakIndex && row.count > 0 ? 'bg-snitch-ink' : 'bg-snitch-teal'"
+                        class="h-full rounded-sm bg-snitch-ink"
                         :style="{ width: barWidth(row.count) }"
                     />
                 </div>
-                <span class="text-right font-mono text-sm tabular-nums text-snitch-ink/70">
-                    {{ row.count }}
-                </span>
-                <span
-                    class="text-right font-mono text-sm tabular-nums text-snitch-ink/55"
-                    :title="liftLabel(row.type) ? 'Peer median lift vs account usual' : undefined"
-                >
-                    {{ liftLabel(row.type) || '-' }}
-                </span>
+                <p class="mt-1 font-mono text-sm tabular-nums text-snitch-ink/55">
+                    {{ row.count }} posts
+                </p>
             </li>
         </ul>
         <p v-else class="mt-2 text-sm text-snitch-ink/55">
             No posts yet.
+        </p>
+        <p
+            v-if="tip"
+            class="mt-3 rounded border border-snitch-spot/60 bg-snitch-spot/35 px-2.5 py-2 text-sm text-snitch-ink"
+        >
+            {{ tip }}
         </p>
     </div>
 </template>

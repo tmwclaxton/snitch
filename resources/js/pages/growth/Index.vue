@@ -115,7 +115,7 @@ function toggleAccount(id: number): void {
                     Growth
                 </p>
                 <h1 class="font-display text-2xl text-snitch-ink">
-                    Own account vs peers
+                    Own account vs rivals
                 </h1>
                 <p class="mt-1 max-w-xl text-sm text-snitch-ink/65">
                     How your account is trending against the accounts you track, week by week.
@@ -178,7 +178,7 @@ function toggleAccount(id: number): void {
                 :series="metrics.charts.posts_per_week"
             />
             <GrowthLineChart
-                title="Engagement rate / follower"
+                title="Engagement rate"
                 unit="%"
                 :series="metrics.charts.engagement_rate"
             />

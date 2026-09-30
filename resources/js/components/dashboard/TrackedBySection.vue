@@ -41,9 +41,6 @@ function countPrefix(count: number): string {
         <div class="relative z-10 flex flex-wrap items-end justify-between gap-3">
             <div class="min-w-0 space-y-2">
                 <div class="flex flex-wrap items-center gap-2">
-                    <p class="caution-tape-meta text-[12px] font-semibold uppercase tracking-[0.14em] text-[#FCD700]">
-                        Is anyone tracking you?
-                    </p>
                     <span
                         class="rounded-full bg-[#FF3D8B] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white"
                     >

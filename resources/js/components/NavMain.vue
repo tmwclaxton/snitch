@@ -23,7 +23,7 @@ withDefaults(
     },
 );
 
-const { isCurrentOrParentUrl, currentUrl } = useCurrentUrl();
+const { isCurrentOrParentUrl, isCurrentUrl, currentUrl } = useCurrentUrl();
 
 function itemIsActive(item: NavItem): boolean {
     if (item.section) {
@@ -32,6 +32,10 @@ function itemIsActive(item: NavItem): boolean {
         }
 
         return activeDashboardSection.value === item.section;
+    }
+
+    if (item.exact) {
+        return isCurrentUrl(item.href);
     }
 
     return isCurrentOrParentUrl(item.href);
@@ -62,14 +66,15 @@ function hrefFor(item: NavItem): string {
 
 <template>
     <SidebarGroup class="px-2 py-0">
-        <SidebarGroupLabel>{{ label }}</SidebarGroupLabel>
-        <SidebarMenu>
+        <SidebarGroupLabel class="h-7">{{ label }}</SidebarGroupLabel>
+        <SidebarMenu class="gap-0.5">
             <SidebarMenuItem
                 v-for="item in items"
                 :key="item.title"
             >
                 <SidebarMenuButton
                     as-child
+                    size="sm"
                     :is-active="itemIsActive(item)"
                     :tooltip="item.title"
                 >

@@ -115,7 +115,7 @@ class DashboardMathTest extends TestCase
 
     public function test_insufficient_reason_never_shows_zero_percent(): void
     {
-        $this->assertSame('Not enough posts yet (n=3)', $this->math->insufficientReason(3));
+        $this->assertSame('Not enough posts yet (from 3 posts)', $this->math->insufficientReason(3));
     }
 
     public function test_median_of_even_count(): void

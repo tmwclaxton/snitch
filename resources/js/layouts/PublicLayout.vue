@@ -14,7 +14,7 @@ withDefaults(
 </script>
 
 <template>
-    <div class="relative min-h-screen w-full bg-white text-neutral-950">
+    <div class="relative min-h-screen w-full bg-snitch-caution-ink text-snitch-caution-fog">
         <SeoHead />
         <div class="relative z-10 flex min-h-screen w-full flex-col">
             <PublicNav :minimal="minimal" />

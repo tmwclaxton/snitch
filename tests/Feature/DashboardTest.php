@@ -81,7 +81,7 @@ class DashboardTest extends TestCase
         $this->assertStringNotContainsString('Latest posts', $dashboard);
         $this->assertStringNotContainsString('recent_posts', $dashboard);
         $this->assertStringContainsString('competitorShow.url(rival.id)', $dashboard);
-        $this->assertStringContainsString('xl:grid-cols-6', $dashboard);
+        $this->assertStringContainsString('xl:grid-cols-4', $dashboard);
         $this->assertStringContainsString('performance vs usual', strtolower($dashboard));
         $this->assertStringContainsString('feedShow.url(post.id)', $winnerCard);
         $this->assertStringContainsString('competitorShow.url(props.post.tracked_account_id)', $winnerCard);
@@ -110,10 +110,12 @@ class DashboardTest extends TestCase
         $this->assertStringNotContainsString('overflow-y-auto', $dashboard);
         $this->assertStringNotContainsString('fit-height', $dashboard);
         $this->assertStringNotContainsString('mt-auto shrink-0', $dashboard);
-        $this->assertStringContainsString('items-stretch gap-2 lg:grid-cols-2', $dashboard);
         $this->assertStringContainsString('id="format_mix"', $dashboard);
         $this->assertStringContainsString(':collapsed-count="5"', $dashboard);
-        // Leaderboard left, Format mix right in the performance pair.
+        $this->assertStringContainsString('Best posting times', $dashboard);
+        $this->assertStringNotContainsString('Follower history', $dashboard);
+        $this->assertStringContainsString('Cast your <span class="snitch-highlight">vote</span>', $dashboard);
+        // Leaderboard then Format mix (stacked, no empty side panel).
         $formatPos = strpos($dashboard, 'id="format_mix"');
         $leaderPos = strpos($dashboard, 'anchor="leaderboard"');
         $this->assertNotFalse($formatPos);

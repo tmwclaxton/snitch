@@ -82,38 +82,41 @@ function accountHeading(account: Account): string {
         class="grid gap-3"
         :class="hasGaps ? 'lg:grid-cols-[minmax(0,1fr)_11rem]' : ''"
     >
-        <div class="min-w-0 overflow-x-hidden">
-            <table class="w-full table-fixed text-left text-sm">
+        <div class="min-w-0 overflow-x-auto">
+            <table class="w-full min-w-[36rem] text-left text-sm">
                 <thead>
                     <tr class="border-b border-slate-200 text-xs text-slate-500">
-                        <th class="w-[18%] py-0.5 pr-1.5 font-medium uppercase">Theme</th>
+                        <th class="sticky left-0 bg-white py-1 pr-2 font-medium uppercase">Theme</th>
                         <th
                             v-for="account in accounts || []"
                             :key="account.handle"
-                            class="break-words px-0.5 py-0.5 font-medium normal-case leading-tight"
+                            class="px-1.5 py-1 align-bottom font-medium normal-case leading-tight"
                         >
                             <Link
                                 v-if="account.id"
                                 :href="competitorShow.url(account.id)"
-                                class="hover:underline"
+                                class="inline-block whitespace-nowrap hover:underline"
                             >
                                 {{ accountHeading(account) }}
                             </Link>
-                            <template v-else>
+                            <span
+                                v-else
+                                class="inline-block whitespace-nowrap"
+                            >
                                 {{ accountHeading(account) }}
-                            </template>
+                            </span>
                         </th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="row in visibleMatrix" :key="row.theme_key" class="border-b border-slate-100">
-                        <td class="break-words py-0.5 pr-1.5 font-medium leading-snug text-slate-700">{{ row.theme }}</td>
+                        <td class="sticky left-0 break-words bg-white py-1 pr-2 font-medium leading-snug text-slate-700">{{ row.theme }}</td>
                         <td
                             v-for="cell in row.cells"
                             :key="cell.handle"
-                            class="px-0.5 py-0.5 tabular-nums"
+                            class="px-1.5 py-1 tabular-nums"
                             :style="{ backgroundColor: cellBg(cell.pi, cell.n) }"
-                            :title="`n=${cell.n}${cell.pi != null ? ` · ${cell.pi}× usual` : ''}`"
+                            :title="`${cell.n} posts${cell.pi != null ? ` · ${cell.pi}× usual` : ''}`"
                         >
                             {{ cell.n < 1 ? '-' : `${cell.share.toFixed(0)}%` }}
                         </td>
@@ -125,7 +128,7 @@ function accountHeading(account: Account): string {
             </p>
         </div>
         <div v-if="hasGaps">
-            <p class="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Gaps you skip</p>
+            <p class="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Topics you skip</p>
             <ul class="space-y-1">
                 <li
                     v-for="gap in gaps"
@@ -133,7 +136,7 @@ function accountHeading(account: Account): string {
                     class="rounded border border-slate-100 bg-slate-50 px-1.5 py-0.5 text-sm text-slate-700"
                 >
                     <span class="font-medium">{{ gap.theme }}</span>
-                    <span class="text-slate-500"> · peers {{ gap.peer_pi.toFixed(1) }}x · n={{ gap.n }}</span>
+                    <span class="text-slate-500"> · rivals {{ gap.peer_pi.toFixed(1) }}x · from {{ gap.n }} posts</span>
                 </li>
             </ul>
         </div>

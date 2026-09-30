@@ -72,7 +72,7 @@ const options = computed(() => ({
                     {{ format }}
                     <template v-if="row.lifts[format]">
                         {{ row.lifts[format].lift.toFixed(2) }}×
-                        <span class="text-slate-400">(n={{ row.lifts[format].n }})</span>
+                        <span class="text-slate-400">(from {{ row.lifts[format].n }} posts)</span>
                     </template>
                     <template v-else>-</template>
                 </span>
@@ -82,7 +82,7 @@ const options = computed(() => ({
             v-if="peerMedianLift && Object.keys(peerMedianLift).length"
             class="text-xs text-slate-500"
         >
-            Peer median lift:
+            Rivals' average lift:
             <span
                 v-for="(lift, format) in peerMedianLift"
                 :key="String(format)"

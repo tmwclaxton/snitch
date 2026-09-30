@@ -128,11 +128,11 @@ class DashboardMetricsTest extends TestCase
 
         $this->assertSame('insufficient', $erCard['status']);
         $this->assertNull($erCard['you']);
-        $this->assertStringContainsString('n=3', (string) $erCard['reason']);
+        $this->assertStringContainsString('from 3 posts', (string) $erCard['reason']);
 
         $ownRow = collect($payload['leaderboard']['data']['rows'])->firstWhere('is_own_account', true);
         $this->assertNull($ownRow['er']);
-        $this->assertStringContainsString('n=3', (string) $ownRow['er_reason']);
+        $this->assertStringContainsString('from 3 posts', (string) $ownRow['er_reason']);
     }
 
     public function test_unknown_followers_show_as_null_not_zero(): void

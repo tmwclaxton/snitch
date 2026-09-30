@@ -133,14 +133,14 @@ function formatUnderHandle(row: Row): string | null {
                             <Link
                                 v-if="row.tracked_account_id"
                                 :href="competitorShow.url(row.tracked_account_id)"
-                                class="break-words font-medium leading-snug hover:underline"
+                                class="whitespace-nowrap font-medium leading-snug hover:underline"
                                 :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-900'"
                             >
                                 {{ accountLabel(row) }}
                             </Link>
                             <span
                                 v-else
-                                class="break-words font-medium leading-snug"
+                                class="whitespace-nowrap font-medium leading-snug"
                                 :class="row.no_posts_in_period ? 'text-slate-400' : 'text-slate-900'"
                             >
                                 {{ accountLabel(row) }}

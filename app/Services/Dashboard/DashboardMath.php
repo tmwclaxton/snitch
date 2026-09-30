@@ -398,7 +398,7 @@ class DashboardMath
 
     public function insufficientReason(int $n): string
     {
-        return "Not enough posts yet (n={$n})";
+        return "Not enough posts yet (from {$n} posts)";
     }
 
     /**

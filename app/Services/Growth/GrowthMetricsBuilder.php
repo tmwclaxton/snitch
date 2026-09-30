@@ -263,7 +263,7 @@ class GrowthMetricsBuilder
     {
         if ($peerRows->isEmpty()) {
             return [
-                'handle' => 'Peer median',
+                'handle' => "Rivals' average",
                 'is_own_account' => false,
                 'is_peer_median' => true,
                 'snapshot_count' => 0,
@@ -282,7 +282,7 @@ class GrowthMetricsBuilder
 
         $keys = ['followers', 'posts_per_week', 'engagement_rate', 'avg_multiplier'];
         $out = [
-            'handle' => 'Peer median',
+            'handle' => "Rivals' average",
             'is_own_account' => false,
             'is_peer_median' => true,
             'snapshot_count' => (int) $peerRows->max('snapshot_count'),
@@ -340,7 +340,7 @@ class GrowthMetricsBuilder
         ])->values()->all();
 
         $rows[] = [
-            'name' => 'Peer median',
+            'name' => "Rivals' average",
             'is_own_account' => false,
             'is_peer_median' => true,
             'points' => $peer[$key] ?? [],

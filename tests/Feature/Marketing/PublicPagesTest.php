@@ -21,12 +21,12 @@ class PublicPagesTest extends TestCase
             );
     }
 
-    public function test_public_layout_uses_white_marketing_shell(): void
+    public function test_public_layout_uses_caution_tape_shell(): void
     {
         $layout = file_get_contents(resource_path('js/layouts/PublicLayout.vue'));
 
         $this->assertNotFalse($layout, 'Missing PublicLayout.vue source');
-        $this->assertStringContainsString('bg-white', $layout);
+        $this->assertStringContainsString('bg-snitch-caution-ink', $layout);
         $this->assertStringNotContainsString('snitch-surface', $layout);
         $this->assertStringNotContainsString('snitch-grain', $layout);
         $this->assertStringNotContainsString('overflow-x-clip', $layout);
@@ -294,7 +294,7 @@ class PublicPagesTest extends TestCase
         $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
 
         $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
-        $this->assertStringContainsString("Start tracking - it's free", $welcome);
+        $this->assertStringContainsString('Start your 7-day free trial', $welcome);
         $this->assertStringContainsString("from '@/routes'", $welcome);
         $this->assertStringContainsString('login()', $welcome);
         $this->assertStringNotContainsString('calendly.com/dan-olympuslab', $welcome);

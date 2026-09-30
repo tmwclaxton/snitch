@@ -31,6 +31,7 @@ class InsightRules
         'attention' => 'leaderboard',
         'weekly' => 'activity',
         'recent_posts' => 'winners',
+        'growth_series' => '/growth',
     ];
 
     /**
@@ -45,7 +46,6 @@ class InsightRules
         'insights',
         'leaderboard',
         'winners',
-        'growth_series',
         'activity',
         'format_mix',
         'captions',
@@ -61,6 +61,10 @@ class InsightRules
         }
 
         $target = self::ANCHOR_ALIASES[$linksTo] ?? $linksTo;
+
+        if (str_starts_with($target, '/')) {
+            return $target;
+        }
 
         return in_array($target, self::LIVE_ANCHORS, true) ? $target : 'insights';
     }
@@ -147,7 +151,7 @@ class InsightRules
 
             $seen[$row['category']] = true;
             $row['links_to'] = $this->resolveAnchor((string) $row['links_to']);
-            $row['detail'] = $row['detail'] ?? sprintf('Based on n=%d · effect score %.2f', $row['n'], $row['score']);
+            $row['detail'] = $row['detail'] ?? sprintf('Based on %d posts · effect score %.2f', $row['n'], $row['score']);
             $row['post_id'] = isset($row['post_id']) ? (int) $row['post_id'] : null;
             $picked[] = $row;
 
@@ -303,7 +307,7 @@ class InsightRules
             'n' => $n,
             'links_to' => 'winners',
             'detail' => sprintf(
-                '%s× usual · prior sample n=%d · format %s',
+                '%s× usual · from %d prior posts · format %s',
                 $this->x((float) $winner['pi']),
                 $n,
                 (string) ($winner['format'] ?? 'post'),
@@ -467,7 +471,7 @@ class InsightRules
                 ),
                 'score' => ((float) $growth / 10) * min(1, $n / 20),
                 'n' => $n,
-                'links_to' => 'growth_series',
+                'links_to' => '/growth',
             ]];
         }
 
@@ -557,7 +561,7 @@ class InsightRules
         return [[
             'category' => 'theme_gap',
             'text' => sprintf(
-                'Peers\' **%s** posts do %s× their usual. You haven\'t posted one yet.',
+                'Rivals\' **%s** posts do %s× their usual. You haven\'t posted one yet.',
                 (string) $gap['theme'],
                 $this->x($pi),
             ),
@@ -627,7 +631,7 @@ class InsightRules
             'score' => ((float) $win['pi']) * min(1, $n / 20),
             'n' => max($n, DashboardMath::MIN_SAMPLE),
             'links_to' => 'winners',
-            'detail' => sprintf('%s× usual · prior sample n=%d', $this->x((float) $win['pi']), $n),
+            'detail' => sprintf('%s× usual · from %d prior posts', $this->x((float) $win['pi']), $n),
             'post_id' => isset($win['id']) ? (int) $win['id'] : null,
         ]];
     }

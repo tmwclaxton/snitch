@@ -63,14 +63,14 @@ const gapLabel = computed(() => {
     if (props.gap.type === 'pp') {
         const sign = props.gap.value > 0 ? '+' : '';
 
-        return `${sign}${numberFmt.format(props.gap.value)} pp`;
+        return `${sign}${numberFmt.format(props.gap.value)} points`;
     }
 
     if (props.gap.lower || props.gap.value < 1) {
         return `${numberFmt.format(1 / Math.max(props.gap.value, 0.01))}× lower`;
     }
 
-    return `${numberFmt.format(props.gap.value)}× peers`;
+    return `${numberFmt.format(props.gap.value)}× rivals`;
 });
 
 const gapClass = computed(() => {
@@ -139,7 +139,7 @@ const growthHint = computed(() => {
         </div>
         <div class="mt-0.5 flex flex-wrap items-center gap-1 font-mono text-sm leading-tight text-snitch-ink/55">
             <span v-if="growthHint">{{ growthHint }}</span>
-            <span v-else>Peer {{ peerLabel }}</span>
+            <span v-else>Rivals' average {{ peerLabel }}</span>
             <span
                 v-if="gapLabel"
                 class="rounded px-1 py-px font-medium tabular-nums"

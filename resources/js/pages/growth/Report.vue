@@ -183,7 +183,7 @@ function captionText(row: { caption: string; caption_preview?: string }): string
                         <span :class="report.kpis[key]?.you_change == null ? 'text-snitch-ink/45' : ''">
                             {{ report.kpis[key]?.you_change_label ?? 'no data' }}
                         </span>
-                        · peer
+                        · rivals' average
                         {{ report.kpis[key]?.peer_display ?? 'no data' }}
                         <span :class="report.kpis[key]?.peer_change == null ? 'text-snitch-ink/45' : ''">
                             ({{ report.kpis[key]?.peer_change_label ?? 'no data' }})

@@ -119,7 +119,7 @@ function toggleCaption(event: Event): void {
                     class="!size-4 shrink-0"
                 />
                 <div class="min-w-0">
-                    <div class="break-words text-xs font-medium leading-snug text-slate-900">
+                    <div class="whitespace-nowrap text-xs font-medium leading-snug text-slate-900">
                         <span
                             v-if="post.tracked_account_id"
                             role="link"

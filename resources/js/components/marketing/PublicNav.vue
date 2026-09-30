@@ -57,26 +57,26 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <header class="sticky top-0 z-40 border-b border-neutral-200 bg-white/85 backdrop-blur">
+    <header class="sticky top-0 z-40 border-b border-white/10 bg-snitch-caution-ink text-snitch-caution-fog backdrop-blur">
         <div class="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
             <div class="flex min-w-0 items-center gap-8">
-                <Link :href="home()" class="flex items-center gap-2 text-neutral-950" aria-label="Snitch home">
+                <Link :href="home()" class="flex items-center gap-2 text-snitch-caution-fog" aria-label="Snitch home">
                     <SnitchBrand size="nav" />
                 </Link>
 
                 <nav
                     v-if="!minimal"
-                    class="hidden items-center gap-6 text-sm font-medium text-neutral-700 md:flex"
+                    class="hidden items-center gap-6 text-sm font-medium text-snitch-caution-fog/75 md:flex"
                     aria-label="Primary"
                 >
                     <Link
                         v-for="link in navLinks"
                         :key="link.label"
                         :href="link.href()"
-                        class="border-b-2 pb-0.5 transition-colors hover:text-neutral-950"
+                        class="border-b-2 pb-0.5 transition-colors hover:text-snitch-caution-fog"
                         :class="
                             isActive(link.match)
-                                ? 'border-snitch-caution-yellow text-neutral-950'
+                                ? 'border-snitch-caution-yellow text-snitch-caution-fog'
                                 : 'border-transparent'
                         "
                         prefetch
@@ -112,14 +112,14 @@ onUnmounted(() => {
                     <Link
                         v-else
                         :href="login()"
-                        class="hidden bg-[#F0C400] px-3 py-2 text-sm font-medium text-neutral-950 md:inline-flex"
+                        class="hidden bg-snitch-caution-yellow px-3 py-2 text-sm font-medium text-snitch-caution-ink md:inline-flex"
                     >
                         Log in
                     </Link>
 
                     <button
                         type="button"
-                        class="inline-flex items-center justify-center p-2 text-neutral-950 md:hidden"
+                        class="inline-flex items-center justify-center p-2 text-snitch-caution-fog md:hidden"
                         :aria-expanded="mobileOpen"
                         aria-controls="public-mobile-nav"
                         :aria-label="mobileOpen ? 'Close menu' : 'Open menu'"
@@ -135,7 +135,7 @@ onUnmounted(() => {
         <div
             v-if="!minimal && mobileOpen"
             id="public-mobile-nav"
-            class="border-t border-neutral-200 bg-white md:hidden"
+            class="border-t border-white/10 bg-snitch-caution-ink md:hidden"
         >
             <nav class="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3" aria-label="Mobile">
                 <Link
@@ -145,8 +145,8 @@ onUnmounted(() => {
                     class="border-l-2 px-3 py-2.5 text-sm font-medium transition-colors"
                     :class="
                         isActive(link.match)
-                            ? 'border-[#F0C400] text-neutral-950'
-                            : 'border-transparent text-neutral-700 hover:text-neutral-950'
+                            ? 'border-snitch-caution-yellow text-snitch-caution-fog'
+                            : 'border-transparent text-snitch-caution-fog/75 hover:text-snitch-caution-fog'
                     "
                     prefetch
                     @click="closeMobile"
@@ -154,11 +154,11 @@ onUnmounted(() => {
                     {{ link.label }}
                 </Link>
 
-                <div class="mt-2 border-t border-neutral-200 pt-3">
+                <div class="mt-2 border-t border-white/10 pt-3">
                     <Link
                         v-if="isAuthenticated"
                         :href="dashboard()"
-                        class="inline-flex w-full items-center gap-2 px-3 py-2.5 text-sm font-medium text-neutral-950"
+                        class="inline-flex w-full items-center gap-2 px-3 py-2.5 text-sm font-medium text-snitch-caution-fog"
                         @click="closeMobile"
                     >
                         <LayoutGrid class="size-3.5" aria-hidden="true" />
@@ -167,7 +167,7 @@ onUnmounted(() => {
                     <Link
                         v-else
                         :href="login()"
-                        class="inline-flex w-full items-center justify-center bg-[#F0C400] px-3 py-2.5 text-sm font-medium text-neutral-950"
+                        class="inline-flex w-full items-center justify-center bg-snitch-caution-yellow px-3 py-2.5 text-sm font-medium text-snitch-caution-ink"
                         @click="closeMobile"
                     >
                         Log in

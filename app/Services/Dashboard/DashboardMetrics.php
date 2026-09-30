@@ -1002,6 +1002,17 @@ class DashboardMetrics
             ),
         ];
 
+        $cards = array_values(array_filter(
+            $cards,
+            static function (array $card): bool {
+                if (($card['key'] ?? null) !== 'reel_reach') {
+                    return true;
+                }
+
+                return ($card['you'] ?? null) !== null || ($card['you_display'] ?? null) !== null;
+            },
+        ));
+
         return CardResult::ok([
             'cards' => $cards,
             'period_days' => $periodDays,
@@ -1073,7 +1084,7 @@ class DashboardMetrics
             $display = $displayKey !== '' ? $display : null;
         } elseif ($you === null) {
             $status = 'insufficient';
-            $reason = 'Add your own Instagram to compare against peers.';
+            $reason = 'Add your own Instagram to compare against rivals.';
         }
 
         $gap = null;

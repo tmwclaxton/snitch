@@ -127,11 +127,13 @@ const mainNavItems: NavItem[] = [
         title: 'Growth',
         href: growth(),
         icon: TrendingUp,
+        exact: true,
     },
     {
         title: 'Monthly report',
         href: monthlyReport(),
         icon: FileText,
+        exact: true,
     },
     {
         title: 'Explore',
@@ -203,7 +205,7 @@ const accountNavItems = computed<NavItem[]>(() => {
             </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent class="gap-4 overflow-y-auto">
+        <SidebarContent class="gap-2 overflow-visible">
             <NavMain :items="questionNavItems" label="Dashboard" />
             <NavMain :items="mainNavItems" label="Platform" />
         </SidebarContent>

@@ -32,9 +32,12 @@ class SidebarNavigationTest extends TestCase
         $this->assertStringNotContainsString("title: 'Ad Library'", $sidebar);
         $this->assertStringNotContainsString("title: 'Influencers'", $sidebar);
         $this->assertStringNotContainsString("title: 'Backlog'", $sidebar);
-        $this->assertStringContainsString('activeDashboardSection', file_get_contents(
-            resource_path('js/components/NavMain.vue'),
-        ) ?: '');
+        $navMain = file_get_contents(resource_path('js/components/NavMain.vue')) ?: '';
+        $this->assertStringContainsString('activeDashboardSection', $navMain);
+        $this->assertStringContainsString('item.exact', $navMain);
+        $this->assertStringContainsString('exact: true', $sidebar);
+        $this->assertStringContainsString('overflow-visible', $sidebar);
+        $this->assertStringNotContainsString('overflow-y-auto', $sidebar);
     }
 
     public function test_account_nav_sits_above_the_profile(): void

@@ -8,7 +8,7 @@ defineOptions({
     layout: PublicLayout,
 });
 
-const CTA_TEXT = "Start tracking - it's free";
+const CTA_TEXT = 'Start your 7-day free trial';
 
 const scrolled = ref(false);
 
@@ -50,12 +50,16 @@ const faqs = [
         a: 'No. Snitch only reads public Instagram data on the competitors you add. Your own account is never connected, logged into or posted from.',
     },
     {
+        q: 'How does the free trial work?',
+        a: 'Start with a 7-day free trial. A card is required to begin, and you can cancel before the trial ends if Snitch is not for you.',
+    },
+    {
         q: 'How often does the data refresh?',
         a: 'Every week, automatically. Add a competitor and they will be pulled in the next weekly refresh.',
     },
     {
         q: 'How long does setup take?',
-        a: 'About 60 seconds. Sign up, paste the Instagram handles you want to watch, and you are done. Your first report lands after the next weekly pull.',
+        a: 'About 60 seconds. Start your 7-day free trial, paste the Instagram handles you want to watch, and you are done. Your first report lands after the next weekly pull.',
     },
 ];
 </script>
@@ -144,10 +148,10 @@ const faqs = [
                             </p>
                         </div>
                         <p class="mt-2 text-sm text-snitch-caution-fog/65">
-                            Plus pay-as-you-go usage credits (£30 included each month).
+                            7-day free trial, then £19/mo. Plus pay-as-you-go usage credits (£30 included each month).
                         </p>
                         <ul class="mt-6 space-y-3 text-sm text-snitch-caution-fog/70">
-                            <li v-for="item in ['Full competitor tracking', 'Weekly refreshed data', 'Gap Analysis', 'Optimal posting times']" :key="item" class="flex items-start gap-3">
+                            <li v-for="item in ['7-day free trial (card required)', 'Full competitor tracking', 'Weekly refreshed data', 'Gap Analysis', 'Optimal posting times']" :key="item" class="flex items-start gap-3">
                                 <span class="mt-0.5 text-snitch-caution-yellow">✓</span>
                                 <span>{{ item }}</span>
                             </li>

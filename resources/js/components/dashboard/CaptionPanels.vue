@@ -87,7 +87,7 @@ function formatMultiplier(value: number | null): string | null {
                     >
                         <span class="w-[4.75rem] shrink-0 leading-snug">
                             {{ row.bucket }}
-                            <span class="text-slate-400">n={{ row.n }}</span>
+                            <span class="text-slate-400">from {{ row.n }} posts</span>
                         </span>
                         <div
                             class="relative h-1.5 w-14 shrink-0 overflow-hidden rounded-sm bg-slate-100"
@@ -174,7 +174,7 @@ function formatMultiplier(value: number | null): string | null {
                     >
                         <span class="w-[4.75rem] shrink-0 leading-snug">
                             {{ row.bucket }} tags
-                            <span class="text-slate-400">n={{ row.n }}</span>
+                            <span class="text-slate-400">from {{ row.n }} posts</span>
                         </span>
                         <div
                             class="relative h-1.5 w-14 shrink-0 overflow-hidden rounded-sm bg-slate-100"

@@ -10,7 +10,6 @@ import CompareTable from '@/components/dashboard/CompareTable.vue';
 import DashCard from '@/components/dashboard/DashCard.vue';
 import DataNotes from '@/components/dashboard/DataNotes.vue';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
-import FollowerHistoryChart from '@/components/dashboard/FollowerHistoryChart.vue';
 import FormatMixChart from '@/components/dashboard/FormatMixChart.vue';
 import InsightList from '@/components/dashboard/InsightList.vue';
 import PostingHeatmap from '@/components/dashboard/PostingHeatmap.vue';
@@ -302,13 +301,20 @@ const hiddenSpotlight = computed(() => {
     return props.winners?.data?.hidden_spotlight ?? [];
 });
 
-const followerPoints = computed(() => props.follower_series ?? []);
-const hasFollowerHistory = computed(() => followerPoints.value.length >= 2);
-const showFollowerNote = computed(
-    () => props.follower_series != null && !hasFollowerHistory.value,
-);
 
 const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? {});
+
+const visibleKpiCards = computed(() => {
+    const cards = (props.kpis?.data?.cards ?? []) as Array<Record<string, unknown>>;
+
+    return cards.filter((card) => {
+        if (card.key === 'reel_reach' && card.you == null && card.you_display == null) {
+            return false;
+        }
+
+        return true;
+    });
+});
 
 const peakHours = computed(() => {
     const hours = props.activity?.by_time_of_day ?? [];
@@ -531,67 +537,60 @@ const trackerIdsByHandle = computed(() => {
                         </div>
                     </div>
 
-                    <div class="grid items-stretch gap-2 lg:grid-cols-2">
-                        <div class="snitch-scrap h-full space-y-2 p-3">
-                            <p class="snitch-ink-label">Best posting times</p>
-                            <ol
-                                v-if="(weekly_brief?.best_times?.length || 0) > 0"
-                                class="space-y-1.5"
-                            >
-                                <li
-                                    v-for="(slot, index) in weekly_brief?.best_times || []"
-                                    :key="slot.label"
-                                    class="flex items-baseline justify-between gap-2 text-sm"
-                                >
-                                    <span class="text-slate-800">
-                                        <span class="tabular-nums text-slate-500">#{{ index + 1 }}</span>
-                                        {{ slot.label }}
-                                    </span>
-                                    <span class="tabular-nums text-slate-500">{{ slot.score.toFixed(1) }}×</span>
-                                </li>
-                            </ol>
-                            <ol
-                                v-else-if="peakHours.length"
-                                class="space-y-1.5"
-                            >
-                                <li
-                                    v-for="(slot, index) in peakHours"
-                                    :key="slot.hour"
-                                    class="flex items-baseline justify-between gap-2 text-sm"
-                                >
-                                    <span class="text-slate-800">
-                                        <span class="tabular-nums text-slate-500">#{{ index + 1 }}</span>
-                                        {{ slot.label }}
-                                    </span>
-                                    <span class="tabular-nums text-slate-500">{{ slot.count }} posts</span>
-                                </li>
-                            </ol>
-                            <p
-                                v-else
-                                class="text-sm text-slate-500"
-                            >
-                                Sync more posts to rank best times.
-                            </p>
-                        </div>
-
-                        <DashCard
-                            class="h-full"
-                            title="This week in 30 seconds"
-                            why="Do-this-next lines from peer gaps for a busy organiser."
-                            formula="score = |effect| × min(1, n/20); top 6, max 1 per category; n ≥ 5."
-                            anchor="insights"
+                    <div class="snitch-scrap space-y-2 p-3">
+                        <p class="snitch-ink-label">Best posting times</p>
+                        <ol
+                            v-if="(weekly_brief?.best_times?.length || 0) > 0"
+                            class="flex flex-wrap gap-2"
                         >
-                            <InsightList
-                                v-if="insights"
-                                :status="insights.status"
-                                :reason="insights.reason"
-                                :items="insights.data?.items"
-                                :tracker-ids="trackerIdsByHandle"
-                                :collapsed-count="5"
-                            />
-                            <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading insights" />
-                        </DashCard>
+                            <li
+                                v-for="(slot, index) in weekly_brief?.best_times || []"
+                                :key="slot.label"
+                                class="rounded border border-snitch-ink/10 bg-white px-2.5 py-1.5 text-sm text-snitch-ink"
+                            >
+                                <span class="font-mono tabular-nums text-snitch-ink/55">#{{ index + 1 }}</span>
+                                {{ slot.label }}
+                                <span class="font-mono tabular-nums text-snitch-ink/55">{{ slot.score.toFixed(1) }}×</span>
+                            </li>
+                        </ol>
+                        <ol
+                            v-else-if="peakHours.length"
+                            class="flex flex-wrap gap-2"
+                        >
+                            <li
+                                v-for="(slot, index) in peakHours"
+                                :key="slot.hour"
+                                class="rounded border border-snitch-ink/10 bg-white px-2.5 py-1.5 text-sm text-snitch-ink"
+                            >
+                                <span class="font-mono tabular-nums text-snitch-ink/55">#{{ index + 1 }}</span>
+                                {{ slot.label }}
+                                <span class="font-mono tabular-nums text-snitch-ink/55">{{ slot.count }} posts</span>
+                            </li>
+                        </ol>
+                        <p
+                            v-else
+                            class="text-sm text-slate-500"
+                        >
+                            Sync more posts to rank best times.
+                        </p>
                     </div>
+
+                    <DashCard
+                        title="This week in 30 seconds"
+                        why="Do-this-next lines from rival gaps for a busy organiser."
+                        formula="Top insights from rival gaps this week."
+                        anchor="insights"
+                    >
+                        <InsightList
+                            v-if="insights"
+                            :status="insights.status"
+                            :reason="insights.reason"
+                            :items="insights.data?.items"
+                            :tracker-ids="trackerIdsByHandle"
+                            :collapsed-count="5"
+                        />
+                        <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading insights" />
+                    </DashCard>
 
                     <DashCard
                         title="Captions and hooks"
@@ -649,7 +648,7 @@ const trackerIdsByHandle = computed(() => {
 
                     <DashCard
                         title="Topics and themes"
-                        why="Topic gaps peers win with that you skip. Top 5 themes only."
+                        why="Topics rivals win with that you skip. Top 5 themes only."
                         formula="share = posts(theme)/posts · colour = median performance vs usual"
                         anchor="themes"
                     >
@@ -692,9 +691,9 @@ const trackerIdsByHandle = computed(() => {
                         id="rail"
                         class="snitch-dash-kpi-strip"
                     >
-                        <template v-if="kpis?.status === 'ok' && kpis.data?.cards?.length">
+                        <template v-if="kpis?.status === 'ok' && visibleKpiCards.length">
                             <StatCard
-                                v-for="card in kpis.data.cards"
+                                v-for="card in visibleKpiCards"
                                 :key="String(card.key)"
                                 :label="String(card.label)"
                                 :why="String(card.why)"
@@ -710,7 +709,7 @@ const trackerIdsByHandle = computed(() => {
                         </template>
                         <template v-else>
                             <div
-                                v-for="slot in 4"
+                                v-for="slot in 3"
                                 :key="`kpi-pending-${slot}`"
                                 class="min-w-0 border-r border-slate-200 px-2 py-1.5 last:border-r-0"
                                 aria-hidden="true"
@@ -721,36 +720,32 @@ const trackerIdsByHandle = computed(() => {
                         </template>
                     </div>
 
-                    <div class="grid items-stretch gap-2 lg:grid-cols-2">
-                        <div class="min-w-0">
-                            <DashCard
-                                class="h-full"
-                                title="Leaderboard"
-                                why="One glance shows who is ahead, and on what."
-                                formula="Engagement rate = median per-follower engagement. Hidden likes and all-zero samples show as -."
-                                anchor="leaderboard"
-                            >
-                                <CompareTable
-                                    v-if="leaderboard"
-                                    :status="leaderboard.status"
-                                    :reason="leaderboard.reason"
-                                    :rows="(leaderboard.data?.rows as any) || []"
-                                />
-                                <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading leaderboard" />
-                            </DashCard>
-                        </div>
-                        <div
-                            id="format_mix"
-                            class="snitch-scrap relative flex h-full min-w-0 flex-col p-2"
-                        >
-                            <FormatMixChart
-                                v-if="caption_intel"
-                                class="snitch-dash-soft-in flex-1"
-                                :formats="caption_intel.format_mix"
-                                :lifts="formatLifts"
-                            />
-                            <SnitchSkeleton v-else variant="scrap" height="4rem" label="Loading format mix" />
-                        </div>
+                    <DashCard
+                        title="Leaderboard"
+                        why="One glance shows who is ahead, and on what."
+                        formula="Engagement rate = median likes + comments per follower. Hidden likes and all-zero samples show as -."
+                        anchor="leaderboard"
+                    >
+                        <CompareTable
+                            v-if="leaderboard"
+                            :status="leaderboard.status"
+                            :reason="leaderboard.reason"
+                            :rows="(leaderboard.data?.rows as any) || []"
+                        />
+                        <SnitchSkeleton v-else variant="scrap" height="5rem" label="Loading leaderboard" />
+                    </DashCard>
+
+                    <div
+                        id="format_mix"
+                        class="snitch-scrap relative min-w-0 p-3"
+                    >
+                        <FormatMixChart
+                            v-if="caption_intel"
+                            class="snitch-dash-soft-in"
+                            :formats="caption_intel.format_mix"
+                            :lifts="formatLifts"
+                        />
+                        <SnitchSkeleton v-else variant="scrap" height="4rem" label="Loading format mix" />
                     </div>
 
                     <section
@@ -806,7 +801,7 @@ const trackerIdsByHandle = computed(() => {
                         />
                         <div
                             v-else-if="winnerItems.length"
-                            class="grid grid-cols-2 items-stretch gap-1.5 sm:grid-cols-3 xl:grid-cols-6"
+                            class="grid grid-cols-1 items-stretch gap-1.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
                         >
                             <WinnerCard
                                 v-for="post in winnerItems"
@@ -821,7 +816,7 @@ const trackerIdsByHandle = computed(() => {
                             <p class="mb-1 text-xs font-medium uppercase tracking-wide text-amber-800/80">
                                 Hidden-likes spotlight (comments+views)
                             </p>
-                            <div class="grid grid-cols-2 items-stretch gap-1.5 sm:grid-cols-3 xl:grid-cols-6">
+                            <div class="grid grid-cols-1 items-stretch gap-1.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                 <WinnerCard
                                     v-for="post in hiddenSpotlight"
                                     :key="`hidden-${post.id}`"
@@ -839,45 +834,6 @@ const trackerIdsByHandle = computed(() => {
                         </button>
                         <SnitchSkeleton v-else-if="!winners" variant="scrap" height="6rem" label="Loading winners" />
                     </DashCard>
-
-                    <div
-                        v-if="hasFollowerHistory"
-                        id="growth_series"
-                        class="snitch-scrap relative max-h-44 p-2"
-                    >
-                        <div class="mb-0.5 flex items-baseline justify-between gap-2">
-                            <p class="snitch-ink-label">Follower history</p>
-                            <p
-                                v-if="growth_delta?.week_delta != null"
-                                class="tabular-nums text-xs text-slate-500"
-                            >
-                                {{ growth_delta.week_delta > 0 ? '+' : '' }}{{ growth_delta.week_delta }}
-                                this week
-                            </p>
-                        </div>
-                        <FollowerHistoryChart
-                            class="snitch-dash-soft-in"
-                            scope="corpus"
-                            hide-title
-                            compact
-                            :points="followerPoints"
-                        />
-                    </div>
-                    <p
-                        v-else-if="showFollowerNote"
-                        id="growth_series"
-                        class="text-sm leading-snug text-slate-600"
-                    >
-                        <span class="font-medium text-slate-800">Follower history</span>
-                        ·
-                        <template v-if="followerPoints.length === 1">
-                            {{ new Intl.NumberFormat('en-GB').format(followerPoints[0].followers) }}
-                            first snapshot only - chart after the next weekly count.
-                        </template>
-                        <template v-else>
-                            No follower snapshots yet.
-                        </template>
-                    </p>
 
                     <DashCard
                         title="Data notes"
@@ -1041,16 +997,29 @@ const trackerIdsByHandle = computed(() => {
             <section
                 v-if="showTrackedBy"
                 id="tracked-by"
-                class="scroll-mt-14 border-t border-slate-100 pt-4"
+                class="scroll-mt-14 space-y-3 border-t border-slate-100 pt-4"
             >
+                <header class="space-y-0.5">
+                    <h2 class="font-display text-xl font-semibold tracking-tight text-snitch-ink">
+                        Is anyone <span class="snitch-highlight">tracking you</span>?
+                    </h2>
+                </header>
                 <TrackedBySection :tracked-by="trackedBy ?? null" />
             </section>
 
             <!-- 5. Cast your vote (sibling agent owns VoteSection) -->
             <section
                 id="vote"
-                class="scroll-mt-14 border-t border-slate-100 pt-4"
+                class="scroll-mt-14 space-y-3 border-t border-slate-100 pt-4"
             >
+                <header class="space-y-0.5">
+                    <h2 class="font-display text-xl font-semibold tracking-tight text-snitch-ink">
+                        Cast your <span class="snitch-highlight">vote</span>
+                    </h2>
+                    <p class="text-sm text-slate-600">
+                        Upvote what you want next, or pitch your own idea.
+                    </p>
+                </header>
                 <VoteSection :suggestions="featureSuggestions ?? []" />
             </section>
         </div>
