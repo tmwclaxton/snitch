@@ -18,6 +18,8 @@ class CompetitorQuotaVisibilityTest extends TestCase
     #[Test]
     public function all_tracked_accounts_remain_in_quota_without_seat_caps(): void
     {
+        config(['subscriptions.trial_competitor_limit' => 0]);
+
         $user = User::factory()->create();
         $accounts = TrackedAccount::factory()->count(5)->for($user)->create();
         $ids = app(PlanEntitlementService::class)->inQuotaTrackedAccountIds($user);
@@ -32,6 +34,8 @@ class CompetitorQuotaVisibilityTest extends TestCase
     #[Test]
     public function competitors_index_does_not_surface_seat_limit_warnings(): void
     {
+        config(['subscriptions.trial_competitor_limit' => 0]);
+
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
         TrackedAccount::factory()->count(3)->for($user)->create();

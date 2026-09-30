@@ -26,7 +26,7 @@ class SharedInertiaPropsTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->has('subscription', fn (Assert $subscription) => $subscription
-                    ->where('subscribed', false)
+                    ->where('subscribed', true)
                     ->where('can_run_billable', true)
                     ->where('balance_pence', 500)
                     ->where('on_trial', true)

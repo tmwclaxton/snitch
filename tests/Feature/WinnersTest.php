@@ -37,7 +37,7 @@ class WinnersTest extends TestCase
         $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
         $this->assertIsString($dashboard);
         $this->assertStringContainsString('id="performance"', $dashboard);
-        $this->assertStringContainsString('anchor="winners"', $dashboard);
+        $this->assertStringContainsString('id="winners"', $dashboard);
     }
 
     public function test_winner_scorer_still_persists_matching_posts(): void

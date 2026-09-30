@@ -31,6 +31,8 @@ class PlanEntitlementServiceTest extends TestCase
 
     public function test_unlimited_competitors_without_seat_caps(): void
     {
+        config(['subscriptions.trial_competitor_limit' => 0]);
+
         $user = User::factory()->create();
         TrackedAccount::factory()->count(5)->for($user)->create();
 
@@ -42,11 +44,13 @@ class PlanEntitlementServiceTest extends TestCase
     public function test_summary_reflects_platform_subscription(): void
     {
         $user = User::factory()->create();
-        $this->assertFalse($this->entitlements->summary($user)['subscribed']);
+        $this->assertTrue($this->entitlements->summary($user)['subscribed']);
         $this->assertTrue($this->entitlements->summary($user)['on_trial']);
 
-        $this->createSubscription($user, 'price_platform_test');
+        $user->subscriptions()->update(['stripe_status' => 'active', 'trial_ends_at' => null]);
+        $user->unsetRelation('subscriptions');
         $user->refresh();
+        $this->entitlements->forgetSharedSummary($user);
 
         $summary = $this->entitlements->summary($user);
 
@@ -64,10 +68,10 @@ class PlanEntitlementServiceTest extends TestCase
 
         $shared = $this->entitlements->sharedSummary($user);
 
-        $this->assertSame('none', $shared['plan']);
-        $this->assertFalse($shared['subscribed']);
+        $this->assertSame('platform', $shared['plan']);
+        $this->assertTrue($shared['subscribed']);
         $this->assertTrue($shared['on_trial']);
-        $this->assertTrue($shared['can_upgrade']);
+        $this->assertFalse($shared['can_upgrade']);
         $this->assertSame(2, $shared['competitors_used']);
         $this->assertSame(1, $shared['influencers_used']);
         $this->assertSame(500.0, $shared['balance_pence']);

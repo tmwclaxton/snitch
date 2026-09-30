@@ -131,7 +131,7 @@ class CheckoutSuccessSyncTest extends TestCase
 
     public function test_apply_checkout_session_rejects_customer_mismatch(): void
     {
-        $user = User::factory()->create([
+        $user = User::factory()->withoutPlatformSubscription()->create([
             'stripe_id' => 'cus_expected',
         ]);
 
