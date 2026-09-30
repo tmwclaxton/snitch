@@ -205,7 +205,7 @@ class InsightRules
                 $out[] = [
                     'category' => 'format_gap',
                     'text' => sprintf(
-                        '**@%s** posts **%s× more %ss** than you (%s%% vs %s%% of posts) and gets **%s× your engagement per follower**.',
+                        '**@%s** posts **%s× more %ss** than you (%s%% vs %s%% of posts) and gets **%s× your engagement rate**.',
                         $rival['handle'],
                         $this->x($shareRatio),
                         $format,

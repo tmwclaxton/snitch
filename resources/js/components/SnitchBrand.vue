@@ -38,11 +38,11 @@ const textClass = {
         />
         <span
             v-if="wordmark"
-            class="snitch-display relative truncate font-semibold tracking-tight text-snitch-ink"
+            class="snitch-display relative truncate font-semibold tracking-tight text-current"
             :class="textClass[size]"
         >
             <span
-                class="pointer-events-none absolute inset-0 translate-x-[1.5px] translate-y-[1px] text-snitch-spot opacity-60 mix-blend-multiply select-none dark:mix-blend-plus-lighter dark:opacity-70"
+                class="pointer-events-none absolute inset-0 translate-x-[1.5px] translate-y-[1px] text-snitch-caution-yellow opacity-70 select-none"
                 aria-hidden="true"
             >Snitch</span>
             <span class="relative">Snitch</span>

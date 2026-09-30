@@ -53,7 +53,7 @@ const options = computed(() => ({
             This week vs last:
             <span class="font-medium text-slate-800">posts {{ deltas.posts >= 0 ? '+' : '' }}{{ deltas.posts }}</span>
             <span v-if="deltas.er != null" class="ml-2 font-medium text-slate-800">
-                ER {{ deltas.er >= 0 ? '+' : '' }}{{ deltas.er.toFixed(1) }}pp
+                ER {{ deltas.er >= 0 ? '+' : '' }}{{ deltas.er.toFixed(1) }} points
             </span>
         </p>
         <VueApexCharts type="line" height="160" :options="options" :series="postSeries" />

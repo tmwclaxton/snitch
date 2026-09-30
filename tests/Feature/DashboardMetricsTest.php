@@ -529,7 +529,7 @@ class DashboardMetricsTest extends TestCase
 
         $erCell = collect($payload['rail']['cells'])->firstWhere('key', 'er');
         $this->assertNotNull($erCell);
-        $this->assertStringContainsString('peer', strtolower((string) $erCell['hint']));
+        $this->assertStringContainsString('rivals', strtolower((string) $erCell['hint']));
     }
 
     /**

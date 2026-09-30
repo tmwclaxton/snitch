@@ -153,9 +153,11 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('id="caption_intel"', $dashboard);
         $this->assertStringContainsString('snitch-heatmap--dash', $dashboard);
         $this->assertStringContainsString('snitch-dash-chip-stack', $dashboard);
-        $this->assertStringContainsString('items-stretch gap-2 lg:grid-cols-2', $dashboard);
-        $this->assertStringContainsString('showFollowerNote', $dashboard);
-        $this->assertStringContainsString('first snapshot only', $dashboard);
+        $this->assertStringContainsString('visibleKpiCards', $dashboard);
+        $this->assertStringContainsString('Best posting times', $dashboard);
+        $this->assertStringContainsString('This week in 30 seconds', $dashboard);
+        $this->assertStringNotContainsString('FollowerHistoryChart', $dashboard);
+        $this->assertStringNotContainsString('showFollowerNote', $dashboard);
         $this->assertStringContainsString('flex-wrap items-center gap-x-1.5', $dashboard);
         $this->assertStringNotContainsString('max-w-[6.5rem]', $dashboard);
         $this->assertStringContainsString('anchor="winners"', $dashboard);
@@ -190,7 +192,7 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('competitorShow.url(id)', $insightList);
         $this->assertStringContainsString('collapsedCount: 5', $insightList);
         $this->assertStringNotContainsString('fitHeight', $insightList);
-        $this->assertStringContainsString('items-stretch gap-2 lg:grid-cols-2', $dashboard);
+        $this->assertStringContainsString('xl:grid-cols-4', $dashboard);
         $this->assertStringNotContainsString('overflow-y-auto', $dashboard);
         $this->assertStringNotContainsString('Length vs PI', $captions);
         $this->assertStringNotContainsString('>CTAs<', $captions);

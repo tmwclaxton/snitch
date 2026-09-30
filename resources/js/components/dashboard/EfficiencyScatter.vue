@@ -51,10 +51,10 @@ const options = computed(() => ({
     legend: { fontSize: '11px', labels: { colors: '#475569' } },
     annotations: {
         xaxis: props.medianX != null
-            ? [{ x: props.medianX, borderColor: '#94a3b8', strokeDashArray: 4, label: { text: 'peer med', style: { fontSize: '9px', background: '#fff' } } }]
+            ? [{ x: props.medianX, borderColor: '#94a3b8', strokeDashArray: 4, label: { text: "rivals' avg", style: { fontSize: '9px', background: '#fff' } } }]
             : [],
         yaxis: props.medianY != null
-            ? [{ y: props.medianY, borderColor: '#94a3b8', strokeDashArray: 4, label: { text: 'peer med', style: { fontSize: '9px', background: '#fff' } } }]
+            ? [{ y: props.medianY, borderColor: '#94a3b8', strokeDashArray: 4, label: { text: "rivals' avg", style: { fontSize: '9px', background: '#fff' } } }]
             : [],
     },
 }));

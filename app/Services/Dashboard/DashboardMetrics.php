@@ -934,7 +934,7 @@ class DashboardMetrics
 
         if ($items === []) {
             return CardResult::insufficient(
-                'Not enough signal yet for plain-English insights (need clearer gaps between you and peers).',
+                'Not enough signal yet for plain-English insights (need clearer gaps between you and rivals).',
                 $n,
                 ['items' => []],
             );
@@ -960,7 +960,7 @@ class DashboardMetrics
             $this->kpiStat(
                 key: 'posts_per_week',
                 label: 'Posts / week',
-                why: 'Posts per week: Effort vs peers; the simplest lever.',
+                why: 'Posts per week: Effort vs rivals; the simplest lever.',
                 formula: 'posts in last 28 days ÷ 4',
                 you: $ownRow,
                 peers: $peerRows,
@@ -2125,7 +2125,7 @@ class DashboardMetrics
                     $peerEr !== null ? (float) $peerEr : null,
                     'pct',
                     youLabel: 'You',
-                    peerLabel: 'peer median',
+                    peerLabel: "rivals' average",
                 ),
                 'href' => null,
                 'you' => $youEr !== null ? $this->math->round2((float) $youEr) : null,
@@ -2159,7 +2159,7 @@ class DashboardMetrics
                     $peerPpw !== null ? (float) $peerPpw : null,
                     'number',
                     youLabel: 'You',
-                    peerLabel: 'peer median',
+                    peerLabel: "rivals' average",
                 ),
                 'href' => null,
                 'you' => $youPpw !== null ? $this->math->round1((float) $youPpw) : null,
@@ -2296,7 +2296,7 @@ class DashboardMetrics
         ?float $peer,
         string $kind,
         string $youLabel = 'You',
-        string $peerLabel = 'peer',
+        string $peerLabel = "rivals' average",
     ): string {
         if ($you === null && $peer === null) {
             return '—';

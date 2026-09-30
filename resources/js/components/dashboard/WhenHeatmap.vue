@@ -71,7 +71,7 @@ function hasOwn(dow: number, block: number): boolean {
                     :key="`${day}-${block}`"
                     class="relative flex h-6 items-center justify-center rounded border border-slate-100"
                     :style="{ backgroundColor: bg(cell) }"
-                    :title="`${day} ${blocks?.[block]} · n=${cell.n || cell.count}${cell.pi != null ? ` · PI ${cell.pi}` : ''}`"
+                    :title="`${day} ${blocks?.[block]} · from ${cell.n || cell.count} posts${cell.pi != null ? ` · ${cell.pi}× usual` : ''}`"
                 >
                     <span
                         v-if="(mode ?? 'pi') === 'pi' && cell.pi != null && cell.n >= 3"
