@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminActivityController;
 use App\Http\Controllers\Admin\AdminOverviewController;
 use App\Http\Controllers\Admin\AdminReferralController;
 use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\FeatureSuggestionController as AdminFeatureSuggestionController;
 use App\Http\Controllers\AdsController;
 use App\Http\Controllers\AgentsController;
 use App\Http\Controllers\AnalyticsController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\BriefController;
 use App\Http\Controllers\CompetitorController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExploreController;
+use App\Http\Controllers\FeatureSuggestionController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\GrowthController;
 use App\Http\Controllers\InfluencerController;
@@ -112,6 +114,8 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::get('/activity', [AdminActivityController::class, 'index'])->name('activity');
         Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
         Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
+        Route::get('/features', [AdminFeatureSuggestionController::class, 'index'])->name('features.index');
+        Route::patch('/features/{suggestion}', [AdminFeatureSuggestionController::class, 'update'])->name('features.update');
         Route::get('/referrals', [AdminReferralController::class, 'index'])->name('referrals.index');
         Route::post('/referrals', [AdminReferralController::class, 'store'])->name('referrals.store');
         Route::get('/referrals/{referral}', [AdminReferralController::class, 'show'])->name('referrals.show');
@@ -123,6 +127,12 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::post('dashboard/watching', WatchingYouController::class)
             ->middleware('throttle:30,1')
             ->name('dashboard.watching');
+        Route::post('/features', [FeatureSuggestionController::class, 'store'])
+            ->middleware('throttle:20,1')
+            ->name('features.store');
+        Route::post('/features/{suggestion}/vote', [FeatureSuggestionController::class, 'vote'])
+            ->middleware('throttle:60,1')
+            ->name('features.vote');
         Route::get('/ad-library', [AdsController::class, 'index'])->name('ads.index');
 
         Route::get('/tracking', [CompetitorController::class, 'index'])->name('competitors.index');

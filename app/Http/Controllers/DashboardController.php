@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\OmitsProductDataWhenPaywalled;
 use App\Services\Brief\WeeklyBriefGenerator;
 use App\Services\Dashboard\DashboardMetrics;
+use App\Services\Features\FeatureSuggestionService;
 use App\Services\Tracking\TrackedByService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -36,6 +37,7 @@ class DashboardController extends Controller
         'kpis',
         'weekly_brief',
         'trackedBy',
+        'featureSuggestions',
     ];
 
     /**
@@ -67,6 +69,7 @@ class DashboardController extends Controller
         DashboardMetrics $metrics,
         WeeklyBriefGenerator $briefs,
         TrackedByService $trackedBy,
+        FeatureSuggestionService $featureSuggestions,
     ): Response {
         $user = $request->user();
         $handles = $this->selectedHandles($request);
@@ -77,6 +80,7 @@ class DashboardController extends Controller
             $empty = $metrics->emptyPayload();
             $empty['weekly_brief'] = null;
             $empty['trackedBy'] = null;
+            $empty['featureSuggestions'] = [];
 
             return Inertia::render('Dashboard', $empty);
         }
@@ -93,6 +97,7 @@ class DashboardController extends Controller
         // Only surface when a ready brief already exists (current or most recent week).
         $props['weekly_brief'] = $briefs->dashboardTeaser($user);
         $props['trackedBy'] = $trackedBy->forUser($user);
+        $props['featureSuggestions'] = $featureSuggestions->forDashboard($user);
 
         foreach (self::PANEL_KEYS as $key) {
             $props[$key] = Inertia::defer(
