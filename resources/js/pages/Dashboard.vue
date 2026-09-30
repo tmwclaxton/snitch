@@ -575,6 +575,7 @@ const trackerIdsByHandle = computed(() => {
                         </div>
 
                         <DashCard
+                            class="h-full"
                             title="This week in 30 seconds"
                             why="Do-this-next lines from peer gaps for a busy organiser."
                             formula="score = |effect| × min(1, n/20); top 6, max 1 per category; n ≥ 5."
