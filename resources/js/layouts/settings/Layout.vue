@@ -5,8 +5,8 @@ import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editProfile } from '@/routes/profile';
-import type { NavItem } from '@/types';
 import { show as editMcp } from '@/routes/settings/mcp';
+import type { NavItem } from '@/types';
 
 const sidebarNavItems: NavItem[] = [
     {

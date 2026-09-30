@@ -2,8 +2,8 @@
 import { Form, Head } from '@inertiajs/vue3';
 import { Bot } from '@lucide/vue';
 import { ref, watch } from 'vue';
-import McpConnectGuide from '@/components/agents/McpConnectGuide.vue';
 import { rotateToken } from '@/actions/App/Http/Controllers/Settings/McpController';
+import McpConnectGuide from '@/components/agents/McpConnectGuide.vue';
 import { show } from '@/routes/settings/mcp';
 
 defineOptions({

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { update as updateFeature } from '@/actions/App/Http/Controllers/Admin/FeatureSuggestionController';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { activity as adminActivity, overview as adminOverview } from '@/routes/admin';
-import { index as adminFeaturesIndex } from '@/routes/admin/features';
 import { index as adminUsersIndex } from '@/routes/admin/users';
+import { update as updateFeature } from '@/actions/App/Http/Controllers/Admin/FeatureSuggestionController';
+import { index as adminFeaturesIndex } from '@/routes/admin/features';
 
 type SuggestionRow = {
     id: number;
