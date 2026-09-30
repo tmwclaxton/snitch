@@ -12,6 +12,15 @@ return [
     ))),
 
     /*
+    | User ids that keep product access without a Stripe subscription in
+    | production (owner account). Ignored outside production.
+    */
+    'grandfather_user_ids' => array_values(array_filter(array_map(
+        static fn (string $id): int => (int) trim($id),
+        explode(',', (string) env('SNITCH_GRANDFATHER_USER_IDS', '1')),
+    ), static fn (int $id): bool => $id > 0)),
+
+    /*
     | Admin referral pages (/admin/referrals) stay off until the screen is ready.
     | Attribution from public referral links still runs.
     */

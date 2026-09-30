@@ -27,7 +27,7 @@ class BillingCheckoutTest extends TestCase
 
     public function test_billing_page_is_displayed(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutPlatformSubscription()->create();
 
         $this->actingAs($user)
             ->get(route('billing.edit'))
@@ -84,7 +84,7 @@ class BillingCheckoutTest extends TestCase
     {
         config(['billing.platform_stripe_price' => null]);
 
-        $user = User::factory()->create();
+        $user = User::factory()->withoutPlatformSubscription()->create();
 
         $this->actingAs($user)
             ->post(route('billing.checkout'), ['product' => 'platform'])
@@ -93,13 +93,14 @@ class BillingCheckoutTest extends TestCase
 
     public function test_platform_checkout_uses_inertia_location(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutPlatformSubscription()->create();
 
         $session = (object) ['url' => 'https://checkout.stripe.com/c/pay/cs_test_123'];
         $checkout = Mockery::mock(Checkout::class);
         $checkout->shouldReceive('asStripeCheckoutSession')->once()->andReturn($session);
 
         $builder = Mockery::mock(SubscriptionBuilder::class);
+        $builder->shouldReceive('trialDays')->once()->with(7)->andReturnSelf();
         $builder->shouldReceive('checkout')->once()->andReturn($checkout);
 
         $user = Mockery::mock($user)->makePartial();

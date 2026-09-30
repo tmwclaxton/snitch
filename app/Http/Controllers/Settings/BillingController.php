@@ -105,13 +105,14 @@ class BillingController extends Controller
         $data = $request->validate([
             'product' => ['required', 'string', Rule::in(['platform', 'credits'])],
             'pack' => ['nullable', 'string', Rule::in(array_keys(config('billing.credit_packs', [])))],
+            'from' => ['nullable', 'string', Rule::in(['onboarding'])],
         ]);
 
         $user = $request->user();
 
         try {
             if ($data['product'] === 'platform') {
-                return $this->checkoutPlatform($user);
+                return $this->checkoutPlatform($user, ($data['from'] ?? null) === 'onboarding');
             }
 
             return $this->checkoutCredits($user, (string) ($data['pack'] ?? ''));
@@ -160,7 +161,7 @@ class BillingController extends Controller
         }
     }
 
-    private function checkoutPlatform(User $user): SymfonyResponse|RedirectResponse
+    private function checkoutPlatform(User $user, bool $fromOnboarding = false): SymfonyResponse|RedirectResponse
     {
         $priceId = $this->entitlements->platformStripePriceId();
 
@@ -170,7 +171,9 @@ class BillingController extends Controller
                 'message' => __('Billing is not configured for the platform plan yet.'),
             ]);
 
-            return redirect()->route('billing.edit');
+            return $fromOnboarding
+                ? redirect()->route('onboarding.show', ['step' => 'paywall'])
+                : redirect()->route('billing.edit');
         }
 
         $type = (string) config('billing.subscription_type', 'default');
@@ -181,14 +184,24 @@ class BillingController extends Controller
                 'message' => __('You already have an active platform plan.'),
             ]);
 
-            return redirect()->route('billing.edit');
+            return $fromOnboarding
+                ? redirect()->route('dashboard')
+                : redirect()->route('billing.edit');
         }
 
-        $checkout = $user->newSubscription($type, $priceId)
-            ->checkout([
-                'success_url' => StripeCheckoutSyncService::billingSuccessUrl('success'),
-                'cancel_url' => StripeCheckoutSyncService::billingCancelUrl(),
-            ]);
+        $builder = $user->newSubscription($type, $priceId);
+        $trialDays = max(0, (int) config('subscriptions.trial_days', 7));
+
+        if ($trialDays > 0) {
+            $builder->trialDays($trialDays);
+        }
+
+        $checkout = $builder->checkout([
+            'success_url' => StripeCheckoutSyncService::billingSuccessUrl('success'),
+            'cancel_url' => $fromOnboarding
+                ? route('onboarding.show', ['step' => 'paywall'])
+                : StripeCheckoutSyncService::billingCancelUrl(),
+        ]);
 
         $url = $this->checkoutUrl($checkout);
 
@@ -198,7 +211,9 @@ class BillingController extends Controller
                 'message' => __('Could not start Stripe Checkout. Try again in a moment.'),
             ]);
 
-            return redirect()->route('billing.edit');
+            return $fromOnboarding
+                ? redirect()->route('onboarding.show', ['step' => 'paywall'])
+                : redirect()->route('billing.edit');
         }
 
         return Inertia::location($url);

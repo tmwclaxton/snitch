@@ -194,22 +194,15 @@ class OnboardingAutofillTest extends TestCase
         });
     }
 
-    public function test_onboarding_page_puts_website_first_with_autofill_control(): void
+    public function test_onboarding_page_is_competitor_search_flow(): void
     {
         $page = file_get_contents(resource_path('js/pages/onboarding/Index.vue'));
-        $form = file_get_contents(resource_path('js/components/BrandProfileForm.vue'));
 
         $this->assertNotFalse($page);
-        $this->assertNotFalse($form);
-        $this->assertStringContainsString('BrandProfileForm', $page);
-        $this->assertStringContainsString("import { csrfHeaders } from '@/lib/csrf'", $form);
-        $this->assertStringContainsString('Autofill from website', $form);
-        $this->assertStringContainsString('snitch-field-prefix', $form);
-        $this->assertStringContainsString('https://', $form);
-        $this->assertStringContainsString('www.yourbrand.com', $form);
-        $this->assertTrue(
-            strpos($form, 'Website') < strpos($form, 'Brand name'),
-            'Website field should appear before brand name',
-        );
+        $this->assertStringContainsString('Add competitors', $page);
+        $this->assertStringContainsString('onboarding-search', $page);
+        $this->assertStringContainsString('The reveal', $page);
+        $this->assertStringContainsString('Start your free trial', $page);
+        $this->assertStringNotContainsString('BrandProfileForm', $page);
     }
 }

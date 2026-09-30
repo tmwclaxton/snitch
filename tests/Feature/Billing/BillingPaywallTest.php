@@ -48,42 +48,55 @@ class BillingPaywallTest extends TestCase
         $this->billing = app(UsageBillingService::class);
     }
 
-    public function test_starter_credit_allows_access_without_paid_plan(): void
+    public function test_starter_credit_alone_does_not_allow_access_without_subscription(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutPlatformSubscription()->create();
         $this->billing->creditClaimBonus($user);
 
-        $this->assertTrue($this->billing->canAccessProduct($user));
-        $this->assertFalse($this->billing->paywallState($user)['blocked']);
+        $this->assertFalse($this->billing->canAccessProduct($user));
+        $this->assertTrue($this->billing->paywallState($user)['blocked']);
+        $this->assertSame('subscribe', $this->billing->paywallState($user)['reason']);
         $this->assertFalse($this->billing->paywallState($user)['can_top_up']);
     }
 
-    public function test_blocked_after_starter_credit_exhausted_without_plan(): void
+    public function test_blocked_without_plan_even_with_starter_credit(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutPlatformSubscription()->create();
         $this->billing->creditClaimBonus($user);
-
-        while ($this->billing->claimBonusRemainingPence($user) > 20) {
-            $this->billing->charge($user, 'explore.search', BillingVendor::Snitch);
-        }
 
         $this->expectException(PlatformSubscriptionRequiredException::class);
         $this->billing->assertCanAccessProduct($user);
     }
 
-    public function test_top_up_alone_does_not_restore_access_after_starter(): void
+    public function test_top_up_alone_does_not_restore_access_without_plan(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutPlatformSubscription()->create();
         $this->billing->creditClaimBonus($user);
-
-        while ($this->billing->canAccessProduct($user)) {
-            $this->billing->charge($user, 'explore.search', BillingVendor::Snitch);
-        }
-
         $this->billing->creditFromTopUp($user, 1000, 'topup:bypass-attempt');
 
         $this->assertFalse($this->billing->canAccessProduct($user));
         $this->assertSame('subscribe', $this->billing->paywallState($user)['reason']);
+    }
+
+    public function test_admin_bypasses_subscription_paywall(): void
+    {
+        config(['snitch.admin_emails' => ['admin@snitch.test']]);
+
+        $user = User::factory()->withoutPlatformSubscription()->create([
+            'email' => 'admin@snitch.test',
+        ]);
+
+        $this->assertTrue($this->billing->canAccessProduct($user));
+        $this->assertFalse($this->billing->paywallState($user)['blocked']);
+    }
+
+    public function test_trialing_subscription_allows_access_with_balance(): void
+    {
+        $user = User::factory()->create();
+
+        $this->assertTrue($this->billing->hasPlatformSubscription($user));
+        $this->assertTrue($this->billing->canAccessProduct($user));
+        $this->assertFalse($this->billing->paywallState($user)['blocked']);
     }
 
     public function test_subscribed_user_with_balance_can_access(): void
@@ -114,7 +127,7 @@ class BillingPaywallTest extends TestCase
 
     public function test_claim_bonus_never_expires(): void
     {
-        $user = User::factory()->withoutStarterCredit()->create();
+        $user = User::factory()->withoutStarterCredit()->withoutPlatformSubscription()->create();
         $entry = $this->billing->creditClaimBonus($user);
 
         $this->assertNotNull($entry);
@@ -167,7 +180,7 @@ class BillingPaywallTest extends TestCase
 
     public function test_credit_checkout_blocked_without_paid_plan(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutPlatformSubscription()->create();
         BrandProfile::factory()->for($user)->create();
 
         $this->actingAs($user)
@@ -178,102 +191,33 @@ class BillingPaywallTest extends TestCase
             ->assertRedirect(route('billing.edit'));
     }
 
-    public function test_dashboard_paywall_props_when_starter_exhausted(): void
+    public function test_dashboard_redirects_to_onboarding_paywall_when_unsubscribed(): void
     {
         $user = $this->paywalledUser();
-        $account = TrackedAccount::factory()->competitor()->for($user)->create(['handle' => 'secret-rival']);
-        Post::factory()->forAccount($account)->create([
-            'type' => PostType::Reel,
-            'caption' => 'secret paywalled caption',
-        ]);
+        TrackedAccount::factory()->competitor()->for($user)->create(['handle' => 'secret-rival']);
 
         $this->actingAs($user)
             ->get(route('dashboard'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('subscription.can_run_billable', false)
-                ->where('subscription.paywall.blocked', true)
-                ->where('subscription.paywall.reason', 'subscribe')
-                ->where('subscription.paywall.can_top_up', false)
-                ->where('subscription.competitors_used', 0)
-                ->where('rivals', [])
-                ->where('kpis.status', 'empty')
-                ->where('leaderboard.status', 'empty')
-                ->where('winners.status', 'empty')
-                ->missing('recent_posts')
-                ->missing('top_posts')
-                ->missing('top_winners')
-            );
+            ->assertRedirect(route('onboarding.show', ['step' => 'paywall']));
     }
 
-    public function test_product_pages_omit_data_when_paywalled(): void
+    public function test_product_pages_redirect_to_onboarding_when_paywalled(): void
     {
         $user = $this->paywalledUser();
-        $account = TrackedAccount::factory()->competitor()->for($user)->create(['handle' => 'leaky-handle']);
-        Post::factory()->forAccount($account)->create([
-            'type' => PostType::Reel,
-            'caption' => 'must-not-appear-in-inertia',
-        ]);
+        TrackedAccount::factory()->competitor()->for($user)->create(['handle' => 'leaky-handle']);
 
-        $this->actingAs($user)
-            ->get(route('feed.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('subscription.paywall.blocked', true)
-                ->where('subscription.can_run_billable', false)
-                ->missing('accounts')
-                ->where('posts.data', [])
-                ->where('posts.total', 0)
-            );
-
-        $this->actingAs($user)
-            ->get(route('competitors.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('competitors/Index')
-                ->where('subscription.paywall.blocked', true)
-                ->where('accounts', [])
-                ->where('suggestions', [])
-                ->where('competitorBrief', '')
-                ->where('suggestRun', null)
-            );
-
-        $this->actingAs($user)
-            ->get(route('explore.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('subscription.paywall.blocked', true)
-                ->where('posts.data', [])
-                ->where('posts.total', 0)
-                ->where('terms.hook_type', [])
-            );
-
-        $this->actingAs($user)
-            ->get(route('winners.index'))
-            ->assertRedirect(route('dashboard').'#performance');
-
-        $this->actingAs($user)
-            ->get(route('influencers.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('subscription.paywall.blocked', true)
-                ->where('suggestions', [])
-                ->where('reviewQueue', [])
-                ->where('keptAccounts', [])
-            );
-
-        $this->actingAs($user)
-            ->get(route('backlog.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('subscription.paywall.blocked', true)
-                ->where('posts.data', [])
-                ->where('counts.queue', 0)
-            );
-
-        $this->actingAs($user)
-            ->get(route('competitors.show', $account))
-            ->assertRedirect(route('competitors.index'));
+        foreach ([
+            route('feed.index'),
+            route('competitors.index'),
+            route('explore.index'),
+            route('winners.index'),
+            route('influencers.index'),
+            route('backlog.index'),
+        ] as $url) {
+            $this->actingAs($user)
+                ->get($url)
+                ->assertRedirect(route('onboarding.show', ['step' => 'paywall']));
+        }
     }
 
     public function test_subscribed_user_still_receives_product_data(): void
@@ -321,20 +265,20 @@ class BillingPaywallTest extends TestCase
             );
     }
 
-    public function test_json_status_endpoints_return_402_when_paywalled(): void
+    public function test_json_status_endpoints_redirect_when_paywalled(): void
     {
         $user = $this->paywalledUser();
+        TrackedAccount::factory()->competitor()->for($user)->create();
 
         $this->actingAs($user)
             ->getJson(route('competitors.suggest.status', ['suggestId' => '00000000-0000-4000-8000-000000000001']))
-            ->assertStatus(402)
-            ->assertJsonPath('paywall.blocked', true)
-            ->assertJsonMissingPath('suggestions');
+            ->assertStatus(302)
+            ->assertRedirect(route('onboarding.show', ['step' => 'paywall']));
 
         $this->actingAs($user)
             ->getJson(route('winners.rescore.status', ['runId' => '00000000-0000-4000-8000-000000000002']))
-            ->assertStatus(402)
-            ->assertJsonPath('paywall.blocked', true);
+            ->assertStatus(302)
+            ->assertRedirect(route('onboarding.show', ['step' => 'paywall']));
     }
 
     public function test_billing_page_still_reachable_when_paywalled(): void
@@ -354,13 +298,14 @@ class BillingPaywallTest extends TestCase
     public function test_product_mutation_redirects_when_paywalled(): void
     {
         $user = $this->paywalledUser();
+        TrackedAccount::factory()->competitor()->for($user)->create();
 
         $this->actingAs($user)
             ->post(route('competitors.suggest'), [
                 'platforms' => ['instagram'],
                 'brief' => 'enough brief text here',
             ])
-            ->assertRedirect(route('billing.edit'));
+            ->assertRedirect(route('onboarding.show', ['step' => 'paywall']));
     }
 
     public function test_mcp_list_feed_blocked_when_paywalled(): void
@@ -373,7 +318,7 @@ class BillingPaywallTest extends TestCase
 
         SnitchServer::tool(ListCompetitorsTool::class)
             ->assertHasErrors()
-            ->assertSee('Subscribe');
+            ->assertSee('free trial');
     }
 
     public function test_unclaimed_agent_starts_without_product_access(): void
@@ -386,26 +331,30 @@ class BillingPaywallTest extends TestCase
         $this->assertFalse($this->billing->isOnWebTrial($user));
     }
 
-    public function test_claimed_web_user_starts_trial_with_starter_credit(): void
+    public function test_claimed_web_user_starts_with_trialing_subscription_and_starter_credit(): void
     {
         $user = User::factory()->create();
 
         $this->assertTrue($user->onGenericTrial());
         $this->assertTrue($this->billing->isOnWebTrial($user));
         $this->assertSame(500.0, $this->billing->balancePence($user));
+        $this->assertTrue($this->billing->hasPlatformSubscription($user));
         $this->assertTrue($this->billing->canAccessProduct($user));
         $this->assertFalse($this->billing->paywallState($user)['blocked']);
     }
 
     public function test_legacy_workos_user_without_claimed_at_is_healed_on_paywall_check(): void
     {
-        $user = User::factory()->withoutStarterCredit()->create([
-            'created_via' => 'web',
-            'workos_id' => 'workos_legacy_heal',
-            'claimed_at' => null,
-            'claim_token' => null,
-            'trial_ends_at' => now()->subDays(30),
-        ]);
+        $user = User::factory()
+            ->withoutStarterCredit()
+            ->withoutPlatformSubscription()
+            ->create([
+                'created_via' => 'web',
+                'workos_id' => 'workos_legacy_heal',
+                'claimed_at' => null,
+                'claim_token' => null,
+                'trial_ends_at' => now()->subDays(30),
+            ]);
 
         $this->assertFalse($user->isClaimed());
         $this->assertSame(0.0, $this->billing->balancePence($user));
@@ -413,7 +362,8 @@ class BillingPaywallTest extends TestCase
         $state = $this->billing->paywallState($user->fresh());
         $user->refresh();
 
-        $this->assertFalse($state['blocked']);
+        $this->assertTrue($state['blocked']);
+        $this->assertSame('subscribe', $state['reason']);
         $this->assertNotNull($user->claimed_at);
         $this->assertTrue($user->isClaimed());
         $this->assertSame(500.0, $this->billing->balancePence($user));
@@ -425,18 +375,22 @@ class BillingPaywallTest extends TestCase
 
     public function test_legacy_heal_clears_stale_starter_exhausted_flag(): void
     {
-        $user = User::factory()->withoutStarterCredit()->create([
-            'created_via' => 'web',
-            'workos_id' => 'workos_legacy_exhausted',
-            'claimed_at' => null,
-            'claim_token' => null,
-            'trial_ends_at' => now()->subDays(30),
-        ]);
+        $user = User::factory()
+            ->withoutStarterCredit()
+            ->withoutPlatformSubscription()
+            ->create([
+                'created_via' => 'web',
+                'workos_id' => 'workos_legacy_exhausted',
+                'claimed_at' => null,
+                'claim_token' => null,
+                'trial_ends_at' => now()->subDays(30),
+            ]);
         $this->billing->markStarterAllowanceExhausted($user);
 
         $state = $this->billing->paywallState($user->fresh());
 
-        $this->assertFalse($state['blocked']);
+        $this->assertTrue($state['blocked']);
+        $this->assertSame('subscribe', $state['reason']);
         $this->assertFalse($state['starter_allowance_exhausted']);
         $this->assertFalse($this->billing->starterAllowanceExhausted($user->fresh()));
         $this->assertSame(500.0, $this->billing->balancePence($user->fresh()));
@@ -455,13 +409,20 @@ class BillingPaywallTest extends TestCase
         $this->assertStringNotContainsString('Agent accounts start at', (string) $state['message']);
     }
 
-    public function test_trial_end_blocks_access_even_with_remaining_starter(): void
+    public function test_stripe_trial_end_blocks_access_even_with_remaining_starter(): void
     {
         $user = User::factory()->create();
 
         $this->assertTrue($this->billing->canAccessProduct($user));
 
-        $this->travel(8)->days();
+        $subscription = $user->subscription('default');
+        $subscription?->forceFill([
+            'stripe_status' => 'canceled',
+            'trial_ends_at' => now()->subDay(),
+            'ends_at' => now()->subDay(),
+        ])->save();
+        $user->forceFill(['trial_ends_at' => now()->subDay()])->save();
+        $user->unsetRelation('subscriptions');
 
         $state = $this->billing->paywallState($user->fresh());
 
@@ -469,7 +430,7 @@ class BillingPaywallTest extends TestCase
         $this->assertSame(500.0, $this->billing->balancePence($user->fresh()));
         $this->assertTrue($state['blocked']);
         $this->assertSame('subscribe', $state['reason']);
-        $this->assertStringContainsString('trial has ended', (string) $state['message']);
+        $this->assertStringContainsString('free trial', (string) $state['message']);
         $this->assertFalse($this->billing->canAccessProduct($user->fresh()));
     }
 
@@ -507,7 +468,7 @@ class BillingPaywallTest extends TestCase
         }
     }
 
-    public function test_mcp_tools_work_with_starter_credit(): void
+    public function test_mcp_tools_work_with_trialing_subscription(): void
     {
         $user = User::factory()->create();
         $this->billing->creditClaimBonus($user);
@@ -523,7 +484,7 @@ class BillingPaywallTest extends TestCase
 
     public function test_mcp_create_credit_checkout_errors_without_paid_plan(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutPlatformSubscription()->create();
         $this->billing->creditClaimBonus($user);
         $this->actingAs($user);
 
@@ -584,13 +545,11 @@ class BillingPaywallTest extends TestCase
 
     private function paywalledUser(): User
     {
-        $user = User::factory()->create();
+        $user = User::factory()->withoutPlatformSubscription()->create();
         BrandProfile::factory()->for($user)->create();
         $this->billing->creditClaimBonus($user);
 
-        while ($this->billing->canAccessProduct($user)) {
-            $this->billing->charge($user, 'explore.search', BillingVendor::Snitch);
-        }
+        $this->assertFalse($this->billing->canAccessProduct($user));
 
         return $user->fresh();
     }

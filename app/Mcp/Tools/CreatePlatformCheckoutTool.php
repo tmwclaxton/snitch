@@ -34,7 +34,14 @@ class CreatePlatformCheckoutTool extends Tool
             return Response::json(['already_subscribed' => true]);
         }
 
-        $checkout = $user->newSubscription($type, $priceId)->checkout([
+        $builder = $user->newSubscription($type, $priceId);
+        $trialDays = max(0, (int) config('subscriptions.trial_days', 7));
+
+        if ($trialDays > 0) {
+            $builder->trialDays($trialDays);
+        }
+
+        $checkout = $builder->checkout([
             'success_url' => StripeCheckoutSyncService::billingSuccessUrl('success'),
             'cancel_url' => StripeCheckoutSyncService::billingCancelUrl(),
         ]);

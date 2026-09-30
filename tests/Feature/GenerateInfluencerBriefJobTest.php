@@ -25,16 +25,22 @@ class GenerateInfluencerBriefJobTest extends TestCase
     {
         Queue::fake();
 
-        $user = User::factory()->create();
+        $user = User::factory()->withoutPlatformSubscription()->create();
 
         $this->actingAs($user)
             ->post(route('onboarding.store'), [
-                'name' => 'Loaf Local',
-                'website' => 'https://loaf.example',
-                'description' => 'Neighborhood bakery content brand',
-                'own_handles' => ['instagram' => '@loaf'],
+                'own_handle' => 'loaflocal',
+                'competitors' => [
+                    [
+                        'platform' => 'instagram',
+                        'handle' => 'rivalbakery',
+                        'display_name' => 'Rival Bakery',
+                        'avatar' => null,
+                        'followers' => 1000,
+                    ],
+                ],
             ])
-            ->assertRedirect(route('competitors.index'));
+            ->assertRedirect(route('onboarding.show', ['step' => 'reveal']));
 
         Queue::assertNotPushed(GenerateInfluencerBriefJob::class);
     }

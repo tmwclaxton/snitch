@@ -210,7 +210,16 @@ class UsageBillingService
         $accessible = $this->accessibleBalancePence($user);
         $minExclusive = $this->minRunBalancePence();
         $hasBalance = $accessible > $minExclusive;
-        $onTrial = $this->isOnWebTrial($user);
+
+        if ($this->hasOperatorBypass($user)) {
+            return [
+                'blocked' => false,
+                'reason' => null,
+                'message' => null,
+                'starter_allowance_exhausted' => $starterExhausted,
+                'can_top_up' => $subscribed,
+            ];
+        }
 
         if ($subscribed) {
             if ($hasBalance) {
@@ -242,37 +251,15 @@ class UsageBillingService
             ];
         }
 
-        if ($onTrial && $hasBalance) {
-            if ($starterExhausted) {
-                $this->clearStarterAllowanceExhausted($user);
-            }
-
-            return [
-                'blocked' => false,
-                'reason' => null,
-                'message' => null,
-                'starter_allowance_exhausted' => false,
-                'can_top_up' => false,
-            ];
-        }
-
         if (! $hasBalance) {
             $this->markStarterAllowanceExhausted($user);
-
-            return [
-                'blocked' => true,
-                'reason' => 'subscribe',
-                'message' => $this->starterExhaustedPaywallMessage(),
-                'starter_allowance_exhausted' => true,
-                'can_top_up' => false,
-            ];
         }
 
         return [
             'blocked' => true,
             'reason' => 'subscribe',
-            'message' => $this->trialEndedPaywallMessage(),
-            'starter_allowance_exhausted' => $starterExhausted,
+            'message' => $this->subscriptionRequiredPaywallMessage(),
+            'starter_allowance_exhausted' => $this->starterAllowanceExhausted($user),
             'can_top_up' => false,
         ];
     }
@@ -292,6 +279,10 @@ class UsageBillingService
     {
         $this->ensureClaimedEntitlements($user);
 
+        if ($this->hasOperatorBypass($user)) {
+            return;
+        }
+
         $subscribed = $this->hasPlatformSubscription($user);
         $accessible = $this->accessibleBalancePence($user);
         $minExclusive = $this->minRunBalancePence();
@@ -304,23 +295,11 @@ class UsageBillingService
                 throw new PlatformSubscriptionRequiredException($this->unclaimedAgentPaywallMessage());
             }
 
-            $onTrial = $this->isOnWebTrial($user);
-
-            if ($onTrial && $hasBalance) {
-                if ($this->starterAllowanceExhausted($user)) {
-                    $this->clearStarterAllowanceExhausted($user);
-                }
-
-                return;
-            }
-
             if (! $hasBalance) {
                 $this->markStarterAllowanceExhausted($user);
-
-                throw new PlatformSubscriptionRequiredException($this->starterExhaustedPaywallMessage());
             }
 
-            throw new PlatformSubscriptionRequiredException($this->trialEndedPaywallMessage());
+            throw new PlatformSubscriptionRequiredException($this->subscriptionRequiredPaywallMessage());
         }
 
         if (! $hasBalance) {
@@ -335,11 +314,29 @@ class UsageBillingService
         }
     }
 
+    public function hasOperatorBypass(User $user): bool
+    {
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        // Production owner account (user 1) keeps access. Never apply in tests
+        // because RefreshDatabase always creates the first user as id 1.
+        if (! app()->isProduction()) {
+            return false;
+        }
+
+        /** @var list<int> $ids */
+        $ids = config('snitch.grandfather_user_ids', [1]);
+
+        return in_array($user->id, $ids, true);
+    }
+
     private function unclaimedAgentPaywallMessage(): string
     {
         $days = $this->trialDays();
 
-        return "Sign in through the website to unlock a {$days}-day trial and £5 usage, or subscribe.";
+        return "Sign in through the website to unlock a {$days}-day card trial and £5 usage, or subscribe.";
     }
 
     private function starterExhaustedPaywallMessage(): string
@@ -352,6 +349,17 @@ class UsageBillingService
         $days = $this->trialDays();
 
         return "Your {$days}-day trial has ended. Subscribe to the platform plan to keep using Snitch. Remaining starter credit stays in your balance.";
+    }
+
+    private function subscriptionRequiredPaywallMessage(): string
+    {
+        $days = $this->trialDays();
+
+        if ($days > 0) {
+            return "Start your {$days}-day free trial with a card on the Billing page. You get 3 competitors included during the trial.";
+        }
+
+        return 'Subscribe to the platform plan to keep using Snitch. Remaining starter credit stays in your balance.';
     }
 
     public function assertCanTopUp(User $user): void

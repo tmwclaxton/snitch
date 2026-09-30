@@ -8,11 +8,18 @@ return [
     */
 
     /*
-    | Generic (no-card) trial for claimed website users. Unclaimed MCP agent
-    | accounts never receive this clock. Stripe Checkout stays without a
-    | subscription trial so the first paid invoice still grants plan credits.
+    | Stripe Checkout trial length for the £19 platform price. Card is taken
+    | at checkout via subscription_data.trial_period_days. Set 0 to disable.
+    | Claimed website users still get starter credit; product access requires
+    | an active or trialing Cashier subscription (admins and user id 1 bypass).
     */
     'trial_days' => (int) env('SNITCH_TRIAL_DAYS', 7),
+
+    /*
+    | Competitors included while the Stripe subscription is trialing (or
+    | before checkout during onboarding). Null / omit = unlimited after trial.
+    */
+    'trial_competitor_limit' => (int) env('SNITCH_TRIAL_COMPETITOR_LIMIT', 3),
 
     'plans' => [
         'none' => [

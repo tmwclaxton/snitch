@@ -19,12 +19,19 @@ class UserFactory extends Factory
     private static \WeakMap $skipStarterCredit;
 
     /**
-     * Claimed web users get the £5 starter credit, matching claim/signup.
-     * Unclaimed MCP agents stay at £0 until claim.
+     * @var \WeakMap<User, true>
+     */
+    private static \WeakMap $skipPlatformSubscription;
+
+    /**
+     * Claimed web users get the £5 starter credit and a local trialing
+     * platform subscription (card trial model). Unclaimed MCP agents stay
+     * at £0 with no subscription until claim.
      */
     public function configure(): static
     {
         self::$skipStarterCredit ??= new \WeakMap;
+        self::$skipPlatformSubscription ??= new \WeakMap;
 
         return $this->afterCreating(function (User $user): void {
             if ($user->claimed_at === null) {
@@ -32,6 +39,21 @@ class UserFactory extends Factory
             }
 
             app(PlanEntitlementService::class)->ensureTrialStarted($user);
+
+            if (! isset(self::$skipPlatformSubscription[$user])) {
+                $days = max(0, (int) config('subscriptions.trial_days', 7));
+
+                $user->subscriptions()->create([
+                    'type' => (string) config('billing.subscription_type', 'default'),
+                    'stripe_id' => 'sub_test_'.uniqid(),
+                    'stripe_status' => $days > 0 ? 'trialing' : 'active',
+                    'stripe_price' => (string) config('billing.platform_stripe_price', 'price_platform_test'),
+                    'quantity' => 1,
+                    'trial_ends_at' => $days > 0 ? now()->addDays($days) : null,
+                ]);
+
+                $user->unsetRelation('subscriptions');
+            }
 
             if (isset(self::$skipStarterCredit[$user])) {
                 return;
@@ -50,6 +72,18 @@ class UserFactory extends Factory
 
         return $this->afterMaking(function (User $user): void {
             self::$skipStarterCredit[$user] = true;
+        });
+    }
+
+    /**
+     * Skip the automatic trialing platform subscription.
+     */
+    public function withoutPlatformSubscription(): static
+    {
+        self::$skipPlatformSubscription ??= new \WeakMap;
+
+        return $this->afterMaking(function (User $user): void {
+            self::$skipPlatformSubscription[$user] = true;
         });
     }
 

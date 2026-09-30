@@ -103,6 +103,16 @@ XML,
 Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function () {
     Route::get('/onboarding', [OnboardingController::class, 'show'])->name('onboarding.show');
     Route::post('/onboarding', [OnboardingController::class, 'store'])->name('onboarding.store');
+    Route::post('/onboarding/own-handle', [OnboardingController::class, 'saveOwnHandle'])
+        ->name('onboarding.own-handle');
+    Route::post('/onboarding/continue', [OnboardingController::class, 'continueToPaywall'])
+        ->name('onboarding.continue');
+    Route::get('/onboarding/search', [OnboardingController::class, 'search'])
+        ->middleware('throttle:60,1')
+        ->name('onboarding.search');
+    Route::post('/onboarding/lookup', [OnboardingController::class, 'lookup'])
+        ->middleware('throttle:20,1')
+        ->name('onboarding.lookup');
     Route::post('/onboarding/autofill', [OnboardingController::class, 'startAutofill'])
         ->middleware('throttle:10,1')
         ->name('onboarding.autofill');

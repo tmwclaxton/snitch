@@ -47,7 +47,35 @@ class PlanEntitlementService
 
     public function canAddCompetitors(User $user, int $additional = 1): bool
     {
-        return true;
+        if ($this->usage->hasOperatorBypass($user)) {
+            return true;
+        }
+
+        $limit = $this->competitorLimitFor($user);
+
+        if ($limit === null) {
+            return true;
+        }
+
+        return $user->trackedAccounts()->competitors()->count() + $additional <= $limit;
+    }
+
+    public function competitorLimitFor(User $user): ?int
+    {
+        $trialLimit = max(0, (int) config('subscriptions.trial_competitor_limit', 3));
+
+        if (! $this->hasPlatformSubscription($user)) {
+            return $trialLimit > 0 ? $trialLimit : null;
+        }
+
+        $type = (string) config('billing.subscription_type', 'default');
+        $subscription = $user->subscription($type);
+
+        if ($subscription !== null && $subscription->onTrial()) {
+            return $trialLimit > 0 ? $trialLimit : null;
+        }
+
+        return null;
     }
 
     public function canAddInfluencers(User $user, int $additional = 1): bool
@@ -121,21 +149,30 @@ class PlanEntitlementService
         $subscribed = $this->hasPlatformSubscription($user);
         $usage = $this->usage->summary($user);
         $paywall = $this->usage->paywallState($user);
-        $onTrial = $this->onTrial($user);
+        $type = (string) config('billing.subscription_type', 'default');
+        $subscription = $user->subscription($type);
+        $onStripeTrial = $subscription !== null && $subscription->onTrial();
+        $onTrial = $onStripeTrial || $this->onTrial($user);
+        $competitorLimit = $this->competitorLimitFor($user);
         $competitorsUsed = $paywall['blocked']
             ? 0
             : $user->trackedAccounts()->competitors()->count();
         $influencersUsed = $paywall['blocked']
             ? 0
             : $user->trackedAccounts()->influencers()->count();
+        $competitorsRemaining = $competitorLimit === null
+            ? null
+            : max(0, $competitorLimit - $competitorsUsed);
 
         return [
             'plan' => $subscribed ? 'platform' : 'none',
             'plan_name' => $subscribed ? 'Platform' : 'No plan',
-            'competitor_limit' => null,
+            'competitor_limit' => $competitorLimit,
             'competitors_used' => $competitorsUsed,
-            'competitors_remaining' => null,
-            'over_quota_competitors' => 0,
+            'competitors_remaining' => $competitorsRemaining,
+            'over_quota_competitors' => $competitorLimit === null
+                ? 0
+                : max(0, $competitorsUsed - $competitorLimit),
             'influencer_limit' => null,
             'influencers_used' => $influencersUsed,
             'influencers_remaining' => null,
@@ -190,7 +227,11 @@ class PlanEntitlementService
 
         $subscribed = $this->hasPlatformSubscription($user);
         $paywall = $this->usage->paywallState($user);
-        $onTrial = $this->onTrial($user);
+        $type = (string) config('billing.subscription_type', 'default');
+        $subscription = $user->subscription($type);
+        $onStripeTrial = $subscription !== null && $subscription->onTrial();
+        $onTrial = $onStripeTrial || $this->onTrial($user);
+        $competitorLimit = $this->competitorLimitFor($user);
         $balancePence = $this->usage->balancePence($user);
         $minRunBalancePence = $this->usage->minRunBalancePence();
         $competitorsUsed = $paywall['blocked']
@@ -199,20 +240,28 @@ class PlanEntitlementService
         $influencersUsed = $paywall['blocked']
             ? 0
             : $user->trackedAccounts()->influencers()->count();
+        $competitorsRemaining = $competitorLimit === null
+            ? null
+            : max(0, $competitorLimit - $competitorsUsed);
+        $trialEndsAt = $onStripeTrial
+            ? $subscription?->trial_ends_at?->toIso8601String()
+            : ($onTrial ? $user->trial_ends_at?->toIso8601String() : null);
 
         return $this->sharedSummaryCache[$user->id] = [
             'plan' => $subscribed ? 'platform' : 'none',
             'plan_name' => $subscribed ? 'Platform' : 'No plan',
-            'competitor_limit' => null,
+            'competitor_limit' => $competitorLimit,
             'competitors_used' => $competitorsUsed,
-            'competitors_remaining' => null,
-            'over_quota_competitors' => 0,
+            'competitors_remaining' => $competitorsRemaining,
+            'over_quota_competitors' => $competitorLimit === null
+                ? 0
+                : max(0, $competitorsUsed - $competitorLimit),
             'influencer_limit' => null,
             'influencers_used' => $influencersUsed,
             'influencers_remaining' => null,
             'over_quota_influencers' => 0,
             'on_trial' => $onTrial,
-            'trial_ends_at' => $onTrial ? $user->trial_ends_at?->toIso8601String() : null,
+            'trial_ends_at' => $trialEndsAt,
             'subscribed' => $subscribed,
             'billing_interval' => $subscribed ? 'month' : null,
             'can_upgrade' => ! $subscribed,

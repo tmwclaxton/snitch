@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\UsageBillingService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -10,7 +11,7 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureBrandProfile
 {
     /**
-     * Redirect authenticated users without a brand profile to onboarding.
+     * Redirect authenticated users who still need onboarding or checkout.
      *
      * @param  Closure(Request): Response  $next
      */
@@ -24,14 +25,24 @@ class EnsureBrandProfile
 
         app(PlanEntitlementService::class)->ensureTrialStarted($user);
 
-        if ($user->brandProfile()->exists()) {
+        if ($request->routeIs('onboarding.*', 'logout', 'billing.*')) {
             return $next($request);
         }
 
-        if ($request->routeIs('onboarding.*', 'logout')) {
+        if (! $user->brandProfile()->exists()) {
+            return redirect()->route('onboarding.show');
+        }
+
+        $usage = app(UsageBillingService::class);
+
+        if ($usage->hasOperatorBypass($user) || $usage->hasPlatformSubscription($user)) {
             return $next($request);
         }
 
-        return redirect()->route('onboarding.show');
+        if ($user->trackedAccounts()->competitors()->doesntExist()) {
+            return redirect()->route('onboarding.show');
+        }
+
+        return redirect()->route('onboarding.show', ['step' => 'paywall']);
     }
 }
