@@ -99,7 +99,7 @@ function captionText(row: { caption: string; caption_preview?: string }): string
 </script>
 
 <template>
-    <div class="snitch-app-shell mx-auto max-w-4xl space-y-4 px-3 py-4 sm:px-4">
+    <div class="snitch-app-shell w-full max-w-none space-y-4 px-3 py-4 sm:px-4">
         <Head :title="report?.month_label ? `Report · ${report.month_label}` : 'Monthly report'" />
 
         <header class="flex flex-wrap items-end justify-between gap-3">

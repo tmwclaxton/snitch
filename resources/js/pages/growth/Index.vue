@@ -3,7 +3,6 @@ import { Head, router } from '@inertiajs/vue3';
 import { TrendingUp } from '@lucide/vue';
 import { computed } from 'vue';
 import GrowthController from '@/actions/App/Http/Controllers/GrowthController';
-import MonthlyReportController from '@/actions/App/Http/Controllers/MonthlyReportController';
 import GrowthLineChart from '@/components/growth/GrowthLineChart.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 
@@ -106,7 +105,7 @@ function toggleAccount(id: number): void {
 </script>
 
 <template>
-    <div class="snitch-app-shell mx-auto max-w-6xl space-y-4 px-3 py-4 sm:px-4">
+    <div class="snitch-app-shell w-full max-w-none space-y-4 px-3 py-4 sm:px-4">
         <Head title="Growth" />
 
         <header class="flex flex-wrap items-end justify-between gap-3">
@@ -122,12 +121,6 @@ function toggleAccount(id: number): void {
                     How your account is trending against the accounts you track, week by week.
                 </p>
             </div>
-            <a
-                :href="MonthlyReportController.show.url()"
-                class="snitch-btn text-sm"
-            >
-                Monthly report
-            </a>
         </header>
 
         <div class="flex flex-wrap items-center gap-2">

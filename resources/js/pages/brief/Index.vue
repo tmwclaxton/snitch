@@ -212,85 +212,6 @@ function regenerate(): void {
             </header>
 
             <section
-                v-if="brief"
-                class="snitch-scrap relative p-5 pt-6 sm:p-6"
-            >
-                <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
-                <div class="flex flex-wrap items-baseline justify-between gap-2">
-                    <h2 class="snitch-display text-2xl text-snitch-ink">Best times</h2>
-                    <p
-                        v-if="brief.thin_data"
-                        class="text-sm text-snitch-ink/60"
-                    >
-                        Not enough posts yet for a strong ranking - treat these as rough.
-                    </p>
-                </div>
-
-                <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(11rem,13rem)_minmax(0,1fr)] lg:items-start">
-                    <ol
-                        v-if="brief.best_times.length"
-                        class="flex flex-col gap-2"
-                    >
-                        <li
-                            v-for="(slot, index) in brief.best_times"
-                            :key="slot.label"
-                            class="border border-snitch-ink/10 bg-snitch-paper/50 px-3 py-2.5"
-                        >
-                            <p class="text-xs uppercase tracking-wide text-snitch-ink/45">
-                                #{{ index + 1 }}
-                            </p>
-                            <p class="text-sm font-medium text-snitch-ink">
-                                {{ slot.label }}
-                            </p>
-                            <p class="text-xs text-snitch-ink/55">
-                                {{ slot.score.toFixed(1) }}× median
-                            </p>
-                        </li>
-                    </ol>
-                    <p
-                        v-else
-                        class="text-sm text-snitch-ink/60"
-                    >
-                        No timing signal yet. Sync more posts and try again.
-                    </p>
-
-                    <div
-                        v-if="brief.heat_grid?.length"
-                        class="w-full min-w-0"
-                    >
-                        <div
-                            class="grid w-full gap-0.5"
-                            :style="{ gridTemplateColumns: `2.25rem repeat(24, minmax(0, 1fr))` }"
-                        >
-                            <span />
-                            <span
-                                v-for="hour in 24"
-                                :key="`h-${hour}`"
-                                class="text-center text-xs leading-none text-snitch-ink/45"
-                            >
-                                {{ hourLabel(hour - 1) }}
-                            </span>
-                            <template
-                                v-for="(row, dow) in brief.heat_grid"
-                                :key="`d-${dow}`"
-                            >
-                                <span class="pr-1 text-right text-xs text-snitch-ink/55">
-                                    {{ days[dow] }}
-                                </span>
-                                <span
-                                    v-for="(cell, hour) in row"
-                                    :key="`c-${dow}-${hour}`"
-                                    class="aspect-square w-full min-h-4 border border-snitch-ink/5"
-                                    :style="heatStyle(cell)"
-                                    :title="cell == null ? '' : `${days[dow]} ${hour}:00 · ${cell}×`"
-                                />
-                            </template>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section
                 v-if="brief?.ideas?.length"
                 class="grid gap-4 md:grid-cols-3 md:items-stretch"
             >
@@ -396,6 +317,85 @@ function regenerate(): void {
                         </Link>
                     </div>
                 </article>
+            </section>
+
+            <section
+                v-if="brief"
+                class="snitch-scrap relative p-5 pt-6 sm:p-6"
+            >
+                <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
+                <div class="flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 class="snitch-display text-2xl text-snitch-ink">Best times</h2>
+                    <p
+                        v-if="brief.thin_data"
+                        class="text-sm text-snitch-ink/60"
+                    >
+                        Not enough posts yet for a strong ranking - treat these as rough.
+                    </p>
+                </div>
+
+                <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(11rem,13rem)_minmax(0,1fr)] lg:items-start">
+                    <ol
+                        v-if="brief.best_times.length"
+                        class="flex flex-col gap-2"
+                    >
+                        <li
+                            v-for="(slot, index) in brief.best_times"
+                            :key="slot.label"
+                            class="border border-snitch-ink/10 bg-snitch-paper/50 px-3 py-2.5"
+                        >
+                            <p class="text-xs uppercase tracking-wide text-snitch-ink/45">
+                                #{{ index + 1 }}
+                            </p>
+                            <p class="text-sm font-medium text-snitch-ink">
+                                {{ slot.label }}
+                            </p>
+                            <p class="text-xs text-snitch-ink/55">
+                                {{ slot.score.toFixed(1) }}× median
+                            </p>
+                        </li>
+                    </ol>
+                    <p
+                        v-else
+                        class="text-sm text-snitch-ink/60"
+                    >
+                        No timing signal yet. Sync more posts and try again.
+                    </p>
+
+                    <div
+                        v-if="brief.heat_grid?.length"
+                        class="w-full min-w-0"
+                    >
+                        <div
+                            class="snitch-brief-heat-grid grid w-full gap-px"
+                            :style="{ gridTemplateColumns: `2rem repeat(24, minmax(0, 1fr))` }"
+                        >
+                            <span />
+                            <span
+                                v-for="hour in 24"
+                                :key="`h-${hour}`"
+                                class="text-center text-[10px] leading-none text-snitch-ink/45"
+                            >
+                                {{ hourLabel(hour - 1) }}
+                            </span>
+                            <template
+                                v-for="(row, dow) in brief.heat_grid"
+                                :key="`d-${dow}`"
+                            >
+                                <span class="pr-1 text-right text-xs text-snitch-ink/55">
+                                    {{ days[dow] }}
+                                </span>
+                                <span
+                                    v-for="(cell, hour) in row"
+                                    :key="`c-${dow}-${hour}`"
+                                    class="snitch-brief-heat-cell w-full border border-snitch-ink/5"
+                                    :style="heatStyle(cell)"
+                                    :title="cell == null ? '' : `${days[dow]} ${hour}:00 · ${cell}×`"
+                                />
+                            </template>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <section

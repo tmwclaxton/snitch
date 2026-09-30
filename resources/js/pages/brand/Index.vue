@@ -25,7 +25,7 @@ defineOptions({
             </p>
         </div>
 
-        <div class="mx-auto max-w-3xl">
+        <div class="w-full max-w-none">
             <BrandProfileForm
                 :brand="brand"
                 :platforms="platforms"
