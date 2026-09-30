@@ -30,13 +30,13 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
 </script>
 
 <template>
-    <div class="relative min-h-full bg-white px-4 py-6 text-neutral-950 sm:px-8 sm:py-8">
-        <header class="mb-6 border-b border-neutral-200 pb-5">
-            <p class="text-xs font-medium uppercase tracking-wide text-neutral-500">Account</p>
-            <h1 class="mt-1.5 text-3xl font-semibold tracking-tight sm:text-4xl">
+    <div class="relative min-h-full bg-snitch-paper px-4 py-6 text-snitch-ink sm:px-8 sm:py-8">
+        <header class="mb-6 border-b border-snitch-ink/10 pb-5">
+            <p class="font-mono text-sm font-medium uppercase tracking-wide text-snitch-ink/55">Account</p>
+            <h1 class="mt-1.5 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
                 Settings
             </h1>
-            <p class="mt-1.5 text-sm text-neutral-500 sm:text-base">
+            <p class="mt-1.5 text-sm text-snitch-ink/60 sm:text-base">
                 Profile, appearance, and MCP.
             </p>
         </header>
@@ -51,8 +51,8 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                         class="inline-flex items-center gap-2 border-l-2 px-3 py-2 text-sm transition-colors"
                         :class="
                             isCurrentOrParentUrl(item.href)
-                                ? 'border-[#F0C400] font-medium text-neutral-950'
-                                : 'border-transparent text-neutral-600 hover:text-neutral-950'
+                                ? 'border-snitch-spot bg-snitch-spot/40 font-medium text-snitch-ink'
+                                : 'border-transparent text-snitch-ink/60 hover:text-snitch-ink'
                         "
                     >
                         <component

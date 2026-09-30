@@ -75,16 +75,18 @@ const gapLabel = computed(() => {
 
 const gapClass = computed(() => {
     if (!props.gap) {
-        return 'bg-slate-100 text-slate-600';
+        return 'bg-snitch-ink/5 text-snitch-ink/65';
     }
 
     if (props.gap.type === 'pp') {
-        return props.gap.value >= 0 ? 'bg-green-50 text-green-700' : 'bg-rose-50 text-rose-700';
+        return props.gap.value >= 0
+            ? 'bg-snitch-spot/50 text-snitch-ink'
+            : 'bg-snitch-alert text-white';
     }
 
     return props.gap.lower || props.gap.value < 1
-        ? 'bg-rose-50 text-rose-700'
-        : 'bg-green-50 text-green-700';
+        ? 'bg-snitch-alert text-white'
+        : 'bg-snitch-spot/50 text-snitch-ink';
 });
 
 const growthHint = computed(() => {
@@ -101,17 +103,17 @@ const growthHint = computed(() => {
 </script>
 
 <template>
-    <div class="min-w-0 border-r border-slate-200 px-1 py-0.5 last:border-r-0">
+    <div class="min-w-0 border-r border-snitch-ink/10 px-1 py-0.5 last:border-r-0">
         <div class="flex items-center justify-between gap-1">
             <div
-                class="min-w-0 text-xs font-medium uppercase leading-tight tracking-wide text-slate-500"
+                class="min-w-0 font-mono text-sm font-medium uppercase leading-tight tracking-wide text-snitch-ink/55"
                 :title="label"
             >
                 {{ label }}
             </div>
             <button
                 type="button"
-                class="relative rounded p-0.5 text-slate-400 hover:text-slate-700"
+                class="relative rounded p-0.5 text-snitch-ink/40 hover:text-snitch-ink"
                 :aria-label="'About ' + label"
                 :title="reason || why"
                 @click="open = !open"
@@ -120,22 +122,22 @@ const growthHint = computed(() => {
                 <Info class="h-3 w-3" />
                 <div
                     v-if="open"
-                    class="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-slate-200 bg-white p-2 text-left text-xs text-slate-600 shadow-sm"
+                    class="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-snitch-ink/10 bg-white p-2 text-left text-sm text-snitch-ink/70 shadow-sm"
                 >
-                    <p class="mb-1 text-slate-700">{{ why }}</p>
-                    <p class="text-slate-500">{{ formula }}</p>
-                    <p v-if="reason" class="mt-1 text-slate-400">{{ reason }}</p>
+                    <p class="mb-1 text-snitch-ink">{{ why }}</p>
+                    <p class="text-snitch-ink/55">{{ formula }}</p>
+                    <p v-if="reason" class="mt-1 text-snitch-ink/45">{{ reason }}</p>
                 </div>
             </button>
         </div>
 
         <div
-            class="mt-0.5 text-xl font-semibold tracking-tight text-slate-900 tabular-nums leading-none"
+            class="mt-0.5 font-mono text-xl font-semibold tracking-tight text-snitch-ink tabular-nums leading-none"
             :title="youLabel === '-' ? (reason || undefined) : undefined"
         >
             {{ youLabel }}
         </div>
-        <div class="mt-0.5 flex flex-wrap items-center gap-1 text-xs leading-tight text-slate-500">
+        <div class="mt-0.5 flex flex-wrap items-center gap-1 font-mono text-sm leading-tight text-snitch-ink/55">
             <span v-if="growthHint">{{ growthHint }}</span>
             <span v-else>Peer {{ peerLabel }}</span>
             <span

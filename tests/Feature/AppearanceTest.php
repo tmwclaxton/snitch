@@ -25,7 +25,7 @@ class AppearanceTest extends TestCase
             $html,
         );
         $this->assertStringContainsString("const appearance = 'dark';", $html);
-        $this->assertStringContainsString('background-color: #1c1915', $html);
+        $this->assertStringContainsString('background-color: #141414', $html);
     }
 
     public function test_light_appearance_cookie_does_not_force_dark_class(): void
@@ -57,20 +57,23 @@ class AppearanceTest extends TestCase
             );
     }
 
-    public function test_app_chrome_fills_the_viewport_on_white_shell(): void
+    public function test_app_chrome_fills_the_viewport_on_evidence_file_shell(): void
     {
         $layout = file_get_contents(resource_path('js/layouts/app/AppSidebarLayout.vue'));
         $settings = file_get_contents(resource_path('js/layouts/settings/Layout.vue'));
         $css = file_get_contents(resource_path('css/app.css'));
+        $vite = file_get_contents(base_path('vite.config.ts'));
 
         $this->assertIsString($layout);
         $this->assertIsString($settings);
         $this->assertNotFalse($css);
+        $this->assertNotFalse($vite);
         $this->assertStringContainsString('min-h-[calc(100svh-4rem)]', $layout);
         $this->assertStringContainsString('snitch-app-chrome', $layout);
+        $this->assertStringContainsString('bg-snitch-paper', $layout);
         $this->assertStringNotContainsString('min-h-[50vh]', $layout);
-        $this->assertStringContainsString('bg-white', $settings);
-        $this->assertStringNotContainsString('quieter paper', $settings);
+        $this->assertStringContainsString('bg-snitch-paper', $settings);
+        $this->assertStringContainsString('border-snitch-spot', $settings);
         $this->assertStringContainsString('snitch-app-chrome', $css);
         $this->assertStringContainsString('font-size: 14px', $css);
         $this->assertStringContainsString('font-size: 15px', $css);
@@ -83,21 +86,39 @@ class AppearanceTest extends TestCase
             '/\.snitch-app-shell\s*\{[^}]*min-height:\s*calc\(100svh\s*-\s*4rem\)/s',
             $css,
         );
+        $this->assertStringContainsString("bunny('Inter'", $vite);
+        $this->assertStringContainsString("bunny('Bricolage Grotesque'", $vite);
+        $this->assertStringContainsString("bunny('Space Mono'", $vite);
+        $this->assertStringContainsString("bunny('Archivo Black'", $vite);
     }
 
-    public function test_dark_mode_defines_warm_snitch_paper_tokens(): void
+    public function test_evidence_file_tokens_are_defined_for_light_and_dark(): void
     {
         $css = file_get_contents(resource_path('css/app.css'));
 
         $this->assertNotFalse($css);
-        $this->assertStringContainsString('--snitch-paper: #1c1915;', $css);
-        $this->assertStringContainsString('--snitch-ink: #efe6d8;', $css);
-        $this->assertStringContainsString('--snitch-press: #1c1b1a;', $css);
-        $this->assertStringContainsString('--snitch-on-spot: #1c1b1a;', $css);
-        $this->assertStringContainsString('--snitch-lift: #3a342c;', $css);
+        $this->assertStringContainsString('--snitch-paper: #f3eee3;', $css);
+        $this->assertStringContainsString('--snitch-ink: #141414;', $css);
+        $this->assertStringContainsString('--snitch-spot: #ffd60a;', $css);
+        $this->assertStringContainsString('--snitch-alert: #e5341d;', $css);
+        $this->assertStringContainsString('--snitch-caution-ink: #0e0e10;', $css);
+        $this->assertStringContainsString('--snitch-caution-yellow: #fcd700;', $css);
+        $this->assertStringContainsString('--snitch-caution-pink: #ff3d8b;', $css);
+        $this->assertStringContainsString("'Bricolage Grotesque'", $css);
+        $this->assertStringContainsString("'Space Mono'", $css);
+        $this->assertStringContainsString("'Archivo Black'", $css);
+        $this->assertStringContainsString("'Inter'", $css);
+        $this->assertStringContainsString('--snitch-paper: #141414;', $css);
+        $this->assertStringContainsString('--snitch-ink: #f3eee3;', $css);
+        $this->assertStringContainsString('--snitch-press: #141414;', $css);
+        $this->assertStringContainsString('--snitch-on-spot: #141414;', $css);
+        $this->assertStringContainsString('--snitch-lift: #2a2a2c;', $css);
         $this->assertStringContainsString('--snitch-print-blend: soft-light;', $css);
         $this->assertStringContainsString('var(--snitch-lift)', $css);
         $this->assertStringContainsString('var(--snitch-print-blend)', $css);
+        $this->assertStringContainsString('.snitch-highlight', $css);
+        $this->assertStringContainsString('.snitch-alert-badge', $css);
+        $this->assertStringContainsString('.snitch-hero-display', $css);
     }
 
     public function test_yellow_button_hover_uses_charcoal_on_spot_type(): void
@@ -117,5 +138,16 @@ class AppearanceTest extends TestCase
             '/\.snitch-platform-embed-open:hover\s*\{[^}]*background:\s*var\(--snitch-spot\);[^}]*color:\s*var\(--snitch-on-spot\)/s',
             $css,
         );
+    }
+
+    public function test_landing_uses_caution_tape_accents(): void
+    {
+        $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
+
+        $this->assertNotFalse($welcome);
+        $this->assertStringContainsString('bg-snitch-caution-ink', $welcome);
+        $this->assertStringContainsString('bg-snitch-caution-yellow', $welcome);
+        $this->assertStringContainsString('snitch-caution-pink', $welcome);
+        $this->assertStringContainsString('snitch-hero-display', $welcome);
     }
 }

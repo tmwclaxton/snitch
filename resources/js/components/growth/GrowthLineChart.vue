@@ -20,10 +20,10 @@ const props = defineProps<{
     tableFallback?: boolean;
 }>();
 
-/** Brand yellow for You; dashed grey for peer median; fixed peer palette. */
-const YOU_COLOUR = '#F0C400';
+/** Evidence File: ink for You (AA on cream); dashed fog for peer median; palette rivals. */
+const YOU_COLOUR = '#141414';
 const PEER_COLOUR = '#8A8478';
-const RIVAL_COLOURS = ['#3A5F6B', '#C45C26', '#5B7C99', '#8B5A2B', '#2F6F4E', '#6B4C7A', '#B45309', '#0F766E'];
+const RIVAL_COLOURS = ['#3A5F6B', '#E5341D', '#5B7C99', '#8B5A2B', '#2F6F4E', '#6B4C7A', '#B45309', '#0F766E'];
 
 const colourByName = computed(() => {
     const map = new Map<string, string>();

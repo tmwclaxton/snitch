@@ -76,7 +76,7 @@ onUnmounted(() => {
                         class="border-b-2 pb-0.5 transition-colors hover:text-neutral-950"
                         :class="
                             isActive(link.match)
-                                ? 'border-[#F0C400] text-neutral-950'
+                                ? 'border-snitch-caution-yellow text-neutral-950'
                                 : 'border-transparent'
                         "
                         prefetch

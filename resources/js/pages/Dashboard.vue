@@ -335,7 +335,7 @@ const trackerIdsByHandle = computed(() => {
 </script>
 
 <template>
-    <div class="min-h-full bg-white px-2 py-2 sm:px-3">
+    <div class="min-h-full bg-snitch-paper px-2 py-2 sm:px-3">
         <Head title="Dashboard" />
 
         <div class="mx-auto max-w-none space-y-4">
@@ -492,11 +492,11 @@ const trackerIdsByHandle = computed(() => {
                     class="scroll-mt-14 space-y-3 border-t border-slate-100 pt-4"
                 >
                     <header class="space-y-0.5">
-                        <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+                        <p class="font-mono text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
                             What the data shows
                         </p>
-                        <h2 class="text-xl font-semibold tracking-tight text-slate-900">
-                            What should we post?
+                        <h2 class="font-display text-xl font-semibold tracking-tight text-snitch-ink">
+                            What should we <span class="snitch-highlight">post</span>?
                         </h2>
                     </header>
 
@@ -683,8 +683,8 @@ const trackerIdsByHandle = computed(() => {
                     class="scroll-mt-14 space-y-3 border-t border-slate-100 pt-4"
                 >
                     <header class="space-y-0.5">
-                        <h2 class="text-xl font-semibold tracking-tight text-slate-900">
-                            How are they performing?
+                        <h2 class="font-display text-xl font-semibold tracking-tight text-snitch-ink">
+                            How are they <span class="snitch-highlight">performing</span>?
                         </h2>
                     </header>
 
@@ -906,8 +906,8 @@ const trackerIdsByHandle = computed(() => {
                     class="scroll-mt-14 space-y-3 border-t border-slate-100 pt-4"
                 >
                     <header class="space-y-0.5">
-                        <h2 class="text-xl font-semibold tracking-tight text-slate-900">
-                            Are they running ads?
+                        <h2 class="font-display text-xl font-semibold tracking-tight text-snitch-ink">
+                            Are they running <span class="snitch-highlight">ads</span>?
                         </h2>
                         <p class="text-sm text-slate-600">
                             Meta Ad Library hits for accounts you track.

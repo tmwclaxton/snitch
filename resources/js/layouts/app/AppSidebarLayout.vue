@@ -20,9 +20,9 @@ withDefaults(defineProps<Props>(), {
     <AppShell variant="sidebar">
         <AppHead />
         <AppSidebar />
-        <AppContent variant="sidebar" class="relative min-w-0 overflow-x-clip bg-white">
+        <AppContent variant="sidebar" class="relative min-w-0 overflow-x-clip bg-snitch-paper">
             <AppSidebarHeader :breadcrumbs="breadcrumbs" />
-            <div class="snitch-app-chrome relative min-h-[calc(100svh-4rem)] bg-white text-neutral-950">
+            <div class="snitch-app-chrome relative min-h-[calc(100svh-4rem)] bg-snitch-paper text-snitch-ink">
                 <slot />
                 <BillingPaywall />
             </div>

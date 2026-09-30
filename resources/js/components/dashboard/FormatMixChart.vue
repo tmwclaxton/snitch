@@ -63,7 +63,7 @@ const peakIndex = computed(() => {
     <div class="snitch-format-mix">
         <div class="flex items-baseline justify-between gap-3">
             <p class="snitch-ink-label">Format mix</p>
-            <p class="tabular-nums text-xs text-slate-500">
+            <p class="font-mono text-sm tabular-nums text-snitch-ink/55">
                 {{ total }} posts
             </p>
         </div>
@@ -74,31 +74,31 @@ const peakIndex = computed(() => {
                 :key="row.type"
                 class="grid grid-cols-[5.5rem_minmax(0,1fr)_2rem_2.75rem] items-center gap-1.5"
             >
-                <span class="whitespace-nowrap text-sm text-slate-600">
+                <span class="whitespace-nowrap text-sm text-snitch-ink/70">
                     {{ postTypeLabel(row.type) }}
                 </span>
                 <div
-                    class="h-2 overflow-hidden rounded-sm bg-slate-100"
+                    class="h-2 overflow-hidden rounded-sm bg-snitch-ink/8"
                     :title="`${postTypeLabel(row.type)}: ${row.count}`"
                 >
                     <div
                         class="h-full rounded-sm"
-                        :class="index === peakIndex && row.count > 0 ? 'bg-slate-800' : 'bg-slate-500'"
+                        :class="index === peakIndex && row.count > 0 ? 'bg-snitch-ink' : 'bg-snitch-teal'"
                         :style="{ width: barWidth(row.count) }"
                     />
                 </div>
-                <span class="text-right text-sm tabular-nums text-slate-600">
+                <span class="text-right font-mono text-sm tabular-nums text-snitch-ink/70">
                     {{ row.count }}
                 </span>
                 <span
-                    class="text-right text-xs tabular-nums text-slate-500"
+                    class="text-right font-mono text-sm tabular-nums text-snitch-ink/55"
                     :title="liftLabel(row.type) ? 'Peer median lift vs account usual' : undefined"
                 >
                     {{ liftLabel(row.type) || '-' }}
                 </span>
             </li>
         </ul>
-        <p v-else class="mt-2 text-sm text-slate-500">
+        <p v-else class="mt-2 text-sm text-snitch-ink/55">
             No posts yet.
         </p>
     </div>

@@ -8,11 +8,17 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    /* Evidence File (app) + Caution Tape (landing) font stacks */
     --font-sans:
-        'Figtree', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
         'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-    --font-display: 'Young Serif', Georgia, 'Times New Roman', serif;
-    --font-annotation: 'Caveat', 'Segoe Print', cursive;
+    --font-display:
+        'Bricolage Grotesque', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-mono:
+        'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        'Liberation Mono', 'Courier New', monospace;
+    --font-hero: 'Archivo Black', 'Impact', 'Arial Black', sans-serif;
+    --font-annotation: 'Space Mono', ui-monospace, monospace;
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -68,10 +74,15 @@
     --color-snitch-teal: var(--snitch-teal);
     --color-snitch-fog: var(--snitch-fog);
     --color-snitch-spot: var(--snitch-spot);
+    --color-snitch-alert: var(--snitch-alert);
     --color-snitch-stipple-spot: var(--snitch-stipple-spot);
     --color-snitch-press: var(--snitch-press);
     --color-snitch-stock: var(--snitch-stock);
     --color-snitch-on-spot: var(--snitch-on-spot);
+    --color-snitch-caution-ink: var(--snitch-caution-ink);
+    --color-snitch-caution-yellow: var(--snitch-caution-yellow);
+    --color-snitch-caution-pink: var(--snitch-caution-pink);
+    --color-snitch-caution-fog: var(--snitch-caution-fog);
 }
 
 @layer base {
@@ -88,43 +99,47 @@
     body,
     html {
         --font-sans:
-            'Figtree', ui-sans-serif, system-ui, sans-serif,
-            'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-            'Noto Color Emoji';
+            'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+            'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     }
 }
 
 :root {
     /*
-      Soft risograph - 2-3 spot inks on warm print paper
-      charcoal + strong riso yellow (mustard / fluorescent print ink, not gold chrome)
-      optional mist teal as third stamp ink only
+      Evidence File (logged-in app) - cream archive paper + highlighter yellow.
+      Caution Tape tokens are landing-only accents (black / bold yellow / pink).
     */
-    --snitch-paper: #efe6d8;
-    --snitch-fog: #e4d9c8;
-    --snitch-ink: #1c1b1a;
-    /* Stable charcoal / cream - film gutters, ticket rings, type on press */
-    --snitch-press: #1c1b1a;
-    --snitch-stock: #efe6d8;
-    --snitch-on-spot: #1c1b1a;
+    --snitch-paper: #f3eee3;
+    --snitch-fog: #ebe4d6;
+    --snitch-ink: #141414;
+    /* Stable press / stock for film gutters, ticket rings, type on press */
+    --snitch-press: #141414;
+    --snitch-stock: #f3eee3;
+    --snitch-on-spot: #141414;
     --snitch-lift: #ffffff;
     --snitch-print-blend: multiply;
-    --snitch-spot: #f0c400;
-    --snitch-accent: #f0c400;
-    --snitch-marker: #f0c400;
-    /* Darker mustard for chart stipple dots (brand spot stays fluorescent). */
-    --snitch-stipple-spot: color-mix(in oklab, var(--snitch-spot) 58%, var(--snitch-press));
+    --snitch-spot: #ffd60a;
+    --snitch-accent: #ffd60a;
+    --snitch-marker: #ffd60a;
+    --snitch-alert: #e5341d;
+    /* Darker highlighter mix for chart stipple / heat cells (AA on cream). */
+    --snitch-stipple-spot: color-mix(in oklab, var(--snitch-spot) 42%, var(--snitch-press));
     --snitch-teal: #3a5f6b;
-    --snitch-grade-tint: rgba(240, 196, 0, 0.18);
-    --snitch-grade-shadow: rgba(28, 27, 26, 0.42);
-    --snitch-grade-fade: rgba(239, 230, 216, 0.35);
-    --snitch-grade-warm: rgba(240, 196, 0, 0.1);
+    /* Caution Tape (landing) */
+    --snitch-caution-ink: #0e0e10;
+    --snitch-caution-yellow: #fcd700;
+    --snitch-caution-pink: #ff3d8b;
+    --snitch-caution-fog: #edeae2;
+    --snitch-grade-tint: rgba(255, 214, 10, 0.2);
+    --snitch-grade-shadow: rgba(20, 20, 20, 0.42);
+    --snitch-grade-fade: rgba(243, 238, 227, 0.35);
+    --snitch-grade-warm: rgba(255, 214, 10, 0.12);
     --snitch-grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
-    --snitch-halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Ccircle cx='2' cy='2' r='1.1' fill='%231c1b1a' fill-opacity='0.18'/%3E%3C/svg%3E");
-    --snitch-tape: rgba(240, 196, 0, 0.42);
-    --snitch-washi: rgba(239, 230, 216, 0.72);
+    --snitch-halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Ccircle cx='2' cy='2' r='1.1' fill='%23141414' fill-opacity='0.16'/%3E%3C/svg%3E");
+    --snitch-tape: rgba(255, 214, 10, 0.42);
+    --snitch-washi: rgba(243, 238, 227, 0.72);
     --snitch-torn-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 24' preserveAspectRatio='none'%3E%3Cpath fill='black' d='M0 10 C14 2 22 18 36 9 C50 0 58 17 74 10 C90 3 98 18 114 9 C130 0 140 17 156 10 C172 3 180 18 196 9 C214 0 222 17 240 10 C256 3 266 18 282 9 C298 0 308 17 324 10 C340 3 350 18 366 9 C382 2 392 16 400 10 L400 24 L0 24 Z'/%3E%3C/svg%3E");
-    --snitch-washi-fill: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='32' viewBox='0 0 64 32'%3E%3Crect width='64' height='32' fill='%23f0c400' fill-opacity='0.32'/%3E%3Cg stroke='%23c9a000' stroke-opacity='0.28' stroke-width='0.5'%3E%3Cpath d='M0 6h64M0 12h64M0 18h64M0 24h64'/%3E%3C/g%3E%3C/svg%3E");
+    --snitch-washi-fill: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='32' viewBox='0 0 64 32'%3E%3Crect width='64' height='32' fill='%23ffd60a' fill-opacity='0.32'/%3E%3Cg stroke='%23c9a000' stroke-opacity='0.28' stroke-width='0.5'%3E%3Cpath d='M0 6h64M0 12h64M0 18h64M0 24h64'/%3E%3C/g%3E%3C/svg%3E");
     --snitch-ticket-clip: polygon(
         0% 8%,
         3% 0%,
@@ -152,104 +167,108 @@
     /* Ghost outline width: ink ring between outer clip and inset face */
     --snitch-ticket-stroke: 2px;
 
-    --background: hsl(36 32% 90%);
-    --foreground: hsl(30 8% 12%);
-    --card: hsl(36 36% 93%);
-    --card-foreground: hsl(30 8% 12%);
-    --popover: hsl(36 36% 93%);
-    --popover-foreground: hsl(30 8% 12%);
-    --primary: hsl(30 8% 12%);
-    --primary-foreground: hsl(36 36% 93%);
-    --secondary: hsl(34 22% 86%);
-    --secondary-foreground: hsl(30 8% 12%);
-    --muted: hsl(34 22% 86%);
-    --muted-foreground: hsl(30 6% 36%);
-    --accent: hsl(34 22% 86%);
-    --accent-foreground: hsl(30 8% 12%);
-    --destructive: hsl(350 70% 48%);
-    --destructive-foreground: hsl(36 36% 93%);
-    --border: hsl(32 14% 72%);
-    --input: hsl(34 20% 84%);
-    --ring: hsl(48 92% 47%);
-    --chart-1: hsl(48 92% 47%);
-    --chart-2: hsl(195 28% 38%);
-    --chart-3: hsl(30 8% 22%);
-    --chart-4: hsl(30 8% 40%);
-    --chart-5: hsl(195 22% 48%);
-    --radius: 0.05rem;
-    --sidebar-background: hsl(0 0% 100%);
-    --sidebar-foreground: hsl(0 0% 9%);
-    --sidebar-primary: hsl(0 0% 9%);
-    --sidebar-primary-foreground: hsl(0 0% 98%);
-    --sidebar-accent: hsl(0 0% 96%);
-    --sidebar-accent-foreground: hsl(0 0% 9%);
-    --sidebar-border: hsl(0 0% 90%);
-    --sidebar-ring: hsl(48 92% 47%);
-    --sidebar: hsl(0 0% 100%);
+    --background: #f3eee3;
+    --foreground: #141414;
+    --card: #ffffff;
+    --card-foreground: #141414;
+    --popover: #ffffff;
+    --popover-foreground: #141414;
+    --primary: #141414;
+    --primary-foreground: #f3eee3;
+    --secondary: #ebe4d6;
+    --secondary-foreground: #141414;
+    --muted: #ebe4d6;
+    --muted-foreground: #4a4740;
+    --accent: #ffd60a;
+    --accent-foreground: #141414;
+    --destructive: #e5341d;
+    --destructive-foreground: #ffffff;
+    --border: rgb(20 20 20 / 0.1);
+    --input: #ebe4d6;
+    --ring: #ffd60a;
+    /* Chart series: ink / teal / alert / warm brown / slate - AA on cream */
+    --chart-1: #141414;
+    --chart-2: #3a5f6b;
+    --chart-3: #e5341d;
+    --chart-4: #8b5a2b;
+    --chart-5: #5b7c99;
+    --radius: 0.15rem;
+    --sidebar-background: #f3eee3;
+    --sidebar-foreground: #141414;
+    --sidebar-primary: #141414;
+    --sidebar-primary-foreground: #f3eee3;
+    --sidebar-accent: #ffd60a;
+    --sidebar-accent-foreground: #141414;
+    --sidebar-border: rgb(20 20 20 / 0.1);
+    --sidebar-ring: #ffd60a;
+    --sidebar: #f3eee3;
 }
 
 .dark {
     /*
-      Warm night press - same riso system, inverted stock.
-      Paper / ink / fog flip for chrome + body type.
-      Press / stock / on-spot stay charcoal + cream for film,
-      ticket rings, and mustard fills.
+      Evidence File night - invert paper/ink, keep highlighter + alert.
+      Press / stock / on-spot stay near-black + cream for film and yellow fills.
     */
-    --snitch-paper: #1c1915;
-    --snitch-fog: #2a251f;
-    --snitch-ink: #efe6d8;
-    --snitch-press: #1c1b1a;
-    --snitch-stock: #efe6d8;
-    --snitch-on-spot: #1c1b1a;
-    --snitch-lift: #3a342c;
+    --snitch-paper: #141414;
+    --snitch-fog: #1c1c1e;
+    --snitch-ink: #f3eee3;
+    --snitch-press: #141414;
+    --snitch-stock: #f3eee3;
+    --snitch-on-spot: #141414;
+    --snitch-lift: #2a2a2c;
     --snitch-print-blend: soft-light;
-    --snitch-spot: #f0c400;
-    --snitch-accent: #f0c400;
-    --snitch-marker: #f0c400;
-    --snitch-stipple-spot: color-mix(in oklab, var(--snitch-spot) 58%, var(--snitch-press));
+    --snitch-spot: #ffd60a;
+    --snitch-accent: #ffd60a;
+    --snitch-marker: #ffd60a;
+    --snitch-alert: #e5341d;
+    --snitch-stipple-spot: color-mix(in oklab, var(--snitch-spot) 48%, var(--snitch-stock));
     --snitch-teal: #7a9aa6;
-    --snitch-grade-tint: rgba(240, 196, 0, 0.14);
+    --snitch-caution-ink: #0e0e10;
+    --snitch-caution-yellow: #fcd700;
+    --snitch-caution-pink: #ff3d8b;
+    --snitch-caution-fog: #edeae2;
+    --snitch-grade-tint: rgba(255, 214, 10, 0.14);
     --snitch-grade-shadow: rgba(0, 0, 0, 0.55);
-    --snitch-grade-fade: rgba(28, 25, 21, 0.5);
-    --snitch-grade-warm: rgba(240, 196, 0, 0.08);
-    --snitch-halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Ccircle cx='2' cy='2' r='1.1' fill='%23efe6d8' fill-opacity='0.14'/%3E%3C/svg%3E");
-    --snitch-tape: rgba(240, 196, 0, 0.38);
-    --snitch-washi: rgba(42, 37, 31, 0.78);
-    --snitch-washi-fill: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='32' viewBox='0 0 64 32'%3E%3Crect width='64' height='32' fill='%23f0c400' fill-opacity='0.28'/%3E%3Cg stroke='%23c9a000' stroke-opacity='0.32' stroke-width='0.5'%3E%3Cpath d='M0 6h64M0 12h64M0 18h64M0 24h64'/%3E%3C/g%3E%3C/svg%3E");
+    --snitch-grade-fade: rgba(20, 20, 20, 0.5);
+    --snitch-grade-warm: rgba(255, 214, 10, 0.08);
+    --snitch-halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Ccircle cx='2' cy='2' r='1.1' fill='%23f3eee3' fill-opacity='0.14'/%3E%3C/svg%3E");
+    --snitch-tape: rgba(255, 214, 10, 0.38);
+    --snitch-washi: rgba(28, 28, 30, 0.78);
+    --snitch-washi-fill: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='32' viewBox='0 0 64 32'%3E%3Crect width='64' height='32' fill='%23ffd60a' fill-opacity='0.28'/%3E%3Cg stroke='%23c9a000' stroke-opacity='0.32' stroke-width='0.5'%3E%3Cpath d='M0 6h64M0 12h64M0 18h64M0 24h64'/%3E%3C/g%3E%3C/svg%3E");
 
-    --background: hsl(30 12% 9%);
-    --foreground: hsl(36 28% 90%);
-    --card: hsl(30 10% 12%);
-    --card-foreground: hsl(36 28% 90%);
-    --popover: hsl(30 10% 12%);
-    --popover-foreground: hsl(36 28% 90%);
-    --primary: hsl(36 28% 90%);
-    --primary-foreground: hsl(30 12% 10%);
-    --secondary: hsl(30 10% 16%);
-    --secondary-foreground: hsl(36 28% 90%);
-    --muted: hsl(30 10% 16%);
-    --muted-foreground: hsl(36 14% 64%);
-    --accent: hsl(30 10% 16%);
-    --accent-foreground: hsl(36 28% 90%);
-    --destructive: hsl(350 60% 48%);
-    --destructive-foreground: hsl(36 28% 92%);
-    --border: hsl(30 10% 20%);
-    --input: hsl(30 10% 18%);
-    --ring: hsl(48 88% 52%);
-    --chart-1: hsl(48 88% 52%);
-    --chart-2: hsl(195 30% 42%);
-    --chart-3: hsl(36 30% 55%);
-    --chart-4: hsl(36 18% 62%);
-    --chart-5: hsl(195 22% 48%);
-    --sidebar-background: hsl(30 12% 8%);
-    --sidebar-foreground: hsl(36 28% 90%);
-    --sidebar-primary: hsl(36 28% 92%);
-    --sidebar-primary-foreground: hsl(30 12% 10%);
-    --sidebar-accent: hsl(30 10% 14%);
-    --sidebar-accent-foreground: hsl(36 28% 90%);
-    --sidebar-border: hsl(30 10% 18%);
-    --sidebar-ring: hsl(48 88% 52%);
-    --sidebar: hsl(30 12% 10%);
+    --background: #141414;
+    --foreground: #f3eee3;
+    --card: #1c1c1e;
+    --card-foreground: #f3eee3;
+    --popover: #1c1c1e;
+    --popover-foreground: #f3eee3;
+    --primary: #f3eee3;
+    --primary-foreground: #141414;
+    --secondary: #2a2a2c;
+    --secondary-foreground: #f3eee3;
+    --muted: #2a2a2c;
+    --muted-foreground: #b8b2a6;
+    --accent: #ffd60a;
+    --accent-foreground: #141414;
+    --destructive: #e5341d;
+    --destructive-foreground: #ffffff;
+    --border: rgb(243 238 227 / 0.12);
+    --input: #2a2a2c;
+    --ring: #ffd60a;
+    --chart-1: #ffd60a;
+    --chart-2: #7a9aa6;
+    --chart-3: #e5341d;
+    --chart-4: #c4a574;
+    --chart-5: #8eb0c4;
+    --sidebar-background: #141414;
+    --sidebar-foreground: #f3eee3;
+    --sidebar-primary: #f3eee3;
+    --sidebar-primary-foreground: #141414;
+    --sidebar-accent: #ffd60a;
+    --sidebar-accent-foreground: #141414;
+    --sidebar-border: rgb(243 238 227 / 0.12);
+    --sidebar-ring: #ffd60a;
+    --sidebar: #141414;
 }
 
 @layer base {
@@ -352,13 +371,15 @@
 
 
     /*
-     * Logged-in app chrome: match the white marketing home (no cream paper,
-     * no serif display, no ticket/tape chrome). Marketing Beta keeps ticket buttons.
-     * Type floor: body ~14px (15px from xl), micro labels never below 12px.
+     * Logged-in app chrome: Evidence File.
+     * Cream paper, near-black ink, yellow highlighter, red alerts.
+     * Cards: white / light cream with ink/10 borders. No ticket/tape chrome.
+     * Type: Inter body, Bricolage headings, Space Mono labels/stats (≥14px).
      */
     .snitch-app-chrome {
-        background-color: #ffffff;
-        color: #0a0a0a;
+        background-color: var(--snitch-paper);
+        color: var(--snitch-ink);
+        font-family: var(--font-sans);
         font-size: 14px;
         line-height: 1.45;
     }
@@ -369,19 +390,18 @@
         }
     }
 
-    /* Keep the logged-in shell white (sidebar + content), not cream paper */
     [data-slot='sidebar-wrapper'] {
-        background-color: #ffffff;
+        background-color: var(--snitch-paper);
     }
 
     [data-slot='sidebar'][data-mobile='true'] {
-        background-color: #ffffff;
+        background-color: var(--snitch-paper);
     }
 
     .snitch-app-chrome .snitch-app-shell {
-        background-color: #ffffff;
+        background-color: var(--snitch-paper);
         background-image: none;
-        color: #0a0a0a;
+        color: var(--snitch-ink);
     }
 
     .snitch-app-chrome .snitch-app-shell::before,
@@ -392,9 +412,9 @@
     }
 
     .snitch-app-chrome .snitch-display {
-        font-family: var(--font-sans);
+        font-family: var(--font-display);
         font-weight: 600;
-        letter-spacing: -0.025em;
+        letter-spacing: -0.02em;
     }
 
     .snitch-app-chrome .snitch-scrap,
@@ -404,9 +424,9 @@
     .snitch-app-chrome .snitch-polaroid,
     .snitch-app-chrome .snitch-cutout,
     .snitch-app-chrome .snitch-sticker {
-        background: #ffffff !important;
+        background: var(--snitch-lift) !important;
         background-image: none !important;
-        border: 1px solid rgb(229 229 229);
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 10%, transparent);
         box-shadow: none !important;
         clip-path: none !important;
         filter: none !important;
@@ -428,8 +448,8 @@
 
     .snitch-app-chrome .snitch-dash-rail-item,
     .snitch-app-chrome .snitch-account-rail > * {
-        background: #ffffff;
-        border: 1px solid rgb(229 229 229);
+        background: var(--snitch-lift);
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 10%, transparent);
         box-shadow: none;
         clip-path: none;
     }
@@ -438,11 +458,11 @@
         clip-path: none;
         filter: none;
         box-shadow: none;
-        background: #f0c400;
-        color: #0a0a0a;
+        background: var(--snitch-ink);
+        color: var(--snitch-paper);
         border-radius: 0;
         padding: 0.55rem 1rem;
-        font-weight: 500;
+        font-weight: 600;
         letter-spacing: 0;
     }
 
@@ -456,75 +476,105 @@
         transform: none;
         filter: none;
         opacity: 0.9;
-        color: #0a0a0a;
+        color: var(--snitch-paper);
     }
 
     .snitch-app-chrome .snitch-btn-ghost,
     .snitch-app-chrome .snitch-btn-ghost-light {
-        background: #ffffff;
-        color: #0a0a0a;
-        border: 1px solid rgb(229 229 229);
+        background: var(--snitch-lift);
+        color: var(--snitch-ink);
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 10%, transparent);
         filter: none;
     }
 
     .snitch-app-chrome .snitch-btn-ghost:hover,
     .snitch-app-chrome .snitch-btn-ghost-light:hover {
-        border-color: rgb(163 163 163);
-        background: #fafafa;
-        color: #0a0a0a;
+        border-color: color-mix(in oklab, var(--snitch-ink) 28%, transparent);
+        background: color-mix(in oklab, var(--snitch-paper) 70%, var(--snitch-lift));
+        color: var(--snitch-ink);
     }
 
     .snitch-app-chrome .snitch-btn.snitch-btn-spot {
-        background: #f0c400;
-        color: #0a0a0a;
+        background: var(--snitch-spot);
+        color: var(--snitch-on-spot);
     }
 
     .snitch-app-chrome .snitch-ink-label {
-        text-transform: none;
-        letter-spacing: 0.04em;
-        color: rgb(115 115 115);
-        font-family: var(--font-sans);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: color-mix(in oklab, var(--snitch-ink) 62%, transparent);
+        font-family: var(--font-mono);
         font-size: 0.75rem; /* 12px meta floor */
         line-height: 1.35;
     }
 
+    .snitch-app-chrome .tabular-nums,
+    .snitch-app-chrome .snitch-stat {
+        font-family: var(--font-mono);
+        font-size: max(0.875rem, 1em); /* Space Mono ≥14px */
+        font-variant-numeric: tabular-nums;
+    }
+
+    .snitch-highlight {
+        background-color: var(--snitch-spot);
+        color: var(--snitch-ink);
+        box-decoration-break: clone;
+        -webkit-box-decoration-break: clone;
+        padding: 0 0.18em;
+    }
+
+    .snitch-alert-badge {
+        display: inline-flex;
+        align-items: center;
+        background: var(--snitch-alert);
+        color: #ffffff;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 0.2em 0.55em;
+        border-radius: 999px;
+        line-height: 1.2;
+    }
+
     .snitch-app-chrome .snitch-field {
         border-radius: 0;
-        border-color: rgb(229 229 229);
-        background: #ffffff;
+        border-color: color-mix(in oklab, var(--snitch-ink) 10%, transparent);
+        background: var(--snitch-lift);
     }
 
     .snitch-app-chrome .snitch-platform-embed-open {
         text-transform: none;
         letter-spacing: 0;
-        background: #ffffff;
-        color: #0a0a0a;
+        background: var(--snitch-lift);
+        color: var(--snitch-ink);
         box-shadow: none;
-        border: 1px solid rgb(229 229 229);
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 10%, transparent);
     }
 
     .snitch-app-chrome .snitch-platform-embed-fallback-empty {
-        background: #fafafa;
-        color: #737373;
+        background: color-mix(in oklab, var(--snitch-paper) 80%, var(--snitch-lift));
+        color: color-mix(in oklab, var(--snitch-ink) 55%, transparent);
     }
 
     .snitch-app-chrome .snitch-avatar {
         clip-path: none;
-        border: 1px solid rgb(229 229 229);
-        background: #f5f5f5;
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 10%, transparent);
+        background: var(--snitch-fog);
         overflow: hidden;
     }
 
     .snitch-app-chrome .snitch-image-fallback-initials {
-        color: #0a0a0a;
-        background: #e5e5e5;
+        color: var(--snitch-ink);
+        background: var(--snitch-fog);
     }
 
     .snitch-app-chrome .snitch-filter-bar,
     .snitch-app-chrome .snitch-paper-panel {
-        background: #ffffff !important;
+        background: var(--snitch-lift) !important;
         background-image: none !important;
-        border: 1px solid rgb(229 229 229);
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 10%, transparent);
         box-shadow: none;
         clip-path: none;
     }
@@ -536,12 +586,20 @@
 
     .snitch-display {
         font-family: var(--font-display);
-        font-weight: 400;
+        font-weight: 600;
         letter-spacing: -0.02em;
         font-optical-sizing: auto;
     }
 
-    /* Caveat hand label - charcoal for contrast on paper; spot yellow is accents only */
+    .snitch-hero-display {
+        font-family: var(--font-hero);
+        font-weight: 400;
+        letter-spacing: 0.01em;
+        text-transform: uppercase;
+        line-height: 1.05;
+    }
+
+    /* Mono annotation / labels - charcoal for contrast; spot yellow is accents only */
     .snitch-annotation {
         font-family: var(--font-annotation);
         color: var(--snitch-ink);
@@ -2504,19 +2562,19 @@
     }
 
     .snitch-heatmap-cell.level-1 {
-        background: color-mix(in oklab, var(--snitch-spot) 35%, var(--snitch-paper));
+        background: color-mix(in oklab, var(--snitch-spot) 45%, var(--snitch-paper));
     }
 
     .snitch-heatmap-cell.level-2 {
-        background: color-mix(in oklab, var(--snitch-spot) 55%, var(--snitch-paper));
+        background: color-mix(in oklab, var(--snitch-spot) 72%, var(--snitch-paper));
     }
 
     .snitch-heatmap-cell.level-3 {
-        background: color-mix(in oklab, var(--snitch-spot) 78%, var(--snitch-ink));
+        background: color-mix(in oklab, var(--snitch-stipple-spot) 70%, var(--snitch-spot));
     }
 
     .snitch-heatmap-cell.level-4 {
-        background: color-mix(in oklab, var(--snitch-spot) 55%, var(--snitch-ink));
+        background: color-mix(in oklab, var(--snitch-ink) 78%, var(--snitch-spot));
     }
 
     .snitch-heatmap-cell.is-future {
@@ -3905,7 +3963,8 @@
 }
 
 .snitch-app-chrome .snitch-ink-label {
-    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.875rem; /* Space Mono labels ≥14px */
     line-height: 1.35;
 }
 

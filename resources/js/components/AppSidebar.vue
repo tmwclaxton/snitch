@@ -41,11 +41,11 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard, home } from '@/routes';
 import { overview as adminOverview, activity as adminActivity } from '@/routes/admin';
+import { index as adminFeaturesIndex } from '@/routes/admin/features';
 import { index as adminUsersIndex } from '@/routes/admin/users';
 import { edit as appearance } from '@/routes/appearance';
 import { edit as billing } from '@/routes/billing';
 import type { NavItem } from '@/types';
-import { index as adminFeaturesIndex } from '@/routes/admin/features';
 
 const page = usePage();
 const isAdmin = computed(() => Boolean(page.props.auth?.user?.is_admin));
@@ -189,9 +189,9 @@ const accountNavItems = computed<NavItem[]>(() => {
     <Sidebar
         collapsible="icon"
         variant="sidebar"
-        class="border-r border-neutral-200 bg-white"
+        class="border-r border-snitch-ink/10 bg-snitch-paper"
     >
-        <SidebarHeader class="border-b border-neutral-200">
+        <SidebarHeader class="border-b border-snitch-ink/10">
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
@@ -208,11 +208,11 @@ const accountNavItems = computed<NavItem[]>(() => {
             <NavMain :items="mainNavItems" label="Platform" />
         </SidebarContent>
 
-        <SidebarFooter class="mt-auto shrink-0 gap-0 border-t border-neutral-200 p-0">
+        <SidebarFooter class="mt-auto shrink-0 gap-0 border-t border-snitch-ink/10 p-0">
             <div class="pt-2">
                 <NavMain :items="accountNavItems" label="Account" />
             </div>
-            <div class="border-t border-neutral-200 p-2">
+            <div class="border-t border-snitch-ink/10 p-2">
                 <NavUser />
             </div>
         </SidebarFooter>
