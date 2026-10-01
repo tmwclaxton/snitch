@@ -7,7 +7,7 @@ paths:
 
 # Evidence File + Caution Tape tokens
 
-Appearance is light / dark / system via `useAppearance`, the `appearance` cookie, and the `dark` class on `<html>`.
+Appearance is light / dark / system via `useAppearance`, the `appearance` cookie, and the `dark` class on `<html>`. When dark is active, set `color-scheme: dark` on the root (CSS + `documentElement.style.colorScheme` in `updateTheme` / the boot script) so native scrollbars follow night; light uses `color-scheme: light`. Dark also styles scrollbar thumbs fog-on-`#1A1A1D`.
 
 ## Palettes
 
