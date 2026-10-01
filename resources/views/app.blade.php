@@ -64,14 +64,18 @@
         <script>
             (function() {
                 const appearance = '{{ $appearance ?? "system" }}';
+                const root = document.documentElement;
+                let dark = appearance === 'dark';
 
                 if (appearance === 'system') {
-                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-                    if (prefersDark) {
-                        document.documentElement.classList.add('dark');
+                    if (dark) {
+                        root.classList.add('dark');
                     }
                 }
+
+                root.style.colorScheme = dark ? 'dark' : 'light';
             })();
         </script>
 
@@ -79,10 +83,12 @@
         <style>
             html {
                 background-color: #f3eee3;
+                color-scheme: light;
             }
 
             html.dark {
                 background-color: #0e0e10;
+                color-scheme: dark;
             }
         </style>
 

@@ -26,6 +26,8 @@ class AppearanceTest extends TestCase
         );
         $this->assertStringContainsString("const appearance = 'dark';", $html);
         $this->assertStringContainsString('background-color: #0e0e10', $html);
+        $this->assertStringContainsString("root.style.colorScheme = dark ? 'dark' : 'light';", $html);
+        $this->assertStringContainsString('color-scheme: dark;', $html);
     }
 
     public function test_light_appearance_cookie_does_not_force_dark_class(): void
@@ -125,6 +127,10 @@ class AppearanceTest extends TestCase
         $this->assertStringContainsString('.snitch-meter-fill-lead', $css);
         $this->assertStringContainsString('.dark .snitch-choice-active', $css);
         $this->assertStringContainsString('background: var(--snitch-spot);', $css);
+        $this->assertStringContainsString('html.dark {', $css);
+        $this->assertStringContainsString('color-scheme: dark;', $css);
+        $this->assertStringContainsString('scrollbar-color:', $css);
+        $this->assertStringContainsString('::-webkit-scrollbar-thumb', $css);
     }
 
     public function test_yellow_button_hover_uses_charcoal_on_spot_type(): void

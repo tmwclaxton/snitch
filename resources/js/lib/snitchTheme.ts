@@ -69,6 +69,47 @@ export function snitchRivalColours(): readonly string[] {
     return snitchIsDark() ? SNITCH_RIVAL_COLOURS_DARK : SNITCH_RIVAL_COLOURS_LIGHT;
 }
 
+export function snitchNormalizeHandle(value: string | null | undefined): string {
+    return (value ?? '').trim().replace(/^@+/, '').toLowerCase();
+}
+
+/**
+ * Stable per-handle colour for chips, legends, and chart lines.
+ * Own / peer series stay on the dedicated You / average colours.
+ */
+export function snitchAccountColour(
+    name: string | null | undefined,
+    options: { isOwn?: boolean; isPeer?: boolean } = {},
+): string {
+    const label = (name ?? '').trim();
+
+    if (
+        options.isOwn
+        || label === 'You'
+        || label.toLowerCase() === 'you'
+    ) {
+        return snitchYouSeries();
+    }
+
+    if (
+        options.isPeer
+        || label === 'Peer median'
+        || label === "Rivals' average"
+    ) {
+        return snitchPeerSeries();
+    }
+
+    const rivals = snitchRivalColours();
+    const key = snitchNormalizeHandle(label);
+    let hash = 0;
+
+    for (let i = 0; i < key.length; i++) {
+        hash = ((hash * 31) + key.charCodeAt(i)) >>> 0;
+    }
+
+    return rivals[hash % rivals.length] ?? rivals[0];
+}
+
 /** Rivals' average / peer median line. */
 export function snitchPeerSeries(): string {
     return snitchIsDark() ? 'rgba(237, 234, 226, 0.55)' : '#8A8478';

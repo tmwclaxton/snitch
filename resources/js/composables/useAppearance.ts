@@ -14,19 +14,17 @@ export function updateTheme(value: Appearance): void {
         return;
     }
 
+    let dark = value === 'dark';
+
     if (value === 'system') {
         const mediaQueryList = window.matchMedia(
             '(prefers-color-scheme: dark)',
         );
-        const systemTheme = mediaQueryList.matches ? 'dark' : 'light';
-
-        document.documentElement.classList.toggle(
-            'dark',
-            systemTheme === 'dark',
-        );
-    } else {
-        document.documentElement.classList.toggle('dark', value === 'dark');
+        dark = mediaQueryList.matches;
     }
+
+    document.documentElement.classList.toggle('dark', dark);
+    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
 }
 
 const setCookie = (name: string, value: string, days = 365) => {

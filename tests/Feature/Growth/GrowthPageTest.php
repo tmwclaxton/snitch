@@ -52,6 +52,26 @@ class GrowthPageTest extends TestCase
             );
     }
 
+    public function test_growth_chips_and_charts_share_handle_colour_map(): void
+    {
+        $index = file_get_contents(resource_path('js/pages/growth/Index.vue'));
+        $chart = file_get_contents(resource_path('js/components/growth/GrowthLineChart.vue'));
+        $theme = file_get_contents(resource_path('js/lib/snitchTheme.ts'));
+        $appearance = file_get_contents(resource_path('js/composables/useAppearance.ts'));
+
+        $this->assertIsString($index);
+        $this->assertIsString($chart);
+        $this->assertIsString($theme);
+        $this->assertIsString($appearance);
+        $this->assertStringContainsString('snitchAccountColour', $index);
+        $this->assertStringContainsString('snitchAccountColour', $chart);
+        $this->assertStringContainsString('export function snitchAccountColour', $theme);
+        $this->assertStringContainsString('snitchNormalizeHandle', $theme);
+        $this->assertStringNotContainsString('RIVAL_COLOURS', $index);
+        $this->assertStringNotContainsString('rivalIndex', $chart);
+        $this->assertStringContainsString("style.colorScheme = dark ? 'dark' : 'light'", $appearance);
+    }
+
     public function test_growth_charts_exclude_current_incomplete_week(): void
     {
         $user = User::factory()->create();

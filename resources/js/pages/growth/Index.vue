@@ -5,6 +5,7 @@ import { computed } from 'vue';
 import GrowthController from '@/actions/App/Http/Controllers/GrowthController';
 import GrowthLineChart from '@/components/growth/GrowthLineChart.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { snitchAccountColour } from '@/lib/snitchTheme';
 
 defineOptions({
     layout: AppLayout,
@@ -54,23 +55,13 @@ const periods = [
     { value: 'all', label: 'All time' },
 ];
 
-const RIVAL_COLOURS = ['#3A5F6B', '#C45C26', '#5B7C99', '#8B5A2B', '#2F6F4E', '#6B4C7A', '#B45309', '#0F766E'];
-
 const rivalOptions = computed(() =>
     props.accountOptions.filter((account) => !account.is_own_account),
 );
 
-const chipColourById = computed(() => {
-    const map = new Map<number, string>();
-    let index = 0;
-
-    for (const account of rivalOptions.value) {
-        map.set(account.id, RIVAL_COLOURS[index % RIVAL_COLOURS.length]);
-        index++;
-    }
-
-    return map;
-});
+function chipColour(handle: string): string {
+    return snitchAccountColour(handle);
+}
 
 const showAllRivals = computed(() => props.selectedAccounts.length === 0);
 
@@ -152,7 +143,7 @@ function toggleAccount(id: number): void {
             >
                 <span
                     class="size-2.5 shrink-0 rounded-full"
-                    :style="{ background: chipColourById.get(account.id) }"
+                    :style="{ background: chipColour(account.handle) }"
                     aria-hidden="true"
                 />
                 @{{ account.handle }}

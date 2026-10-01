@@ -281,6 +281,38 @@
   re-scopes the day tokens for sections that are deliberately cream/white
   (e.g. /beta). Paint the canvas black so overscroll never flashes cream.
 */
+html {
+    color-scheme: light;
+}
+
+html.dark {
+    color-scheme: dark;
+    scrollbar-color: color-mix(in oklab, var(--snitch-ink) 42%, transparent) #1a1a1d;
+}
+
+html.dark::-webkit-scrollbar,
+html.dark *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+html.dark::-webkit-scrollbar-track,
+html.dark *::-webkit-scrollbar-track {
+    background: #1a1a1d;
+}
+
+html.dark::-webkit-scrollbar-thumb,
+html.dark *::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--snitch-ink) 42%, transparent);
+    border-radius: 999px;
+    border: 2px solid #1a1a1d;
+}
+
+html.dark::-webkit-scrollbar-thumb:hover,
+html.dark *::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklab, var(--snitch-ink) 58%, transparent);
+}
+
 html:has(.snitch-public-shell) {
     background-color: #0e0e10;
     color-scheme: dark;

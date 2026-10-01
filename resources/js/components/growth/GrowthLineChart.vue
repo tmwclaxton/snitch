@@ -2,12 +2,11 @@
 import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 import {
+    snitchAccountColour,
     snitchAxisLabel,
     snitchAxisMuted,
     snitchInk,
     snitchPeerSeries,
-    snitchRivalColours,
-    snitchYouSeries,
 } from '@/lib/snitchTheme';
 
 type Point = { date: string; value: number | null };
@@ -30,20 +29,17 @@ const props = defineProps<{
 
 const colourByName = computed(() => {
     const map = new Map<string, string>();
-    let rivalIndex = 0;
-    const youColour = snitchYouSeries();
-    const peerColour = snitchPeerSeries();
-    const rivals = snitchRivalColours();
 
     for (const row of props.series ?? []) {
-        if (row.is_own_account || row.name === 'You') {
-            map.set(row.name, youColour);
-        } else if (row.is_peer_median || row.name === 'Peer median' || row.name === "Rivals' average") {
-            map.set(row.name, peerColour);
-        } else {
-            map.set(row.name, rivals[rivalIndex % rivals.length] ?? rivals[0]);
-            rivalIndex++;
-        }
+        map.set(
+            row.name,
+            snitchAccountColour(row.name, {
+                isOwn: Boolean(row.is_own_account) || row.name === 'You',
+                isPeer: Boolean(row.is_peer_median)
+                    || row.name === 'Peer median'
+                    || row.name === "Rivals' average",
+            }),
+        );
     }
 
     return map;
