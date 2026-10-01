@@ -247,7 +247,7 @@ function regenerate(): void {
                     </h3>
                     <p
                         v-if="idea.visual"
-                        class="mt-1 text-sm text-snitch-ink/50 dark:text-snitch-ink/85"
+                        class="snitch-brief-idea-visual mt-1 text-sm text-snitch-ink/50"
                     >
                         {{ idea.visual }}
                     </p>
@@ -391,7 +391,7 @@ function regenerate(): void {
                                 <span
                                     v-for="(cell, hour) in row"
                                     :key="`c-${dow}-${hour}`"
-                                    class="snitch-brief-heat-cell w-full border border-snitch-ink/5 dark:border-[#2c2c31]"
+                                    class="snitch-brief-heat-cell w-full border border-snitch-ink/5 dark:border-[#3a3a40]"
                                     :style="heatStyle(cell)"
                                     :title="cell == null ? '' : `${days[dow]} ${hour}:00 · ${cell}×`"
                                 />

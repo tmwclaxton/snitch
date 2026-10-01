@@ -1380,14 +1380,19 @@ html:has(.snitch-public-shell) {
     .dark .snitch-brief-heat-cell {
         --snitch-brief-heat-empty: #1f1f23;
         background: #1f1f23;
-        border-color: #2c2c31;
+        border-color: #3a3a40;
     }
 
     .dark .snitch-brief-heat-axis,
     .dark .snitch-brief-heat-axis-day {
-        color: color-mix(in oklab, var(--snitch-fog, var(--snitch-ink)) 78%, transparent);
+        /* Dark --snitch-fog is a surface; fog body type is --snitch-ink. */
+        color: color-mix(in oklab, var(--snitch-ink) 82%, transparent);
         font-size: 0.875rem; /* 14px fog */
         line-height: 1.2;
+    }
+
+    .dark .snitch-brief-idea-visual {
+        color: color-mix(in oklab, var(--snitch-ink) 88%, transparent);
     }
 
     /* Soft fade only on the dash sheet - keep transform stagger off so rows do not jump. */
