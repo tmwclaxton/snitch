@@ -57,19 +57,98 @@ class GrowthPageTest extends TestCase
         $index = file_get_contents(resource_path('js/pages/growth/Index.vue'));
         $chart = file_get_contents(resource_path('js/components/growth/GrowthLineChart.vue'));
         $theme = file_get_contents(resource_path('js/lib/snitchTheme.ts'));
+        $lineChart = file_get_contents(resource_path('js/lib/lineChart.ts'));
         $appearance = file_get_contents(resource_path('js/composables/useAppearance.ts'));
 
         $this->assertIsString($index);
         $this->assertIsString($chart);
         $this->assertIsString($theme);
+        $this->assertIsString($lineChart);
         $this->assertIsString($appearance);
         $this->assertStringContainsString('snitchAccountColour', $index);
         $this->assertStringContainsString('snitchAccountColour', $chart);
+        $this->assertStringContainsString('connectedLineData', $chart);
+        $this->assertStringContainsString("type: 'datetime'", $chart);
+        $this->assertStringContainsString('youStrokeWidth', $chart);
+        $this->assertStringContainsString('export function connectedLineData', $lineChart);
         $this->assertStringContainsString('export function snitchAccountColour', $theme);
         $this->assertStringContainsString('snitchNormalizeHandle', $theme);
         $this->assertStringNotContainsString('RIVAL_COLOURS', $index);
         $this->assertStringNotContainsString('rivalIndex', $chart);
+        $this->assertStringContainsString("type: 'datetime' as const", $chart);
         $this->assertStringContainsString("style.colorScheme = dark ? 'dark' : 'light'", $appearance);
+    }
+
+    public function test_own_account_weekly_metrics_null_out_empty_weeks_but_keep_posted_weeks(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $own = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'is_own_account' => true,
+            'handle' => 'goodgym',
+            'followers' => 1200,
+        ]);
+
+        $thisWeek = CarbonImmutable::now('Europe/London')->startOfWeek(CarbonImmutable::MONDAY);
+        $weekA = $thisWeek->subWeeks(3);
+        $weekB = $thisWeek->subWeeks(2);
+        $weekC = $thisWeek->subWeeks(1);
+
+        Post::factory()->forAccount($own)->create([
+            'posted_at' => $weekA->addDays(1),
+            'metrics' => ['views' => 800, 'likes' => 80, 'comments' => 8, 'shares' => 2],
+        ]);
+        Post::factory()->forAccount($own)->create([
+            'posted_at' => $weekC->addDays(2),
+            'metrics' => ['views' => 600, 'likes' => 40, 'comments' => 4, 'shares' => 1],
+        ]);
+
+        FollowerSnapshot::factory()->create([
+            'social_account_id' => $own->social_account_id,
+            'followers' => 1200,
+            'captured_on' => $weekA->toDateString(),
+        ]);
+        FollowerSnapshot::factory()->create([
+            'social_account_id' => $own->social_account_id,
+            'followers' => 1250,
+            'captured_on' => $weekC->toDateString(),
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('growth.index', ['period' => '30d']))
+            ->assertOk();
+
+        $charts = $response->original->getData()['page']['props']['metrics']['charts'] ?? null;
+        $this->assertIsArray($charts);
+
+        foreach (['posts_per_week', 'engagement_rate'] as $key) {
+            $you = collect($charts[$key] ?? [])->firstWhere('name', 'You');
+            $this->assertNotNull($you, $key);
+            $byDate = collect($you['points'] ?? [])->keyBy('date');
+
+            $pointA = $byDate->get($weekA->toDateString());
+            $pointB = $byDate->get($weekB->toDateString());
+            $pointC = $byDate->get($weekC->toDateString());
+
+            $this->assertIsArray($pointA, $key.' week A');
+            $this->assertIsArray($pointB, $key.' week B');
+            $this->assertIsArray($pointC, $key.' week C');
+            $this->assertNotNull($pointA['value'] ?? null, $key.' week A value');
+            $this->assertNull($pointB['value'] ?? null, $key.' week B gap');
+            $this->assertNotNull($pointC['value'] ?? null, $key.' week C value');
+        }
+
+        $multiplier = collect($charts['avg_multiplier'] ?? [])->firstWhere('name', 'You');
+        $this->assertNotNull($multiplier);
+        $this->assertNull(
+            collect($multiplier['points'] ?? [])->firstWhere('date', $weekB->toDateString())['value'] ?? null,
+        );
+
+        $followers = collect($charts['followers'] ?? [])->firstWhere('name', 'You');
+        $this->assertNotNull($followers);
+        $followerValues = collect($followers['points'] ?? [])->pluck('value')->filter(fn ($v) => $v !== null);
+        $this->assertGreaterThanOrEqual(2, $followerValues->count());
     }
 
     public function test_growth_charts_exclude_current_incomplete_week(): void

@@ -3,6 +3,13 @@ import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
 import { useAccountColours } from '@/composables/useAccountColours';
+import {
+    connectedLineData,
+    lineChartTimestamp,
+    rivalStrokeWidth,
+    youStrokeWidth,
+} from '@/lib/lineChart';
+import { snitchAxisLabel, snitchAxisMuted, snitchInk } from '@/lib/snitchTheme';
 
 type Point = { label: string; posts: number; interactions: number; er: number | null; followers: number | null };
 type Series = { handle: string; is_own_account: boolean; points: Point[] };
@@ -18,31 +25,72 @@ const props = defineProps<{
 const { colourFor } = useAccountColours();
 
 const postSeries = computed(() =>
-    (props.series ?? []).map((row) => ({
-        name: row.is_own_account ? 'You' : `@${row.handle}`,
-        data: row.points.map((point) => point.posts),
-    })),
+    (props.series ?? []).map((row) => {
+        const weeks = props.weeks ?? [];
+
+        return {
+            name: row.is_own_account ? 'You' : `@${row.handle}`,
+            data: connectedLineData(
+                row.points.map((point, index) => ({
+                    date: weeks[index] ?? point.label,
+                    value: point.posts,
+                })),
+            ),
+        };
+    }).filter((row) => row.data.length > 0),
+);
+
+const activeRows = computed(() =>
+    (props.series ?? []).filter((row) => {
+        const name = row.is_own_account ? 'You' : `@${row.handle}`;
+
+        return postSeries.value.some((series) => series.name === name);
+    }),
 );
 
 const colours = computed(() =>
-    (props.series ?? []).map((row) => colourFor(row.handle, row.is_own_account)),
+    activeRows.value.map((row) => colourFor(row.handle, row.is_own_account)),
+);
+
+const strokeWidths = computed(() =>
+    activeRows.value.map((row) => (row.is_own_account ? youStrokeWidth() : rivalStrokeWidth())),
 );
 
 const options = computed(() => ({
-    chart: { type: 'line' as const, height: 160, toolbar: { show: false }, zoom: { enabled: false }, fontFamily: 'inherit' },
+    chart: {
+        type: 'line' as const,
+        height: 160,
+        toolbar: { show: false },
+        zoom: { enabled: false },
+        fontFamily: 'inherit',
+        background: 'transparent',
+        animations: { enabled: false },
+    },
     colors: colours.value,
-    stroke: { width: 2, curve: 'straight' as const },
-    markers: { size: 2 },
-    grid: { borderColor: '#e2e8f0', strokeDashArray: 3 },
+    stroke: {
+        width: strokeWidths.value,
+        curve: 'straight' as const,
+        lineCap: 'round' as const,
+    },
+    markers: { size: 2, strokeWidth: 0 },
+    grid: { borderColor: snitchAxisMuted(), strokeDashArray: 3 },
     xaxis: {
-        categories: props.weeks ?? [],
-        labels: { style: { colors: '#64748b', fontSize: '9px' }, rotate: -35 },
+        type: 'datetime' as const,
+        labels: {
+            style: { colors: snitchAxisLabel(), fontSize: '14px' },
+            datetimeUTC: true,
+            rotate: -35,
+        },
+        min: props.weeks?.[0] ? lineChartTimestamp(props.weeks[0]) : undefined,
+        max: props.weeks?.length
+            ? lineChartTimestamp(props.weeks[props.weeks.length - 1] ?? '')
+            : undefined,
     },
     yaxis: {
-        labels: { style: { colors: '#64748b', fontSize: '9px' } },
-        title: { text: 'posts/wk', style: { color: '#94a3b8', fontSize: '9px' } },
+        labels: { style: { colors: snitchAxisLabel(), fontSize: '14px' } },
+        title: { text: 'posts/wk', style: { color: snitchAxisLabel(), fontSize: '14px' } },
     },
-    legend: { fontSize: '10px', labels: { colors: '#475569' } },
+    legend: { fontSize: '14px', labels: { colors: snitchInk('#141414') } },
 }));
 </script>
 
@@ -56,6 +104,12 @@ const options = computed(() => ({
                 ER {{ deltas.er >= 0 ? '+' : '' }}{{ deltas.er.toFixed(1) }} points
             </span>
         </p>
-        <VueApexCharts type="line" height="160" :options="options" :series="postSeries" />
+        <VueApexCharts
+            v-if="postSeries.length"
+            type="line"
+            height="160"
+            :options="options"
+            :series="postSeries"
+        />
     </div>
 </template>

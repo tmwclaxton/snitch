@@ -3,6 +3,11 @@ import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
 import { useAccountColours } from '@/composables/useAccountColours';
+import {
+    connectedLineData,
+    rivalStrokeWidth,
+    youStrokeWidth,
+} from '@/lib/lineChart';
 import { snitchAxisLabel, snitchAxisMuted, snitchInk } from '@/lib/snitchTheme';
 
 type Point = { date: string; followers: number; pct_change: number | null };
@@ -19,26 +24,48 @@ const { colourFor } = useAccountColours();
 const chartSeries = computed(() =>
     (props.series ?? []).map((row) => ({
         name: row.is_own_account ? 'You' : `@${row.handle}`,
-        data: row.points.map((point) => ({
-            x: point.date,
-            y: point.pct_change ?? 0,
-        })),
-    })),
+        data: connectedLineData(
+            row.points.map((point) => ({
+                date: point.date,
+                value: point.pct_change,
+            })),
+        ),
+    })).filter((row) => row.data.length > 0),
 );
 
 const colours = computed(() =>
-    (props.series ?? []).map((row) => colourFor(row.handle, row.is_own_account)),
+    (props.series ?? [])
+        .filter((row) => row.points.some((point) => point.pct_change !== null))
+        .map((row) => colourFor(row.handle, row.is_own_account)),
+);
+
+const strokeWidths = computed(() =>
+    (props.series ?? [])
+        .filter((row) => row.points.some((point) => point.pct_change !== null))
+        .map((row) => (row.is_own_account ? youStrokeWidth() : rivalStrokeWidth())),
 );
 
 const options = computed(() => ({
-    chart: { type: 'line' as const, height: 180, toolbar: { show: false }, zoom: { enabled: false }, fontFamily: 'inherit', background: 'transparent' },
+    chart: {
+        type: 'line' as const,
+        height: 180,
+        toolbar: { show: false },
+        zoom: { enabled: false },
+        fontFamily: 'inherit',
+        background: 'transparent',
+        animations: { enabled: false },
+    },
     colors: colours.value,
-    stroke: { width: 2, curve: 'straight' as const },
-    markers: { size: 3 },
+    stroke: {
+        width: strokeWidths.value,
+        curve: 'straight' as const,
+        lineCap: 'round' as const,
+    },
+    markers: { size: 3, strokeWidth: 0 },
     grid: { borderColor: snitchAxisMuted(), strokeDashArray: 3 },
     xaxis: {
-        type: 'category' as const,
-        labels: { style: { colors: snitchAxisLabel(), fontSize: '14px' } },
+        type: 'datetime' as const,
+        labels: { style: { colors: snitchAxisLabel(), fontSize: '14px' }, datetimeUTC: true },
     },
     yaxis: {
         labels: {
@@ -58,6 +85,12 @@ const options = computed(() => ({
     <EmptyState v-if="status === 'empty' || !series?.length" :reason="reason" compact />
     <div v-else>
         <p v-if="status === 'insufficient'" class="mb-1.5 text-xs text-snitch-ink/55">{{ reason }}</p>
-        <VueApexCharts type="line" height="180" :options="options" :series="chartSeries" />
+        <VueApexCharts
+            v-if="chartSeries.length"
+            type="line"
+            height="180"
+            :options="options"
+            :series="chartSeries"
+        />
     </div>
 </template>

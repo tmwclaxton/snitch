@@ -2,6 +2,11 @@
 import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 import {
+    connectedLineData,
+    rivalStrokeWidth,
+    youStrokeWidth,
+} from '@/lib/lineChart';
+import {
     snitchAccountColour,
     snitchAxisLabel,
     snitchAxisMuted,
@@ -27,6 +32,16 @@ const props = defineProps<{
     tableFallback?: boolean;
 }>();
 
+function isYou(row: Series): boolean {
+    return Boolean(row.is_own_account) || row.name === 'You';
+}
+
+function isPeer(row: Series): boolean {
+    return Boolean(row.is_peer_median)
+        || row.name === 'Peer median'
+        || row.name === "Rivals' average";
+}
+
 const colourByName = computed(() => {
     const map = new Map<string, string>();
 
@@ -34,10 +49,8 @@ const colourByName = computed(() => {
         map.set(
             row.name,
             snitchAccountColour(row.name, {
-                isOwn: Boolean(row.is_own_account) || row.name === 'You',
-                isPeer: Boolean(row.is_peer_median)
-                    || row.name === 'Peer median'
-                    || row.name === "Rivals' average",
+                isOwn: isYou(row),
+                isPeer: isPeer(row),
             }),
         );
     }
@@ -45,46 +58,24 @@ const colourByName = computed(() => {
     return map;
 });
 
-/** Shared weekly categories so every series aligns on the same x-axis. */
-const categories = computed(() => {
-    const dates = new Set<string>();
-
-    for (const row of props.series ?? []) {
-        for (const point of row.points ?? []) {
-            if (point.date) {
-                dates.add(point.date);
-            }
-        }
-    }
-
-    return [...dates].sort();
-});
-
 const activeSeries = computed(() =>
-    (props.series ?? []).filter((row) => (row.points ?? []).some((point) => point.value !== null)),
+    (props.series ?? []).filter((row) => connectedLineData(row.points).length > 0),
 );
 
+/** Only real points - ApexCharts 7 cannot join null category slots, so drop gaps client-side. */
 const chartSeries = computed(() =>
-    activeSeries.value.map((row) => {
-        const byDate = new Map((row.points ?? []).map((point) => [point.date, point.value]));
-
-        return {
-            name: row.name,
-            data: categories.value.map((date) => {
-                const value = byDate.get(date);
-
-                return value === undefined || value === null ? null : Number(value);
-            }),
-        };
-    }),
+    activeSeries.value.map((row) => ({
+        name: row.name,
+        data: connectedLineData(row.points),
+    })),
 );
 
 const strokeWidths = computed(() =>
-    activeSeries.value.map((row) => (row.is_own_account || row.name === 'You' ? 3.5 : 2)),
+    activeSeries.value.map((row) => (isYou(row) ? youStrokeWidth() : rivalStrokeWidth())),
 );
 
 const strokeDashes = computed(() =>
-    activeSeries.value.map((row) => (row.is_peer_median || row.name === 'Peer median' || row.name === "Rivals' average" ? 8 : 0)),
+    activeSeries.value.map((row) => (isPeer(row) ? 8 : 0)),
 );
 
 const colours = computed(() =>
@@ -92,12 +83,14 @@ const colours = computed(() =>
 );
 
 const chartKey = computed(() =>
-    activeSeries.value.map((row) => row.name).join('|') + ':' + categories.value.join(','),
+    chartSeries.value
+        .map((row) => `${row.name}:${row.data.map((point) => `${point.x}=${point.y}`).join(',')}`)
+        .join('|'),
 );
 
 const tableRows = computed(() =>
     (props.series ?? [])
-        .filter((row) => !row.is_peer_median && row.name !== 'Peer median' && row.name !== "Rivals' average")
+        .filter((row) => !isPeer(row))
         .map((row) => {
             const last = [...(row.points ?? [])].reverse().find((point) => point.value !== null);
 
@@ -110,11 +103,18 @@ const tableRows = computed(() =>
         .filter((row) => row.value !== null),
 );
 
-function formatAxisDate(value: string): string {
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+function formatAxisDate(value: string | number): string {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        const date = new Date(value);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        return `${date.getUTCDate()} ${months[date.getUTCMonth()] ?? ''}`;
+    }
+
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value));
 
     if (!match) {
-        return value;
+        return String(value);
     }
 
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -141,9 +141,15 @@ const options = computed(() => ({
         lineCap: 'round' as const,
     },
     markers: {
-        size: activeSeries.value.map((row) => (row.is_peer_median || row.name === 'Peer median' || row.name === "Rivals' average" ? 0 : 3)),
+        size: activeSeries.value.map((row) => {
+            if (isPeer(row)) {
+                return 0;
+            }
+
+            return isYou(row) ? 4 : 3;
+        }),
         strokeWidth: 0,
-        hover: { size: 4 },
+        hover: { size: 5 },
     },
     grid: {
         borderColor: snitchAxisMuted(),
@@ -151,14 +157,11 @@ const options = computed(() => ({
         padding: { left: 8, right: 12, bottom: 0 },
     },
     xaxis: {
-        type: 'category' as const,
-        categories: categories.value,
-        tickPlacement: 'on' as const,
+        type: 'datetime' as const,
         labels: {
             style: { colors: snitchAxisLabel(), fontSize: '14px' },
-            rotate: categories.value.length > 8 ? -35 : 0,
-            hideOverlappingLabels: false,
-            formatter: (value: string) => formatAxisDate(String(value)),
+            datetimeUTC: true,
+            formatter: (value: string | number) => formatAxisDate(value),
         },
         axisBorder: { color: snitchAxisMuted() },
         axisTicks: { color: snitchAxisMuted() },
@@ -182,6 +185,9 @@ const options = computed(() => ({
     tooltip: {
         shared: true,
         intersect: false,
+        x: {
+            formatter: (value: string | number) => formatAxisDate(value),
+        },
         y: {
             formatter: (value: number | null) => {
                 if (value === null || Number.isNaN(value)) {
@@ -192,9 +198,6 @@ const options = computed(() => ({
 
                 return `${Number(value).toFixed(2)}${suffix}`;
             },
-        },
-        x: {
-            formatter: (value: string) => formatAxisDate(String(value)),
         },
     },
 }));
