@@ -234,11 +234,11 @@ class UsageBillingServiceTest extends TestCase
         $this->assertNotNull($thisMonth);
         $this->assertNotNull($lastMonth);
 
-        $expectedThisMonthApify = collect([$first, $second, $third])
+        $expectedThisMonthApify = (float) collect([$first, $second, $third])
             ->filter(fn ($entry) => $entry->fresh()->created_at?->format('Y-m') === now()->format('Y-m'))
             ->sum(fn ($entry) => abs($entry->amount_pence));
 
-        $this->assertSame($expectedThisMonthApify, $thisMonth['apify']);
+        $this->assertSame($expectedThisMonthApify, (float) $thisMonth['apify']);
         $this->assertSame(abs($fourth->amount_pence), $lastMonth['nanogpt']);
     }
 
