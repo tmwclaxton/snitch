@@ -1,0 +1,306 @@
+<?php
+
+namespace App\Services\Brief;
+
+class DailyBriefValidator
+{
+    /**
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array{ok: bool, errors: list<string>, output: array<string, mixed>}
+     */
+    public function validate(array $output, array $facts): array
+    {
+        $output = $this->replaceDashes($output);
+        $errors = [];
+
+        $headline = trim((string) ($output['headline'] ?? ''));
+        $actions = $output['actions'] ?? null;
+        $ownSummary = trim((string) ($output['own_summary'] ?? ''));
+        $competitorSummary = trim((string) ($output['competitor_summary'] ?? ''));
+        $watch = $output['watch'] ?? [];
+
+        if ($headline === '') {
+            $errors[] = 'headline is empty';
+        }
+
+        if (! is_array($actions)) {
+            $errors[] = 'actions must be an array';
+            $actions = [];
+        }
+
+        $count = count($actions);
+
+        if ($count < 3 || $count > 5) {
+            $errors[] = 'need 3 to 5 actions, got '.$count;
+        }
+
+        $handles = $this->allowedHandles($facts);
+        $postIds = $this->allowedPostIds($facts);
+        $allowedNumbers = $this->allowedNumbers($facts);
+
+        $texts = [$headline, $ownSummary, $competitorSummary];
+
+        foreach ($watch as $item) {
+            if (is_string($item)) {
+                $texts[] = $item;
+            }
+        }
+
+        foreach ($actions as $index => $action) {
+            if (! is_array($action)) {
+                $errors[] = 'action '.($index + 1).' is not an object';
+
+                continue;
+            }
+
+            $title = trim((string) ($action['title'] ?? ''));
+            $why = trim((string) ($action['why'] ?? ''));
+            $how = trim((string) ($action['how'] ?? ''));
+            $hook = trim((string) ($action['hook'] ?? ''));
+
+            if ($title === '') {
+                $errors[] = 'action '.($index + 1).' is missing a title';
+            }
+
+            if ($this->containsEllipsis($title.$why.$how.$hook)) {
+                $errors[] = 'action '.($index + 1).' truncates with ...';
+            }
+
+            if ($hook !== '' && str_word_count($hook) > 12) {
+                $errors[] = 'action '.($index + 1).' hook is longer than 12 words';
+            }
+
+            $relatedHandles = $action['related_handles'] ?? [];
+            if (! is_array($relatedHandles)) {
+                $errors[] = 'action '.($index + 1).' related_handles must be an array';
+                $relatedHandles = [];
+            }
+
+            foreach ($relatedHandles as $handle) {
+                $normalised = $this->normaliseHandle((string) $handle);
+                if ($normalised !== '' && ! in_array($normalised, $handles, true)) {
+                    $errors[] = 'unknown handle @'.$normalised;
+                }
+            }
+
+            $relatedPosts = $action['related_post_ids'] ?? [];
+            if (! is_array($relatedPosts)) {
+                $errors[] = 'action '.($index + 1).' related_post_ids must be an array';
+                $relatedPosts = [];
+            }
+
+            foreach ($relatedPosts as $postId) {
+                if (! in_array((int) $postId, $postIds, true)) {
+                    $errors[] = 'unknown post id '.$postId;
+                }
+            }
+
+            $texts[] = $title;
+            $texts[] = $why;
+            $texts[] = $how;
+            $texts[] = $hook;
+            $texts[] = (string) ($action['when'] ?? '');
+        }
+
+        if ($this->containsEllipsis(implode(' ', $texts))) {
+            $errors[] = 'text truncates with ...';
+        }
+
+        foreach ($this->handlesInText(implode("\n", $texts)) as $handle) {
+            if (! in_array($handle, $handles, true)) {
+                $errors[] = 'unknown handle @'.$handle;
+            }
+        }
+
+        foreach ($this->numbersInText(implode("\n", $texts)) as $number) {
+            if ($this->isAllowedSmallInt($number) || $this->isClock($number)) {
+                continue;
+            }
+
+            if (! $this->numberIsKnown($number, $allowedNumbers)) {
+                $errors[] = 'invented number '.$number;
+            }
+        }
+
+        $output['headline'] = $headline;
+        $output['actions'] = array_values(array_filter($actions, fn (mixed $action): bool => is_array($action)));
+        $output['own_summary'] = $ownSummary;
+        $output['competitor_summary'] = $competitorSummary;
+        $output['watch'] = is_array($watch) ? array_values(array_filter($watch, fn (mixed $item): bool => is_string($item) && trim($item) !== '')) : [];
+
+        return [
+            'ok' => $errors === [],
+            'errors' => array_values(array_unique($errors)),
+            'output' => $output,
+        ];
+    }
+
+    /**
+     * Drop actions that cite unknown handles, post ids, or invented numbers.
+     *
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function dropInvalidActions(array $output, array $facts): array
+    {
+        $kept = [];
+
+        foreach ($output['actions'] ?? [] as $action) {
+            if (! is_array($action)) {
+                continue;
+            }
+
+            $probe = $output;
+            $probe['actions'] = [$action];
+            $probe['headline'] = $output['headline'] ?? '';
+            $probe['own_summary'] = '';
+            $probe['competitor_summary'] = '';
+            $probe['watch'] = [];
+            $result = $this->validate($probe, $facts);
+
+            $actionOnlyErrors = array_values(array_filter(
+                $result['errors'],
+                fn (string $error): bool => ! str_contains($error, 'need 3 to 5')
+                    && $error !== 'headline is empty',
+            ));
+
+            if ($actionOnlyErrors === []) {
+                $kept[] = $action;
+            }
+        }
+
+        $output['actions'] = $kept;
+
+        return $output;
+    }
+
+    /**
+     * @param  array<string, mixed>  $value
+     * @return array<string, mixed>
+     */
+    public function replaceDashes(array $value): array
+    {
+        array_walk_recursive($value, function (mixed &$item): void {
+            if (is_string($item)) {
+                $item = str_replace(["\u{2014}", "\u{2013}", '—', '–'], [' - ', ' - ', ' - ', ' - '], $item);
+                $item = preg_replace('/\s+-\s+/', ' - ', $item) ?? $item;
+            }
+        });
+
+        return $value;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return list<string>
+     */
+    public function allowedHandles(array $facts): array
+    {
+        $handles = [];
+
+        foreach ($facts['allowed_handles'] ?? [] as $handle) {
+            $normalised = $this->normaliseHandle((string) $handle);
+            if ($normalised !== '') {
+                $handles[] = $normalised;
+            }
+        }
+
+        return array_values(array_unique($handles));
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return list<int>
+     */
+    public function allowedPostIds(array $facts): array
+    {
+        return array_values(array_unique(array_map('intval', $facts['allowed_post_ids'] ?? [])));
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return list<string>
+     */
+    public function allowedNumbers(array $facts): array
+    {
+        $tokens = [];
+        $json = json_encode($facts) ?: '';
+
+        if (preg_match_all('/\d[\d,.]*%?x?/u', $json, $matches) > 0) {
+            foreach ($matches[0] as $raw) {
+                $tokens[] = $this->normaliseNumber((string) $raw);
+            }
+        }
+
+        for ($i = 1; $i <= 5; $i++) {
+            $tokens[] = (string) $i;
+        }
+
+        return array_values(array_unique(array_filter($tokens)));
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function handlesInText(string $text): array
+    {
+        preg_match_all('/@([A-Za-z0-9._]+)/u', $text, $matches);
+
+        return array_values(array_unique(array_map(
+            fn (string $handle): string => $this->normaliseHandle($handle),
+            $matches[1] ?? [],
+        )));
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function numbersInText(string $text): array
+    {
+        preg_match_all('/\d[\d,.]*%?x?/u', $text, $matches);
+
+        return array_values(array_unique($matches[0] ?? []));
+    }
+
+    public function numberIsKnown(string $number, array $allowed): bool
+    {
+        $normalised = $this->normaliseNumber($number);
+
+        if (in_array($normalised, $allowed, true)) {
+            return true;
+        }
+
+        $stripped = rtrim(rtrim($normalised, 'x'), '%');
+
+        return in_array($stripped, $allowed, true)
+            || in_array($stripped.'x', $allowed, true)
+            || in_array($stripped.'%', $allowed, true);
+    }
+
+    public function isAllowedSmallInt(string $number): bool
+    {
+        return preg_match('/^[1-5]$/', $this->normaliseNumber($number)) === 1;
+    }
+
+    public function isClock(string $number): bool
+    {
+        return preg_match('/^\d{1,2}:\d{2}$/', $number) === 1;
+    }
+
+    public function containsEllipsis(string $text): bool
+    {
+        return str_contains($text, '...');
+    }
+
+    public function normaliseHandle(string $handle): string
+    {
+        return strtolower(ltrim(trim($handle), '@'));
+    }
+
+    public function normaliseNumber(string $number): string
+    {
+        return strtolower(str_replace(',', '', trim($number)));
+    }
+}

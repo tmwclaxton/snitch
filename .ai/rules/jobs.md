@@ -32,6 +32,9 @@ Unless force=true, the job no-ops when TrackedAccount::isDueForSync() is false (
 ## Weekly follower refresh is profile-only
 `snitch:refresh-followers` is scheduled weekly and queues `RefreshFollowerCountJob` for Instagram social accounts that still have a tracker and no snapshot inside `snitch.followers.refresh_interval_days`. It calls resolveProfile and writes `follower_snapshots`. It does not import posts, mark sync running, or bill a user. When the last tracker is removed, that social account drops out. Platforms only return the current count, so do not invent older points.
 
+## Opt-in daily brief refresh
+`snitch:daily-refresh` is the scheduled exception to "do not auto-sync accounts". It only runs for `users.daily_brief_enabled`, Instagram own + competitor trackers, `force=true` with a small postsLimit, and `resolveProfile=false`. Pair it with `RefreshFollowerCountJob(..., force: true)` so those accounts get a calendar-day snapshot without waiting for the weekly interval. Ads Firecrawl refresh is throttled per account. See daily-brief.md.
+
 ## TikHub failure or empty list falls back to Apify
 If `driverFor` is tikhub and resolveProfile / listRecentPosts throws or returns `[]`, SyncTrackedAccountJob retries those calls on `apifyAdapter`. Empty Apify `[]` still falls back to TikHub only when TikHub was not already tried. Do not bounce back to TikHub after a TikHub 400 plus empty Apify, or the job fails instead of marking empty.
 

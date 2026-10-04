@@ -23,6 +23,13 @@ final class McpAppUrls
         return rtrim((string) config('app.url'), '/').'/explore';
     }
 
+    public static function today(?string $date = null): string
+    {
+        $url = self::origin().'/today';
+
+        return $date === null || $date === '' ? $url : $url.'?date='.$date;
+    }
+
     public static function brief(?string $week = null): string
     {
         $url = self::origin().'/brief';

@@ -13,7 +13,10 @@ class RefreshFollowerCountJob implements ShouldQueue
 
     public int $tries = 1;
 
-    public function __construct(public int $socialAccountId) {}
+    public function __construct(
+        public int $socialAccountId,
+        public bool $force = false,
+    ) {}
 
     public function handle(FollowerCountRefresher $refresher): void
     {
@@ -23,6 +26,6 @@ class RefreshFollowerCountJob implements ShouldQueue
             return;
         }
 
-        $refresher->refresh($social);
+        $refresher->refresh($social, $this->force);
     }
 }

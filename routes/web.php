@@ -13,6 +13,7 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\BrandProfileController;
 use App\Http\Controllers\BriefController;
 use App\Http\Controllers\CompetitorController;
+use App\Http\Controllers\DailyBriefController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExploreController;
 use App\Http\Controllers\FeatureSuggestionController;
@@ -200,6 +201,13 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::get('/backlog', [BacklogController::class, 'index'])->name('backlog.index');
 
         Route::get('/explore', [ExploreController::class, 'index'])->name('explore.index');
+
+        Route::get('/today', [DailyBriefController::class, 'index'])->name('today.index');
+        Route::post('/today/generate', [DailyBriefController::class, 'generate'])
+            ->middleware('throttle:10,1')
+            ->name('today.generate');
+        Route::patch('/today/{brief}/actions/{index}', [DailyBriefController::class, 'toggleAction'])
+            ->name('today.actions.toggle');
 
         Route::get('/brief', [BriefController::class, 'index'])->name('brief.index');
         Route::post('/brief/generate', [BriefController::class, 'generate'])

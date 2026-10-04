@@ -14,6 +14,7 @@ import {
     Settings,
     Shield,
     Store,
+    Sun,
     Target,
     TrendingUp,
     Users,
@@ -23,6 +24,7 @@ import { computed } from 'vue';
 import { edit as brand } from '@/actions/App/Http/Controllers/BrandProfileController';
 import { index as brief } from '@/actions/App/Http/Controllers/BriefController';
 import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
+import { index as today } from '@/actions/App/Http/Controllers/DailyBriefController';
 import { index as explore } from '@/actions/App/Http/Controllers/ExploreController';
 import { index as feed } from '@/actions/App/Http/Controllers/FeedController';
 import { index as growth } from '@/actions/App/Http/Controllers/GrowthController';
@@ -103,6 +105,11 @@ const questionNavItems = computed<NavItem[]>(() => {
 });
 
 const mainNavItems: NavItem[] = [
+    {
+        title: 'Today',
+        href: today(),
+        icon: Sun,
+    },
     {
         title: 'Brand',
         href: brand(),

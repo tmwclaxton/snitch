@@ -14,6 +14,7 @@ final class WorkflowGuide
         'explore',
         'content_plan',
         'weekly_brief',
+        'daily_brief',
         'growth',
     ];
 
@@ -41,6 +42,7 @@ final class WorkflowGuide
             'explore' => self::explore(),
             'content_plan' => self::contentPlan(),
             'weekly_brief' => self::weeklyBrief(),
+            'daily_brief' => self::dailyBrief(),
             'growth' => self::growth(),
             default => self::overview(),
         };
@@ -77,12 +79,12 @@ final class WorkflowGuide
                 self::step(1, 'whoami', 'Confirm user, runtime.app_url, brand_warnings, queue warnings.'),
                 self::step(2, 'billing_status', 'Confirm can_run_billable (balance above 20p) before sync/suggest/find/analyze.'),
                 self::step(3, 'get_brand', 'Verify name + website; fix with update_brand or start_brand_autofill → autofill_status.'),
-                self::step(4, 'workflow_guide', 'Pick brand | competitors | influencers | sync_analyze | billing | explore | content_plan | weekly_brief | growth and follow that guide.'),
+                self::step(4, 'workflow_guide', 'Pick brand | competitors | influencers | sync_analyze | billing | explore | content_plan | weekly_brief | daily_brief | growth and follow that guide.'),
             ],
             'notes' => [
                 'Localhost and production are different databases and credit balances.',
-                'Nothing is auto-scheduled - agents/users trigger sync, suggest, find, analyze, winners.',
-                'Use workflow=weekly_brief for /brief, workflow=growth for charts and the monthly report, and workflow=content_plan for winner remakes + collab shortlists.',
+                'Most work is on demand. The opt-in daily brief refresh is the scheduled exception.',
+                'Use workflow=daily_brief for /today, workflow=weekly_brief for /brief, workflow=growth for charts and the monthly report, and workflow=content_plan for winner remakes + collab shortlists.',
                 'On local artisan serve prefer short wait_seconds (8-12) on dispatch tools and re-poll status tools - long waits stall the browser UI.',
                 'Remote MCP clients (Claude.ai) time out around 10-15s - dispatch tools default wait_seconds=0; poll status tools until completed.',
                 'Never paste bearer tokens into public chats; use rotate_token if exposed.',
@@ -391,6 +393,38 @@ final class WorkflowGuide
             'notes' => [
                 'history lists recent weeks. Pass week as Y-m-d (any day in that week snaps to Monday).',
                 'An empty brief means there is not enough data yet, or generation is still queued (generating=true).',
+            ],
+        ];
+    }
+
+    /**
+     * @return array{
+     *     summary: string,
+     *     prerequisites: list<string>,
+     *     do_not_skip: list<string>,
+     *     steps: list<array{order: int, tool: string, action: string}>,
+     *     notes: list<string>
+     * }
+     */
+    private static function dailyBrief(): array
+    {
+        return [
+            'summary' => 'Read the Today page (/today): headline, numbers, today\'s actions, competitor moves, and things to watch.',
+            'prerequisites' => [
+                'whoami so runtime.app_url matches the account you expect.',
+                'daily_brief_enabled on the user. Generation runs automatically after the 07:00 Europe/London job.',
+            ],
+            'do_not_skip' => [
+                'Do not invent a regenerate. Automatic daily briefs are free and read-only from MCP.',
+                'Use only handles, post ids, and numbers from the stored payload.',
+            ],
+            'steps' => [
+                self::step(1, 'get_daily_brief', 'Omit date for today in Europe/London. Read headline, actions, competitor_moves, and app_url.'),
+                self::step(2, 'get_post', 'Optional: open related_post_ids from an action.'),
+            ],
+            'notes' => [
+                'history lists the last 30 brief dates. Pass date as Y-m-d.',
+                'An empty brief means generation has not finished yet (generating=true) or the user is not opted in.',
             ],
         ];
     }

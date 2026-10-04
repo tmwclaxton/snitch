@@ -273,6 +273,17 @@ return [
         'debounce_seconds' => 300,
     ],
 
+    'daily_brief' => [
+        'model' => env('SNITCH_DAILY_BRIEF_MODEL', env('SNITCH_BRIEF_MODEL', env('SNITCH_WINNER_COPY_MODEL', 'deepseek/deepseek-v4-flash'))),
+        'posts_limit' => (int) env('SNITCH_DAILY_BRIEF_POSTS_LIMIT', 6),
+        'recency_days' => (int) env('SNITCH_DAILY_BRIEF_RECENCY_DAYS', 30),
+        'refresh_time' => env('SNITCH_DAILY_BRIEF_REFRESH_TIME', '06:00'),
+        'generate_time' => env('SNITCH_DAILY_BRIEF_GENERATE_TIME', '07:00'),
+        'winner_lookback_days' => (int) env('SNITCH_DAILY_BRIEF_WINNER_LOOKBACK_DAYS', 7),
+        'max_actions' => (int) env('SNITCH_DAILY_BRIEF_MAX_ACTIONS', 5),
+        'ads_refresh_every_days' => (int) env('SNITCH_DAILY_BRIEF_ADS_REFRESH_DAYS', 3),
+    ],
+
     'winners' => [
         'copy_model' => env('SNITCH_WINNER_COPY_MODEL', 'deepseek/deepseek-v4-flash'),
         'presets' => [

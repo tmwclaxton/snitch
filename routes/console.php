@@ -30,3 +30,17 @@ Schedule::command('snitch:generate-weekly-briefs')
     ->weeklyOn(1, '8:00')
     ->withoutOverlapping()
     ->onOneServer();
+
+// Opt-in daily light refresh for daily-brief users (own + competitors).
+Schedule::command('snitch:daily-refresh')
+    ->dailyAt((string) config('snitch.daily_brief.refresh_time', '06:00'))
+    ->timezone('Europe/London')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Daily executive summary after the light refresh.
+Schedule::command('snitch:generate-daily-briefs')
+    ->dailyAt((string) config('snitch.daily_brief.generate_time', '07:00'))
+    ->timezone('Europe/London')
+    ->withoutOverlapping()
+    ->onOneServer();

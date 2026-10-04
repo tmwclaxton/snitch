@@ -18,7 +18,18 @@ use Laravel\Passport\Contracts\OAuthenticatable;
 use Stripe\Customer;
 use Stripe\Exception\InvalidRequestException;
 
-#[Fillable(['name', 'email', 'workos_id', 'avatar', 'created_via', 'claim_token', 'claimed_at', 'referral_code_id'])]
+#[Fillable([
+    'name',
+    'email',
+    'workos_id',
+    'avatar',
+    'created_via',
+    'claim_token',
+    'claimed_at',
+    'referral_code_id',
+    'daily_brief_enabled',
+    'daily_brief_email',
+])]
 #[Hidden(['workos_id', 'remember_token', 'claim_token'])]
 class User extends Authenticatable implements OAuthenticatable
 {
@@ -35,6 +46,8 @@ class User extends Authenticatable implements OAuthenticatable
             'password' => 'hashed',
             'trial_ends_at' => 'datetime',
             'claimed_at' => 'datetime',
+            'daily_brief_enabled' => 'boolean',
+            'daily_brief_email' => 'boolean',
         ];
     }
 
@@ -144,5 +157,13 @@ class User extends Authenticatable implements OAuthenticatable
     public function creditLedgerEntries(): HasMany
     {
         return $this->hasMany(CreditLedgerEntry::class);
+    }
+
+    /**
+     * @return HasMany<DailyBrief, $this>
+     */
+    public function dailyBriefs(): HasMany
+    {
+        return $this->hasMany(DailyBrief::class);
     }
 }

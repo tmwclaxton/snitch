@@ -42,6 +42,7 @@ class SyncTrackedAccountJob implements ShouldQueue
         public bool $force = false,
         public ?int $postsLimit = null,
         public ?int $recencyDays = null,
+        public bool $resolveProfile = true,
     ) {}
 
     public function handle(
@@ -464,6 +465,12 @@ class SyncTrackedAccountJob implements ShouldQueue
 
     private function shouldResolveProfile(TrackedAccount $account): bool
     {
+        if (! $this->resolveProfile) {
+            return blank($account->external_id)
+                || blank($account->url)
+                || blank($account->display_name);
+        }
+
         if ($this->force) {
             return true;
         }

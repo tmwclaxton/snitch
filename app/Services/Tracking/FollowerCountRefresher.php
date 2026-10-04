@@ -36,11 +36,21 @@ class FollowerCountRefresher
             ->all();
     }
 
-    public function refresh(SocialAccount $social): bool
+    public function refresh(SocialAccount $social, bool $force = false): bool
     {
         $social->loadMissing('trackedAccounts');
 
         if ($social->trackedAccounts->isEmpty()) {
+            return false;
+        }
+
+        $todayExists = $social->followerSnapshots()
+            ->whereDate('captured_on', CarbonImmutable::now()->toDateString())
+            ->exists();
+
+        if ($todayExists) {
+            $this->seedMissingTrackers($social->id);
+
             return false;
         }
 
@@ -49,7 +59,7 @@ class FollowerCountRefresher
             ->whereDate('captured_on', '>=', $cutoff)
             ->exists();
 
-        if ($recent) {
+        if ($recent && ! $force) {
             // A second tracker of an already-refreshed account must still inherit
             // the latest known count without paying for another profile scrape.
             $this->seedMissingTrackers($social->id);

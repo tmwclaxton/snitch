@@ -7,6 +7,7 @@ use App\Models\Post;
 use App\Models\SocialAd;
 use App\Models\TrackedAccount;
 use App\Services\Firecrawl\FirecrawlClient;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -48,6 +49,24 @@ class CompetitorAdsFinder
         }
 
         if ((string) config('snitch.firecrawl.api_key') === '') {
+            return;
+        }
+
+        $adsDays = max(1, (int) config('snitch.daily_brief.ads_refresh_every_days', 3));
+        $cacheKey = 'competitor-ads-refresh:'.$account->id;
+
+        if (Cache::has($cacheKey)) {
+            return;
+        }
+
+        $recentPaidRefresh = SocialAd::query()
+            ->where('social_account_id', $account->social_account_id)
+            ->where('last_seen_at', '>=', now()->subDays($adsDays))
+            ->exists();
+
+        if ($recentPaidRefresh) {
+            Cache::put($cacheKey, now()->toIso8601String(), now()->addDays($adsDays));
+
             return;
         }
 
@@ -104,6 +123,8 @@ class CompetitorAdsFinder
                 raw: $hit,
             );
         }
+
+        Cache::put($cacheKey, now()->toIso8601String(), now()->addDays($adsDays));
     }
 
     /**

@@ -142,7 +142,7 @@ class McpConnectionGuide
                 'generate_influencer_brief', 'find_influencers', 'influencer_search_status', 'list_influencers', 'keep_influencer', 'discard_influencer', 'dismiss_influencer_suggestions', 'remove_influencer',
                 'list_feed', 'get_post', 'analyze_post',
                 'list_winners', 'update_winner_rules', 'rescore_winners', 'rescore_winners_status',
-                'get_weekly_brief', 'mark_weekly_brief_idea_used',
+                'get_daily_brief', 'get_weekly_brief', 'mark_weekly_brief_idea_used',
                 'get_growth', 'get_monthly_report', 'share_monthly_report', 'revoke_monthly_report',
                 'explore_posts',
             ],
