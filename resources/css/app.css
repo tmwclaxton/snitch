@@ -2039,8 +2039,13 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
 
     /* Last dashboard section can scroll its heading under the sticky header. */
     #vote {
-        min-height: calc(100svh - 5rem);
-        padding-bottom: 3rem;
+        min-height: calc(100svh - 4rem);
+        padding-bottom: 6rem;
+    }
+
+    .snitch-dash-anchor-pad {
+        height: calc(50svh - 4rem);
+        pointer-events: none;
     }
 
     #what-to-post:target,

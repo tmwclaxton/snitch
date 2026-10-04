@@ -3,8 +3,14 @@ import { router } from '@inertiajs/vue3';
 const WAIT_MS = 2500;
 const POLL_MS = 50;
 const HEADER_OFFSET_PX = 80;
-const REALIGN_MS = [120, 400, 900, 1600];
-const OBSERVE_MS = 2500;
+const REALIGN_MS = [80, 200, 500, 1000, 2000, 3500, 5000];
+const OBSERVE_MS = 6000;
+
+type JumpHandle = {
+    stop: () => void;
+};
+
+let activeJump: JumpHandle | null = null;
 
 function waitForElement(id: string, timeoutMs: number): Promise<HTMLElement | null> {
     const existing = document.getElementById(id);
@@ -38,9 +44,14 @@ function waitForElement(id: string, timeoutMs: number): Promise<HTMLElement | nu
     });
 }
 
-function alignToAnchor(el: HTMLElement, behavior: ScrollBehavior): void {
-    const top = window.scrollY + el.getBoundingClientRect().top - HEADER_OFFSET_PX;
-    window.scrollTo({ top: Math.max(0, top), behavior });
+function headingOf(section: HTMLElement): HTMLElement {
+    return section.querySelector('h1, h2') ?? section;
+}
+
+function alignToAnchor(section: HTMLElement): void {
+    const target = headingOf(section);
+    const top = window.scrollY + target.getBoundingClientRect().top - HEADER_OFFSET_PX;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
 }
 
 export async function scrollToDashboardAnchor(id: string): Promise<boolean> {
@@ -50,15 +61,15 @@ export async function scrollToDashboardAnchor(id: string): Promise<boolean> {
         return false;
     }
 
-    alignToAnchor(el, 'auto');
+    activeJump?.stop();
 
     const realign = (): void => {
-        alignToAnchor(el, 'auto');
+        alignToAnchor(el);
     };
 
-    for (const delay of REALIGN_MS) {
-        window.setTimeout(realign, delay);
-    }
+    realign();
+
+    const timers = REALIGN_MS.map((delay) => window.setTimeout(realign, delay));
 
     document.querySelectorAll('img').forEach((img) => {
         if (!img.complete) {
@@ -66,20 +77,44 @@ export async function scrollToDashboardAnchor(id: string): Promise<boolean> {
         }
     });
 
+    const removeFinish = router.on('finish', (event) => {
+        if (event.detail.visit.preserveScroll) {
+            return;
+        }
+
+        realign();
+    });
+
+    let observer: ResizeObserver | null = null;
+
     if (typeof ResizeObserver !== 'undefined') {
-        const observer = new ResizeObserver(() => {
+        observer = new ResizeObserver(() => {
             realign();
         });
         observer.observe(el);
 
-        const canvas = document.querySelector('.snitch-app-canvas');
+        const canvas = document.querySelector('.snitch-app-canvas, .snitch-app-chrome');
 
         if (canvas instanceof HTMLElement) {
             observer.observe(canvas);
         }
-
-        window.setTimeout(() => observer.disconnect(), OBSERVE_MS);
     }
+
+    const stop = (): void => {
+        for (const timer of timers) {
+            window.clearTimeout(timer);
+        }
+
+        removeFinish();
+        observer?.disconnect();
+
+        if (activeJump?.stop === stop) {
+            activeJump = null;
+        }
+    };
+
+    window.setTimeout(stop, OBSERVE_MS);
+    activeJump = { stop };
 
     return true;
 }

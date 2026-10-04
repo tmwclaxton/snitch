@@ -70,6 +70,13 @@ class DashboardQuestionSectionsTest extends TestCase
         $this->assertStringContainsString('window.scrollTo', $anchors);
         $this->assertStringContainsString('REALIGN_MS', $anchors);
         $this->assertStringContainsString('ResizeObserver', $anchors);
+        $this->assertStringContainsString("querySelector('h1, h2')", $anchors);
+        $this->assertStringContainsString("router.on('finish'", $anchors);
+        $this->assertStringContainsString('preserveScroll', $anchors);
+        $this->assertStringContainsString('snitch-dash-anchor-pad', $dashboard);
+        $this->assertStringContainsString('sticky top-0 z-20', file_get_contents(
+            resource_path('js/components/AppSidebarHeader.vue'),
+        ) ?: '');
         $this->assertStringNotContainsString('snitch-dash-anchor-flash', $anchors);
         $this->assertStringNotContainsString('classList.add', $anchors);
         $this->assertStringNotContainsString('snitch-dash-anchor-flash', $css);
@@ -78,7 +85,8 @@ class DashboardQuestionSectionsTest extends TestCase
         $this->assertStringContainsString('scroll-mt-20', $dashboard);
         $this->assertStringContainsString('snitch-section-answer', $dashboard);
         $this->assertStringNotContainsString('max-w-4xl text-2xl', $dashboard);
-        $this->assertStringContainsString('min-height: calc(100svh - 5rem)', $css);
+        $this->assertStringContainsString('min-height: calc(100svh - 4rem)', $css);
+        $this->assertStringContainsString('.snitch-dash-anchor-pad', $css);
         $this->assertStringContainsString('.snitch-section-answer', $css);
         $this->assertStringContainsString('clamp(1.375rem, 2.15cqw, 1.625rem)', $css);
         $this->assertStringContainsString('container-type: inline-size', $css);

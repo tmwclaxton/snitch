@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import { index as briefIndex } from '@/actions/App/Http/Controllers/BriefController';
 import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
@@ -208,7 +208,9 @@ onMounted(() => {
 
     if (hash && sectionIds.value.includes(hash)) {
         activateDashboardSection(hash);
-        void scrollToDashboardAnchor(hash);
+        void nextTick(() => {
+            void scrollToDashboardAnchor(hash);
+        });
     }
 });
 
@@ -928,6 +930,7 @@ const detailsOpen = ref(false);
                 </header>
                 <VoteSection :suggestions="featureSuggestions ?? []" />
             </section>
+            <div class="snitch-dash-anchor-pad" aria-hidden="true" />
         </div>
     </div>
 </template>
