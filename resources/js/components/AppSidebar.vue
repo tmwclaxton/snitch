@@ -159,6 +159,7 @@ const adminNavItems = computed<NavItem[]>(() => {
             title: 'Admin',
             href: adminOverview(),
             icon: Shield,
+            exact: true,
         },
         {
             title: 'Activity',
@@ -198,7 +199,7 @@ const accountNavItems: NavItem[] = [
         variant="sidebar"
         class="border-r border-white/10 bg-black"
     >
-        <SidebarHeader class="shrink-0 border-b border-snitch-ink/10 p-1.5">
+        <SidebarHeader class="shrink-0 border-b border-snitch-ink/10 p-1">
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
@@ -210,7 +211,7 @@ const accountNavItems: NavItem[] = [
             </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent class="min-h-0 flex-1 gap-1 overflow-y-auto">
+        <SidebarContent class="min-h-0 flex-1 gap-0 overflow-y-auto">
             <NavMain :items="questionNavItems" label="Dashboard" />
             <NavMain :items="mainNavItems" label="Platform" />
             <NavMain
@@ -221,7 +222,7 @@ const accountNavItems: NavItem[] = [
             <NavMain :items="accountNavItems" label="Account" />
         </SidebarContent>
 
-        <SidebarFooter class="shrink-0 border-t border-snitch-ink/10 p-1.5">
+        <SidebarFooter class="shrink-0 border-t border-snitch-ink/10 p-1">
             <NavUser />
         </SidebarFooter>
     </Sidebar>

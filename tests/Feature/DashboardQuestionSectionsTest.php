@@ -57,10 +57,10 @@ class DashboardQuestionSectionsTest extends TestCase
         $this->assertIsString($nav);
         $this->assertIsString($menu);
         $this->assertStringContainsString('snitch-nav-current', $nav);
-        $this->assertStringContainsString('h-5 text-sm', $nav);
+        $this->assertStringContainsString('h-4 text-sm leading-none', $nav);
         $this->assertStringNotContainsString('[&>span:last-child]:truncate', $menu);
         $this->assertStringContainsString('data-[active=true]:bg-[#fcd700]!', $menu);
-        $this->assertStringContainsString('sm: "h-7 py-0 text-sm"', $menu);
+        $this->assertStringContainsString('sm: "h-[1.625rem] py-0 text-sm"', $menu);
 
         $anchors = file_get_contents(resource_path('js/lib/dashboardAnchors.ts'));
         $css = file_get_contents(resource_path('css/app.css'));
@@ -84,12 +84,14 @@ class DashboardQuestionSectionsTest extends TestCase
         $this->assertStringContainsString('#what-to-post:target', $css);
         $this->assertStringContainsString('scroll-mt-20', $dashboard);
         $this->assertStringContainsString('snitch-section-answer', $dashboard);
+        $this->assertStringContainsString('snitch-app-canvas', $dashboard);
         $this->assertStringNotContainsString('max-w-4xl text-2xl', $dashboard);
         $this->assertStringContainsString('min-height: calc(100svh - 4rem)', $css);
         $this->assertStringContainsString('.snitch-dash-anchor-pad', $css);
         $this->assertStringContainsString('.snitch-section-answer', $css);
-        $this->assertStringContainsString('clamp(1.375rem, 2.15cqw, 1.625rem)', $css);
+        $this->assertStringContainsString('clamp(1.125rem, 1.8cqw, 1.25rem)', $css);
         $this->assertStringContainsString('container-type: inline-size', $css);
+        $this->assertStringContainsString('container-name: snitch-chrome', $css);
         $this->assertDoesNotMatchRegularExpression(
             '/\.snitch-section-answer\s*\{[^}]*\+ 0\.3vw/s',
             $css,

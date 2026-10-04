@@ -96,7 +96,7 @@ const sortIndicator = computed(() => (column: string) => {
 });
 
 const userRowClass =
-    'snitch-admin-users-row grid min-w-[48rem] grid-cols-[minmax(11rem,1.4fr)_minmax(7rem,1fr)_minmax(8.5rem,0.95fr)_minmax(6rem,0.7fr)_minmax(5.5rem,0.7fr)_minmax(6rem,0.7fr)_minmax(8.5rem,0.95fr)] items-start gap-x-0';
+    'snitch-admin-users-row grid min-w-[56rem] grid-cols-[minmax(16rem,2.2fr)_minmax(7rem,1fr)_minmax(8.5rem,0.95fr)_minmax(6rem,0.7fr)_minmax(5.5rem,0.7fr)_minmax(6rem,0.7fr)_minmax(8.5rem,0.95fr)] items-start gap-x-4';
 
 function planLabel(status: string): string {
     const labels: Record<string, string> = {
@@ -175,7 +175,7 @@ function planLabel(status: string): string {
                         role="row"
                     >
                         <div
-                            class="px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
+                            class="min-w-0 px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
                             role="columnheader"
                         >
                             <button
@@ -187,7 +187,7 @@ function planLabel(status: string): string {
                             </button>
                         </div>
                         <div
-                            class="px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
+                            class="min-w-0 px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
                             role="columnheader"
                         >
                             <button
@@ -199,7 +199,7 @@ function planLabel(status: string): string {
                             </button>
                         </div>
                         <div
-                            class="px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
+                            class="min-w-0 px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
                             role="columnheader"
                         >
                             <button
@@ -211,13 +211,13 @@ function planLabel(status: string): string {
                             </button>
                         </div>
                         <div
-                            class="px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
+                            class="min-w-0 px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
                             role="columnheader"
                         >
                             Plan
                         </div>
                         <div
-                            class="px-2 py-2 text-right text-sm font-medium text-snitch-ink/70"
+                            class="min-w-0 px-2 py-2 text-right text-sm font-medium text-snitch-ink/70"
                             role="columnheader"
                         >
                             <button
@@ -229,13 +229,13 @@ function planLabel(status: string): string {
                             </button>
                         </div>
                         <div
-                            class="px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
+                            class="min-w-0 px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
                             role="columnheader"
                         >
                             Referral
                         </div>
                         <div
-                            class="px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
+                            class="min-w-0 px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
                             role="columnheader"
                         >
                             Last activity
@@ -248,7 +248,7 @@ function planLabel(status: string): string {
                         role="row"
                     >
                         <div
-                            class="px-2 py-2 text-left text-sm"
+                            class="min-w-0 px-2 py-2 text-left text-sm [overflow-wrap:anywhere]"
                             role="cell"
                         >
                             <Link
@@ -259,38 +259,38 @@ function planLabel(status: string): string {
                             </Link>
                         </div>
                         <div
-                            class="px-2 py-2 text-left text-sm text-snitch-ink/80"
+                            class="min-w-0 px-2 py-2 text-left text-sm text-snitch-ink/80"
                             role="cell"
                         >
                             {{ row.name || '-' }}
                         </div>
                         <div
-                            class="px-2 py-2 text-left text-sm text-snitch-ink/70"
+                            class="min-w-0 px-2 py-2 text-left text-sm text-snitch-ink/70"
                             role="cell"
                         >
                             {{ formatWhen(row.created_at) }}
                         </div>
                         <div
-                            class="px-2 py-2 text-left text-sm"
+                            class="min-w-0 px-2 py-2 text-left text-sm"
                             role="cell"
                         >
                             {{ planLabel(row.plan_status) }}
                         </div>
                         <div
-                            class="px-2 py-2 text-right text-sm tabular-nums"
+                            class="min-w-0 px-2 py-2 text-right text-sm tabular-nums"
                             role="cell"
                         >
-                            {{ formatPenceAsGbp(row.balance_pence) }}
+                            {{ formatPenceAsGbp(row.balance_pence, { decimals: 2 }) }}
                         </div>
                         <div
-                            class="px-2 py-2 text-left text-sm text-snitch-ink/70"
+                            class="min-w-0 px-2 py-2 text-left text-sm text-snitch-ink/70"
                             role="cell"
                         >
                             <span v-if="row.referral_code">{{ row.referral_code }}</span>
                             <span v-else>-</span>
                         </div>
                         <div
-                            class="px-2 py-2 text-left text-sm text-snitch-ink/70"
+                            class="min-w-0 px-2 py-2 text-left text-sm text-snitch-ink/70"
                             role="cell"
                         >
                             {{ formatWhen(row.last_activity_at) }}

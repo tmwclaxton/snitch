@@ -36,10 +36,33 @@ class SidebarNavigationTest extends TestCase
         $this->assertStringContainsString('activeDashboardSection', $navMain);
         $this->assertStringContainsString('item.exact', $navMain);
         $this->assertStringContainsString('exact: true', $sidebar);
+        $this->assertMatchesRegularExpression(
+            "/title: 'Admin',[\\s\\S]{0,120}exact: true/",
+            $sidebar,
+        );
         $this->assertStringContainsString('overflow-y-auto', $sidebar);
+        $this->assertStringContainsString('gap-0 overflow-y-auto', $sidebar);
         $this->assertStringContainsString('adminNavItems', $sidebar);
         $this->assertStringContainsString('label="Admin"', $sidebar);
         $this->assertStringContainsString('label="Account"', $sidebar);
+
+        $headerPx = 4;
+        $footerPx = 4;
+        $logoRowPx = 48;
+        $userRowPx = 48;
+        $borderPx = 1;
+        $rowPx = 26;
+        $labelPx = 16;
+        $dashboardItems = 5;
+        $platformItems = 8;
+        $adminItems = 4;
+        $accountItems = 2;
+        $groupCount = 4;
+        $chrome = (($headerPx * 2) + $logoRowPx + $borderPx)
+            + (($footerPx * 2) + $userRowPx + $borderPx);
+        $nav = (($dashboardItems + $platformItems + $adminItems + $accountItems) * $rowPx)
+            + ($groupCount * $labelPx);
+        $this->assertLessThanOrEqual(713, $chrome + $nav);
     }
 
     public function test_account_nav_sits_above_the_profile(): void

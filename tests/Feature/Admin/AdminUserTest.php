@@ -121,10 +121,15 @@ class AdminUserTest extends TestCase
         $this->assertNotFalse($page);
         $this->assertStringContainsString('snitch-admin-users-row', $page);
         $this->assertStringContainsString('userRowClass', $page);
+        $this->assertStringContainsString('gap-x-4', $page);
+        $this->assertStringContainsString('minmax(16rem,2.2fr)', $page);
+        $this->assertStringContainsString('[overflow-wrap:anywhere]', $page);
+        $this->assertStringContainsString('formatPenceAsGbp(row.balance_pence, { decimals: 2 })', $page);
         $this->assertStringContainsString('text-right text-sm font-medium', $page);
         $this->assertStringContainsString('text-right text-sm tabular-nums', $page);
         $this->assertStringContainsString('planLabel', $page);
         $this->assertStringContainsString("none: 'None'", $page);
+        $this->assertStringNotContainsString('gap-x-0', $page);
         $this->assertStringNotContainsString('line-clamp', $page);
         $this->assertStringNotContainsString('truncate', $page);
         $this->assertStringNotContainsString('text-xs', $page);

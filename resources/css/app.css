@@ -480,6 +480,8 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
         font-family: var(--font-sans);
         font-size: 14px;
         line-height: 1.45;
+        container-type: inline-size;
+        container-name: snitch-chrome;
     }
 
     @media (min-width: 1280px) {
@@ -801,14 +803,15 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
 
     /*
      * Dashboard / Today answer lines: sit on one line at laptop width.
-     * Size from the canvas (sidebar already taken), not the viewport,
-     * so 1280px windows stay near 22px. Wrap only when the sentence
+     * Size from the chrome/canvas (sidebar already taken), not the
+     * viewport. Archivo Black ~57-char answers plus highlight pad
+     * need ~18-20px on a 985px column. Wrap only when the sentence
      * is longer than the canvas.
      */
     .snitch-section-answer {
         max-width: none;
         width: 100%;
-        font-size: clamp(1.375rem, 2.15cqw, 1.625rem);
+        font-size: clamp(1.125rem, 1.8cqw, 1.25rem);
         letter-spacing: 0;
         line-height: 1.15;
     }

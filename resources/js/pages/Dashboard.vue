@@ -419,7 +419,7 @@ const detailsOpen = ref(false);
 </script>
 
 <template>
-    <div class="min-h-full bg-snitch-paper px-2 py-2 sm:px-3">
+    <div class="snitch-app-canvas min-h-full bg-snitch-paper px-2 py-2 sm:px-3">
         <Head title="Dashboard" />
 
         <div class="mx-auto max-w-none">
