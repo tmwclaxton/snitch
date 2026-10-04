@@ -250,7 +250,7 @@ function paginationLabel(label: string): string {
 
             <p
                 v-if="creditExpiryNote"
-                class="mt-4 rounded-sm border border-snitch-spot/35 bg-snitch-spot/15 px-3 py-2 text-sm text-snitch-ink/80"
+                class="mt-4 rounded-sm border border-snitch-ink/10 bg-snitch-lift px-3 py-2 text-sm text-snitch-ink/80"
                 data-test="credit-expiry-filter-note"
             >
                 <span class="font-medium text-snitch-ink">{{ creditExpiryNote.title }}:</span>

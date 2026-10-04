@@ -106,7 +106,7 @@ function toggleAccount(id: number): void {
                     Growth
                 </p>
                 <h1 class="font-display text-2xl text-snitch-ink">
-                    Own account vs rivals
+                    Own account vs <span class="snitch-highlight">rivals</span>
                 </h1>
                 <p class="mt-1 max-w-xl text-sm text-snitch-ink/65">
                     How your account is trending against the accounts you track, week by week.

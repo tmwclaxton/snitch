@@ -600,7 +600,7 @@ function countBarY(count: number, max: number): number {
                     :key="page"
                     :href="detailHref({ page: page === 1 ? undefined : page })"
                     class="px-2 py-1 text-xs tabular-nums"
-                    :class="page === users.current_page ? 'bg-snitch-spot/30 text-snitch-ink' : 'text-snitch-ink/60 hover:text-snitch-ink'"
+                    :class="page === users.current_page ? 'snitch-choice-active px-2 py-1' : 'text-snitch-ink/60 hover:text-snitch-ink'"
                     preserve-scroll
                 >
                     {{ page }}

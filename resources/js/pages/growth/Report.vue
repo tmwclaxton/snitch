@@ -4,6 +4,7 @@ import { Download, Link2, Link2Off } from '@lucide/vue';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import GrowthController from '@/actions/App/Http/Controllers/GrowthController';
 import MonthlyReportController from '@/actions/App/Http/Controllers/MonthlyReportController';
+import SnitchHighlightedText from '@/components/SnitchHighlightedText.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 
 defineOptions({
@@ -106,7 +107,7 @@ function captionText(row: { caption: string; caption_preview?: string }): string
             <div>
                 <p class="snitch-ink-label">Monthly report</p>
                 <h1 class="font-display text-2xl text-snitch-ink">
-                    {{ report?.month_label ?? 'Pick a month' }}
+                    <SnitchHighlightedText :text="report?.month_label ?? 'Pick a month'" />
                 </h1>
             </div>
             <div class="flex flex-wrap items-center gap-3">

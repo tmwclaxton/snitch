@@ -75,7 +75,7 @@ class AppearanceTest extends TestCase
         $this->assertStringContainsString('bg-snitch-paper', $layout);
         $this->assertStringNotContainsString('min-h-[50vh]', $layout);
         $this->assertStringContainsString('bg-snitch-paper', $settings);
-        $this->assertStringContainsString('border-snitch-spot', $settings);
+        $this->assertStringContainsString('snitch-highlight', $settings);
         $this->assertStringContainsString('snitch-app-chrome', $css);
         $this->assertStringContainsString('font-size: 14px', $css);
         $this->assertStringContainsString('font-size: 15px', $css);
@@ -129,6 +129,16 @@ class AppearanceTest extends TestCase
             $css,
         );
         $this->assertStringContainsString('.snitch-meter-fill-lead', $css);
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-meter-fill-lead\s*\{[^}]*background:\s*var\(--snitch-ink\)/s',
+            $css,
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.dark \.snitch-meter-fill-lead\s*\{[^}]*background:\s*var\(--snitch-spot\)/s',
+            $css,
+        );
+        $this->assertStringContainsString('--snitch-heat: #141414;', $css);
+        $this->assertStringContainsString("html:not(.dark) .snitch-app-chrome [data-slot='sidebar-menu-button'][data-active='true']", $css);
         $this->assertStringContainsString('.dark .snitch-choice-active', $css);
         $this->assertStringContainsString('background: var(--snitch-spot);', $css);
         $this->assertStringContainsString('html.dark {', $css);

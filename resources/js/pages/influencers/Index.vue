@@ -914,7 +914,7 @@ onUnmounted(() => {
                         class="snitch-cutout flex cursor-pointer flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-start sm:justify-between"
                         :class="
                             selectedReview[suggestionKey(item)]
-                                ? 'ring-2 ring-snitch-spot/70'
+                                ? 'ring-2 ring-snitch-ink/40 dark:ring-snitch-spot/70'
                                 : ''
                         "
                         @click="toggleReview(item)"
@@ -1039,7 +1039,7 @@ onUnmounted(() => {
                         v-for="account in keptAccountsList"
                         :key="account.id"
                         class="snitch-cutout flex cursor-pointer flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-start sm:justify-between"
-                        :class="selectedKept[account.id] ? 'ring-2 ring-snitch-spot/70' : ''"
+                        :class="selectedKept[account.id] ? 'ring-2 ring-snitch-ink/40 dark:ring-snitch-spot/70' : ''"
                         @click="toggleKept(account)"
                     >
                         <div class="flex min-w-0 items-start gap-3">

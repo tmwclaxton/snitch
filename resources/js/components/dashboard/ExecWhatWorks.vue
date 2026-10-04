@@ -24,11 +24,18 @@ const hasMore = computed(
     () => restHashtags.value.length + restCtas.value.length + restGaps.value.length > 0,
 );
 
-function gapLabel(gap: Gap): string {
-    const theme = gap.theme || gap.label || 'theme';
-    const x = typeof gap.peer_pi === 'number' ? ` ${gap.peer_pi.toFixed(1)}× rivals` : '';
+function gapTheme(gap: Gap): string {
+    return gap.theme || gap.label || 'theme';
+}
 
-    return `${theme}${x}`;
+function gapLift(gap: Gap): string | null {
+    return typeof gap.peer_pi === 'number' ? `${gap.peer_pi.toFixed(1)}× rivals` : null;
+}
+
+function gapLabel(gap: Gap): string {
+    const lift = gapLift(gap);
+
+    return lift ? `${gapTheme(gap)} ${lift}` : gapTheme(gap);
 }
 </script>
 
@@ -77,9 +84,13 @@ function gapLabel(gap: Gap): string {
                     <span
                         v-for="(gap, index) in topGaps"
                         :key="`g-${index}`"
-                        class="rounded bg-snitch-spot/40 px-2 py-1 text-sm text-snitch-ink"
+                        class="snitch-choice rounded px-2 py-1 text-sm text-snitch-ink"
                     >
-                        {{ gapLabel(gap) }}
+                        {{ gapTheme(gap) }}
+                        <span
+                            v-if="gapLift(gap)"
+                            class="snitch-highlight ms-1"
+                        >{{ gapLift(gap) }}</span>
                     </span>
                     <span
                         v-if="!topGaps.length"

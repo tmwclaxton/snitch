@@ -40,13 +40,13 @@ const gapClass = computed(() => {
 
     if (props.gap.type === 'pp') {
         return props.gap.value >= 0
-            ? 'bg-snitch-spot text-snitch-ink'
+            ? 'snitch-highlight'
             : 'bg-snitch-alert text-snitch-paper';
     }
 
     return props.gap.lower || props.gap.value < 1
         ? 'bg-snitch-alert text-snitch-paper'
-        : 'bg-snitch-spot text-snitch-ink';
+        : 'snitch-highlight';
 });
 </script>
 
@@ -57,7 +57,7 @@ const gapClass = computed(() => {
         </p>
         <div class="mt-2 flex flex-wrap items-end justify-between gap-2">
             <p class="font-display text-3xl font-semibold tracking-tight text-snitch-ink tabular-nums leading-none">
-                {{ value }}
+                <span class="snitch-highlight">{{ value }}</span>
             </p>
             <span
                 v-if="gapLabel"

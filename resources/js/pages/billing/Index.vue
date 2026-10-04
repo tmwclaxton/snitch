@@ -168,7 +168,7 @@ function vendorAccent(key: SpendVendorKey): string {
 
             <p
                 v-if="checkoutStatus === 'success'"
-                class="mt-6 rounded-sm border border-snitch-ink/15 bg-snitch-spot/20 px-3 py-2 text-sm"
+                class="mt-6 rounded-sm border border-snitch-ink/10 bg-snitch-lift px-3 py-2 text-sm"
             >
                 Checkout completed. Credits and plan status update shortly after Stripe confirms.
             </p>

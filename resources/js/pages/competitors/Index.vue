@@ -164,7 +164,7 @@ function refreshLabel(value: string | null): string {
                                             @{{ account.handle }}
                                             <span
                                                 v-if="account.is_own_account"
-                                                class="rounded-sm bg-snitch-spot/90 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-snitch-ink"
+                                                class="snitch-highlight rounded-sm px-1.5 py-0.5 text-sm font-semibold uppercase tracking-wider"
                                             >
                                                 You
                                             </span>
@@ -249,7 +249,7 @@ function refreshLabel(value: string | null): string {
                                     <span class="truncate">@{{ account.handle }}</span>
                                     <span
                                         v-if="account.is_own_account"
-                                        class="rounded-sm bg-snitch-spot/90 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-snitch-ink"
+                                        class="snitch-highlight rounded-sm px-1.5 py-0.5 text-sm font-semibold uppercase tracking-wider"
                                     >
                                         You
                                     </span>

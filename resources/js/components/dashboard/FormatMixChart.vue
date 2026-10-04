@@ -97,7 +97,10 @@ const tip = computed(() => {
                     <span class="whitespace-nowrap text-sm font-medium text-snitch-ink">
                         {{ postTypeLabel(row.type) }}
                     </span>
-                    <span class="font-mono text-sm tabular-nums text-snitch-ink/70">
+                    <span
+                        class="font-mono text-sm tabular-nums"
+                        :class="peakByLift?.type === row.type ? 'snitch-highlight text-snitch-ink' : 'text-snitch-ink/70'"
+                    >
                         {{ liftLabel(row.type) || 'no lift yet' }}
                     </span>
                 </div>
@@ -121,9 +124,11 @@ const tip = computed(() => {
         </p>
         <p
             v-if="tip"
-            class="mt-auto pt-3 rounded border border-snitch-spot/60 bg-snitch-spot/35 px-2.5 py-2 text-sm text-snitch-ink"
+            class="mt-auto rounded border border-snitch-ink/10 bg-snitch-lift px-2.5 py-2 pt-3 text-sm text-snitch-ink"
         >
-            {{ tip }}
+            Rivals get
+            <span class="snitch-highlight">{{ peakByLift?.lift.toFixed(1) }}×</span>
+            their usual from {{ peakByLift ? postTypeLabel(peakByLift.type) : '' }}.
         </p>
     </div>
 </template>

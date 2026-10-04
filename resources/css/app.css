@@ -123,6 +123,7 @@
     --snitch-accent: #ffd60a;
     --snitch-marker: #ffd60a;
     --snitch-alert: #e5341d;
+    --snitch-heat: #141414;
     /* Darker highlighter mix for chart stipple / heat cells (AA on cream). */
     --snitch-stipple-spot: color-mix(in oklab, var(--snitch-spot) 42%, var(--snitch-press));
     --snitch-teal: #3a5f6b;
@@ -180,13 +181,13 @@
     --secondary-foreground: #141414;
     --muted: #ebe4d6;
     --muted-foreground: #4a4740;
-    --accent: #ffd60a;
+    --accent: #ebe4d6;
     --accent-foreground: #141414;
     --destructive: #e5341d;
     --destructive-foreground: #ffffff;
     --border: rgb(20 20 20 / 0.1);
     --input: #ebe4d6;
-    --ring: #ffd60a;
+    --ring: #141414;
     /* Chart series: ink / teal / alert / warm brown / slate - AA on cream */
     --chart-1: #141414;
     --chart-2: #3a5f6b;
@@ -198,11 +199,12 @@
     --sidebar-foreground: #141414;
     --sidebar-primary: #141414;
     --sidebar-primary-foreground: #f3eee3;
-    --sidebar-accent: #ffd60a;
+    --sidebar-accent: color-mix(in oklab, #141414 6%, #f3eee3);
     --sidebar-accent-foreground: #141414;
     --sidebar-border: rgb(20 20 20 / 0.1);
-    --sidebar-ring: #ffd60a;
+    --sidebar-ring: #141414;
     --sidebar: #f3eee3;
+    --snitch-heat: #141414;
 }
 
 .dark {
@@ -224,6 +226,7 @@
     --snitch-accent: #fcd700;
     --snitch-marker: #fcd700;
     --snitch-alert: #e5341d;
+    --snitch-heat: #fcd700;
     --snitch-stipple-spot: color-mix(in oklab, var(--snitch-spot) 55%, var(--snitch-stock));
     --snitch-teal: #7a9aa6;
     --snitch-caution-ink: #0e0e10;
@@ -272,6 +275,7 @@
     --sidebar-border: rgb(255 255 255 / 0.1);
     --sidebar-ring: #fcd700;
     --sidebar: #0e0e10;
+    --snitch-heat: #fcd700;
 }
 
 /*
@@ -449,6 +453,23 @@ html:has(.snitch-public-shell) {
         background-color: var(--snitch-paper);
     }
 
+    /*
+     * Light sidebar: active item is a highlighter hugging the label,
+     * not a full-width yellow slab. Dark keeps the yellow fill.
+     */
+    html:not(.dark) .snitch-app-chrome [data-slot='sidebar-menu-button'][data-active='true'] {
+        background-color: transparent !important;
+        background-image: none !important;
+    }
+
+    html:not(.dark) .snitch-app-chrome [data-slot='sidebar-menu-button'][data-active='true'] > span:last-child {
+        background-color: var(--snitch-spot);
+        color: var(--snitch-ink);
+        box-decoration-break: clone;
+        -webkit-box-decoration-break: clone;
+        padding: 0.05em 0.28em;
+    }
+
     .snitch-app-chrome .snitch-app-shell {
         background-color: var(--snitch-paper);
         background-image: none;
@@ -546,8 +567,8 @@ html:has(.snitch-public-shell) {
     }
 
     .snitch-app-chrome .snitch-btn.snitch-btn-spot {
-        background: var(--snitch-spot);
-        color: var(--snitch-on-spot);
+        background: var(--snitch-ink);
+        color: var(--snitch-paper);
     }
 
     /* Night shell: yellow primary + fog outline secondary (matches /pricing). */
@@ -783,7 +804,7 @@ html:has(.snitch-public-shell) {
 
     /*
      * Segmented paper control (appearance, winner presets).
-     * Flat ink segments in one strip - mustard fill when active.
+     * Light: ink fill when active. Dark: yellow fill when active.
      */
     .snitch-seg {
         display: inline-flex;
@@ -822,6 +843,11 @@ html:has(.snitch-public-shell) {
     }
 
     .snitch-seg-item:hover {
+        background: color-mix(in oklab, var(--snitch-ink) 6%, transparent);
+        color: var(--snitch-ink);
+    }
+
+    .dark .snitch-seg-item:hover {
         background: color-mix(in oklab, var(--snitch-spot) 18%, transparent);
         color: var(--snitch-ink);
     }
@@ -833,12 +859,18 @@ html:has(.snitch-public-shell) {
     }
 
     .snitch-seg-item-active {
-        background: var(--snitch-spot);
-        color: var(--snitch-on-spot);
+        background: var(--snitch-ink);
+        color: var(--snitch-paper);
     }
 
     .snitch-seg-item-active:hover {
-        background: color-mix(in oklab, var(--snitch-spot) 88%, var(--snitch-press));
+        background: color-mix(in oklab, var(--snitch-ink) 88%, var(--snitch-paper));
+        color: var(--snitch-paper);
+    }
+
+    .dark .snitch-seg-item-active,
+    .dark .snitch-seg-item-active:hover {
+        background: var(--snitch-spot);
         color: var(--snitch-on-spot);
     }
 
@@ -932,7 +964,7 @@ html:has(.snitch-public-shell) {
         color: var(--snitch-on-spot);
     }
 
-    /* Meter bars: lead = spot; others = ink (light) / dim yellow (dark) */
+    /* Meter bars: light = ink. Dark lead = yellow; others = dim yellow. */
     .snitch-meter {
         overflow: hidden;
         border-radius: 0.125rem;
@@ -950,7 +982,7 @@ html:has(.snitch-public-shell) {
     }
 
     .snitch-meter-fill-lead {
-        background: var(--snitch-spot);
+        background: var(--snitch-ink);
     }
 
     .dark .snitch-meter-fill-lead {
@@ -1437,6 +1469,11 @@ html:has(.snitch-public-shell) {
 
     a.snitch-dash-rail-item:hover,
     a.snitch-dash-rail-item:focus-visible {
+        background: color-mix(in oklab, var(--snitch-ink) 6%, var(--snitch-paper));
+    }
+
+    .dark a.snitch-dash-rail-item:hover,
+    .dark a.snitch-dash-rail-item:focus-visible {
         background: color-mix(in oklab, var(--snitch-spot) 28%, var(--snitch-paper));
     }
 
@@ -2858,19 +2895,19 @@ html:has(.snitch-public-shell) {
     }
 
     .snitch-heatmap-cell.level-1 {
-        background: color-mix(in oklab, var(--snitch-spot) 45%, var(--snitch-paper));
+        background: color-mix(in oklab, var(--snitch-heat) 22%, var(--snitch-paper));
     }
 
     .snitch-heatmap-cell.level-2 {
-        background: color-mix(in oklab, var(--snitch-spot) 72%, var(--snitch-paper));
+        background: color-mix(in oklab, var(--snitch-heat) 40%, var(--snitch-paper));
     }
 
     .snitch-heatmap-cell.level-3 {
-        background: color-mix(in oklab, var(--snitch-stipple-spot) 70%, var(--snitch-spot));
+        background: color-mix(in oklab, var(--snitch-heat) 62%, var(--snitch-paper));
     }
 
     .snitch-heatmap-cell.level-4 {
-        background: color-mix(in oklab, var(--snitch-ink) 78%, var(--snitch-spot));
+        background: color-mix(in oklab, var(--snitch-heat) 82%, var(--snitch-paper));
     }
 
     .snitch-heatmap-cell.is-future {

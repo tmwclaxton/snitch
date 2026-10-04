@@ -216,7 +216,7 @@ const sortIndicator = computed(() => (column: string) => {
                         v-if="link.url"
                         :href="link.url"
                         class="border border-snitch-ink/15 px-2 py-1 text-xs"
-                        :class="link.active ? 'bg-snitch-spot/30 text-snitch-ink' : 'text-snitch-ink/70'"
+                        :class="link.active ? 'snitch-choice-active' : 'text-snitch-ink/70'"
                         preserve-state
                     >
                         <span v-html="link.label" />

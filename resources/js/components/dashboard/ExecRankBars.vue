@@ -78,7 +78,11 @@ const ranked = computed(() => {
                 </div>
                 <span
                     class="font-mono text-sm tabular-nums"
-                    :class="row.hasData ? 'text-snitch-ink' : 'text-snitch-ink/45'"
+                    :class="row.is_own_account && row.hasData
+                        ? 'snitch-highlight text-snitch-ink'
+                        : row.hasData
+                            ? 'text-snitch-ink'
+                            : 'text-snitch-ink/45'"
                 >
                     {{ row.erLabel }}
                 </span>

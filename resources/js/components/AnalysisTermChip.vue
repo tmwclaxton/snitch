@@ -53,8 +53,8 @@ const rootClass = computed(() => {
         return [
             'inline-flex items-center gap-1.5 border px-2.5 py-1.5 text-left text-sm transition',
             props.selected
-                ? 'border-snitch-ink/25 bg-snitch-spot text-snitch-on-spot shadow-[2px_2px_0_color-mix(in_oklab,var(--snitch-press)_35%,transparent)]'
-                : 'border-snitch-ink/15 bg-[color-mix(in_oklab,var(--snitch-lift)_55%,var(--snitch-paper))] text-snitch-ink shadow-[1px_1px_0_color-mix(in_oklab,var(--snitch-spot)_18%,transparent)] hover:border-snitch-ink/30',
+                ? 'border-snitch-ink bg-snitch-ink text-snitch-paper dark:border-snitch-spot dark:bg-snitch-spot dark:text-snitch-on-spot'
+                : 'border-snitch-ink/15 bg-snitch-lift text-snitch-ink hover:border-snitch-ink/30',
             linkClass,
         ];
     }
@@ -96,7 +96,7 @@ const iconClass = computed(() => {
             v-if="count != null && count > 0"
             :class="
                 variant === 'picker' && selected
-                    ? 'text-snitch-on-spot/70'
+                    ? 'text-snitch-paper/70 dark:text-snitch-on-spot/70'
                     : 'opacity-60'
             "
         >
@@ -117,7 +117,7 @@ const iconClass = computed(() => {
             v-if="count != null && count > 0"
             :class="
                 variant === 'picker' && selected
-                    ? 'text-snitch-on-spot/70'
+                    ? 'text-snitch-paper/70 dark:text-snitch-on-spot/70'
                     : 'opacity-60'
             "
         >

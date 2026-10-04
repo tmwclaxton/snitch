@@ -100,7 +100,7 @@ function heatStyle(value: number | null): Record<string, string> {
     const mix = Math.round(32 + ratio * 68);
 
     return {
-        background: `color-mix(in oklab, var(--snitch-spot) ${mix}%, var(--snitch-brief-heat-empty, var(--snitch-lift)))`,
+        background: `color-mix(in oklab, var(--snitch-heat) ${mix}%, var(--snitch-brief-heat-empty, var(--snitch-lift)))`,
     };
 }
 
@@ -152,7 +152,7 @@ function regenerate(): void {
                 <div>
                     <p class="snitch-ink-label">Post this next</p>
                     <h1 class="snitch-display mt-1 text-3xl text-snitch-ink sm:text-4xl">
-                        This week
+                        This <span class="snitch-highlight">week</span>
                     </h1>
                     <p class="mt-1.5 max-w-2xl text-sm text-snitch-ink/65">
                         Three ideas grounded in competitor winners and your brand.
@@ -182,7 +182,7 @@ function regenerate(): void {
                                 v-for="row in history"
                                 :key="row.id"
                                 :href="BriefController.index.url({ query: { week: row.week_start } })"
-                                class="flex items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-snitch-spot/20"
+                                class="flex items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-snitch-ink/5"
                                 @click="historyOpen = false"
                             >
                                 <span>Week of {{ formatWeekLabel(row.week_start) }}</span>
@@ -328,7 +328,7 @@ function regenerate(): void {
             >
                 <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
                 <div class="flex flex-wrap items-baseline justify-between gap-2">
-                    <h2 class="snitch-display text-2xl text-snitch-ink">Best times</h2>
+                    <h2 class="snitch-display text-2xl text-snitch-ink">Best <span class="snitch-highlight">times</span></h2>
                     <p
                         v-if="brief.thin_data"
                         class="text-sm text-snitch-ink/60"
@@ -353,7 +353,10 @@ function regenerate(): void {
                             <p class="text-sm font-medium text-snitch-ink">
                                 {{ slot.label }}
                             </p>
-                            <p class="text-xs text-snitch-ink/55">
+                            <p
+                                class="font-mono text-sm"
+                                :class="index === 0 ? 'snitch-highlight text-snitch-ink' : 'text-snitch-ink/70'"
+                            >
                                 {{ slot.score.toFixed(1) }}× median
                             </p>
                         </li>

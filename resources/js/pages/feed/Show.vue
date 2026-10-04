@@ -336,7 +336,7 @@ function openTranscript(): void {
                     </p>
                     <span
                         v-if="post.winner_insight"
-                        class="inline-flex items-center gap-1 bg-snitch-spot/30 px-1.5 py-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-snitch-ink"
+                        class="snitch-highlight inline-flex items-center gap-1 px-1.5 py-0.5 text-sm font-semibold uppercase tracking-[0.14em]"
                         :title="`Winner score ${post.winner_insight.score.toFixed(1)}`"
                     >
                         <Trophy

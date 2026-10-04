@@ -126,6 +126,8 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('Best posting times', $dashboard);
         $this->assertStringNotContainsString('Follower history', $dashboard);
         $this->assertStringContainsString('Cast your <span class="snitch-highlight">vote</span>', $dashboard);
+        $this->assertStringContainsString('SnitchHighlightedText', $dashboard);
+        $this->assertStringContainsString('peer-checked:bg-snitch-ink', $dashboard);
         $formatPos = strpos($dashboard, 'id="format_mix"');
         $leaderPos = strpos($dashboard, 'id="leaderboard"');
         $this->assertNotFalse($formatPos);

@@ -15,6 +15,7 @@ import PostingHeatmap from '@/components/dashboard/PostingHeatmap.vue';
 import TrackedBySection from '@/components/dashboard/TrackedBySection.vue';
 import VoteSection from '@/components/dashboard/VoteSection.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
+import SnitchHighlightedText from '@/components/SnitchHighlightedText.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import { activateDashboardSection, useDashboardScrollSpy } from '@/composables/useDashboardScrollSpy';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -466,13 +467,15 @@ const detailsOpen = ref(false);
                             @change="refreshQuery({ hidden: !show_hidden_likes })"
                         >
                         <span
-                            class="relative inline-flex h-3.5 w-6 shrink-0 items-center rounded-full bg-snitch-ink/15 transition-colors peer-checked:bg-snitch-spot peer-focus-visible:ring-2 peer-focus-visible:ring-snitch-spot/40 dark:bg-[#1a1a1d] dark:peer-checked:bg-snitch-spot"
+                            class="relative inline-flex h-3.5 w-6 shrink-0 items-center rounded-full bg-snitch-ink/15 transition-colors peer-checked:bg-snitch-ink peer-focus-visible:ring-2 peer-focus-visible:ring-snitch-ink/30 dark:bg-[#1a1a1d] dark:peer-checked:bg-snitch-spot dark:peer-focus-visible:ring-snitch-spot/40"
                             aria-hidden="true"
                         >
                             <span
                                 class="ml-0.5 inline-block size-2.5 rounded-full transition-transform"
                                 :class="[
-                                    show_hidden_likes ? 'translate-x-2.5 bg-snitch-on-spot' : 'translate-x-0 bg-snitch-paper dark:bg-snitch-ink',
+                                    show_hidden_likes
+                                        ? 'translate-x-2.5 bg-snitch-paper dark:bg-snitch-on-spot'
+                                        : 'translate-x-0 bg-snitch-paper dark:bg-snitch-ink',
                                 ]"
                             />
                         </span>
@@ -528,7 +531,7 @@ const detailsOpen = ref(false);
                     >
                         <span
                             class="flex size-5 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-                            :class="step.done ? 'bg-snitch-spot text-snitch-ink' : 'bg-snitch-ink/10 text-snitch-ink/70'"
+                            :class="step.done ? 'bg-snitch-ink text-snitch-paper dark:bg-snitch-spot dark:text-snitch-on-spot' : 'bg-snitch-ink/10 text-snitch-ink/70'"
                         >
                             {{ step.done ? '✓' : index + 1 }}
                         </span>
@@ -555,7 +558,7 @@ const detailsOpen = ref(false);
                             What should we post?
                         </p>
                         <h2 class="font-display max-w-4xl text-2xl font-semibold tracking-tight text-snitch-ink md:text-3xl">
-                            {{ whatToPostHeadline }}
+                            <SnitchHighlightedText :text="whatToPostHeadline" />
                         </h2>
                     </header>
 
@@ -629,7 +632,10 @@ const detailsOpen = ref(false);
                                             :style="{ width: slot.width }"
                                         />
                                     </div>
-                                    <span class="whitespace-nowrap font-mono text-sm tabular-nums text-snitch-ink/70">{{ slot.suffix }}</span>
+                                    <span
+                                        class="whitespace-nowrap font-mono text-sm tabular-nums"
+                                        :class="slotIndex === 0 ? 'snitch-highlight text-snitch-ink' : 'text-snitch-ink/70'"
+                                    >{{ slot.suffix }}</span>
                                 </li>
                             </ul>
                         </div>
@@ -660,7 +666,7 @@ const detailsOpen = ref(false);
                             How are they performing?
                         </p>
                         <h2 class="font-display max-w-4xl text-2xl font-semibold tracking-tight text-snitch-ink md:text-3xl">
-                            {{ performanceHeadline }}
+                            <SnitchHighlightedText :text="performanceHeadline" />
                         </h2>
                     </header>
 
@@ -810,7 +816,7 @@ const detailsOpen = ref(false);
                             Are they running ads?
                         </p>
                         <h2 class="font-display max-w-4xl text-2xl font-semibold tracking-tight text-snitch-ink md:text-3xl">
-                            {{ adsHeadline }}
+                            <SnitchHighlightedText :text="adsHeadline" />
                         </h2>
                     </header>
 

@@ -15,7 +15,7 @@ defineProps<{
             class="min-w-[14rem] flex-1 rounded border border-snitch-ink/10 bg-snitch-lift p-3"
         >
             <p class="font-display text-2xl font-semibold tabular-nums text-snitch-ink leading-none">
-                {{ item.metric }}
+                <span class="snitch-highlight">{{ item.metric }}</span>
             </p>
             <p class="mt-2 text-sm leading-snug text-snitch-ink/80">
                 {{ item.text }}

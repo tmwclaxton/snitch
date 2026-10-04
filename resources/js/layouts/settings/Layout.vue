@@ -34,7 +34,7 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
         <header class="mb-6 border-b border-snitch-ink/10 pb-5">
             <p class="font-mono text-sm font-medium uppercase tracking-wide text-snitch-ink/55">Account</p>
             <h1 class="mt-1.5 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-                Settings
+                <span class="snitch-highlight">Settings</span>
             </h1>
             <p class="mt-1.5 text-sm text-snitch-ink/60 sm:text-base">
                 Profile, appearance, and MCP.
@@ -51,7 +51,7 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                         class="inline-flex items-center gap-2 border-l-2 px-3 py-2 text-sm transition-colors"
                         :class="
                             isCurrentOrParentUrl(item.href)
-                                ? 'border-snitch-spot bg-snitch-spot/40 font-medium text-snitch-ink'
+                                ? 'border-snitch-ink font-medium text-snitch-ink'
                                 : 'border-transparent text-snitch-ink/60 hover:text-snitch-ink'
                         "
                     >
@@ -61,7 +61,9 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                             class="size-3.5 shrink-0 opacity-70"
                             aria-hidden="true"
                         />
-                        {{ item.title }}
+                        <span :class="isCurrentOrParentUrl(item.href) ? 'snitch-highlight' : ''">
+                            {{ item.title }}
+                        </span>
                     </Link>
                 </nav>
             </aside>
