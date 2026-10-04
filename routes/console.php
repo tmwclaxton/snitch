@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\ScheduleHeartbeat;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -8,39 +9,46 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+// Scheduler liveness for snitch:audit. Proves schedule:work is alive in the live slot.
+Schedule::call(fn () => ScheduleHeartbeat::mark(ScheduleHeartbeat::TICK))
+    ->name('snitch:scheduler-heartbeat')
+    ->everyFiveMinutes()
+    ->onOneServer();
+
 // Weekly AI blog draft (default status from config/blog.php). Spot-check then blog:publish.
 Schedule::command('blog:generate --length=long')
     ->weeklyOn(1, '9:00')
     ->appendOutputTo(storage_path('logs/blog-generate.log'));
 
-// Current follower count only. Does not import posts. Skips accounts nobody tracks.
+// One UK morning pipeline (BST = UTC+1). Do not add a second scrape.
+// 07:00 BST / 06:00 UTC: calendar-day follower snapshots (interval 1).
+// 07:15 BST / 06:15 UTC: account sync (7-day gate) plus opt-in daily-brief light sync.
+// 07:25 BST / 06:25 UTC: daily brief after queued sync jobs have had time to drain.
 Schedule::command('snitch:refresh-followers')
-    ->weeklyOn(1, '6:00')
+    ->dailyAt('6:00')
     ->withoutOverlapping()
-    ->onOneServer();
+    ->onOneServer()
+    ->onSuccess(fn () => ScheduleHeartbeat::mark('snitch:refresh-followers'))
+    ->onFailure(fn () => ScheduleHeartbeat::mark('snitch:refresh-followers', 'failure'));
 
-// Lovable core: weekly Instagram post refresh for accounts past the min interval.
 Schedule::command('snitch:sync-accounts')
-    ->weeklyOn(1, '7:00')
+    ->dailyAt('6:15')
     ->withoutOverlapping()
-    ->onOneServer();
+    ->onOneServer()
+    ->onSuccess(fn () => ScheduleHeartbeat::mark('snitch:sync-accounts'))
+    ->onFailure(fn () => ScheduleHeartbeat::mark('snitch:sync-accounts', 'failure'));
+
+Schedule::command('snitch:generate-daily-briefs')
+    ->dailyAt((string) config('snitch.daily_brief.generate_time', '06:25'))
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->onSuccess(fn () => ScheduleHeartbeat::mark('snitch:generate-daily-briefs'))
+    ->onFailure(fn () => ScheduleHeartbeat::mark('snitch:generate-daily-briefs', 'failure'));
 
 // After Monday sync: free weekly "Post this next" brief when missing.
 Schedule::command('snitch:generate-weekly-briefs')
     ->weeklyOn(1, '8:00')
     ->withoutOverlapping()
-    ->onOneServer();
-
-// Opt-in daily light refresh for daily-brief users (own + competitors).
-Schedule::command('snitch:daily-refresh')
-    ->dailyAt((string) config('snitch.daily_brief.refresh_time', '06:00'))
-    ->timezone('Europe/London')
-    ->withoutOverlapping()
-    ->onOneServer();
-
-// Daily executive summary after the light refresh.
-Schedule::command('snitch:generate-daily-briefs')
-    ->dailyAt((string) config('snitch.daily_brief.generate_time', '07:00'))
-    ->timezone('Europe/London')
-    ->withoutOverlapping()
-    ->onOneServer();
+    ->onOneServer()
+    ->onSuccess(fn () => ScheduleHeartbeat::mark('snitch:generate-weekly-briefs'))
+    ->onFailure(fn () => ScheduleHeartbeat::mark('snitch:generate-weekly-briefs', 'failure'));

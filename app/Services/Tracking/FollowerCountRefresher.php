@@ -169,11 +169,16 @@ class FollowerCountRefresher
         $account->forceFill(['followers' => $latest])->save();
     }
 
+    /**
+     * Earliest captured_on that still counts as "recent". Calendar-day based and
+     * inclusive of today, so interval 1 means "already captured today" and a
+     * snapshot taken mid-week never blocks the next scheduled run for 2 weeks.
+     */
     private function cutoffDate(): string
     {
-        $days = max(1, (int) config('snitch.followers.refresh_interval_days', 6));
+        $days = max(1, (int) config('snitch.followers.refresh_interval_days', 1));
 
-        return CarbonImmutable::now()->subDays($days)->toDateString();
+        return CarbonImmutable::now()->startOfDay()->subDays($days - 1)->toDateString();
     }
 
     /**

@@ -3,8 +3,10 @@
 namespace App\Console\Commands;
 
 use App\Enums\Platform;
+use App\Enums\TrackedAccountKind;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Models\TrackedAccount;
+use App\Models\User;
 use App\Services\Billing\PlanEntitlementService;
 use App\Services\Billing\UsageBillingService;
 use Illuminate\Console\Attributes\Description;
@@ -12,7 +14,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('snitch:sync-accounts')]
-#[Description('Enqueue Instagram sync jobs for tracked accounts past the min sync interval (weekly schedule + ops)')]
+#[Description('Enqueue Instagram sync jobs: 7-day interval for everyone, plus a light daily scrape for daily-brief users')]
 class SyncAccountsCommand extends Command
 {
     public function handle(PlanEntitlementService $entitlements, UsageBillingService $billing): int
@@ -23,6 +25,8 @@ class SyncAccountsCommand extends Command
         $billingSkipped = 0;
         $quotaCache = [];
         $billingCache = [];
+        $postsLimit = max(1, (int) config('snitch.daily_brief.posts_limit', 6));
+        $recencyDays = max(1, (int) config('snitch.daily_brief.recency_days', 30));
 
         TrackedAccount::query()
             ->with('user')
@@ -31,6 +35,8 @@ class SyncAccountsCommand extends Command
             ->chunkById(100, function ($accounts) use (
                 $entitlements,
                 $billing,
+                $postsLimit,
+                $recencyDays,
                 &$count,
                 &$skipped,
                 &$overQuota,
@@ -48,6 +54,7 @@ class SyncAccountsCommand extends Command
                     }
 
                     $userId = (int) $user->id;
+                    $dailyBrief = $this->shouldForceDailyBriefSync($account, $user);
 
                     if (! isset($quotaCache[$userId])) {
                         $quotaCache[$userId] = array_fill_keys(
@@ -62,7 +69,7 @@ class SyncAccountsCommand extends Command
                         continue;
                     }
 
-                    if (! $account->isDueForSync()) {
+                    if (! $dailyBrief && ! $account->isDueForSync()) {
                         $skipped++;
 
                         continue;
@@ -79,7 +86,19 @@ class SyncAccountsCommand extends Command
                     }
 
                     $account->markSyncRunning();
-                    SyncTrackedAccountJob::dispatch($account->id);
+
+                    if ($dailyBrief) {
+                        SyncTrackedAccountJob::dispatch(
+                            $account->id,
+                            force: true,
+                            postsLimit: $postsLimit,
+                            recencyDays: $recencyDays,
+                            resolveProfile: false,
+                        );
+                    } else {
+                        SyncTrackedAccountJob::dispatch($account->id);
+                    }
+
                     $count++;
                 }
             });
@@ -87,5 +106,14 @@ class SyncAccountsCommand extends Command
         $this->info("Enqueued {$count} account sync jobs ({$skipped} skipped recently; {$overQuota} over quota; {$billingSkipped} low balance).");
 
         return self::SUCCESS;
+    }
+
+    private function shouldForceDailyBriefSync(TrackedAccount $account, User $user): bool
+    {
+        if (! $user->daily_brief_enabled) {
+            return false;
+        }
+
+        return $account->is_own_account || $account->kind === TrackedAccountKind::Competitor;
     }
 }

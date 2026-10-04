@@ -178,9 +178,12 @@ return [
     /*
     | Profile-only follower refresh. Not a post sync. Runs while at least one
     | person still tracks the social account, then stops.
+    | refresh_interval_days is in calendar days, today included: 1 = one snapshot
+    | per day (the scheduler runs snitch:refresh-followers daily), 7 = at most
+    | one snapshot in any 7-day calendar window.
     */
     'followers' => [
-        'refresh_interval_days' => (int) env('SNITCH_FOLLOWER_REFRESH_DAYS', 6),
+        'refresh_interval_days' => (int) env('SNITCH_FOLLOWER_REFRESH_DAYS', 1),
     ],
 
     /*
@@ -277,8 +280,11 @@ return [
         'model' => env('SNITCH_DAILY_BRIEF_MODEL', env('SNITCH_BRIEF_MODEL', env('SNITCH_WINNER_COPY_MODEL', 'deepseek/deepseek-v4-flash'))),
         'posts_limit' => (int) env('SNITCH_DAILY_BRIEF_POSTS_LIMIT', 6),
         'recency_days' => (int) env('SNITCH_DAILY_BRIEF_RECENCY_DAYS', 30),
-        'refresh_time' => env('SNITCH_DAILY_BRIEF_REFRESH_TIME', '06:00'),
-        'generate_time' => env('SNITCH_DAILY_BRIEF_GENERATE_TIME', '07:00'),
+        // refresh_time is ops-only for `snitch:daily-refresh`. The scheduler
+        // folds the light scrape into snitch:sync-accounts at 06:15 UTC.
+        'refresh_time' => env('SNITCH_DAILY_BRIEF_REFRESH_TIME', '06:15'),
+        // 07:25 BST / 06:25 UTC: after 06:15 sync jobs have started to drain.
+        'generate_time' => env('SNITCH_DAILY_BRIEF_GENERATE_TIME', '06:25'),
         'winner_lookback_days' => (int) env('SNITCH_DAILY_BRIEF_WINNER_LOOKBACK_DAYS', 7),
         'max_actions' => (int) env('SNITCH_DAILY_BRIEF_MAX_ACTIONS', 5),
         'ads_refresh_every_days' => (int) env('SNITCH_DAILY_BRIEF_ADS_REFRESH_DAYS', 3),

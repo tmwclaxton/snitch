@@ -47,7 +47,7 @@ class GrowthPageTest extends TestCase
                 ->where('period', '30d')
                 ->where('metrics.thin_data', true)
                 ->where('metrics.snapshot_count', 1)
-                ->where('metrics.note', fn ($note): bool => is_string($note) && str_contains($note, 'Only one weekly snapshot'))
+                ->where('metrics.note', fn ($note): bool => is_string($note) && str_contains($note, 'Only one follower snapshot'))
                 ->has('metrics.charts.followers')
             );
     }

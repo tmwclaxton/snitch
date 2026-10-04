@@ -49,7 +49,7 @@ class GetDailyBriefTool extends Tool
             'generating' => GenerateDailyBriefJob::isActiveFor($user->id, $date->toDateString()),
             'app_url' => McpAppUrls::today($date->toDateString()),
             'next_step' => $payload === null
-                ? 'No daily summary for this date yet. It is created automatically (free) after the 07:00 Europe/London run. Do not force a regenerate.'
+                ? 'No daily summary for this date yet. It is created automatically (free) after the 07:25 Europe/London run. Do not force a regenerate.'
                 : 'Use the actions today. Mark them done on /today when finished.',
         ]);
     }

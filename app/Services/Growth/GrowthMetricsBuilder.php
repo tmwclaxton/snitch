@@ -61,8 +61,8 @@ class GrowthMetricsBuilder
             'thin_data' => $thin,
             'note' => $thin
                 ? ($snapshotCount === 1
-                    ? 'Only one weekly snapshot so far. Charts fill in as Monday syncs land.'
-                    : 'No weekly follower snapshots yet. Charts fill in after the first Monday sync.')
+                    ? 'Only one follower snapshot so far. Charts fill in as the daily follower refresh lands.'
+                    : 'No follower snapshots yet. Charts fill in after the first daily follower refresh.')
                 : null,
             'accounts' => $series->values()->all(),
             'peer_median' => $peer,
@@ -138,12 +138,18 @@ class GrowthMetricsBuilder
             'value' => (int) $row->followers,
         ])->values()->all();
 
-        $posts = Post::query()
+        // posted_at is stored in UTC; range bounds are London days. The full history
+        // (not just the window) is the "X× usual" baseline, matching the dashboard.
+        $history = Post::query()
             ->where('social_account_id', $socialId)
-            ->when($start !== null, fn ($q) => $q->where('posted_at', '>=', $start))
-            ->where('posted_at', '<=', $end)
+            ->whereNotNull('posted_at')
+            ->where('posted_at', '<=', $end->utc())
             ->orderByDesc('posted_at')
             ->get();
+        $startUtc = $start?->utc();
+        $posts = $history
+            ->filter(fn (Post $post): bool => $startUtc === null || $post->posted_at->gte($startUtc))
+            ->values();
 
         $weeks = max(1, ($start === null
             ? max(1, (int) ceil(max(1, $posts->min('posted_at')?->diffInDays($end) ?? 7) / 7))
@@ -152,15 +158,21 @@ class GrowthMetricsBuilder
         $postsPerWeek = $posts->count() / $weeks;
 
         $followersFallback = (int) ($account->followers ?? 0);
+        // ER needs followers at post time: use every snapshot, not only those in range.
+        $erSnapshots = FollowerSnapshot::query()
+            ->where('social_account_id', $socialId)
+            ->orderBy('captured_on')
+            ->get(['captured_on', 'followers'])
+            ->map(fn (FollowerSnapshot $s): array => [
+                'captured_on' => $s->captured_on?->toDateString() ?? '',
+                'followers' => (int) $s->followers,
+            ]);
         $erValues = [];
         $multipliers = [];
 
         foreach ($posts as $post) {
             $followers = $this->math->followersAt(
-                $snapshots->map(fn (FollowerSnapshot $s): array => [
-                    'captured_on' => $s->captured_on?->toDateString() ?? '',
-                    'followers' => (int) $s->followers,
-                ]),
+                $erSnapshots,
                 $post->posted_at,
                 $followersFallback > 0 ? $followersFallback : null,
             );
@@ -170,7 +182,7 @@ class GrowthMetricsBuilder
                 $erValues[] = $er;
             }
 
-            $pi = $this->math->performanceIndex($post, $posts)['pi'] ?? null;
+            $pi = $this->math->performanceIndex($post, $history)['pi'] ?? null;
 
             if ($pi !== null) {
                 $multipliers[] = (float) $pi;
@@ -207,10 +219,7 @@ class GrowthMetricsBuilder
 
             foreach ($weekPosts as $post) {
                 $followers = $this->math->followersAt(
-                    $snapshots->map(fn (FollowerSnapshot $s): array => [
-                        'captured_on' => $s->captured_on?->toDateString() ?? '',
-                        'followers' => (int) $s->followers,
-                    ]),
+                    $erSnapshots,
                     $post->posted_at,
                     $followersFallback > 0 ? $followersFallback : null,
                 );
@@ -220,7 +229,7 @@ class GrowthMetricsBuilder
                     $weekEr[] = $er;
                 }
 
-                $pi = $this->math->performanceIndex($post, $posts)['pi'] ?? null;
+                $pi = $this->math->performanceIndex($post, $history)['pi'] ?? null;
 
                 if ($pi !== null) {
                     $weekMult[] = (float) $pi;

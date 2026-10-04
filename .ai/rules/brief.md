@@ -35,3 +35,6 @@ Admin POST `brief.generate` with `force` queues `GenerateWeeklyBriefJob` with `b
 
 ## Idea quality
 Feed the LLM the top 5-8 winner candidates by X× usual (30d, tracked accounts including own). Every idea must cite 1-2 `inspired_by_post_ids`; at most 2 ideas may share one source - reassign repeats in code. `hook` is the literal on-screen first line (max ~12 words); scene direction goes in optional `visual`. Instagram CTAs only: comment, save, share, DM, or link in bio - never swipe up.
+
+## Report maths use full post history
+`MonthlyReportBuilder` and `GrowthMetricsBuilder` compute X× usual against the full post history (same as the dashboard), not a window-only baseline. Past months without a follower snapshot report no followers instead of today's count. Partial-month post counts compare with the same days last month. London month bounds convert to UTC. Unscored winner insights sort last on Postgres. After a maths fix, persist stored monthly reports again (`MonthlyReportBuilder::persist`) so /report does not keep the old payload.

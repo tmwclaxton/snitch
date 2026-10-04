@@ -412,7 +412,7 @@ final class WorkflowGuide
             'summary' => 'Read the Today page (/today): headline, numbers, today\'s actions, competitor moves, and things to watch.',
             'prerequisites' => [
                 'whoami so runtime.app_url matches the account you expect.',
-                'daily_brief_enabled on the user. Generation runs automatically after the 07:00 Europe/London job.',
+                'daily_brief_enabled on the user. Generation runs automatically after the 07:25 Europe/London job.',
             ],
             'do_not_skip' => [
                 'Do not invent a regenerate. Automatic daily briefs are free and read-only from MCP.',

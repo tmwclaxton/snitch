@@ -102,12 +102,19 @@ class MonthlyReportBuilder
         $prevStart = $monthStart->subMonth()->startOfMonth();
         $prevEnd = $monthStart->subMonth()->endOfMonth();
         $prevLabel = $prevStart->format('F');
+        $isPartial = $monthStart->isSameMonth($now);
+
+        // A partial month ("so far") compares post volume with the same number of
+        // days at the start of last month, not the whole of last month.
+        $prevPostsEnd = $isPartial
+            ? min($prevEnd, $prevStart->addDays($now->day - 1)->endOfDay())
+            : $prevEnd;
 
         $accounts = $this->growth->trackedAccounts($user);
         $own = $accounts->first(fn (TrackedAccount $a): bool => (bool) $a->is_own_account);
         $rivals = $accounts->filter(fn (TrackedAccount $a): bool => ! (bool) $a->is_own_account)->values();
 
-        $kpis = $this->kpis($own, $rivals, $monthStart, $monthEnd, $prevStart, $prevEnd, $prevLabel);
+        $kpis = $this->kpis($own, $rivals, $monthStart, $monthEnd, $prevStart, $prevEnd, $prevPostsEnd, $prevLabel, $isPartial);
         $ownTop = $own === null ? [] : $this->topPostsForAccount($own, $monthStart, $monthEnd, 3);
         $rivalWinners = $this->topRivalWinners($user, $rivals, $monthStart, $monthEnd, 3);
         $brief = WeeklyBrief::query()
@@ -117,7 +124,7 @@ class MonthlyReportBuilder
             ->with('ideas')
             ->first();
 
-        $changed = $this->whatChanged($kpis);
+        $changed = $this->whatChanged($kpis, $isPartial);
 
         return [
             'month' => $monthStart->format('Y-m'),
@@ -174,26 +181,44 @@ class MonthlyReportBuilder
         CarbonImmutable $monthEnd,
         CarbonImmutable $prevStart,
         CarbonImmutable $prevEnd,
+        CarbonImmutable $prevPostsEnd,
         string $prevLabel,
+        bool $isPartial = false,
     ): array {
-        $ownNow = $this->accountMonthStats($own, $monthStart, $monthEnd);
+        $ownNow = $this->accountMonthStats($own, $monthStart, $monthEnd, $isPartial);
         $ownPrev = $this->accountMonthStats($own, $prevStart, $prevEnd);
 
-        $peerNow = $this->peerMonthStats($rivals, $monthStart, $monthEnd);
+        $peerNow = $this->peerMonthStats($rivals, $monthStart, $monthEnd, $isPartial);
         $peerPrev = $this->peerMonthStats($rivals, $prevStart, $prevEnd);
+
+        $ownPrevPosts = $isPartial ? $this->postCount($own, $prevStart, $prevPostsEnd) : $ownPrev['posts'];
+        $peerPrevPosts = $isPartial
+            ? ($rivals->isEmpty() ? null : $this->math->median($rivals->map(fn (TrackedAccount $a): int => $this->postCount($a, $prevStart, $prevPostsEnd))->values()))
+            : $peerPrev['posts'];
 
         return [
             'followers' => $this->kpiPair('followers', $ownNow['followers'], $ownPrev['followers'], $peerNow['followers'], $peerPrev['followers'], $prevLabel),
-            'posts' => $this->kpiPair('posts', $ownNow['posts'], $ownPrev['posts'], $peerNow['posts'], $peerPrev['posts'], $prevLabel),
+            'posts' => $this->kpiPair('posts', $ownNow['posts'], $ownPrevPosts, $peerNow['posts'], $peerPrevPosts, $prevLabel),
             'engagement_rate' => $this->kpiPair('engagement_rate', $ownNow['engagement_rate'], $ownPrev['engagement_rate'], $peerNow['engagement_rate'], $peerPrev['engagement_rate'], $prevLabel),
             'avg_multiplier' => $this->kpiPair('avg_multiplier', $ownNow['avg_multiplier'], $ownPrev['avg_multiplier'], $peerNow['avg_multiplier'], $peerPrev['avg_multiplier'], $prevLabel),
         ];
     }
 
     /**
+     * Followers, post count, mean ER and mean "X× usual" for one account in a window.
+     *
+     * - Window bounds are London calendar days; posted_at is stored in UTC, so the
+     *   bounds are converted to UTC before querying.
+     * - "X× usual" (performance index) uses the account's full post history before
+     *   each post as the baseline (same as the dashboard and winners), not just
+     *   posts inside the window, so the first posts of a month are not dropped.
+     * - Followers come from a snapshot captured inside the window. The live tracker
+     *   count is only used as a fallback for the current month; past months with no
+     *   snapshot report "no data" instead of today's count.
+     *
      * @return array{followers: int|null, posts: int, engagement_rate: float|null, avg_multiplier: float|null}
      */
-    private function accountMonthStats(?TrackedAccount $account, CarbonImmutable $start, CarbonImmutable $end): array
+    private function accountMonthStats(?TrackedAccount $account, CarbonImmutable $start, CarbonImmutable $end, bool $allowLiveFallback = false): array
     {
         if ($account === null || $account->social_account_id === null) {
             return [
@@ -205,16 +230,21 @@ class MonthlyReportBuilder
         }
 
         $socialId = (int) $account->social_account_id;
-        $posts = Post::query()
-            ->where('social_account_id', $socialId)
-            ->whereBetween('posted_at', [$start, $end])
-            ->orderByDesc('posted_at')
-            ->get();
+        $history = $this->historyUpTo($socialId, $end);
+        [$startUtc, $endUtc] = $this->utcBounds($start, $end);
+        $posts = $history
+            ->filter(fn (Post $post): bool => $post->posted_at !== null
+                && $post->posted_at->betweenIncluded($startUtc, $endUtc))
+            ->values();
 
         $snapshots = FollowerSnapshot::query()
             ->where('social_account_id', $socialId)
             ->orderBy('captured_on')
             ->get(['captured_on', 'followers']);
+        $snapshotRows = $snapshots->map(fn (FollowerSnapshot $s): array => [
+            'captured_on' => $s->captured_on?->toDateString() ?? '',
+            'followers' => (int) $s->followers,
+        ]);
 
         $followersFallback = (int) ($account->followers ?? 0);
         $er = [];
@@ -222,10 +252,7 @@ class MonthlyReportBuilder
 
         foreach ($posts as $post) {
             $followers = $this->math->followersAt(
-                $snapshots->map(fn (FollowerSnapshot $s): array => [
-                    'captured_on' => $s->captured_on?->toDateString() ?? '',
-                    'followers' => (int) $s->followers,
-                ]),
+                $snapshotRows,
                 $post->posted_at,
                 $followersFallback > 0 ? $followersFallback : null,
             );
@@ -235,22 +262,29 @@ class MonthlyReportBuilder
                 $er[] = $rate;
             }
 
-            $pi = $this->math->performanceIndex($post, $posts)['pi'] ?? null;
+            $pi = $this->math->performanceIndex($post, $history)['pi'] ?? null;
 
             if ($pi !== null) {
                 $mult[] = (float) $pi;
             }
         }
 
+        $startDay = $start->toDateString();
+        $endDay = $end->toDateString();
         $latestFollowers = $snapshots
-            ->filter(fn (FollowerSnapshot $s): bool => $s->captured_on !== null
-                && $s->captured_on->betweenIncluded($start, $end))
+            ->filter(function (FollowerSnapshot $s) use ($startDay, $endDay): bool {
+                $day = $s->captured_on?->toDateString();
+
+                return $day !== null && $day >= $startDay && $day <= $endDay;
+            })
             ->last()?->followers;
 
+        $followers = $latestFollowers !== null
+            ? (int) $latestFollowers
+            : ($allowLiveFallback && $followersFallback > 0 ? $followersFallback : null);
+
         return [
-            'followers' => $latestFollowers !== null
-                ? (int) $latestFollowers
-                : ($followersFallback > 0 ? $followersFallback : null),
+            'followers' => $followers,
             'posts' => $posts->count(),
             'engagement_rate' => $er === [] ? null : round(array_sum($er) / count($er), 2),
             'avg_multiplier' => $mult === [] ? null : round(array_sum($mult) / count($mult), 2),
@@ -258,10 +292,47 @@ class MonthlyReportBuilder
     }
 
     /**
+     * Posts for one social account up to $end (UTC-converted), newest first.
+     *
+     * @return Collection<int, Post>
+     */
+    private function historyUpTo(int $socialId, CarbonImmutable $end): Collection
+    {
+        return Post::query()
+            ->where('social_account_id', $socialId)
+            ->whereNotNull('posted_at')
+            ->where('posted_at', '<=', $end->utc())
+            ->orderByDesc('posted_at')
+            ->get();
+    }
+
+    /**
+     * @return array{0: CarbonImmutable, 1: CarbonImmutable}
+     */
+    private function utcBounds(CarbonImmutable $start, CarbonImmutable $end): array
+    {
+        return [$start->utc(), $end->utc()];
+    }
+
+    private function postCount(?TrackedAccount $account, CarbonImmutable $start, CarbonImmutable $end): int
+    {
+        if ($account === null || $account->social_account_id === null) {
+            return 0;
+        }
+
+        [$startUtc, $endUtc] = $this->utcBounds($start, $end);
+
+        return Post::query()
+            ->where('social_account_id', (int) $account->social_account_id)
+            ->whereBetween('posted_at', [$startUtc, $endUtc])
+            ->count();
+    }
+
+    /**
      * @param  Collection<int, TrackedAccount>  $rivals
      * @return array{followers: float|null, posts: float|null, engagement_rate: float|null, avg_multiplier: float|null}
      */
-    private function peerMonthStats(Collection $rivals, CarbonImmutable $start, CarbonImmutable $end): array
+    private function peerMonthStats(Collection $rivals, CarbonImmutable $start, CarbonImmutable $end, bool $allowLiveFallback = false): array
     {
         if ($rivals->isEmpty()) {
             return [
@@ -272,7 +343,7 @@ class MonthlyReportBuilder
             ];
         }
 
-        $rows = $rivals->map(fn (TrackedAccount $a): array => $this->accountMonthStats($a, $start, $end));
+        $rows = $rivals->map(fn (TrackedAccount $a): array => $this->accountMonthStats($a, $start, $end, $allowLiveFallback));
 
         return [
             'followers' => $this->math->median($rows->pluck('followers')->filter(fn ($v) => $v !== null)->values()),
@@ -353,15 +424,20 @@ class MonthlyReportBuilder
      */
     private function topPostsForAccount(TrackedAccount $account, CarbonImmutable $start, CarbonImmutable $end, int $limit): array
     {
-        $posts = Post::query()
-            ->where('social_account_id', $account->social_account_id)
-            ->whereBetween('posted_at', [$start, $end])
-            ->orderByDesc('posted_at')
-            ->get();
+        if ($account->social_account_id === null) {
+            return [];
+        }
+
+        $history = $this->historyUpTo((int) $account->social_account_id, $end);
+        [$startUtc, $endUtc] = $this->utcBounds($start, $end);
+        $posts = $history
+            ->filter(fn (Post $post): bool => $post->posted_at !== null
+                && $post->posted_at->betweenIncluded($startUtc, $endUtc))
+            ->values();
 
         return $posts
-            ->map(function (Post $post) use ($posts): array {
-                $pi = $this->math->performanceIndex($post, $posts)['pi'] ?? null;
+            ->map(function (Post $post) use ($history): array {
+                $pi = $this->math->performanceIndex($post, $history)['pi'] ?? null;
                 $caption = trim((string) ($post->caption ?? ''));
 
                 return [
@@ -398,13 +474,17 @@ class MonthlyReportBuilder
             return [];
         }
 
+        [$startUtc, $endUtc] = $this->utcBounds($start, $end);
+
         return WinnerInsight::query()
             ->where('user_id', $user->id)
-            ->whereHas('post', function ($query) use ($socialIds, $start, $end): void {
+            ->whereHas('post', function ($query) use ($socialIds, $startUtc, $endUtc): void {
                 $query->whereIn('social_account_id', $socialIds)
-                    ->whereBetween('posted_at', [$start, $end]);
+                    ->whereBetween('posted_at', [$startUtc, $endUtc]);
             })
             ->with(['post.socialAccount'])
+            // Postgres sorts NULL first on DESC; unscored insights must not outrank real winners.
+            ->orderByRaw('CASE WHEN performance_multiplier IS NULL THEN 1 ELSE 0 END')
             ->orderByDesc('performance_multiplier')
             ->limit($limit)
             ->get()
@@ -448,7 +528,7 @@ class MonthlyReportBuilder
      * @param  array<string, mixed>  $kpis
      * @return list<string>
      */
-    private function whatChanged(array $kpis): array
+    private function whatChanged(array $kpis, bool $isPartial = false): array
     {
         $lines = [];
 
@@ -465,7 +545,8 @@ class MonthlyReportBuilder
             }
 
             $direction = $change >= 0 ? 'up' : 'down';
-            $lines[] = "{$label} {$direction} ".abs((float) $change).'% vs last month.';
+            $versus = $key === 'posts' && $isPartial ? 'vs the same days last month' : 'vs last month';
+            $lines[] = "{$label} {$direction} ".abs((float) $change)."% {$versus}.";
         }
 
         if ($lines === []) {
