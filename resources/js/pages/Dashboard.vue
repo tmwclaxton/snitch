@@ -233,14 +233,23 @@ function refreshQuery(next: { accounts?: string[]; period?: number; hidden?: boo
 function ideaHowto(idea: {
     visual?: string | null;
     caption_angle?: string | null;
-    cta?: string | null;
 }): string {
-    return [idea.visual, idea.caption_angle, idea.cta]
+    return [idea.visual, idea.caption_angle]
         .map((value) => (value ?? '').replace(/\s+/g, ' ').trim())
         .filter((value) => value !== '')
         .map((value) => /[.!?]$/.test(value) ? value : `${value}.`)
-        .slice(0, 3)
+        .slice(0, 2)
         .join(' ');
+}
+
+function ideaCta(idea: { cta?: string | null }): string {
+    const value = (idea.cta ?? '').replace(/\s+/g, ' ').trim().replace(/[.]+$/, '');
+
+    if (value === '') {
+        return '';
+    }
+
+    return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function toggleAccount(handle: string): void {
@@ -568,6 +577,13 @@ const detailsOpen = ref(false);
                                     class="flex-1 text-sm leading-relaxed text-snitch-caution-fog/85"
                                 >
                                     {{ ideaHowto(idea) }}
+                                </p>
+                                <p
+                                    v-if="ideaCta(idea)"
+                                    class="text-sm leading-relaxed text-snitch-caution-fog/85"
+                                >
+                                    <strong class="font-semibold">Call to action:</strong>
+                                    {{ ideaCta(idea) }}
                                 </p>
                             </Link>
                         </div>

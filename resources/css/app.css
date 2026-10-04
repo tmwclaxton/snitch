@@ -270,8 +270,8 @@
     --sidebar-foreground: #edeae2;
     --sidebar-primary: #fcd700;
     --sidebar-primary-foreground: #0e0e10;
-    --sidebar-accent: #fcd700;
-    --sidebar-accent-foreground: #0e0e10;
+    --sidebar-accent: #1e1e22;
+    --sidebar-accent-foreground: #edeae2;
     --sidebar-border: rgb(255 255 255 / 0.1);
     --sidebar-ring: #fcd700;
     --sidebar: #000000;
@@ -322,6 +322,52 @@ html:has(.snitch-app-night),
 html[data-app-night='1'] {
     background-color: #0e0e10;
     color-scheme: dark;
+}
+
+/*
+ * Night sidebar hover uses the grey --sidebar-accent token. Force the one
+ * current item to yellow here (unlayered) so hover:bg-sidebar-accent cannot
+ * paint a second yellow row. Labels wrap; icon stays on the first line.
+ */
+html.dark [data-slot='sidebar-menu-button'],
+html:has(.snitch-app-night) [data-slot='sidebar-menu-button'],
+html[data-app-night='1'] [data-slot='sidebar-menu-button'] {
+    height: auto;
+    min-height: 1.75rem;
+    align-items: flex-start;
+    overflow: visible;
+}
+
+html.dark [data-slot='sidebar-menu-button'] > span:last-child,
+html:has(.snitch-app-night) [data-slot='sidebar-menu-button'] > span:last-child,
+html[data-app-night='1'] [data-slot='sidebar-menu-button'] > span:last-child {
+    overflow: visible;
+    white-space: normal;
+    text-overflow: unset;
+}
+
+html.dark [data-slot='sidebar-menu-button'] > svg,
+html:has(.snitch-app-night) [data-slot='sidebar-menu-button'] > svg,
+html[data-app-night='1'] [data-slot='sidebar-menu-button'] > svg {
+    margin-top: 0.15rem;
+}
+
+html.dark [data-slot='sidebar-menu-button']:hover:not([data-active='true']),
+html.dark [data-slot='sidebar-menu-button']:active:not([data-active='true']),
+html:has(.snitch-app-night) [data-slot='sidebar-menu-button']:hover:not([data-active='true']),
+html[data-app-night='1'] [data-slot='sidebar-menu-button']:hover:not([data-active='true']) {
+    background-color: #1e1e22 !important;
+    color: #edeae2 !important;
+}
+
+html.dark [data-slot='sidebar-menu-button'][data-active='true'],
+html.dark [data-slot='sidebar-menu-button'][data-active='true']:hover,
+html:has(.snitch-app-night) [data-slot='sidebar-menu-button'][data-active='true'],
+html:has(.snitch-app-night) [data-slot='sidebar-menu-button'][data-active='true']:hover,
+html[data-app-night='1'] [data-slot='sidebar-menu-button'][data-active='true'],
+html[data-app-night='1'] [data-slot='sidebar-menu-button'][data-active='true']:hover {
+    background-color: #fcd700 !important;
+    color: #0e0e10 !important;
 }
 
 .snitch-light {
@@ -477,27 +523,6 @@ html[data-app-night='1'] {
         box-decoration-break: clone;
         -webkit-box-decoration-break: clone;
         padding: 0.05em 0.28em;
-    }
-
-    /*
-     * Night sidebar: hover is grey + cream. Only the current page / one
-     * dashboard section stays yellow. Hover must not paint several yellow rows.
-     */
-    .snitch-app-night [data-slot='sidebar-menu-button']:hover,
-    .snitch-app-night [data-slot='sidebar-menu-button']:active,
-    .snitch-app-night [data-slot='sidebar-menu-button'][data-state='open']:hover,
-    .snitch-app-night [data-slot='sidebar-menu-sub-button']:hover,
-    .snitch-app-night [data-slot='sidebar-menu-sub-button']:active {
-        background-color: #1e1e22 !important;
-        color: #edeae2 !important;
-    }
-
-    .snitch-app-night [data-slot='sidebar-menu-button'][data-active='true'],
-    .snitch-app-night [data-slot='sidebar-menu-button'][data-active='true']:hover,
-    .snitch-app-night [data-slot='sidebar-menu-sub-button'][data-active='true'],
-    .snitch-app-night [data-slot='sidebar-menu-sub-button'][data-active='true']:hover {
-        background-color: #fcd700 !important;
-        color: #0e0e10 !important;
     }
 
     .snitch-app-chrome .snitch-app-shell {

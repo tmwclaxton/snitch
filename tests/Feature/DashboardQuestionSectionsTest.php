@@ -51,6 +51,15 @@ class DashboardQuestionSectionsTest extends TestCase
         $this->assertStringContainsString("title: 'Vote for what features you want'", $sidebar);
         $this->assertStringNotContainsString("title: 'Cast your vote'", $sidebar);
 
+        $nav = file_get_contents(resource_path('js/components/NavMain.vue'));
+        $menu = file_get_contents(resource_path('js/components/ui/sidebar/index.ts'));
+        $this->assertIsString($nav);
+        $this->assertIsString($menu);
+        $this->assertStringContainsString('whitespace-normal break-words', $nav);
+        $this->assertStringNotContainsString('[&>span:last-child]:truncate', $menu);
+        $this->assertStringContainsString('items-start', $menu);
+        $this->assertStringContainsString('min-h-7 h-auto', $menu);
+
         $anchors = file_get_contents(resource_path('js/lib/dashboardAnchors.ts'));
         $css = file_get_contents(resource_path('css/app.css'));
         $this->assertIsString($anchors);

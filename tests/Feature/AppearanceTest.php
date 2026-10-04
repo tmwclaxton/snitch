@@ -168,8 +168,10 @@ class AppearanceTest extends TestCase
             $css,
         );
         $this->assertStringContainsString('background: var(--snitch-spot);', $css);
-        $this->assertStringContainsString(".snitch-app-night [data-slot='sidebar-menu-button']:hover", $css);
-        $this->assertStringContainsString(".snitch-app-night [data-slot='sidebar-menu-button'][data-active='true']", $css);
+        $this->assertStringContainsString('--sidebar-accent: #1e1e22;', $css);
+        $this->assertStringContainsString('--sidebar-accent-foreground: #edeae2;', $css);
+        $this->assertStringContainsString("html.dark [data-slot='sidebar-menu-button']:hover:not([data-active='true'])", $css);
+        $this->assertStringContainsString("html.dark [data-slot='sidebar-menu-button'][data-active='true']", $css);
         $this->assertStringContainsString('html.dark {', $css);
         $this->assertStringContainsString('color-scheme: dark;', $css);
         $this->assertStringContainsString('scrollbar-color:', $css);
