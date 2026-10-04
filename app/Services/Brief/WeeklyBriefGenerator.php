@@ -250,7 +250,7 @@ class WeeklyBriefGenerator
      *     week_start: string|null,
      *     idea_count: int,
      *     hook: string|null,
-     *     ideas: list<array{format: string, hook: string, slot: string}>
+     *     ideas: list<array{format: string, hook: string, slot: string, visual: ?string, caption_angle: ?string, cta: ?string}>
      * }|null
      */
     public function dashboardTeaser(User $user): ?array
@@ -273,6 +273,9 @@ class WeeklyBriefGenerator
                     'format' => (string) ($idea->format ?: 'Reel'),
                     'hook' => (string) ($idea->hook ?: ''),
                     'slot' => sprintf('%s %02d:00', $day, $hour),
+                    'visual' => filled($idea->visual) ? (string) $idea->visual : null,
+                    'caption_angle' => filled($idea->caption_angle) ? (string) $idea->caption_angle : null,
+                    'cta' => filled($idea->cta) ? (string) $idea->cta : null,
                 ];
             })
             ->all();

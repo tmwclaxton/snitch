@@ -163,7 +163,13 @@ class AppearanceTest extends TestCase
         $this->assertStringContainsString('--snitch-heat: #141414;', $css);
         $this->assertStringContainsString("html:not(.dark) .snitch-app-chrome [data-slot='sidebar-menu-button'][data-active='true']", $css);
         $this->assertStringContainsString('.dark .snitch-choice-active', $css);
+        $this->assertMatchesRegularExpression(
+            '/\.dark \.snitch-choice-active,\s*\n\s*\.dark \.snitch-choice-active:hover\s*\{[^}]*background:\s*#1e1e22/s',
+            $css,
+        );
         $this->assertStringContainsString('background: var(--snitch-spot);', $css);
+        $this->assertStringContainsString(".snitch-app-night [data-slot='sidebar-menu-button']:hover", $css);
+        $this->assertStringContainsString(".snitch-app-night [data-slot='sidebar-menu-button'][data-active='true']", $css);
         $this->assertStringContainsString('html.dark {', $css);
         $this->assertStringContainsString('color-scheme: dark;', $css);
         $this->assertStringContainsString('scrollbar-color:', $css);

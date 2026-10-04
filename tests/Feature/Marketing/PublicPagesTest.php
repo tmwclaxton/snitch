@@ -348,6 +348,8 @@ class PublicPagesTest extends TestCase
         $this->assertStringNotContainsString('Full Access', $welcome);
         $this->assertStringNotContainsString('£50/mo', $welcome);
         $this->assertStringContainsString('Better social media performance.', $welcome);
+        $this->assertStringNotContainsString('Gap found', $welcome);
+        $this->assertStringNotContainsString('tracking-[0.18em]', $welcome);
     }
 
     public function test_beta_hero_background_is_static_on_mobile(): void

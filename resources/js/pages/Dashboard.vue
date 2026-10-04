@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Info } from '@lucide/vue';
 import { computed, onMounted, ref } from 'vue';
 import { index as briefIndex } from '@/actions/App/Http/Controllers/BriefController';
 import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
@@ -140,7 +139,14 @@ const props = defineProps<{
         week_start: string | null;
         idea_count: number;
         hook: string | null;
-        ideas?: { format: string; hook: string; slot: string }[];
+        ideas?: {
+            format: string;
+            hook: string;
+            slot: string;
+            visual?: string | null;
+            caption_angle?: string | null;
+            cta?: string | null;
+        }[];
         best_times?: { label: string; score: number }[];
     } | null;
     executive?: {
@@ -178,12 +184,6 @@ const showOnboarding = computed(
 );
 
 const hasInstagramSet = computed(() => props.rivals.length > 0 || props.own_account != null);
-
-const hiddenLikesCount = computed(
-    () => props.controls.hidden_likes_count
-        ?? props.winners?.data?.hidden_likes_count
-        ?? 0,
-);
 
 const showTrackedBy = computed(
     () => props.trackedBy != null && props.trackedBy.count > 0,
@@ -228,6 +228,19 @@ function refreshQuery(next: { accounts?: string[]; period?: number; hidden?: boo
         {},
         { preserveState: true, replace: true },
     );
+}
+
+function ideaHowto(idea: {
+    visual?: string | null;
+    caption_angle?: string | null;
+    cta?: string | null;
+}): string {
+    return [idea.visual, idea.caption_angle, idea.cta]
+        .map((value) => (value ?? '').replace(/\s+/g, ' ').trim())
+        .filter((value) => value !== '')
+        .map((value) => /[.!?]$/.test(value) ? value : `${value}.`)
+        .slice(0, 3)
+        .join(' ');
 }
 
 function toggleAccount(handle: string): void {
@@ -460,48 +473,6 @@ const detailsOpen = ref(false);
                 </div>
 
                 <div class="ml-auto flex shrink-0 flex-wrap items-center gap-2">
-                    <label class="group relative inline-flex h-7 cursor-pointer items-center gap-1.5 text-sm text-snitch-ink/70">
-                        <input
-                            type="checkbox"
-                            class="peer sr-only"
-                            :checked="!!show_hidden_likes"
-                            aria-label="Show hidden-likes posts"
-                            @change="refreshQuery({ hidden: !show_hidden_likes })"
-                        >
-                        <span
-                            class="relative inline-flex h-3.5 w-6 shrink-0 items-center rounded-full bg-snitch-ink/15 transition-colors peer-checked:bg-snitch-ink peer-focus-visible:ring-2 peer-focus-visible:ring-snitch-ink/30 dark:bg-[#1a1a1d] dark:peer-checked:bg-snitch-spot dark:peer-focus-visible:ring-snitch-spot/40"
-                            aria-hidden="true"
-                        >
-                            <span
-                                class="ml-0.5 inline-block size-2.5 rounded-full transition-transform"
-                                :class="[
-                                    show_hidden_likes
-                                        ? 'translate-x-2.5 bg-snitch-paper dark:bg-snitch-on-spot'
-                                        : 'translate-x-0 bg-snitch-paper dark:bg-snitch-ink',
-                                ]"
-                            />
-                        </span>
-                        <span class="hidden whitespace-nowrap md:inline">Hidden likes</span>
-                        <span
-                            v-if="hiddenLikesCount > 0"
-                            class="tabular-nums text-snitch-ink/45"
-                        >
-                            {{ hiddenLikesCount }}
-                        </span>
-                        <span
-                            class="relative inline-flex text-snitch-ink/40 group-hover:text-snitch-ink"
-                            tabindex="0"
-                            aria-label="About hidden-likes posts"
-                        >
-                            <Info class="h-3.5 w-3.5" />
-                            <span
-                                role="tooltip"
-                                class="pointer-events-none absolute right-0 top-full z-20 mt-1.5 w-60 rounded border border-snitch-ink/10 bg-snitch-lift p-2 text-left text-sm leading-snug text-snitch-ink/70 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-                            >
-                                Some accounts hide like counts. Turn this on to include those posts, ranked on comments and views.
-                            </span>
-                        </span>
-                    </label>
                     <div class="flex items-center gap-0.5 rounded border border-snitch-ink/15 p-0.5 dark:border-snitch-ink/28">
                         <button
                             v-for="days in periods"
@@ -553,7 +524,7 @@ const detailsOpen = ref(false);
                 <!-- 1. What should we post? -->
                 <section
                     id="what-to-post"
-                    class="mt-3 scroll-mt-14 space-y-4"
+                    class="mt-3 scroll-mt-20 space-y-4"
                 >
                     <header class="space-y-2">
                         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
@@ -582,7 +553,7 @@ const detailsOpen = ref(false);
                                 v-for="(idea, index) in weekly_brief.ideas.slice(0, 3)"
                                 :key="`${idea.slot}-${index}`"
                                 :href="briefIndex.url()"
-                                class="snitch-caution-card flex min-w-0 flex-col gap-2 p-3 hover:opacity-90"
+                                class="snitch-caution-card flex h-full min-w-0 flex-col gap-2 p-3 hover:opacity-90"
                             >
                                 <div class="flex flex-wrap items-center gap-2 text-sm">
                                     <span class="snitch-caution-num">0{{ index + 1 }}</span>
@@ -592,6 +563,12 @@ const detailsOpen = ref(false);
                                     <span class="whitespace-nowrap font-mono tabular-nums text-snitch-caution-fog/70">{{ idea.slot }}</span>
                                 </div>
                                 <span class="text-sm leading-snug text-snitch-caution-fog">{{ idea.hook }}</span>
+                                <p
+                                    v-if="ideaHowto(idea)"
+                                    class="flex-1 text-sm leading-relaxed text-snitch-caution-fog/85"
+                                >
+                                    {{ ideaHowto(idea) }}
+                                </p>
                             </Link>
                         </div>
                     </div>
@@ -662,7 +639,7 @@ const detailsOpen = ref(false);
                 <!-- 2. How are they performing? -->
                 <section
                     id="performance"
-                    class="mt-5 scroll-mt-14 space-y-4 border-t border-snitch-ink/10 pt-5"
+                    class="mt-5 scroll-mt-20 space-y-4 border-t border-snitch-ink/10 pt-5"
                 >
                     <header class="space-y-2">
                         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
@@ -813,7 +790,7 @@ const detailsOpen = ref(false);
                 <!-- 3. Are they running ads? -->
                 <section
                     id="ads"
-                    class="mt-5 scroll-mt-14 space-y-4 border-t border-snitch-ink/10 pt-5"
+                    class="mt-5 scroll-mt-20 space-y-4 border-t border-snitch-ink/10 pt-5"
                 >
                     <header class="space-y-2">
                         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
@@ -914,7 +891,7 @@ const detailsOpen = ref(false);
             <section
                 v-if="showTrackedBy"
                 id="tracked-by"
-                class="mt-5 scroll-mt-14 space-y-3 border-t border-snitch-ink/10 pt-5"
+                    class="mt-5 scroll-mt-20 space-y-3 border-t border-snitch-ink/10 pt-5"
             >
                 <header>
                     <h2 class="snitch-hero-display text-2xl text-snitch-ink md:text-3xl">
@@ -926,11 +903,11 @@ const detailsOpen = ref(false);
 
             <section
                 id="vote"
-                class="mt-5 scroll-mt-14 space-y-3 border-t border-snitch-ink/10 pt-5"
+                    class="mt-5 scroll-mt-20 space-y-3 border-t border-snitch-ink/10 pt-5"
             >
                 <header>
                     <h2 class="snitch-hero-display text-2xl text-snitch-ink md:text-3xl">
-                        Cast your <span class="snitch-highlight">vote</span>
+                        Vote for what <span class="snitch-highlight">features</span> you want
                     </h2>
                 </header>
                 <VoteSection :suggestions="featureSuggestions ?? []" />

@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import SnitchImage from '@/components/SnitchImage.vue';
 
 const props = defineProps<{
@@ -36,10 +38,9 @@ const piLabel = computed(() => `${props.post.pi.toFixed(1)}× usual`);
 </script>
 
 <template>
-    <button
-        type="button"
+    <Link
+        :href="feedShow.url(post.id)"
         class="group relative flex h-full min-w-0 flex-col overflow-hidden rounded border border-snitch-ink/10 bg-snitch-lift text-left"
-        @click="open = !open"
         @mouseenter="open = true"
         @mouseleave="open = false"
         @focus="open = true"
@@ -74,5 +75,5 @@ const piLabel = computed(() => `${props.post.pi.toFixed(1)}× usual`);
                 {{ piLabel }}
             </p>
         </div>
-    </button>
+    </Link>
 </template>

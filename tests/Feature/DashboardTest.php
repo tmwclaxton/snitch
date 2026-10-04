@@ -88,6 +88,7 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('whatToPostHeadline', $dashboard);
         $this->assertStringContainsString('ExecStatTile', $dashboard);
         $this->assertStringContainsString('feedShow.url(post.id)', $winnerCard);
+        $this->assertStringContainsString('feedShow.url(post.id)', $winnerThumb);
         $this->assertStringContainsString('competitorShow.url(props.post.tracked_account_id)', $winnerCard);
         $this->assertStringContainsString('their usual', $winnerCard);
         $this->assertStringContainsString('Open on Instagram', $winnerCard);
@@ -95,6 +96,8 @@ class DashboardTest extends TestCase
         $this->assertStringNotContainsString('…', $winnerThumb);
         $this->assertStringNotContainsString('...', $winnerThumb);
         $this->assertStringContainsString('weekly_brief.ideas', $dashboard);
+        $this->assertStringContainsString('ideaHowto', $dashboard);
+        $this->assertStringContainsString('caption_angle', $dashboard);
         $this->assertStringContainsString('Post this next', $dashboard);
         $this->assertStringContainsString('snitch-format-tag w-fit self-start text-sm', $dashboard);
         $this->assertStringContainsString('What should we post?', $dashboard);
@@ -125,9 +128,11 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('ExecTakeaways', $dashboard);
         $this->assertStringContainsString('Best posting times', $dashboard);
         $this->assertStringNotContainsString('Follower history', $dashboard);
-        $this->assertStringContainsString('Cast your <span class="snitch-highlight">vote</span>', $dashboard);
+        $this->assertStringContainsString('Vote for what <span class="snitch-highlight">features</span> you want', $dashboard);
+        $this->assertStringNotContainsString('Cast your', $dashboard);
         $this->assertStringContainsString('SnitchHighlightedText', $dashboard);
-        $this->assertStringContainsString('peer-checked:bg-snitch-ink', $dashboard);
+        $this->assertStringNotContainsString('peer-checked:bg-snitch-ink', $dashboard);
+        $this->assertStringNotContainsString('Show hidden-likes posts', $dashboard);
         $formatPos = strpos($dashboard, 'id="format_mix"');
         $leaderPos = strpos($dashboard, 'id="leaderboard"');
         $this->assertNotFalse($formatPos);
@@ -200,9 +205,9 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('Add Instagram competitor handles on Tracking', $dashboard);
         $this->assertStringContainsString('No rivals to compare yet', $dashboard);
         $this->assertStringContainsString('legacy_non_instagram_count', $dashboard);
-        $this->assertStringContainsString('Show hidden-likes posts', $dashboard);
-        $this->assertStringContainsString('ranked on comments and views', $dashboard);
-        $this->assertStringContainsString('hidden: !show_hidden_likes', $dashboard);
+        $this->assertStringNotContainsString('Show hidden-likes posts', $dashboard);
+        $this->assertStringNotContainsString('ranked on comments and views', $dashboard);
+        $this->assertStringContainsString('next.hidden ?? props.show_hidden_likes ?? false', $dashboard);
     }
 
     public function test_dashboard_reports_legacy_non_instagram_trackers(): void

@@ -71,9 +71,6 @@ const faqs = [
         <!-- Caution Tape hero band -->
         <section class="flex min-h-[calc(100svh-3.5rem)] flex-col border-b border-white/10 bg-snitch-caution-ink">
             <div class="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-4 py-10 text-center sm:py-12">
-                <p class="mb-4 font-mono text-sm uppercase tracking-[0.18em] text-snitch-caution-yellow">
-                    Snitch
-                </p>
                 <h1 class="snitch-hero-display text-[clamp(2.1rem,5.2vw,4.25rem)] text-snitch-caution-fog">
                     <span class="block">Better social media</span>
                     <span class="block">
@@ -87,16 +84,13 @@ const faqs = [
                     Track your competitors and see the exact gap between you and them.
                     What's working, what you're missing, delivered instantly.
                 </p>
-                <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+                <div class="mt-8 flex flex-wrap items-center justify-center">
                     <Link
                         :href="login()"
                         class="inline-flex items-center justify-center bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-caution-ink hover:opacity-90"
                     >
                         {{ CTA_TEXT }}
                     </Link>
-                    <span class="snitch-alert-badge !bg-snitch-caution-pink">
-                        Gap found
-                    </span>
                 </div>
             </div>
 

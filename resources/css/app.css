@@ -479,6 +479,27 @@ html[data-app-night='1'] {
         padding: 0.05em 0.28em;
     }
 
+    /*
+     * Night sidebar: hover is grey + cream. Only the current page / one
+     * dashboard section stays yellow. Hover must not paint several yellow rows.
+     */
+    .snitch-app-night [data-slot='sidebar-menu-button']:hover,
+    .snitch-app-night [data-slot='sidebar-menu-button']:active,
+    .snitch-app-night [data-slot='sidebar-menu-button'][data-state='open']:hover,
+    .snitch-app-night [data-slot='sidebar-menu-sub-button']:hover,
+    .snitch-app-night [data-slot='sidebar-menu-sub-button']:active {
+        background-color: #1e1e22 !important;
+        color: #edeae2 !important;
+    }
+
+    .snitch-app-night [data-slot='sidebar-menu-button'][data-active='true'],
+    .snitch-app-night [data-slot='sidebar-menu-button'][data-active='true']:hover,
+    .snitch-app-night [data-slot='sidebar-menu-sub-button'][data-active='true'],
+    .snitch-app-night [data-slot='sidebar-menu-sub-button'][data-active='true']:hover {
+        background-color: #fcd700 !important;
+        color: #0e0e10 !important;
+    }
+
     .snitch-app-chrome .snitch-app-shell {
         background-color: var(--snitch-paper);
         background-image: none;
@@ -910,8 +931,8 @@ html[data-app-night='1'] {
     }
 
     .dark .snitch-seg-item:hover {
-        background: color-mix(in oklab, var(--snitch-spot) 18%, transparent);
-        color: var(--snitch-ink);
+        background: #1e1e22;
+        color: #edeae2;
     }
 
     .snitch-seg-item:focus-visible {
@@ -932,13 +953,14 @@ html[data-app-night='1'] {
 
     .dark .snitch-seg-item-active,
     .dark .snitch-seg-item-active:hover {
-        background: var(--snitch-spot);
-        color: var(--snitch-on-spot);
+        background: #1e1e22;
+        color: #edeae2;
     }
 
     /*
      * Choice chips / period toggles - never invert ink↔paper in dark
-     * (pale pill + pale text). Selected = spot yellow; idle = dark lift.
+     * (pale pill + pale text). Selected = grey + cream outline; idle = dark lift.
+     * Yellow stays on headlines, primary buttons, and the one active sidebar item.
      */
     .snitch-choice {
         display: inline-flex;
@@ -974,9 +996,9 @@ html[data-app-night='1'] {
 
     .dark .snitch-choice-active,
     .dark .snitch-choice-active:hover {
-        border-color: var(--snitch-spot);
-        background: var(--snitch-spot);
-        color: var(--snitch-on-spot);
+        border-color: #edeae2;
+        background: #1e1e22;
+        color: #edeae2;
     }
 
     .snitch-choice-active .snitch-image-fallback-initials,
@@ -988,8 +1010,8 @@ html[data-app-night='1'] {
 
     .dark .snitch-choice-active .snitch-image-fallback-initials,
     .dark .snitch-choice-active .snitch-avatar {
-        background: var(--snitch-on-spot);
-        color: var(--snitch-spot);
+        background: #0e0e10;
+        color: #edeae2;
     }
 
     .snitch-choice .snitch-image-fallback-initials,
@@ -1960,14 +1982,17 @@ html[data-app-night='1'] {
         padding: 0.4rem 0.5rem 0.45rem;
     }
 
-    /* Brief flash when an insight "see why →" scrolls to a card. */
-    .snitch-dash-anchor-flash {
-        outline: 2px solid var(--snitch-ink);
-        outline-offset: 3px;
-        box-shadow: 0 0 0 4px color-mix(in oklab, var(--snitch-spot) 55%, transparent);
-        transition: outline-color 0.35s ease, box-shadow 0.35s ease;
-    }
-
+    /*
+     * Hash jumps: leave the heading clear of the h-16 header. Do not flash
+     * or outline :target - sidebar anchors only scroll.
+     */
+    #what-to-post,
+    #performance,
+    #ads,
+    #tracked-by,
+    #vote,
+    #onboarding,
+    #insights,
     #rail,
     #activity,
     #format_mix,
@@ -1975,7 +2000,28 @@ html[data-app-night='1'] {
     #caption_intel,
     #recent_posts,
     #winners {
-        scroll-margin-top: 4rem;
+        scroll-margin-top: 5rem;
+    }
+
+    #what-to-post:target,
+    #performance:target,
+    #ads:target,
+    #tracked-by:target,
+    #vote:target,
+    #onboarding:target,
+    #insights:target,
+    #rail:target,
+    #activity:target,
+    #format_mix:target,
+    #growth_series:target,
+    #caption_intel:target,
+    #recent_posts:target,
+    #winners:target,
+    .snitch-app-night :target {
+        outline: none;
+        outline-offset: 0;
+        box-shadow: none;
+        animation: none;
     }
 
     .snitch-dash-winner-row {

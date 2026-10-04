@@ -288,6 +288,7 @@ class WeeklyBriefGenerationTest extends TestCase
             'position' => 1,
             'format' => 'Reel',
             'hook' => 'Open on proof',
+            'visual' => 'Film the counter at open',
             'caption_angle' => 'Angle',
             'cta' => 'CTA',
             'hashtags' => ['#a', '#b', '#c'],
@@ -307,6 +308,9 @@ class WeeklyBriefGenerationTest extends TestCase
                 ->where('weekly_brief.ideas.0.format', 'Reel')
                 ->where('weekly_brief.ideas.0.hook', 'Open on proof')
                 ->where('weekly_brief.ideas.0.slot', 'Mon 09:00')
+                ->where('weekly_brief.ideas.0.visual', 'Film the counter at open')
+                ->where('weekly_brief.ideas.0.caption_angle', 'Angle')
+                ->where('weekly_brief.ideas.0.cta', 'CTA')
             );
     }
 

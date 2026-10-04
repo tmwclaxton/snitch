@@ -1,9 +1,8 @@
 import { router } from '@inertiajs/vue3';
 
-const FLASH_CLASS = 'snitch-dash-anchor-flash';
-const FLASH_MS = 1600;
 const WAIT_MS = 2500;
 const POLL_MS = 50;
+const HEADER_OFFSET_PX = 80;
 
 function waitForElement(id: string, timeoutMs: number): Promise<HTMLElement | null> {
     const existing = document.getElementById(id);
@@ -44,11 +43,8 @@ export async function scrollToDashboardAnchor(id: string): Promise<boolean> {
         return false;
     }
 
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    el.classList.add(FLASH_CLASS);
-    window.setTimeout(() => {
-        el.classList.remove(FLASH_CLASS);
-    }, FLASH_MS);
+    const top = window.scrollY + el.getBoundingClientRect().top - HEADER_OFFSET_PX;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
 
     return true;
 }

@@ -48,6 +48,21 @@ class DashboardQuestionSectionsTest extends TestCase
         $this->assertStringContainsString('activeDashboardSection', file_get_contents(
             resource_path('js/components/NavMain.vue'),
         ) ?: '');
+        $this->assertStringContainsString("title: 'Vote for what features you want'", $sidebar);
+        $this->assertStringNotContainsString("title: 'Cast your vote'", $sidebar);
+
+        $anchors = file_get_contents(resource_path('js/lib/dashboardAnchors.ts'));
+        $css = file_get_contents(resource_path('css/app.css'));
+        $this->assertIsString($anchors);
+        $this->assertIsString($css);
+        $this->assertStringContainsString('HEADER_OFFSET_PX = 80', $anchors);
+        $this->assertStringContainsString('window.scrollTo', $anchors);
+        $this->assertStringNotContainsString('snitch-dash-anchor-flash', $anchors);
+        $this->assertStringNotContainsString('classList.add', $anchors);
+        $this->assertStringNotContainsString('snitch-dash-anchor-flash', $css);
+        $this->assertStringContainsString('scroll-margin-top: 5rem', $css);
+        $this->assertStringContainsString('#what-to-post:target', $css);
+        $this->assertStringContainsString('scroll-mt-20', $dashboard);
     }
 
     public function test_resolve_active_dashboard_section_algorithm(): void

@@ -185,6 +185,7 @@ class ExecutiveDashboardTest extends TestCase
         $this->assertStringNotContainsString('whitespace-nowrap', $winnerThumb);
         $this->assertStringContainsString('\\u200b', $winnerThumb);
         $this->assertStringContainsString('text-[13px]', $winnerThumb);
+        $this->assertStringContainsString('feedShow.url(post.id)', $winnerThumb);
         $this->assertStringContainsString('whatToPostHeadline', $dashboard);
         $this->assertStringContainsString('performanceHeadline', $dashboard);
         $this->assertStringContainsString('executive?.what_to_post?.headline', $dashboard);

@@ -95,7 +95,7 @@ const questionNavItems = computed<NavItem[]>(() => {
     }
 
     items.push({
-        title: 'Cast your vote',
+        title: 'Vote for what features you want',
         href: `${dashboard.url()}#vote`,
         icon: Vote,
         section: 'vote',

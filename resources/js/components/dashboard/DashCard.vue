@@ -16,7 +16,7 @@ const open = ref(false);
 <template>
     <section
         :id="anchor || undefined"
-        class="scroll-mt-14 rounded border border-snitch-ink/10 bg-snitch-lift px-1.5 py-0.5 transition-shadow duration-500"
+        class="scroll-mt-20 rounded border border-snitch-ink/10 bg-snitch-lift px-1.5 py-0.5"
         :class="props.class"
     >
         <div class="mb-0.5 flex h-6 shrink-0 items-center justify-between gap-2">
