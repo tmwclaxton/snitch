@@ -84,7 +84,9 @@ function hrefFor(item: NavItem): string {
                         @click="(event) => onNavClick(event, item)"
                     >
                         <component :is="item.icon" />
-                        <span>{{ item.title }}</span>
+                        <span class="min-w-0">
+                            <span class="snitch-nav-label">{{ item.title }}</span>
+                        </span>
                     </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>

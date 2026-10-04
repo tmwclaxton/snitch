@@ -463,6 +463,13 @@ html:has(.snitch-public-shell) {
     }
 
     html:not(.dark) .snitch-app-chrome [data-slot='sidebar-menu-button'][data-active='true'] > span:last-child {
+        background-color: transparent;
+        width: max-content;
+        max-width: 100%;
+        flex: 0 1 auto;
+    }
+
+    html:not(.dark) .snitch-app-chrome [data-slot='sidebar-menu-button'][data-active='true'] .snitch-nav-label {
         background-color: var(--snitch-spot);
         color: var(--snitch-ink);
         box-decoration-break: clone;

@@ -778,7 +778,7 @@ function paginationLabel(label: string): string {
                     v-for="chip in activeChips"
                     :key="chip.key"
                     type="button"
-                    class="inline-flex items-center gap-1.5 border border-snitch-ink/15 bg-[color-mix(in_oklab,var(--snitch-spot)_22%,var(--snitch-paper))] px-2.5 py-1 text-xs font-medium text-snitch-ink shadow-[1px_1px_0_color-mix(in_oklab,var(--snitch-spot)_25%,transparent)] transition hover:border-snitch-ink/35"
+                    class="snitch-choice inline-flex items-center gap-1.5 px-2.5 py-1 text-sm font-medium"
                     :aria-label="`Remove ${chip.label}`"
                     @click="chip.clear"
                 >

@@ -31,6 +31,9 @@ class EvidenceFileLightChromeTest extends TestCase
         $this->assertStringContainsString('export function highlightKeyPhrase', $phrase);
         $this->assertStringContainsString('--sidebar-accent: color-mix(in oklab, #141414 6%, #f3eee3);', $css);
         $this->assertStringContainsString("html:not(.dark) .snitch-app-chrome [data-slot='sidebar-menu-button'][data-active='true']", $css);
-        $this->assertStringContainsString('> span:last-child', $css);
+        $this->assertStringContainsString('.snitch-nav-label', $css);
+        $nav = file_get_contents(resource_path('js/components/NavMain.vue'));
+        $this->assertNotFalse($nav);
+        $this->assertStringContainsString('snitch-nav-label', $nav);
     }
 }
