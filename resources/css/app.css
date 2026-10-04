@@ -325,47 +325,40 @@ html[data-app-night='1'] {
 }
 
 /*
- * Night sidebar hover uses the grey --sidebar-accent token. Force the one
- * current item to yellow here (unlayered) so hover:bg-sidebar-accent cannot
- * paint a second yellow row. Labels wrap; icon stays on the first line.
+ * Night sidebar: compact 28px rows. Hover is grey. The current item
+ * (.snitch-nav-current / data-active) stays yellow even while hovered.
  */
-html.dark [data-slot='sidebar-menu-button'],
-html:has(.snitch-app-night) [data-slot='sidebar-menu-button'],
-html[data-app-night='1'] [data-slot='sidebar-menu-button'] {
-    height: auto;
+html.dark [data-sidebar='menu-button'][data-size='sm'],
+html:has(.snitch-app-night) [data-sidebar='menu-button'][data-size='sm'],
+html[data-app-night='1'] [data-sidebar='menu-button'][data-size='sm'] {
+    height: 1.75rem;
     min-height: 1.75rem;
-    align-items: flex-start;
-    overflow: visible;
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
-html.dark [data-slot='sidebar-menu-button'] > span:last-child,
-html:has(.snitch-app-night) [data-slot='sidebar-menu-button'] > span:last-child,
-html[data-app-night='1'] [data-slot='sidebar-menu-button'] > span:last-child {
-    overflow: visible;
-    white-space: normal;
-    text-overflow: unset;
-}
-
-html.dark [data-slot='sidebar-menu-button'] > svg,
-html:has(.snitch-app-night) [data-slot='sidebar-menu-button'] > svg,
-html[data-app-night='1'] [data-slot='sidebar-menu-button'] > svg {
-    margin-top: 0.15rem;
-}
-
-html.dark [data-slot='sidebar-menu-button']:hover:not([data-active='true']),
-html.dark [data-slot='sidebar-menu-button']:active:not([data-active='true']),
-html:has(.snitch-app-night) [data-slot='sidebar-menu-button']:hover:not([data-active='true']),
-html[data-app-night='1'] [data-slot='sidebar-menu-button']:hover:not([data-active='true']) {
+html.dark [data-sidebar='menu-button']:hover:not([data-active='true']):not(.snitch-nav-current),
+html.dark [data-sidebar='menu-button']:active:not([data-active='true']):not(.snitch-nav-current),
+html:has(.snitch-app-night) [data-sidebar='menu-button']:hover:not([data-active='true']):not(.snitch-nav-current),
+html[data-app-night='1'] [data-sidebar='menu-button']:hover:not([data-active='true']):not(.snitch-nav-current) {
     background-color: #1e1e22 !important;
     color: #edeae2 !important;
 }
 
-html.dark [data-slot='sidebar-menu-button'][data-active='true'],
-html.dark [data-slot='sidebar-menu-button'][data-active='true']:hover,
-html:has(.snitch-app-night) [data-slot='sidebar-menu-button'][data-active='true'],
-html:has(.snitch-app-night) [data-slot='sidebar-menu-button'][data-active='true']:hover,
-html[data-app-night='1'] [data-slot='sidebar-menu-button'][data-active='true'],
-html[data-app-night='1'] [data-slot='sidebar-menu-button'][data-active='true']:hover {
+html.dark .snitch-nav-current,
+html.dark .snitch-nav-current:hover,
+html.dark .snitch-nav-current:focus,
+html.dark [data-sidebar='menu-button'][data-active='true'],
+html.dark [data-sidebar='menu-button'][data-active='true']:hover,
+html:has(.snitch-app-night) .snitch-nav-current,
+html:has(.snitch-app-night) .snitch-nav-current:hover,
+html:has(.snitch-app-night) [data-sidebar='menu-button'][data-active='true'],
+html:has(.snitch-app-night) [data-sidebar='menu-button'][data-active='true']:hover,
+html[data-app-night='1'] .snitch-nav-current,
+html[data-app-night='1'] .snitch-nav-current:hover,
+html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true'],
+html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover {
     background-color: #fcd700 !important;
     color: #0e0e10 !important;
 }

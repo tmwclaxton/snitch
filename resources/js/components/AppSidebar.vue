@@ -95,7 +95,7 @@ const questionNavItems = computed<NavItem[]>(() => {
     }
 
     items.push({
-        title: 'Vote for what features you want',
+        title: 'Vote on features',
         href: `${dashboard.url()}#vote`,
         icon: Vote,
         section: 'vote',
@@ -198,7 +198,7 @@ const accountNavItems: NavItem[] = [
         variant="sidebar"
         class="border-r border-white/10 bg-black"
     >
-        <SidebarHeader class="shrink-0 border-b border-snitch-ink/10">
+        <SidebarHeader class="shrink-0 border-b border-snitch-ink/10 p-1.5">
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
@@ -210,7 +210,7 @@ const accountNavItems: NavItem[] = [
             </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent class="min-h-0 flex-1 gap-2 overflow-y-auto">
+        <SidebarContent class="min-h-0 flex-1 gap-1 overflow-y-auto">
             <NavMain :items="questionNavItems" label="Dashboard" />
             <NavMain :items="mainNavItems" label="Platform" />
             <NavMain
@@ -221,7 +221,7 @@ const accountNavItems: NavItem[] = [
             <NavMain :items="accountNavItems" label="Account" />
         </SidebarContent>
 
-        <SidebarFooter class="shrink-0 border-t border-snitch-ink/10 p-2">
+        <SidebarFooter class="shrink-0 border-t border-snitch-ink/10 p-1.5">
             <NavUser />
         </SidebarFooter>
     </Sidebar>

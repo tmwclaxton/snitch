@@ -66,7 +66,7 @@ function hrefFor(item: NavItem): string {
 
 <template>
     <SidebarGroup class="px-2 py-0">
-        <SidebarGroupLabel class="h-7">{{ label }}</SidebarGroupLabel>
+        <SidebarGroupLabel class="h-5 text-sm">{{ label }}</SidebarGroupLabel>
         <SidebarMenu class="gap-0">
             <SidebarMenuItem
                 v-for="item in items"
@@ -76,16 +76,18 @@ function hrefFor(item: NavItem): string {
                     as-child
                     size="sm"
                     :is-active="itemIsActive(item)"
+                    :class="itemIsActive(item) ? 'snitch-nav-current' : ''"
                     :tooltip="item.title"
                 >
                     <Link
                         :href="hrefFor(item)"
+                        :class="itemIsActive(item) ? 'snitch-nav-current' : ''"
                         :prefetch="item.section ? false : 'hover'"
                         @click="(event) => onNavClick(event, item)"
                     >
                         <component :is="item.icon" />
-                        <span class="min-w-0 flex-1 whitespace-normal break-words">
-                            <span class="snitch-nav-label whitespace-normal break-words">{{ item.title }}</span>
+                        <span class="min-w-0 flex-1">
+                            <span class="snitch-nav-label">{{ item.title }}</span>
                         </span>
                     </Link>
                 </SidebarMenuButton>

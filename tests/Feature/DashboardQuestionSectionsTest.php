@@ -48,17 +48,19 @@ class DashboardQuestionSectionsTest extends TestCase
         $this->assertStringContainsString('activeDashboardSection', file_get_contents(
             resource_path('js/components/NavMain.vue'),
         ) ?: '');
-        $this->assertStringContainsString("title: 'Vote for what features you want'", $sidebar);
+        $this->assertStringContainsString("title: 'Vote on features'", $sidebar);
+        $this->assertStringNotContainsString("title: 'Vote for what features you want'", $sidebar);
         $this->assertStringNotContainsString("title: 'Cast your vote'", $sidebar);
 
         $nav = file_get_contents(resource_path('js/components/NavMain.vue'));
         $menu = file_get_contents(resource_path('js/components/ui/sidebar/index.ts'));
         $this->assertIsString($nav);
         $this->assertIsString($menu);
-        $this->assertStringContainsString('whitespace-normal break-words', $nav);
+        $this->assertStringContainsString('snitch-nav-current', $nav);
+        $this->assertStringContainsString('h-5 text-sm', $nav);
         $this->assertStringNotContainsString('[&>span:last-child]:truncate', $menu);
-        $this->assertStringContainsString('items-start', $menu);
-        $this->assertStringContainsString('min-h-7 h-auto', $menu);
+        $this->assertStringContainsString('data-[active=true]:bg-[#fcd700]!', $menu);
+        $this->assertStringContainsString('sm: "h-7 py-0 text-sm"', $menu);
 
         $anchors = file_get_contents(resource_path('js/lib/dashboardAnchors.ts'));
         $css = file_get_contents(resource_path('css/app.css'));
