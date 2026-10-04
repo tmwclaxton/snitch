@@ -46,27 +46,35 @@ class SidebarNavigationTest extends TestCase
         $this->assertStringContainsString('label="Admin"', $sidebar);
         $this->assertStringContainsString('collapsible', $sidebar);
         $this->assertStringContainsString(':default-open="adminGroupOpen"', $sidebar);
-        $this->assertStringContainsString('label="Account"', $sidebar);
+        $this->assertStringContainsString('accountNavItems', $sidebar);
+        $this->assertStringContainsString('Billing', $sidebar);
+        $this->assertStringContainsString('Settings', $sidebar);
 
-        $headerPx = 0;
-        $footerPx = 0;
         $logoRowPx = 40;
+        $accountStripPx = 28;
         $userRowPx = 40;
         $borderPx = 1;
-        $rowPx = 30;
+        $rowPx = 32;
         $labelPx = 14;
-        $dashboardItems = 5;
+        $groupTopFirstPx = 10;
+        $groupTopPx = 12;
+        $groupBelowPx = 4;
+        $dashboardItemsCollapsed = 5;
+        $dashboardItemsExpanded = 4;
         $platformItems = 8;
         $adminItems = 4;
-        $accountItems = 2;
-        $groupCount = 4;
-        $chrome = (($headerPx * 2) + $logoRowPx + $borderPx)
-            + (($footerPx * 2) + $userRowPx + $borderPx);
-        $collapsedItems = $dashboardItems + $platformItems + $accountItems;
-        $expandedItems = $collapsedItems + $adminItems;
-        $labels = $groupCount * $labelPx;
-        $this->assertLessThanOrEqual(713, $chrome + ($collapsedItems * $rowPx) + $labels);
-        $this->assertLessThanOrEqual(713, $chrome + ($expandedItems * $rowPx) + $labels);
+        $groupCountCollapsed = 3;
+        $groupCountExpanded = 3;
+        $chrome = ($logoRowPx + $borderPx) + ($accountStripPx + $userRowPx + $borderPx);
+        $groupChrome = static function (int $groups) use ($groupTopFirstPx, $groupTopPx, $groupBelowPx, $labelPx): int {
+            $tops = $groupTopFirstPx + ($groups - 1) * $groupTopPx;
+
+            return $tops + ($groups * ($groupBelowPx + $labelPx));
+        };
+        $collapsedItems = $dashboardItemsCollapsed + $platformItems;
+        $expandedItems = $dashboardItemsExpanded + $platformItems + $adminItems;
+        $this->assertLessThanOrEqual(713, $chrome + ($collapsedItems * $rowPx) + $groupChrome($groupCountCollapsed));
+        $this->assertLessThanOrEqual(713, $chrome + ($expandedItems * $rowPx) + $groupChrome($groupCountExpanded));
     }
 
     public function test_account_nav_sits_above_the_profile(): void
@@ -76,7 +84,7 @@ class SidebarNavigationTest extends TestCase
         $this->assertNotFalse($sidebar);
 
         $platform = strpos($sidebar, '<NavMain :items="mainNavItems" label="Platform" />');
-        $account = strpos($sidebar, '<NavMain :items="accountNavItems" label="Account" />');
+        $account = strpos($sidebar, 'v-for="item in accountNavItems"');
         $admin = strpos($sidebar, 'label="Admin"');
         $footer = strpos($sidebar, '<SidebarFooter');
         $profile = strpos($sidebar, '<NavUser />');
@@ -86,9 +94,9 @@ class SidebarNavigationTest extends TestCase
         $this->assertNotFalse($admin);
         $this->assertNotFalse($footer);
         $this->assertNotFalse($profile);
-        $this->assertLessThan($account, $platform);
-        $this->assertLessThan($account, $admin);
-        $this->assertLessThan($footer, $account);
+        $this->assertLessThan($footer, $platform);
+        $this->assertLessThan($footer, $admin);
+        $this->assertGreaterThan($footer, $account);
         $this->assertLessThan($profile, $footer);
         $this->assertStringContainsString('title: \'Explore\'', $sidebar);
         $explore = strpos($sidebar, "title: 'Explore'");

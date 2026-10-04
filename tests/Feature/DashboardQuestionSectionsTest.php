@@ -57,11 +57,12 @@ class DashboardQuestionSectionsTest extends TestCase
         $this->assertIsString($nav);
         $this->assertIsString($menu);
         $this->assertStringContainsString('snitch-nav-current', $nav);
-        $this->assertStringContainsString('h-3.5 gap-1 px-2 text-sm leading-none', $nav);
+        $this->assertStringContainsString('mb-1 h-3.5 gap-1 px-2 text-sm leading-none', $nav);
+        $this->assertStringContainsString('pt-3 first:pt-2.5', $nav);
         $this->assertStringContainsString('collapsible', $nav);
         $this->assertStringNotContainsString('[&>span:last-child]:truncate', $menu);
         $this->assertStringContainsString('data-[active=true]:bg-[#fcd700]!', $menu);
-        $this->assertStringContainsString('sm: "h-[1.875rem] py-0 text-sm"', $menu);
+        $this->assertStringContainsString('sm: "h-8 py-0 text-sm"', $menu);
 
         $anchors = file_get_contents(resource_path('js/lib/dashboardAnchors.ts'));
         $css = file_get_contents(resource_path('css/app.css'));

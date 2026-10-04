@@ -5,9 +5,10 @@ type FormatPenceOptions = {
      * (e.g. £6.30, £0.0103). Use for balance, ledger lines, spend chart.
      * `2`: catalog / subscription / top-up prices - whole pounds or 2dp
      * (e.g. £19, £30, £10) - never forced 4dp.
+     * `always2`: always 2dp (e.g. £5.00, £4.99). Use for admin user balances.
      * `4`: always show 4dp (e.g. live tool averages on /pricing).
      */
-    decimals?: 2 | 4 | 'auto';
+    decimals?: 2 | 4 | 'auto' | 'always2';
 };
 
 /**
@@ -23,6 +24,9 @@ export function formatPenceAsGbp(pence: number, options: FormatPenceOptions = {}
     if (mode === 4) {
         maximumFractionDigits = 4;
         minimumFractionDigits = 4;
+    } else if (mode === 'always2') {
+        maximumFractionDigits = 2;
+        minimumFractionDigits = 2;
     } else if (mode === 2) {
         if (centipence === 0 || centipence % 10_000 === 0) {
             maximumFractionDigits = 0;

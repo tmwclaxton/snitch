@@ -53,6 +53,22 @@ for (const [pence, expected] of catalogCases) {
   }
 }
 
+const always2Cases = [
+  [0, '£0.00'],
+  [500, '£5.00'],
+  [499, '£4.99'],
+  [494, '£4.94'],
+  [499.21, '£4.99'],
+];
+
+for (const [pence, expected] of always2Cases) {
+  const actual = formatPenceAsGbp(pence, { decimals: 'always2' });
+  if (actual !== expected) {
+    console.error(JSON.stringify({ mode: 'always2', pence, expected, actual }));
+    process.exit(1);
+  }
+}
+
 const signed = formatPenceAsGbp(1.03, { signed: true });
 if (signed !== '+£0.0103') {
   console.error(JSON.stringify({ expected: '+£0.0103', actual: signed }));

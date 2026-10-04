@@ -51,7 +51,7 @@ import { edit as editProfile } from '@/routes/profile';
 import type { NavItem } from '@/types';
 
 const page = usePage();
-const { currentUrl } = useCurrentUrl();
+const { currentUrl, isCurrentOrParentUrl } = useCurrentUrl();
 const isAdmin = computed(() => Boolean(page.props.auth?.user?.is_admin));
 const adminGroupOpen = computed(
     () => currentUrl.value === '/admin' || currentUrl.value.startsWith('/admin/'),
@@ -226,10 +226,20 @@ const accountNavItems: NavItem[] = [
                 collapsible
                 :default-open="adminGroupOpen"
             />
-            <NavMain :items="accountNavItems" label="Account" />
         </SidebarContent>
 
         <SidebarFooter class="shrink-0 border-t border-snitch-ink/10 px-1 py-0">
+            <div class="flex h-7 items-center gap-3 px-2 text-sm">
+                <Link
+                    v-for="item in accountNavItems"
+                    :key="item.title"
+                    :href="item.href"
+                    class="hover:text-sidebar-foreground"
+                    :class="isCurrentOrParentUrl(item.href) ? 'snitch-nav-current font-medium text-[#0e0e10]' : 'text-sidebar-foreground/80'"
+                >
+                    {{ item.title }}
+                </Link>
+            </div>
             <NavUser />
         </SidebarFooter>
     </Sidebar>

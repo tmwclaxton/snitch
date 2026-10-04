@@ -76,15 +76,29 @@ function toggleSort(column: string): void {
     applyFilters({ sort: column, direction, page: 1 });
 }
 
-function formatWhen(iso: string | null): string {
+function whenLines(iso: string | null): string[] {
     if (!iso) {
-        return '-';
+        return ['-'];
     }
 
-    return new Intl.DateTimeFormat('en-GB', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(iso));
+    const value = new Date(iso);
+
+    return [
+        new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium' }).format(value),
+        new Intl.DateTimeFormat('en-GB', { timeStyle: 'short' }).format(value),
+    ];
+}
+
+function emailLocal(email: string): string {
+    const at = email.lastIndexOf('@');
+
+    return at > 0 ? email.slice(0, at) : email;
+}
+
+function emailDomain(email: string): string | null {
+    const at = email.lastIndexOf('@');
+
+    return at > 0 ? email.slice(at + 1) : null;
 }
 
 const sortIndicator = computed(() => (column: string) => {
@@ -96,7 +110,7 @@ const sortIndicator = computed(() => (column: string) => {
 });
 
 const userRowClass =
-    'snitch-admin-users-row grid min-w-[56rem] grid-cols-[minmax(16rem,2.2fr)_minmax(7rem,1fr)_minmax(8.5rem,0.95fr)_minmax(6rem,0.7fr)_minmax(5.5rem,0.7fr)_minmax(6rem,0.7fr)_minmax(8.5rem,0.95fr)] items-start gap-x-4';
+    'snitch-admin-users-row grid w-full min-w-0 grid-cols-[minmax(0,1.5fr)_minmax(0,0.9fr)_minmax(4.25rem,0.7fr)_minmax(3.25rem,0.45fr)_minmax(3.75rem,0.5fr)_minmax(2.75rem,0.35fr)_minmax(4.25rem,0.7fr)] items-start gap-x-3';
 
 function planLabel(status: string): string {
     const labels: Record<string, string> = {
@@ -164,9 +178,9 @@ function planLabel(status: string): string {
                 <button type="submit" class="snitch-btn px-4 py-2 text-sm">Search</button>
             </form>
 
-            <div class="overflow-x-auto">
+            <div class="min-w-0">
                 <div
-                    class="w-full"
+                    class="w-full min-w-0"
                     role="table"
                     aria-label="Users"
                 >
@@ -248,14 +262,17 @@ function planLabel(status: string): string {
                         role="row"
                     >
                         <div
-                            class="min-w-0 px-2 py-2 text-left text-sm [overflow-wrap:anywhere]"
+                            class="min-w-0 px-2 py-2 text-left text-sm break-words"
                             role="cell"
                         >
                             <Link
                                 :href="adminUserShow(row.id)"
                                 class="font-medium underline decoration-snitch-ink/25 underline-offset-2 hover:decoration-snitch-ink"
                             >
-                                {{ row.email }}
+                                <template v-if="emailDomain(row.email)">
+                                    {{ emailLocal(row.email) }}<wbr />@{{ emailDomain(row.email) }}
+                                </template>
+                                <template v-else>{{ row.email }}</template>
                             </Link>
                         </div>
                         <div
@@ -268,7 +285,11 @@ function planLabel(status: string): string {
                             class="min-w-0 px-2 py-2 text-left text-sm text-snitch-ink/70"
                             role="cell"
                         >
-                            {{ formatWhen(row.created_at) }}
+                            <span
+                                v-for="(line, index) in whenLines(row.created_at)"
+                                :key="`${row.id}-joined-${index}`"
+                                class="block"
+                            >{{ line }}</span>
                         </div>
                         <div
                             class="min-w-0 px-2 py-2 text-left text-sm"
@@ -280,7 +301,7 @@ function planLabel(status: string): string {
                             class="min-w-0 px-2 py-2 text-right text-sm tabular-nums"
                             role="cell"
                         >
-                            {{ formatPenceAsGbp(row.balance_pence, { decimals: 2 }) }}
+                            {{ formatPenceAsGbp(row.balance_pence, { decimals: 'always2' }) }}
                         </div>
                         <div
                             class="min-w-0 px-2 py-2 text-left text-sm text-snitch-ink/70"
@@ -293,7 +314,11 @@ function planLabel(status: string): string {
                             class="min-w-0 px-2 py-2 text-left text-sm text-snitch-ink/70"
                             role="cell"
                         >
-                            {{ formatWhen(row.last_activity_at) }}
+                            <span
+                                v-for="(line, index) in whenLines(row.last_activity_at)"
+                                :key="`${row.id}-activity-${index}`"
+                                class="block"
+                            >{{ line }}</span>
                         </div>
                     </div>
                     <div

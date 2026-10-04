@@ -121,10 +121,14 @@ class AdminUserTest extends TestCase
         $this->assertNotFalse($page);
         $this->assertStringContainsString('snitch-admin-users-row', $page);
         $this->assertStringContainsString('userRowClass', $page);
-        $this->assertStringContainsString('gap-x-4', $page);
-        $this->assertStringContainsString('minmax(16rem,2.2fr)', $page);
-        $this->assertStringContainsString('[overflow-wrap:anywhere]', $page);
-        $this->assertStringContainsString('formatPenceAsGbp(row.balance_pence, { decimals: 2 })', $page);
+        $this->assertStringContainsString('gap-x-3', $page);
+        $this->assertStringContainsString('minmax(0,1.5fr)', $page);
+        $this->assertStringContainsString('minmax(2.75rem,0.35fr)', $page);
+        $this->assertStringContainsString('<wbr', $page);
+        $this->assertStringContainsString('whenLines', $page);
+        $this->assertStringContainsString("formatPenceAsGbp(row.balance_pence, { decimals: 'always2' })", $page);
+        $this->assertStringNotContainsString('overflow-x-auto', $page);
+        $this->assertStringNotContainsString('min-w-[56rem]', $page);
         $this->assertStringContainsString('text-right text-sm font-medium', $page);
         $this->assertStringContainsString('text-right text-sm tabular-nums', $page);
         $this->assertStringContainsString('planLabel', $page);

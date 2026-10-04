@@ -90,9 +90,9 @@ function toggleGroup(): void {
 </script>
 
 <template>
-    <SidebarGroup class="px-2 py-0">
+    <SidebarGroup class="px-2 pb-0 pt-3 first:pt-2.5">
         <SidebarGroupLabel
-            class="h-3.5 gap-1 px-2 text-sm leading-none"
+            class="mb-1 h-3.5 gap-1 px-2 text-sm leading-none"
             :class="collapsible ? 'cursor-pointer select-none' : ''"
             :as="collapsible ? 'button' : undefined"
             :aria-expanded="collapsible ? open : undefined"
