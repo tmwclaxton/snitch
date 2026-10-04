@@ -80,6 +80,12 @@ class DashboardQuestionSectionsTest extends TestCase
         $this->assertStringNotContainsString('max-w-4xl text-2xl', $dashboard);
         $this->assertStringContainsString('min-height: calc(100svh - 5rem)', $css);
         $this->assertStringContainsString('.snitch-section-answer', $css);
+        $this->assertStringContainsString('clamp(1.375rem, 2.15cqw, 1.625rem)', $css);
+        $this->assertStringContainsString('container-type: inline-size', $css);
+        $this->assertDoesNotMatchRegularExpression(
+            '/\.snitch-section-answer\s*\{[^}]*\+ 0\.3vw/s',
+            $css,
+        );
 
         $today = file_get_contents(resource_path('js/pages/today/Index.vue'));
         $this->assertIsString($today);
