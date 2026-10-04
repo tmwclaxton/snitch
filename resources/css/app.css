@@ -914,6 +914,8 @@ html:has(.snitch-public-shell) {
     /* Format tags (REEL / CAROUSEL) - yellow face in dark, ink face in light */
     .snitch-format-tag {
         display: inline-flex;
+        width: fit-content;
+        max-width: 100%;
         align-items: center;
         border-radius: 0.25rem;
         padding: 0.125rem 0.375rem;

@@ -124,6 +124,10 @@ class AppearanceTest extends TestCase
         $this->assertStringContainsString('.snitch-hero-display', $css);
         $this->assertStringContainsString('.snitch-choice-active', $css);
         $this->assertStringContainsString('.snitch-format-tag', $css);
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-format-tag\s*\{[^}]*width:\s*fit-content/s',
+            $css,
+        );
         $this->assertStringContainsString('.snitch-meter-fill-lead', $css);
         $this->assertStringContainsString('.dark .snitch-choice-active', $css);
         $this->assertStringContainsString('background: var(--snitch-spot);', $css);

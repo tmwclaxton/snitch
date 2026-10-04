@@ -96,6 +96,7 @@ class DashboardTest extends TestCase
         $this->assertStringNotContainsString('...', $winnerThumb);
         $this->assertStringContainsString('weekly_brief.ideas', $dashboard);
         $this->assertStringContainsString('Post this next', $dashboard);
+        $this->assertStringContainsString('snitch-format-tag w-fit self-start text-sm', $dashboard);
         $this->assertStringContainsString('What should we post?', $dashboard);
         $this->assertStringContainsString('How are they performing?', $dashboard);
         $this->assertStringContainsString('Are they running ads?', $dashboard);

@@ -580,7 +580,7 @@ const detailsOpen = ref(false);
                                 class="flex min-w-0 flex-col gap-2 rounded border border-snitch-ink/10 bg-snitch-lift p-3 hover:border-snitch-ink/30"
                             >
                                 <div class="flex flex-wrap items-center gap-2 text-sm">
-                                    <span class="snitch-format-tag text-sm">
+                                    <span class="snitch-format-tag w-fit self-start text-sm">
                                         {{ idea.format }}
                                     </span>
                                     <span class="whitespace-nowrap tabular-nums text-snitch-ink/55">{{ idea.slot }}</span>

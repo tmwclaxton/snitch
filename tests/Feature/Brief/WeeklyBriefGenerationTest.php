@@ -247,6 +247,9 @@ class WeeklyBriefGenerationTest extends TestCase
             $source,
         );
         $this->assertStringNotContainsString('Generate free brief', $source);
+        $this->assertStringContainsString('inline-flex w-fit self-start', $source);
+        $this->assertStringContainsString('snitch-format-tag w-fit self-start text-sm', $source);
+        $this->assertStringNotContainsString('snitch-format-tag text-xs', $source);
     }
 
     public function test_non_admin_cannot_post_generate(): void

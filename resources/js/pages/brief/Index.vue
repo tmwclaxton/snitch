@@ -226,7 +226,7 @@ function regenerate(): void {
                 >
                     <span class="snitch-tape right-5 -top-2" aria-hidden="true" />
                     <div class="flex items-start justify-between gap-2">
-                        <span class="snitch-format-tag text-xs">
+                        <span class="snitch-format-tag w-fit self-start text-sm">
                             {{ idea.format }}
                         </span>
                         <Form
@@ -267,13 +267,13 @@ function regenerate(): void {
                         <span
                             v-for="tag in idea.hashtags"
                             :key="tag"
-                            class="rounded-sm bg-snitch-ink/5 px-1.5 py-0.5 text-xs text-snitch-ink/70"
+                            class="w-fit self-start rounded-sm bg-snitch-ink/5 px-1.5 py-0.5 text-sm text-snitch-ink/70"
                         >
                             {{ tag }}
                         </span>
                     </div>
-                    <p class="mt-3 inline-flex items-center gap-1.5 rounded-full border border-snitch-ink/15 bg-snitch-paper/70 px-2 py-0.5 text-xs text-snitch-ink/70">
-                        <CalendarDays class="size-3.5" />
+                    <p class="mt-3 inline-flex w-fit self-start items-center gap-1.5 whitespace-nowrap rounded-full border border-snitch-ink/15 bg-snitch-paper/70 px-2 py-0.5 text-sm text-snitch-ink/70">
+                        <CalendarDays class="size-3.5 shrink-0" />
                         Post {{ idea.recommended_day }}
                         {{ formatHour(idea.recommended_hour) }}
                     </p>
