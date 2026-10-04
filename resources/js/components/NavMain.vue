@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { ChevronDown } from '@lucide/vue';
+import { ref, watch } from 'vue';
 import {
     SidebarGroup,
     SidebarGroupLabel,
@@ -13,13 +15,28 @@ import { scrollToDashboardAnchor } from '@/lib/dashboardAnchors';
 import { toUrl } from '@/lib/utils';
 import type { NavItem } from '@/types';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         items: NavItem[];
         label?: string;
+        collapsible?: boolean;
+        defaultOpen?: boolean;
     }>(),
     {
         label: 'Platform',
+        collapsible: false,
+        defaultOpen: false,
+    },
+);
+
+const open = ref(!props.collapsible || props.defaultOpen);
+
+watch(
+    () => props.defaultOpen,
+    (value) => {
+        if (props.collapsible) {
+            open.value = value;
+        }
     },
 );
 
@@ -62,12 +79,36 @@ function onNavClick(event: MouseEvent, item: NavItem): void {
 function hrefFor(item: NavItem): string {
     return toUrl(item.href);
 }
+
+function toggleGroup(): void {
+    if (! props.collapsible) {
+        return;
+    }
+
+    open.value = ! open.value;
+}
 </script>
 
 <template>
     <SidebarGroup class="px-2 py-0">
-        <SidebarGroupLabel class="h-4 text-sm leading-none">{{ label }}</SidebarGroupLabel>
-        <SidebarMenu class="gap-0">
+        <SidebarGroupLabel
+            class="h-3.5 gap-1 px-2 text-sm leading-none"
+            :class="collapsible ? 'cursor-pointer select-none' : ''"
+            :as="collapsible ? 'button' : undefined"
+            :aria-expanded="collapsible ? open : undefined"
+            @click="toggleGroup"
+        >
+            <span>{{ label }}</span>
+            <ChevronDown
+                v-if="collapsible"
+                class="ml-auto size-3.5"
+                :class="open ? '' : '-rotate-90'"
+            />
+        </SidebarGroupLabel>
+        <SidebarMenu
+            v-if="!collapsible || open"
+            class="gap-0"
+        >
             <SidebarMenuItem
                 v-for="item in items"
                 :key="item.title"

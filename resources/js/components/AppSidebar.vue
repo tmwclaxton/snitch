@@ -41,6 +41,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard, home } from '@/routes';
 import { overview as adminOverview, activity as adminActivity } from '@/routes/admin';
 import { index as adminFeaturesIndex } from '@/routes/admin/features';
@@ -50,7 +51,11 @@ import { edit as editProfile } from '@/routes/profile';
 import type { NavItem } from '@/types';
 
 const page = usePage();
+const { currentUrl } = useCurrentUrl();
 const isAdmin = computed(() => Boolean(page.props.auth?.user?.is_admin));
+const adminGroupOpen = computed(
+    () => currentUrl.value === '/admin' || currentUrl.value.startsWith('/admin/'),
+);
 
 const trackedBy = computed(() => {
     const raw = (page.props as { trackedBy?: { count: number; since?: string | null } | null }).trackedBy;
@@ -199,10 +204,10 @@ const accountNavItems: NavItem[] = [
         variant="sidebar"
         class="border-r border-white/10 bg-black"
     >
-        <SidebarHeader class="shrink-0 border-b border-snitch-ink/10 p-1">
+        <SidebarHeader class="shrink-0 border-b border-snitch-ink/10 px-1 py-0">
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton size="lg" as-child>
+                    <SidebarMenuButton size="lg" class="h-10" as-child>
                         <Link :href="home()">
                             <AppLogo />
                         </Link>
@@ -218,11 +223,13 @@ const accountNavItems: NavItem[] = [
                 v-if="adminNavItems.length"
                 :items="adminNavItems"
                 label="Admin"
+                collapsible
+                :default-open="adminGroupOpen"
             />
             <NavMain :items="accountNavItems" label="Account" />
         </SidebarContent>
 
-        <SidebarFooter class="shrink-0 border-t border-snitch-ink/10 p-1">
+        <SidebarFooter class="shrink-0 border-t border-snitch-ink/10 px-1 py-0">
             <NavUser />
         </SidebarFooter>
     </Sidebar>

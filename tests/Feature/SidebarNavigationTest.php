@@ -44,15 +44,17 @@ class SidebarNavigationTest extends TestCase
         $this->assertStringContainsString('gap-0 overflow-y-auto', $sidebar);
         $this->assertStringContainsString('adminNavItems', $sidebar);
         $this->assertStringContainsString('label="Admin"', $sidebar);
+        $this->assertStringContainsString('collapsible', $sidebar);
+        $this->assertStringContainsString(':default-open="adminGroupOpen"', $sidebar);
         $this->assertStringContainsString('label="Account"', $sidebar);
 
-        $headerPx = 4;
-        $footerPx = 4;
-        $logoRowPx = 48;
-        $userRowPx = 48;
+        $headerPx = 0;
+        $footerPx = 0;
+        $logoRowPx = 40;
+        $userRowPx = 40;
         $borderPx = 1;
-        $rowPx = 26;
-        $labelPx = 16;
+        $rowPx = 30;
+        $labelPx = 14;
         $dashboardItems = 5;
         $platformItems = 8;
         $adminItems = 4;
@@ -60,9 +62,11 @@ class SidebarNavigationTest extends TestCase
         $groupCount = 4;
         $chrome = (($headerPx * 2) + $logoRowPx + $borderPx)
             + (($footerPx * 2) + $userRowPx + $borderPx);
-        $nav = (($dashboardItems + $platformItems + $adminItems + $accountItems) * $rowPx)
-            + ($groupCount * $labelPx);
-        $this->assertLessThanOrEqual(713, $chrome + $nav);
+        $collapsedItems = $dashboardItems + $platformItems + $accountItems;
+        $expandedItems = $collapsedItems + $adminItems;
+        $labels = $groupCount * $labelPx;
+        $this->assertLessThanOrEqual(713, $chrome + ($collapsedItems * $rowPx) + $labels);
+        $this->assertLessThanOrEqual(713, $chrome + ($expandedItems * $rowPx) + $labels);
     }
 
     public function test_account_nav_sits_above_the_profile(): void
