@@ -22,12 +22,12 @@ class EvidenceFileLightChromeTest extends TestCase
 
         $this->assertStringContainsString('SnitchHighlightedText', $dashboard);
         $this->assertStringContainsString('peer-checked:bg-snitch-ink', $dashboard);
-        $this->assertStringContainsString('snitch-highlight text-snitch-ink', $dashboard);
+        $this->assertStringContainsString('snitch-caution-band', $dashboard);
         $this->assertStringContainsString('snitch-choice', $whatWorks);
         $this->assertStringContainsString('snitch-highlight', $whatWorks);
         $this->assertStringNotContainsString('bg-snitch-spot/40', $whatWorks);
         $this->assertStringNotContainsString('bg-snitch-spot/35', $formatMix);
-        $this->assertStringContainsString('snitch-highlight', $formatMix);
+        $this->assertStringContainsString('snitch-stat-accent', $formatMix);
         $this->assertStringContainsString('export function highlightKeyPhrase', $phrase);
         $this->assertStringContainsString('--sidebar-accent: color-mix(in oklab, #141414 6%, #f3eee3);', $css);
         $this->assertStringContainsString("html:not(.dark) .snitch-app-chrome [data-slot='sidebar-menu-button'][data-active='true']", $css);

@@ -530,7 +530,7 @@ function formatGbpAxis(value: number): string {
         <header class="flex flex-wrap items-end justify-between gap-4">
             <div>
                 <p class="snitch-ink-label">Internal</p>
-                <h1 class="font-display text-3xl text-snitch-ink">Admin overview</h1>
+                <h1 class="snitch-hero-display text-3xl text-snitch-ink">Admin <span class="snitch-highlight">overview</span></h1>
                 <p class="mt-1 max-w-xl text-sm text-snitch-ink/65">
                     Platform-wide usage, spend, profit (COGS vs charge), MCP tools, and failed reels.
                     {{ from }} → {{ to }}.

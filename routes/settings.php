@@ -16,7 +16,9 @@ Route::middleware([
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::inertia('settings/appearance', 'settings/Appearance')->name('appearance.edit');
+    // Appearance is hidden while the logged-in app is pinned to Caution Tape
+    // night. Keep settings/Appearance.vue so the setting can come back.
+    Route::redirect('settings/appearance', '/settings/profile')->name('appearance.edit');
 
     Route::get('settings/mcp', [McpController::class, 'show'])->name('settings.mcp.show');
     Route::post('settings/mcp/token', [McpController::class, 'rotateToken'])

@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
 import { useAccountColours } from '@/composables/useAccountColours';
+import { snitchApexTheme, snitchAxisLabel, snitchInk } from '@/lib/snitchTheme';
 
 type Row = { handle: string; is_own_account: boolean; eng_share: number; post_share: number };
 
@@ -41,17 +42,19 @@ function optionsFor(title: string) {
             height: 100,
             toolbar: { show: false },
             fontFamily: 'inherit',
+            background: 'transparent',
         },
+        theme: snitchApexTheme(),
         colors: colours.value,
         plotOptions: { bar: { horizontal: true, barHeight: '60%' } },
         dataLabels: { enabled: false },
         xaxis: {
             categories: [title],
             max: 100,
-            labels: { style: { colors: '#64748b', fontSize: '10px' } },
+            labels: { style: { colors: snitchAxisLabel(), fontSize: '14px' } },
         },
         yaxis: { labels: { show: false } },
-        legend: { fontSize: '10px', labels: { colors: '#475569' } },
+        legend: { fontSize: '14px', labels: { colors: snitchInk('#edeae2') } },
         grid: { show: false },
         tooltip: { y: { formatter: (value: number) => `${value.toFixed(1)}%` } },
     };

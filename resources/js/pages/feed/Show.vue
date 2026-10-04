@@ -346,7 +346,7 @@ function openTranscript(): void {
                         Winner
                     </span>
                 </div>
-                <h1 class="snitch-display mt-1 text-2xl text-snitch-ink sm:text-3xl">
+                <h1 class="snitch-hero-display mt-1 text-2xl text-snitch-ink sm:text-3xl">
                     {{ primaryTitle }}
                 </h1>
                 <p class="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-snitch-ink/65">

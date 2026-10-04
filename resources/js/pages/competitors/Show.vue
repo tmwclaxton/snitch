@@ -400,7 +400,7 @@ function askRemove(): void {
                                 {{ productPlatformLabel(account.platform) }}
                             </p>
                         </div>
-                        <h1 class="snitch-display mt-1 truncate text-3xl text-snitch-ink">
+                        <h1 class="snitch-hero-display mt-1 text-3xl text-snitch-ink">
                             {{ account.display_name || account.handle }}
                         </h1>
                         <p class="mt-1 text-sm text-snitch-ink/65 sm:text-base">

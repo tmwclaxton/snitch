@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Bot, Palette, User } from '@lucide/vue';
+import { Bot, User } from '@lucide/vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
-import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editProfile } from '@/routes/profile';
 import { show as editMcp } from '@/routes/settings/mcp';
 import type { NavItem } from '@/types';
@@ -14,11 +13,13 @@ const sidebarNavItems: NavItem[] = [
         href: editProfile(),
         icon: User,
     },
-    {
-        title: 'Appearance',
-        href: editAppearance(),
-        icon: Palette,
-    },
+    // Appearance is hidden while the logged-in app is pinned to Caution Tape
+    // night. Leave this entry (and settings/Appearance.vue) so it can come back.
+    // {
+    //     title: 'Appearance',
+    //     href: editAppearance(),
+    //     icon: Palette,
+    // },
     {
         title: 'MCP',
         href: editMcp(),
@@ -33,11 +34,11 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
     <div class="relative min-h-full bg-snitch-paper px-4 py-6 text-snitch-ink sm:px-8 sm:py-8">
         <header class="mb-6 border-b border-snitch-ink/10 pb-5">
             <p class="font-mono text-sm font-medium uppercase tracking-wide text-snitch-ink/55">Account</p>
-            <h1 class="mt-1.5 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-                <span class="snitch-highlight">Settings</span>
+            <h1 class="snitch-hero-display mt-1.5 text-3xl sm:text-4xl">
+                Settings
             </h1>
-            <p class="mt-1.5 text-sm text-snitch-ink/60 sm:text-base">
-                Profile, appearance, and MCP.
+            <p class="mt-1.5 text-sm text-snitch-ink/70 sm:text-base">
+                Profile and MCP.
             </p>
         </header>
 
@@ -51,8 +52,8 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                         class="inline-flex items-center gap-2 border-l-2 px-3 py-2 text-sm transition-colors"
                         :class="
                             isCurrentOrParentUrl(item.href)
-                                ? 'border-snitch-ink font-medium text-snitch-ink'
-                                : 'border-transparent text-snitch-ink/60 hover:text-snitch-ink'
+                                ? 'border-snitch-spot font-medium text-snitch-ink'
+                                : 'border-transparent text-snitch-ink/70 hover:text-snitch-ink'
                         "
                     >
                         <component
@@ -61,7 +62,7 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                             class="size-3.5 shrink-0 opacity-70"
                             aria-hidden="true"
                         />
-                        <span :class="isCurrentOrParentUrl(item.href) ? 'snitch-highlight' : ''">
+                        <span>
                             {{ item.title }}
                         </span>
                     </Link>

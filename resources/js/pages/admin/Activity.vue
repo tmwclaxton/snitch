@@ -97,7 +97,7 @@ function typeLabel(type: string): string {
         <header class="flex flex-wrap items-end justify-between gap-4">
             <div>
                 <p class="snitch-ink-label">Internal</p>
-                <h1 class="font-display text-3xl text-snitch-ink">Platform activity</h1>
+                <h1 class="snitch-hero-display text-3xl text-snitch-ink">Platform <span class="snitch-highlight">activity</span></h1>
                 <p class="mt-1 max-w-xl text-sm text-snitch-ink/65">
                     Signups, ledger entries, MCP calls, and analyses from existing first-party tables.
                     {{ from }} → {{ to }}.

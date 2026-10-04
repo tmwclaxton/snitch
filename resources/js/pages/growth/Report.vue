@@ -4,7 +4,6 @@ import { Download, Link2, Link2Off } from '@lucide/vue';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import GrowthController from '@/actions/App/Http/Controllers/GrowthController';
 import MonthlyReportController from '@/actions/App/Http/Controllers/MonthlyReportController';
-import SnitchHighlightedText from '@/components/SnitchHighlightedText.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 
 defineOptions({
@@ -105,9 +104,9 @@ function captionText(row: { caption: string; caption_preview?: string }): string
 
         <header class="flex flex-wrap items-end justify-between gap-3">
             <div>
-                <p class="snitch-ink-label">Monthly report</p>
-                <h1 class="font-display text-2xl text-snitch-ink">
-                    <SnitchHighlightedText :text="report?.month_label ?? 'Pick a month'" />
+                <p class="snitch-ink-label">{{ report?.month_label ?? 'Pick a month' }}</p>
+                <h1 class="snitch-hero-display text-2xl text-snitch-ink">
+                    Monthly <span class="snitch-highlight">report</span>
                 </h1>
             </div>
             <div class="flex flex-wrap items-center gap-3">
@@ -176,7 +175,7 @@ function captionText(row: { caption: string; caption_preview?: string }): string
                     class="snitch-scrap p-3"
                 >
                     <p class="snitch-ink-label">{{ label }}</p>
-                    <p class="mt-1 font-display text-2xl text-snitch-ink">
+                    <p class="mt-1 font-mono text-2xl text-snitch-ink">
                         {{ report.kpis[key]?.you_display ?? 'no data' }}
                     </p>
                     <p class="mt-1 text-sm text-snitch-ink/60">
@@ -194,7 +193,7 @@ function captionText(row: { caption: string; caption_preview?: string }): string
             </section>
 
             <section class="snitch-scrap space-y-2 p-3">
-                <h2 class="font-display text-lg text-snitch-ink">Your top 3</h2>
+                <h2 class="snitch-hero-display text-lg text-snitch-ink">Your top 3</h2>
                 <ul class="space-y-3">
                     <li
                         v-for="post in report.own_top_posts"
@@ -235,7 +234,7 @@ function captionText(row: { caption: string; caption_preview?: string }): string
             </section>
 
             <section class="snitch-scrap space-y-2 p-3">
-                <h2 class="font-display text-lg text-snitch-ink">Competitor winners</h2>
+                <h2 class="snitch-hero-display text-lg text-snitch-ink">Competitor winners</h2>
                 <ul class="space-y-3">
                     <li
                         v-for="(winner, index) in report.competitor_winners"
@@ -277,14 +276,14 @@ function captionText(row: { caption: string; caption_preview?: string }): string
             </section>
 
             <section class="snitch-scrap space-y-2 p-3">
-                <h2 class="font-display text-lg text-snitch-ink">What changed</h2>
+                <h2 class="snitch-hero-display text-lg text-snitch-ink">What <span class="snitch-highlight">changed</span></h2>
                 <ul class="list-disc space-y-1 pl-5 text-sm text-snitch-ink/80">
                     <li v-for="line in report.what_changed" :key="line">{{ line }}</li>
                 </ul>
             </section>
 
             <section class="snitch-scrap space-y-2 p-3">
-                <h2 class="font-display text-lg text-snitch-ink">Next month focus</h2>
+                <h2 class="snitch-hero-display text-lg text-snitch-ink">Next month <span class="snitch-highlight">focus</span></h2>
                 <ul class="space-y-2">
                     <li
                         v-for="(idea, index) in report.next_focus"

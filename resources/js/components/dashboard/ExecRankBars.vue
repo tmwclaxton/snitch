@@ -83,7 +83,7 @@ const ranked = computed(() => {
                 <span
                     class="font-mono text-sm tabular-nums"
                     :class="row.is_own_account && row.hasData
-                        ? 'snitch-highlight text-snitch-ink'
+                        ? 'snitch-stat-accent'
                         : row.hasData
                             ? 'text-snitch-ink'
                             : 'text-snitch-ink/45'"

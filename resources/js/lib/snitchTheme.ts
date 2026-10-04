@@ -18,7 +18,9 @@ export function snitchIsDark(): boolean {
         return false;
     }
 
-    return document.documentElement.classList.contains('dark');
+    return document.documentElement.classList.contains('dark')
+        || document.documentElement.dataset.appNight === '1'
+        || document.querySelector('.snitch-app-night') !== null;
 }
 
 export function snitchInk(fallback = '#141414'): string {
@@ -122,4 +124,8 @@ export function snitchAxisMuted(): string {
 
 export function snitchAxisLabel(): string {
     return snitchIsDark() ? 'rgba(237, 234, 226, 0.7)' : '#5c5346';
+}
+
+export function snitchApexTheme(): { mode: 'dark' | 'light' } {
+    return { mode: snitchIsDark() ? 'dark' : 'light' };
 }

@@ -99,7 +99,7 @@ const tip = computed(() => {
                     </span>
                     <span
                         class="font-mono text-sm tabular-nums"
-                        :class="peakByLift?.type === row.type ? 'snitch-highlight text-snitch-ink' : 'text-snitch-ink/70'"
+                        :class="peakByLift?.type === row.type ? 'snitch-stat-accent' : 'text-snitch-ink/70'"
                     >
                         {{ liftLabel(row.type) || 'no lift yet' }}
                     </span>
@@ -127,7 +127,7 @@ const tip = computed(() => {
             class="mt-auto rounded border border-snitch-ink/10 bg-snitch-lift px-2.5 py-2 pt-3 text-sm text-snitch-ink"
         >
             Rivals get
-            <span class="snitch-highlight">{{ peakByLift?.lift.toFixed(1) }}×</span>
+            <span class="snitch-stat-accent">{{ peakByLift?.lift.toFixed(1) }}×</span>
             their usual from {{ peakByLift ? postTypeLabel(peakByLift.type) : '' }}.
         </p>
     </div>

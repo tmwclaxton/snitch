@@ -8,7 +8,7 @@ import {
     rivalStrokeWidth,
     youStrokeWidth,
 } from '@/lib/lineChart';
-import { snitchAxisLabel, snitchAxisMuted, snitchInk } from '@/lib/snitchTheme';
+import { snitchApexTheme, snitchAxisLabel, snitchAxisMuted, snitchInk } from '@/lib/snitchTheme';
 
 type Point = { date: string; followers: number; pct_change: number | null };
 type Series = { handle: string; is_own_account: boolean; points: Point[] };
@@ -55,6 +55,7 @@ const options = computed(() => ({
         background: 'transparent',
         animations: { enabled: false },
     },
+    theme: snitchApexTheme(),
     colors: colours.value,
     stroke: {
         width: strokeWidths.value,

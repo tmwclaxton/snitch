@@ -752,8 +752,8 @@ onUnmounted(() => {
         >
             <header>
                 <p class="snitch-ink-label">Brand deals</p>
-                <h1 class="snitch-display mt-2 text-3xl text-snitch-ink sm:text-4xl">
-                    Find influencers
+                <h1 class="snitch-hero-display mt-2 text-3xl text-snitch-ink sm:text-4xl">
+                    Find <span class="snitch-highlight">influencers</span>
                 </h1>
                 <p v-if="brand?.name" class="snitch-annotation mt-2 text-xl text-snitch-ink/80">
                     For {{ brand.name }}

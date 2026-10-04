@@ -247,7 +247,7 @@ onUnmounted(() => {
         <div class="snitch-app-canvas">
             <div class="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <h1 class="snitch-display text-3xl text-snitch-ink sm:text-4xl">
+                    <h1 class="snitch-hero-display text-3xl text-snitch-ink sm:text-4xl">
                         Winners
                     </h1>
                     <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">

@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\BrandProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class AppearanceTest extends TestCase
@@ -45,7 +44,7 @@ class AppearanceTest extends TestCase
         $this->assertStringContainsString("const appearance = 'light';", $html);
     }
 
-    public function test_authenticated_users_can_visit_appearance_settings(): void
+    public function test_authenticated_users_are_redirected_away_from_appearance_settings(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -53,10 +52,27 @@ class AppearanceTest extends TestCase
         $this
             ->actingAs($user)
             ->get(route('appearance.edit'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('settings/Appearance')
-            );
+            ->assertRedirect('/settings/profile');
+    }
+
+    public function test_authenticated_users_are_pinned_to_caution_tape_night(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->withUnencryptedCookie('appearance', 'light')
+            ->get(route('dashboard'));
+
+        $response->assertOk();
+        $html = (string) $response->getContent();
+        $this->assertStringContainsString('data-app-night="1"', $html);
+        $this->assertMatchesRegularExpression(
+            '/<html[^>]*\bclass="[^"]*\bdark\b/',
+            $html,
+        );
+        $this->assertStringContainsString('html[data-app-night="1"]', $html);
     }
 
     public function test_app_chrome_fills_the_viewport_on_evidence_file_shell(): void
@@ -75,7 +91,8 @@ class AppearanceTest extends TestCase
         $this->assertStringContainsString('bg-snitch-paper', $layout);
         $this->assertStringNotContainsString('min-h-[50vh]', $layout);
         $this->assertStringContainsString('bg-snitch-paper', $settings);
-        $this->assertStringContainsString('snitch-highlight', $settings);
+        $this->assertStringContainsString('snitch-hero-display', $settings);
+        $this->assertStringContainsString('Appearance is hidden while the logged-in app is pinned', $settings);
         $this->assertStringContainsString('snitch-app-chrome', $css);
         $this->assertStringContainsString('font-size: 14px', $css);
         $this->assertStringContainsString('font-size: 15px', $css);
@@ -121,7 +138,7 @@ class AppearanceTest extends TestCase
         $this->assertStringContainsString('var(--snitch-print-blend)', $css);
         $this->assertStringContainsString('.snitch-highlight', $css);
         $this->assertMatchesRegularExpression(
-            '/\.snitch-highlight[^{]*\{[^}]*background-color:\s*#ffd60a;[^}]*color:\s*#141414;/s',
+            '/\.snitch-highlight[^{]*\{[^}]*background-color:\s*#fcd700;[^}]*color:\s*#0e0e10;/s',
             $css,
         );
         $this->assertStringContainsString('html.dark .snitch-highlight', $css);

@@ -8,6 +8,7 @@ import {
 } from '@/lib/lineChart';
 import {
     snitchAccountColour,
+    snitchApexTheme,
     snitchAxisLabel,
     snitchAxisMuted,
     snitchInk,
@@ -133,6 +134,7 @@ const options = computed(() => ({
         animations: { enabled: false },
         background: 'transparent',
     },
+    theme: snitchApexTheme(),
     colors: colours.value,
     stroke: {
         width: strokeWidths.value,
@@ -206,7 +208,7 @@ const options = computed(() => ({
 <template>
     <section class="snitch-scrap flex h-full min-h-[280px] flex-col space-y-2 p-3">
         <div class="flex items-baseline justify-between gap-2">
-            <h2 class="font-display text-base text-snitch-ink">{{ title }}</h2>
+            <h2 class="snitch-hero-display text-base text-snitch-ink">{{ title }}</h2>
         </div>
 
         <template v-if="tableFallback">

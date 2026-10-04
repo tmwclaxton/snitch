@@ -601,7 +601,7 @@ function paginationLabel(label: string): string {
         <div class="snitch-app-canvas">
             <header class="border-b border-snitch-ink/10 pb-5">
                 <p class="snitch-ink-label">Snitch / Explore</p>
-                <h1 class="snitch-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
+                <h1 class="snitch-hero-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
                     Craft <span class="snitch-highlight">catalogue</span>
                 </h1>
                 <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">Open a catalogue picker, select multiple hooks, topics, or crafts, then skim the matches.</p>

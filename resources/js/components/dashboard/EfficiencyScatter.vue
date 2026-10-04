@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
 import { useAccountColours } from '@/composables/useAccountColours';
+import { snitchApexTheme, snitchAxisLabel, snitchAxisMuted, snitchInk } from '@/lib/snitchTheme';
 
 type Point = {
     handle: string;
@@ -35,26 +36,27 @@ const colours = computed(() =>
 );
 
 const options = computed(() => ({
-    chart: { type: 'bubble' as const, height: 180, toolbar: { show: false }, fontFamily: 'inherit' },
+    chart: { type: 'bubble' as const, height: 180, toolbar: { show: false }, fontFamily: 'inherit', background: 'transparent' },
+    theme: snitchApexTheme(),
     colors: colours.value,
     dataLabels: { enabled: false },
-    grid: { borderColor: '#e2e8f0', strokeDashArray: 3 },
+    grid: { borderColor: snitchAxisMuted(), strokeDashArray: 3 },
     xaxis: {
         tickAmount: 4,
-        title: { text: 'Posts / week', style: { color: '#94a3b8', fontSize: '10px' } },
-        labels: { style: { colors: '#64748b', fontSize: '10px' } },
+        title: { text: 'Posts / week', style: { color: snitchAxisLabel(), fontSize: '14px' } },
+        labels: { style: { colors: snitchAxisLabel(), fontSize: '14px' } },
     },
     yaxis: {
-        title: { text: 'ER %', style: { color: '#94a3b8', fontSize: '10px' } },
-        labels: { style: { colors: '#64748b', fontSize: '10px' } },
+        title: { text: 'ER %', style: { color: snitchAxisLabel(), fontSize: '14px' } },
+        labels: { style: { colors: snitchAxisLabel(), fontSize: '14px' } },
     },
-    legend: { fontSize: '11px', labels: { colors: '#475569' } },
+    legend: { fontSize: '14px', labels: { colors: snitchInk('#edeae2') } },
     annotations: {
         xaxis: props.medianX != null
-            ? [{ x: props.medianX, borderColor: '#94a3b8', strokeDashArray: 4, label: { text: "rivals' avg", style: { fontSize: '9px', background: '#fff' } } }]
+            ? [{ x: props.medianX, borderColor: snitchAxisMuted(), strokeDashArray: 4, label: { text: "rivals' avg", style: { fontSize: '14px', color: snitchAxisLabel(), background: 'transparent' } } }]
             : [],
         yaxis: props.medianY != null
-            ? [{ y: props.medianY, borderColor: '#94a3b8', strokeDashArray: 4, label: { text: "rivals' avg", style: { fontSize: '9px', background: '#fff' } } }]
+            ? [{ y: props.medianY, borderColor: snitchAxisMuted(), strokeDashArray: 4, label: { text: "rivals' avg", style: { fontSize: '14px', color: snitchAxisLabel(), background: 'transparent' } } }]
             : [],
     },
 }));

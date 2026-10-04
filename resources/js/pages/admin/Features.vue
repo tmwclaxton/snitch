@@ -72,8 +72,8 @@ function setStatus(id: number, status: string): void {
             </Link>
         </div>
 
-        <h1 class="font-display text-3xl text-snitch-ink">
-            Feature votes
+        <h1 class="snitch-hero-display text-3xl text-snitch-ink">
+            Feature <span class="snitch-highlight">votes</span>
         </h1>
         <p class="mt-2 max-w-2xl text-[14px] text-snitch-ink/75">
             Set status so the dashboard shows Planned, Building, or Shipped.

@@ -105,7 +105,7 @@ function toggleAccount(id: number): void {
                     <TrendingUp class="size-3.5" />
                     Growth
                 </p>
-                <h1 class="font-display text-2xl text-snitch-ink">
+                <h1 class="snitch-hero-display text-2xl text-snitch-ink">
                     Own account vs <span class="snitch-highlight">rivals</span>
                 </h1>
                 <p class="mt-1 max-w-xl text-sm text-snitch-ink/65">

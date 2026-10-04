@@ -45,8 +45,8 @@ import { dashboard, home } from '@/routes';
 import { overview as adminOverview, activity as adminActivity } from '@/routes/admin';
 import { index as adminFeaturesIndex } from '@/routes/admin/features';
 import { index as adminUsersIndex } from '@/routes/admin/users';
-import { edit as appearance } from '@/routes/appearance';
 import { edit as billing } from '@/routes/billing';
+import { edit as editProfile } from '@/routes/profile';
 import type { NavItem } from '@/types';
 
 const page = usePage();
@@ -186,7 +186,7 @@ const accountNavItems: NavItem[] = [
     },
     {
         title: 'Settings',
-        href: appearance(),
+        href: editProfile(),
         icon: Settings,
     },
 ];
@@ -196,7 +196,7 @@ const accountNavItems: NavItem[] = [
     <Sidebar
         collapsible="icon"
         variant="sidebar"
-        class="border-r border-snitch-ink/10 bg-snitch-paper"
+        class="border-r border-white/10 bg-black"
     >
         <SidebarHeader class="shrink-0 border-b border-snitch-ink/10">
             <SidebarMenu>

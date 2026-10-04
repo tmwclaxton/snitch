@@ -522,7 +522,7 @@ const detailsOpen = ref(false);
                 id="onboarding"
                 class="mt-3 rounded border border-snitch-ink/10 bg-snitch-lift p-4"
             >
-                <h2 class="font-display text-lg font-semibold text-snitch-ink">
+                <h2 class="snitch-hero-display text-lg text-snitch-ink">
                     Get ready
                 </h2>
                 <ol class="mt-3 grid gap-2 sm:grid-cols-3">
@@ -559,38 +559,39 @@ const detailsOpen = ref(false);
                         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
                             What should we post?
                         </p>
-                        <h2 class="font-display max-w-4xl text-2xl font-semibold tracking-tight text-snitch-ink md:text-3xl">
+                        <h2 class="snitch-hero-display max-w-4xl text-2xl text-snitch-ink md:text-3xl">
                             <SnitchHighlightedText :text="whatToPostHeadline" />
                         </h2>
                     </header>
 
                     <div
                         v-if="weekly_brief?.ideas?.length"
-                        class="space-y-2"
+                        class="snitch-caution-band space-y-3"
                     >
                         <div class="flex flex-wrap items-baseline justify-between gap-2">
-                            <h3 class="text-sm font-semibold text-snitch-ink">Post this next</h3>
+                            <h3 class="text-sm font-semibold uppercase tracking-wide text-snitch-caution-ink">Post this next</h3>
                             <Link
                                 :href="briefIndex.url()"
-                                class="text-sm font-medium text-snitch-ink/60 underline-offset-2 hover:text-snitch-ink hover:underline"
+                                class="text-sm font-medium text-snitch-caution-ink underline-offset-2 hover:underline"
                             >
                                 See full brief
                             </Link>
                         </div>
-                        <div class="grid gap-2 sm:grid-cols-3">
+                        <div class="grid gap-2 sm:grid-cols-3 sm:items-stretch">
                             <Link
                                 v-for="(idea, index) in weekly_brief.ideas.slice(0, 3)"
                                 :key="`${idea.slot}-${index}`"
                                 :href="briefIndex.url()"
-                                class="flex min-w-0 flex-col gap-2 rounded border border-snitch-ink/10 bg-snitch-lift p-3 hover:border-snitch-ink/30"
+                                class="snitch-caution-card flex min-w-0 flex-col gap-2 p-3 hover:opacity-90"
                             >
                                 <div class="flex flex-wrap items-center gap-2 text-sm">
+                                    <span class="snitch-caution-num">0{{ index + 1 }}</span>
                                     <span class="snitch-format-tag w-fit self-start text-sm">
                                         {{ idea.format }}
                                     </span>
-                                    <span class="whitespace-nowrap tabular-nums text-snitch-ink/55">{{ idea.slot }}</span>
+                                    <span class="whitespace-nowrap font-mono tabular-nums text-snitch-caution-fog/70">{{ idea.slot }}</span>
                                 </div>
-                                <span class="text-sm leading-snug text-snitch-ink">{{ idea.hook }}</span>
+                                <span class="text-sm leading-snug text-snitch-caution-fog">{{ idea.hook }}</span>
                             </Link>
                         </div>
                     </div>
@@ -636,7 +637,7 @@ const detailsOpen = ref(false);
                                     </div>
                                     <span
                                         class="whitespace-nowrap font-mono text-sm tabular-nums"
-                                        :class="slotIndex === 0 ? 'snitch-highlight text-snitch-ink' : 'text-snitch-ink/70'"
+                                        :class="slotIndex === 0 ? 'snitch-stat-accent' : 'text-snitch-ink/70'"
                                     >{{ slot.suffix }}</span>
                                 </li>
                             </ul>
@@ -667,7 +668,7 @@ const detailsOpen = ref(false);
                         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
                             How are they performing?
                         </p>
-                        <h2 class="font-display max-w-4xl text-2xl font-semibold tracking-tight text-snitch-ink md:text-3xl">
+                        <h2 class="snitch-hero-display max-w-4xl text-2xl text-snitch-ink md:text-3xl">
                             <SnitchHighlightedText :text="performanceHeadline" />
                         </h2>
                     </header>
@@ -818,7 +819,7 @@ const detailsOpen = ref(false);
                         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
                             Are they running ads?
                         </p>
-                        <h2 class="font-display max-w-4xl text-2xl font-semibold tracking-tight text-snitch-ink md:text-3xl">
+                        <h2 class="snitch-hero-display max-w-4xl text-2xl text-snitch-ink md:text-3xl">
                             <SnitchHighlightedText :text="adsHeadline" />
                         </h2>
                     </header>
@@ -896,7 +897,7 @@ const detailsOpen = ref(false);
                 v-else-if="!showOnboarding"
                 class="mt-3 rounded border border-dashed border-snitch-ink/20 bg-snitch-lift p-8 text-center"
             >
-                <h2 class="font-display text-xl font-semibold text-snitch-ink">
+                <h2 class="snitch-hero-display text-xl text-snitch-ink">
                     {{ own_account ? 'No rivals to compare yet' : 'No Instagram competitors yet' }}
                 </h2>
                 <p class="mt-2 text-sm text-snitch-ink/60">
@@ -916,7 +917,7 @@ const detailsOpen = ref(false);
                 class="mt-5 scroll-mt-14 space-y-3 border-t border-snitch-ink/10 pt-5"
             >
                 <header>
-                    <h2 class="font-display text-2xl font-semibold tracking-tight text-snitch-ink md:text-3xl">
+                    <h2 class="snitch-hero-display text-2xl text-snitch-ink md:text-3xl">
                         Is anyone <span class="snitch-highlight">tracking you</span>?
                     </h2>
                 </header>
@@ -928,7 +929,7 @@ const detailsOpen = ref(false);
                 class="mt-5 scroll-mt-14 space-y-3 border-t border-snitch-ink/10 pt-5"
             >
                 <header>
-                    <h2 class="font-display text-2xl font-semibold tracking-tight text-snitch-ink md:text-3xl">
+                    <h2 class="snitch-hero-display text-2xl text-snitch-ink md:text-3xl">
                         Cast your <span class="snitch-highlight">vote</span>
                     </h2>
                 </header>

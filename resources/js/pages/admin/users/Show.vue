@@ -114,7 +114,7 @@ function typeLabel(type: string): string {
         <header class="flex flex-wrap items-end justify-between gap-4">
             <div>
                 <p class="snitch-ink-label">Internal</p>
-                <h1 class="font-display text-3xl text-snitch-ink">{{ user.email }}</h1>
+                <h1 class="snitch-hero-display text-3xl text-snitch-ink">{{ user.email }}</h1>
                 <p class="mt-1 text-sm text-snitch-ink/65">
                     {{ user.name || 'No name' }}
                     · joined {{ formatWhen(user.created_at) }}

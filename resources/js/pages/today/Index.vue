@@ -161,8 +161,8 @@ function formatMix(counts: Record<string, number>): string {
             <header class="flex flex-wrap items-end justify-between gap-4 border-b border-snitch-ink/10 pb-5">
                 <div>
                     <p class="snitch-ink-label">Daily summary</p>
-                    <h1 class="snitch-display mt-1 text-3xl text-snitch-ink sm:text-4xl">
-                        <span class="snitch-highlight">Today</span>
+                    <h1 class="snitch-hero-display mt-1 text-3xl text-snitch-ink sm:text-4xl">
+                        Today
                     </h1>
                     <p class="mt-1.5 text-sm text-snitch-ink/65">
                         {{ formatAppDate(date) }}
@@ -213,7 +213,7 @@ function formatMix(counts: Record<string, number>): string {
             </header>
 
             <section v-if="brief" class="grid items-start gap-6">
-                <p class="font-display text-2xl leading-snug text-snitch-ink sm:text-3xl">
+                <p class="snitch-hero-display text-2xl leading-snug text-snitch-ink sm:text-3xl">
                     {{ brief.headline }}
                 </p>
 

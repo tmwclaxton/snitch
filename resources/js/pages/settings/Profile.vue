@@ -45,8 +45,8 @@ function submit(): void {
             <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
 
             <div class="relative z-10">
-                <h2 class="snitch-display text-2xl text-snitch-ink">
-                    Profile information
+                <h2 class="snitch-hero-display text-2xl text-snitch-ink">
+                    Profile <span class="snitch-highlight">information</span>
                 </h2>
                 <p class="mt-1.5 text-sm text-snitch-ink/65">
                     Update your name and email address.

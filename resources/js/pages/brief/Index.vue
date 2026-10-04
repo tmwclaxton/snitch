@@ -151,7 +151,7 @@ function regenerate(): void {
             <header class="flex flex-wrap items-end justify-between gap-4 border-b border-snitch-ink/10 pb-5">
                 <div>
                     <p class="snitch-ink-label">Post this next</p>
-                    <h1 class="snitch-display mt-1 text-3xl text-snitch-ink sm:text-4xl">
+                    <h1 class="snitch-hero-display mt-1 text-3xl text-snitch-ink sm:text-4xl">
                         This <span class="snitch-highlight">week</span>
                     </h1>
                     <p class="mt-1.5 max-w-2xl text-sm text-snitch-ink/65">
@@ -216,19 +216,22 @@ function regenerate(): void {
 
             <section
                 v-if="brief?.ideas?.length"
-                class="grid gap-4 md:grid-cols-3 md:items-stretch"
+                class="snitch-caution-band"
             >
+                <div class="grid gap-4 md:grid-cols-3 md:items-stretch">
                 <article
-                    v-for="idea in brief.ideas"
+                    v-for="(idea, index) in brief.ideas"
                     :key="idea.id"
-                    class="snitch-scrap relative flex h-full flex-col p-4 pt-5"
+                    class="snitch-caution-card relative flex h-full flex-col p-4 pt-5"
                     :class="idea.used_at ? 'opacity-70' : ''"
                 >
-                    <span class="snitch-tape right-5 -top-2" aria-hidden="true" />
                     <div class="flex items-start justify-between gap-2">
-                        <span class="snitch-format-tag w-fit self-start text-sm">
-                            {{ idea.format }}
-                        </span>
+                        <div class="flex items-center gap-2">
+                            <span class="snitch-caution-num">0{{ index + 1 }}</span>
+                            <span class="snitch-format-tag w-fit self-start text-sm">
+                                {{ idea.format }}
+                            </span>
+                        </div>
                         <Form
                             v-bind="BriefController.markUsed.form(idea.id)"
                             class="shrink-0"
@@ -242,7 +245,7 @@ function regenerate(): void {
                             </button>
                         </Form>
                     </div>
-                    <h3 class="snitch-display mt-2 text-xl font-semibold text-snitch-ink">
+                    <h3 class="mt-3 text-lg font-semibold text-snitch-caution-fog">
                         {{ idea.hook }}
                     </h3>
                     <p
@@ -320,6 +323,7 @@ function regenerate(): void {
                         </Link>
                     </div>
                 </article>
+                </div>
             </section>
 
             <section
@@ -328,7 +332,7 @@ function regenerate(): void {
             >
                 <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
                 <div class="flex flex-wrap items-baseline justify-between gap-2">
-                    <h2 class="snitch-display text-2xl text-snitch-ink">Best <span class="snitch-highlight">times</span></h2>
+                    <h2 class="snitch-hero-display text-2xl text-snitch-ink">Best <span class="snitch-highlight">times</span></h2>
                     <p
                         v-if="brief.thin_data"
                         class="text-sm text-snitch-ink/60"
@@ -355,7 +359,7 @@ function regenerate(): void {
                             </p>
                             <p
                                 class="font-mono text-sm"
-                                :class="index === 0 ? 'snitch-highlight text-snitch-ink' : 'text-snitch-ink/70'"
+                                :class="index === 0 ? 'snitch-stat-accent' : 'text-snitch-ink/70'"
                             >
                                 {{ slot.score.toFixed(1) }}× median
                             </p>

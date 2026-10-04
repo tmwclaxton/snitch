@@ -1,4 +1,6 @@
 <script setup lang="ts">
+// Hidden while the logged-in app is pinned to Caution Tape night.
+// settings/appearance redirects to profile; keep this page so Appearance can return.
 import { Head } from '@inertiajs/vue3';
 import AppearanceTabs from '@/components/AppearanceTabs.vue';
 import { edit } from '@/routes/appearance';

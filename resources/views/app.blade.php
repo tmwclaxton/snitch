@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"  @class(['dark' => ($appearance ?? 'system') == 'dark'])>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-app-night="{{ ($appNight ?? false) ? '1' : '0' }}" @class(['dark' => ($appNight ?? false) || ($appearance ?? 'system') == 'dark'])>
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -65,14 +65,19 @@
             (function() {
                 const appearance = '{{ $appearance ?? "system" }}';
                 const root = document.documentElement;
-                let dark = appearance === 'dark';
+                const appNight = root.dataset.appNight === '1';
+                let dark = appNight || appearance === 'dark';
 
-                if (appearance === 'system') {
+                if (!appNight && appearance === 'system') {
                     dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
                     if (dark) {
                         root.classList.add('dark');
                     }
+                }
+
+                if (appNight) {
+                    root.classList.add('dark');
                 }
 
                 root.style.colorScheme = dark ? 'dark' : 'light';
@@ -86,7 +91,8 @@
                 color-scheme: light;
             }
 
-            html.dark {
+            html.dark,
+            html[data-app-night="1"] {
                 background-color: #0e0e10;
                 color-scheme: dark;
             }

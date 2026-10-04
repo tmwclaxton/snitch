@@ -46,8 +46,8 @@ function seenLabel(iso: string | null): string | null {
         <div class="snitch-app-canvas">
             <header class="border-b border-snitch-ink/10 pb-5">
                 <p class="snitch-ink-label">Snitch / Ads</p>
-                <h1 class="snitch-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
-                    Active ads
+                <h1 class="snitch-hero-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
+                    Active <span class="snitch-highlight">ads</span>
                 </h1>
                 <p class="mt-1.5 max-w-2xl text-sm text-snitch-ink/65 sm:text-base">
                     Meta Ad Library hits for accounts you track.

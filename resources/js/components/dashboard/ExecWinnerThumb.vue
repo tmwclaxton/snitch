@@ -70,7 +70,7 @@ const piLabel = computed(() => `${props.post.pi.toFixed(1)}× usual`);
             <p class="text-[13px] font-medium leading-snug break-words text-snitch-ink">
                 {{ handle }}
             </p>
-            <p class="font-display text-base font-semibold tabular-nums text-snitch-ink">
+            <p class="font-mono text-base font-semibold tabular-nums text-snitch-ink">
                 {{ piLabel }}
             </p>
         </div>

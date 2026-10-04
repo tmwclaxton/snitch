@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
+import { snitchApexTheme, snitchAxisLabel, snitchAxisMuted, snitchInk, snitchSpot } from '@/lib/snitchTheme';
 
 type Row = {
     handle: string;
@@ -17,7 +18,7 @@ const props = defineProps<{
 }>();
 
 const formats = ['Reel', 'Carousel', 'Image', 'Video'] as const;
-const colours = ['#0f172a', '#0f766e', '#b45309', '#64748b'];
+const colours = [snitchSpot('#fcd700'), '#4fc3f7', '#7cffb2', '#ff8a3d'];
 
 const categories = computed(() =>
     (props.rows ?? []).map((row) => (row.is_own_account ? 'You' : `@${row.handle}`)),
@@ -31,14 +32,15 @@ const chartSeries = computed(() =>
 );
 
 const options = computed(() => ({
-    chart: { type: 'bar' as const, stacked: true, stackType: '100%' as const, height: 180, toolbar: { show: false }, fontFamily: 'inherit' },
+    chart: { type: 'bar' as const, stacked: true, stackType: '100%' as const, height: 180, toolbar: { show: false }, fontFamily: 'inherit', background: 'transparent' },
+    theme: snitchApexTheme(),
     colors: colours,
     plotOptions: { bar: { horizontal: true, barHeight: '55%' } },
     dataLabels: { enabled: false },
-    xaxis: { categories: categories.value, labels: { style: { colors: '#64748b', fontSize: '10px' } } },
-    yaxis: { labels: { style: { colors: '#64748b', fontSize: '10px' } } },
-    legend: { fontSize: '11px', labels: { colors: '#475569' } },
-    grid: { borderColor: '#e2e8f0' },
+    xaxis: { categories: categories.value, labels: { style: { colors: snitchAxisLabel(), fontSize: '14px' } } },
+    yaxis: { labels: { style: { colors: snitchAxisLabel(), fontSize: '14px' } } },
+    legend: { fontSize: '14px', labels: { colors: snitchInk('#edeae2') } },
+    grid: { borderColor: snitchAxisMuted() },
     tooltip: { y: { formatter: (value: number) => `${value.toFixed(0)}%` } },
 }));
 </script>

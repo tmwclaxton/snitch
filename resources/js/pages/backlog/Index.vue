@@ -152,8 +152,8 @@ onUnmounted(() => {
                     <ArrowLeft class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
                     <span class="relative z-10">Dashboard</span>
                 </Link>
-                <h1 class="snitch-display text-3xl text-snitch-ink sm:text-4xl">
-                    Analyse queue
+                <h1 class="snitch-hero-display text-3xl text-snitch-ink sm:text-4xl">
+                    Analyse <span class="snitch-highlight">queue</span>
                 </h1>
                 <p class="mt-1.5 max-w-2xl text-sm text-snitch-ink/65 sm:text-base">
                     Reels waiting on analysis after sync. This page refreshes while the queue runs.

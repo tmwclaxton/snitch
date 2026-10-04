@@ -72,7 +72,7 @@ async function copyUrl(row: ReferralRow): Promise<void> {
         <header class="flex flex-wrap items-end justify-between gap-4">
             <div>
                 <p class="snitch-ink-label">Internal</p>
-                <h1 class="font-display text-3xl text-snitch-ink">Referral links</h1>
+                <h1 class="snitch-hero-display text-3xl text-snitch-ink">Referral <span class="snitch-highlight">links</span></h1>
                 <p class="mt-1 max-w-xl text-sm text-snitch-ink/65">
                     Partner codes, first-touch cookies, and referred-user analytics.
                 </p>

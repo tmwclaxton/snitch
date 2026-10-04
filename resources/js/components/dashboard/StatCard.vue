@@ -80,13 +80,13 @@ const gapClass = computed(() => {
 
     if (props.gap.type === 'pp') {
         return props.gap.value >= 0
-            ? 'snitch-highlight'
-            : 'bg-snitch-alert text-snitch-paper';
+            ? 'text-snitch-ink/70'
+            : 'snitch-gap-lower rounded px-1.5 py-0.5';
     }
 
     return props.gap.lower
-        ? 'bg-snitch-alert text-snitch-paper'
-        : 'snitch-highlight';
+        ? 'snitch-gap-lower rounded px-1.5 py-0.5'
+        : 'text-snitch-ink/70';
 });
 
 const growthHint = computed(() => {

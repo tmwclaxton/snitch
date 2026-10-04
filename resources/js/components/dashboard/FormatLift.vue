@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
 import { useAccountColours } from '@/composables/useAccountColours';
-import { snitchAxisLabel, snitchAxisMuted, snitchInk, snitchPeerSeries } from '@/lib/snitchTheme';
+import { snitchApexTheme, snitchAxisLabel, snitchAxisMuted, snitchInk, snitchPeerSeries } from '@/lib/snitchTheme';
 
 type Row = {
     handle: string;
@@ -43,6 +43,7 @@ const colours = computed(() =>
 
 const options = computed(() => ({
     chart: { type: 'bar' as const, height: 180, toolbar: { show: false }, fontFamily: 'inherit', background: 'transparent' },
+    theme: snitchApexTheme(),
     colors: colours.value,
     plotOptions: { bar: { columnWidth: '55%' } },
     dataLabels: { enabled: false },

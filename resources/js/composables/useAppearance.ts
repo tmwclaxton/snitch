@@ -14,9 +14,10 @@ export function updateTheme(value: Appearance): void {
         return;
     }
 
-    let dark = value === 'dark';
+    const appNight = document.documentElement.dataset.appNight === '1';
+    let dark = appNight || value === 'dark';
 
-    if (value === 'system') {
+    if (! appNight && value === 'system') {
         const mediaQueryList = window.matchMedia(
             '(prefers-color-scheme: dark)',
         );

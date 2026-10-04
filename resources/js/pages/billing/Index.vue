@@ -148,7 +148,7 @@ function vendorAccent(key: SpendVendorKey): string {
             <header class="flex flex-wrap items-end justify-between gap-4 border-b border-snitch-ink/10 pb-5">
                 <div class="min-w-0">
                     <p class="snitch-ink-label">Account</p>
-                    <h1 class="snitch-display mt-1 text-3xl text-snitch-ink sm:text-4xl">
+                    <h1 class="snitch-hero-display mt-1 text-3xl text-snitch-ink sm:text-4xl">
                         Billing
                     </h1>
                     <p class="mt-1.5 max-w-2xl text-sm text-snitch-ink/65 sm:text-base">

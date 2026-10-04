@@ -69,7 +69,7 @@ function refreshLabel(value: string | null): string {
     <div class="px-4 py-6 sm:px-8">
         <Head title="Competitors" />
         <div class="mb-6 border-b border-snitch-ink/10 pb-4">
-            <h1 class="text-2xl font-semibold tracking-tight">Competitors</h1>
+            <h1 class="snitch-hero-display text-2xl">Competitors</h1>
             <p class="mt-1 text-sm text-snitch-ink/55">
                 Track public Instagram accounts. Posts and follower counts refresh weekly.
             </p>

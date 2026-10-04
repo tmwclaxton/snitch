@@ -168,8 +168,8 @@ function paginationLabel(label: string): string {
             <header class="border-b border-snitch-ink/10 pb-5">
                 <div class="min-w-0 max-w-xl">
                     <p class="snitch-ink-label">Snitch / Feed</p>
-                    <h1 class="snitch-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
-                        <span class="snitch-highlight">Feed</span>
+                    <h1 class="snitch-hero-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
+                        Feed
                     </h1>
                     <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
                         Metrics, hooks, and craft tags at a glance - open a frame for the full dossier.

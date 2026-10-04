@@ -253,7 +253,7 @@
     --secondary: #1c1c1f;
     --secondary-foreground: #edeae2;
     --muted: #1c1c1f;
-    --muted-foreground: #b8b2a6;
+    --muted-foreground: #c4bfb4;
     --accent: #fcd700;
     --accent-foreground: #0e0e10;
     --destructive: #e5341d;
@@ -266,7 +266,7 @@
     --chart-3: #e5341d;
     --chart-4: #c4a574;
     --chart-5: #8eb0c4;
-    --sidebar-background: #0e0e10;
+    --sidebar-background: #000000;
     --sidebar-foreground: #edeae2;
     --sidebar-primary: #fcd700;
     --sidebar-primary-foreground: #0e0e10;
@@ -274,7 +274,7 @@
     --sidebar-accent-foreground: #0e0e10;
     --sidebar-border: rgb(255 255 255 / 0.1);
     --sidebar-ring: #fcd700;
-    --sidebar: #0e0e10;
+    --sidebar: #000000;
     --snitch-heat: #fcd700;
 }
 
@@ -317,7 +317,9 @@ html.dark *::-webkit-scrollbar-thumb:hover {
     background: color-mix(in oklab, var(--snitch-ink) 58%, transparent);
 }
 
-html:has(.snitch-public-shell) {
+html:has(.snitch-public-shell),
+html:has(.snitch-app-night),
+html[data-app-night='1'] {
     background-color: #0e0e10;
     color-scheme: dark;
 }
@@ -426,10 +428,10 @@ html:has(.snitch-public-shell) {
 
 
     /*
-     * Logged-in app chrome: Evidence File.
-     * Cream paper, near-black ink, yellow highlighter, red alerts.
-     * Cards: white / light cream with ink/10 borders. No ticket/tape chrome.
-     * Type: Inter body, Bricolage headings, Space Mono labels/stats (≥14px).
+     * Logged-in app chrome: Caution Tape night (matches the public landing).
+     * Paper #0E0E10, fog type, lifted panels, yellow spot, pink alerts.
+     * Headlines: Archivo Black uppercase. Body: Inter. Labels/stats: Space Mono.
+     * Appearance no longer flips this shell to Evidence File cream.
      */
     .snitch-app-chrome {
         background-color: var(--snitch-paper);
@@ -490,10 +492,13 @@ html:has(.snitch-public-shell) {
         display: none !important;
     }
 
-    .snitch-app-chrome .snitch-display {
-        font-family: var(--font-display);
-        font-weight: 600;
-        letter-spacing: -0.02em;
+    .snitch-app-chrome .snitch-display,
+    .snitch-app-chrome .snitch-hero-display {
+        font-family: var(--font-hero);
+        font-weight: 400;
+        letter-spacing: 0.01em;
+        text-transform: uppercase;
+        line-height: 1.05;
     }
 
     .snitch-app-chrome .snitch-scrap,
@@ -537,12 +542,13 @@ html:has(.snitch-public-shell) {
         clip-path: none;
         filter: none;
         box-shadow: none;
-        background: var(--snitch-ink);
-        color: var(--snitch-paper);
+        background: var(--snitch-spot);
+        color: var(--snitch-on-spot);
         border-radius: 0;
         padding: 0.55rem 1rem;
-        font-weight: 600;
-        letter-spacing: 0;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
     }
 
     .snitch-app-chrome .snitch-btn::before,
@@ -554,31 +560,35 @@ html:has(.snitch-public-shell) {
     .snitch-app-chrome .snitch-btn:hover {
         transform: none;
         filter: none;
-        opacity: 0.9;
-        color: var(--snitch-paper);
+        opacity: 0.92;
+        color: var(--snitch-on-spot);
     }
 
     .snitch-app-chrome .snitch-btn-ghost,
     .snitch-app-chrome .snitch-btn-ghost-light {
-        background: var(--snitch-lift);
+        background: transparent;
         color: var(--snitch-ink);
-        border: 1px solid color-mix(in oklab, var(--snitch-ink) 10%, transparent);
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 45%, transparent);
         filter: none;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 700;
     }
 
     .snitch-app-chrome .snitch-btn-ghost:hover,
     .snitch-app-chrome .snitch-btn-ghost-light:hover {
-        border-color: color-mix(in oklab, var(--snitch-ink) 28%, transparent);
-        background: color-mix(in oklab, var(--snitch-paper) 70%, var(--snitch-lift));
+        border-color: color-mix(in oklab, var(--snitch-ink) 70%, transparent);
+        background: color-mix(in oklab, var(--snitch-ink) 8%, transparent);
         color: var(--snitch-ink);
     }
 
     .snitch-app-chrome .snitch-btn.snitch-btn-spot {
-        background: var(--snitch-ink);
-        color: var(--snitch-paper);
+        background: var(--snitch-spot);
+        color: var(--snitch-on-spot);
     }
 
-    /* Night shell: yellow primary + fog outline secondary (matches /pricing). */
+    /* Logged-in app is pinned to night; keep these so a future Appearance
+       toggle can restore cream without rewriting button rules. */
     .dark .snitch-app-chrome .snitch-btn {
         background: var(--snitch-spot);
         color: var(--snitch-on-spot);
@@ -593,13 +603,13 @@ html:has(.snitch-public-shell) {
     .dark .snitch-app-chrome .snitch-btn-ghost-light {
         background: transparent;
         color: var(--snitch-ink);
-        border: 1px solid color-mix(in oklab, var(--snitch-ink) 28%, transparent);
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 45%, transparent);
     }
 
     .dark .snitch-app-chrome .snitch-btn-ghost:hover,
     .dark .snitch-app-chrome .snitch-btn-ghost-light:hover {
         background: color-mix(in oklab, var(--snitch-ink) 8%, transparent);
-        border-color: color-mix(in oklab, var(--snitch-ink) 45%, transparent);
+        border-color: color-mix(in oklab, var(--snitch-ink) 70%, transparent);
         color: var(--snitch-ink);
     }
 
@@ -625,8 +635,8 @@ html:has(.snitch-public-shell) {
     html.dark .snitch-highlight.text-snitch-ink,
     .dark .snitch-highlight,
     .dark .snitch-highlight.text-snitch-ink {
-        background-color: #ffd60a;
-        color: #141414;
+        background-color: #fcd700;
+        color: #0e0e10;
         box-decoration-break: clone;
         -webkit-box-decoration-break: clone;
         padding: 0 0.18em;
@@ -645,6 +655,46 @@ html:has(.snitch-public-shell) {
         padding: 0.2em 0.55em;
         border-radius: 999px;
         line-height: 1.2;
+    }
+
+    .snitch-app-chrome .snitch-alert-badge,
+    .snitch-gap-lower {
+        background: #ff3d8b;
+        color: #ffffff;
+    }
+
+    .snitch-stat-accent {
+        color: #fcd700;
+    }
+
+    .snitch-caution-band {
+        background: #fcd700;
+        color: #0e0e10;
+        padding: 1.25rem;
+    }
+
+    .snitch-caution-band a:not(.snitch-caution-card) {
+        color: #0e0e10;
+    }
+
+    .snitch-caution-card {
+        background: #0e0e10;
+        color: #edeae2;
+        border: 1px solid rgb(14 14 16 / 0.15);
+    }
+
+    .snitch-caution-num {
+        display: flex;
+        height: 2.5rem;
+        width: 2.5rem;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        background: #fcd700;
+        color: #0e0e10;
+        font-family: var(--font-mono);
+        font-size: 0.875rem;
+        font-weight: 700;
     }
 
     .snitch-app-chrome .snitch-field {
@@ -955,25 +1005,26 @@ html:has(.snitch-public-shell) {
         border-color: color-mix(in oklab, var(--snitch-ink) 25%, transparent);
     }
 
-    /* Format tags (REEL / CAROUSEL) - yellow face in dark, ink face in light */
+    /* Format tags (REEL / CAROUSEL) - landing small-label: mono, yellow type, no slab */
     .snitch-format-tag {
         display: inline-flex;
         width: fit-content;
         max-width: 100%;
         align-items: center;
-        border-radius: 0.25rem;
-        padding: 0.125rem 0.375rem;
-        font-weight: 600;
+        border-radius: 0;
+        padding: 0;
+        font-family: var(--font-mono);
+        font-weight: 700;
         font-size: inherit;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
-        background: var(--snitch-ink);
-        color: var(--snitch-paper);
+        background: transparent;
+        color: var(--snitch-spot);
     }
 
     .dark .snitch-format-tag {
-        background: var(--snitch-spot);
-        color: var(--snitch-on-spot);
+        background: transparent;
+        color: var(--snitch-spot);
     }
 
     /* Meter bars: light = ink. Dark lead = yellow; others = dim yellow. */
