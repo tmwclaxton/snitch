@@ -395,7 +395,7 @@ const detailsOpen = ref(false);
     <div class="min-h-full bg-snitch-paper px-2 py-2 sm:px-3">
         <Head title="Dashboard" />
 
-        <div class="mx-auto max-w-none space-y-8">
+        <div class="mx-auto max-w-none">
             <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 border-b border-snitch-ink/10 pb-2">
                 <h1 class="hidden shrink-0 text-sm font-semibold tracking-tight text-snitch-ink sm:block">
                     Dashboard
@@ -515,7 +515,7 @@ const detailsOpen = ref(false);
             <section
                 v-if="showOnboarding"
                 id="onboarding"
-                class="rounded border border-snitch-ink/10 bg-snitch-lift p-4"
+                class="mt-3 rounded border border-snitch-ink/10 bg-snitch-lift p-4"
             >
                 <h2 class="font-display text-lg font-semibold text-snitch-ink">
                     Get ready
@@ -548,7 +548,7 @@ const detailsOpen = ref(false);
                 <!-- 1. What should we post? -->
                 <section
                     id="what-to-post"
-                    class="scroll-mt-14 space-y-4 border-t border-snitch-ink/10 pt-6"
+                    class="mt-3 scroll-mt-14 space-y-4"
                 >
                     <header class="space-y-2">
                         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
@@ -590,32 +590,6 @@ const detailsOpen = ref(false);
                         </div>
                     </div>
 
-                    <div
-                        v-if="postingTimeBars.length"
-                        class="rounded border border-snitch-ink/10 bg-snitch-lift p-3"
-                    >
-                        <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
-                            Best posting times
-                        </p>
-                        <ul class="mt-3 space-y-2">
-                            <li
-                                v-for="(slot, slotIndex) in postingTimeBars"
-                                :key="slot.label"
-                                class="grid grid-cols-[7rem_1fr_auto] items-center gap-2"
-                            >
-                                <span class="whitespace-nowrap text-sm font-medium text-snitch-ink">{{ slot.label }}</span>
-                                <div class="snitch-meter h-3">
-                                    <div
-                                        class="h-full rounded-sm"
-                                        :class="slotIndex === 0 ? 'snitch-meter-fill-lead' : 'snitch-meter-fill'"
-                                        :style="{ width: slot.width }"
-                                    />
-                                </div>
-                                <span class="font-mono text-sm tabular-nums text-snitch-ink/70">{{ slot.suffix }}</span>
-                            </li>
-                        </ul>
-                    </div>
-
                     <div id="insights">
                         <ExecTakeaways
                             v-if="takeaways.length"
@@ -629,17 +603,48 @@ const detailsOpen = ref(false);
                         />
                     </div>
 
-                    <div id="caption_intel">
+                    <div
+                        id="caption_intel"
+                        class="grid items-stretch gap-3"
+                        :class="postingTimeBars.length ? 'lg:grid-cols-2' : ''"
+                    >
+                        <div
+                            v-if="postingTimeBars.length"
+                            class="flex h-full min-h-0 flex-col rounded border border-snitch-ink/10 bg-snitch-lift p-3"
+                        >
+                            <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
+                                Best posting times
+                            </p>
+                            <ul class="mt-3 flex flex-1 flex-col justify-evenly gap-3">
+                                <li
+                                    v-for="(slot, slotIndex) in postingTimeBars"
+                                    :key="slot.label"
+                                    class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2"
+                                >
+                                    <span class="whitespace-nowrap text-sm font-medium text-snitch-ink">{{ slot.label }}</span>
+                                    <div class="snitch-meter h-3 min-w-0">
+                                        <div
+                                            class="h-full rounded-sm"
+                                            :class="slotIndex === 0 ? 'snitch-meter-fill-lead' : 'snitch-meter-fill'"
+                                            :style="{ width: slot.width }"
+                                        />
+                                    </div>
+                                    <span class="whitespace-nowrap font-mono text-sm tabular-nums text-snitch-ink/70">{{ slot.suffix }}</span>
+                                </li>
+                            </ul>
+                        </div>
                         <ExecWhatWorks
                             v-if="caption_intel || themes"
+                            class="h-full"
                             :hashtags="caption_intel?.hashtags"
                             :ctas="caption_intel?.ctas"
                             :gaps="themeGaps"
                         />
                         <SnitchSkeleton
                             v-else
+                            class="h-full min-h-[10rem]"
                             variant="scrap"
-                            height="4rem"
+                            height="100%"
                             label="Loading what works"
                         />
                     </div>
@@ -648,7 +653,7 @@ const detailsOpen = ref(false);
                 <!-- 2. How are they performing? -->
                 <section
                     id="performance"
-                    class="scroll-mt-14 space-y-4 border-t border-snitch-ink/10 pt-6"
+                    class="mt-5 scroll-mt-14 space-y-4 border-t border-snitch-ink/10 pt-5"
                 >
                     <header class="space-y-2">
                         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
@@ -798,7 +803,7 @@ const detailsOpen = ref(false);
                 <!-- 3. Are they running ads? -->
                 <section
                     id="ads"
-                    class="scroll-mt-14 space-y-4 border-t border-snitch-ink/10 pt-6"
+                    class="mt-5 scroll-mt-14 space-y-4 border-t border-snitch-ink/10 pt-5"
                 >
                     <header class="space-y-2">
                         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
@@ -880,7 +885,7 @@ const detailsOpen = ref(false);
 
             <div
                 v-else-if="!showOnboarding"
-                class="rounded border border-dashed border-snitch-ink/20 bg-snitch-lift p-8 text-center"
+                class="mt-3 rounded border border-dashed border-snitch-ink/20 bg-snitch-lift p-8 text-center"
             >
                 <h2 class="font-display text-xl font-semibold text-snitch-ink">
                     {{ own_account ? 'No rivals to compare yet' : 'No Instagram competitors yet' }}
@@ -899,7 +904,7 @@ const detailsOpen = ref(false);
             <section
                 v-if="showTrackedBy"
                 id="tracked-by"
-                class="scroll-mt-14 space-y-3 border-t border-snitch-ink/10 pt-6"
+                class="mt-5 scroll-mt-14 space-y-3 border-t border-snitch-ink/10 pt-5"
             >
                 <header>
                     <h2 class="font-display text-2xl font-semibold tracking-tight text-snitch-ink md:text-3xl">
@@ -911,7 +916,7 @@ const detailsOpen = ref(false);
 
             <section
                 id="vote"
-                class="scroll-mt-14 space-y-3 border-t border-snitch-ink/10 pt-6"
+                class="mt-5 scroll-mt-14 space-y-3 border-t border-snitch-ink/10 pt-5"
             >
                 <header>
                     <h2 class="font-display text-2xl font-semibold tracking-tight text-snitch-ink md:text-3xl">

@@ -100,6 +100,15 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('How are they performing?', $dashboard);
         $this->assertStringContainsString('Are they running ads?', $dashboard);
         $this->assertStringContainsString('id="what-to-post"', $dashboard);
+        $this->assertDoesNotMatchRegularExpression(
+            '/id="what-to-post"[^>]*border-t/',
+            $dashboard,
+        );
+        $this->assertStringNotContainsString('space-y-8', $dashboard);
+        $this->assertStringContainsString('id="caption_intel"', $dashboard);
+        $this->assertStringContainsString('items-stretch', $dashboard);
+        $this->assertStringContainsString('grid-cols-[auto_minmax(0,1fr)_auto]', $dashboard);
+        $this->assertStringNotContainsString('grid-cols-[7rem_1fr_auto]', $dashboard);
         $this->assertStringContainsString('id="performance"', $dashboard);
         $this->assertStringContainsString('id="ads"', $dashboard);
         $this->assertStringContainsString('TrackedBySection', $dashboard);

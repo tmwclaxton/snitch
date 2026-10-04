@@ -177,6 +177,8 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('What works', $whatWorks);
         $this->assertStringContainsString('See details', $whatWorks);
         $this->assertStringContainsString('Topics to try', $whatWorks);
+        $this->assertStringContainsString('flex h-full min-h-0 flex-col', $whatWorks);
+        $this->assertStringNotContainsString('md:grid-cols-3', $whatWorks);
         $captions = file_get_contents(base_path('resources/js/components/dashboard/CaptionPanels.vue'));
         $this->assertIsString($captions);
         $this->assertStringContainsString('Caption length vs results', $captions);

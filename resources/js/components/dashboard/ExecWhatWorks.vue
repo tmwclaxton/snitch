@@ -33,12 +33,12 @@ function gapLabel(gap: Gap): string {
 </script>
 
 <template>
-    <section class="rounded border border-snitch-ink/10 bg-snitch-lift p-3">
+    <section class="flex h-full min-h-0 flex-col rounded border border-snitch-ink/10 bg-snitch-lift p-3">
         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
             What works
         </p>
 
-        <div class="mt-3 grid gap-3 md:grid-cols-3">
+        <div class="mt-3 flex flex-1 flex-col justify-evenly gap-3">
             <div>
                 <p class="mb-1.5 text-sm font-medium text-snitch-ink">Hashtags</p>
                 <div class="flex flex-wrap gap-1.5">
@@ -97,7 +97,7 @@ function gapLabel(gap: Gap): string {
             <summary class="cursor-pointer text-sm font-medium text-snitch-ink/70 hover:text-snitch-ink">
                 {{ open ? 'Hide details' : 'See details' }}
             </summary>
-            <div class="mt-2 grid gap-3 border-t border-snitch-ink/10 pt-2 md:grid-cols-3">
+            <div class="mt-2 grid gap-3 border-t border-snitch-ink/10 pt-2">
                 <div class="flex flex-wrap gap-1.5">
                     <span
                         v-for="row in restHashtags"
