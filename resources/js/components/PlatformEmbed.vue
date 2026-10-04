@@ -95,14 +95,6 @@ const usableVideoMediaUrl = computed(() => {
     return props.mediaUrl;
 });
 
-const showPlayHint = computed(
-    () =>
-        props.compact
-        && !interactiveSrc.value
-        && Boolean(props.postUrl)
-        && (Boolean(usableCoverUrl.value) || Boolean(usableStillMediaUrl.value)),
-);
-
 function onMediaError(): void {
     mediaFailed.value = true;
 }
@@ -171,14 +163,6 @@ watch(interactiveSrc, () => {
                 fallback="paper"
             />
         </div>
-
-        <span
-            v-if="showPlayHint"
-            class="snitch-platform-embed-play"
-            aria-hidden="true"
-        >
-            Play
-        </span>
 
         <a
             v-if="postUrl && !interactiveSrc"

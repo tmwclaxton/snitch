@@ -9,7 +9,7 @@ import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import { metricPairs } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
-import { platformIconSrc, productPlatformLabel } from '@/lib/platforms';
+import { platformIconSrc } from '@/lib/platforms';
 import {
     glanceTermChips,
     postPrimaryTitle,
@@ -71,6 +71,37 @@ const captionExpanded = ref(false);
 
 const captionSource = computed(() => props.post.caption?.trim() || '');
 
+const completedHook = computed(() => {
+    if (!analysisCompleted.value) {
+        return null;
+    }
+
+    return props.post.analysis?.hook?.trim() || null;
+});
+
+const completedConcept = computed(() => {
+    if (!analysisCompleted.value) {
+        return null;
+    }
+
+    return props.post.analysis?.concept?.trim() || null;
+});
+
+const hookLine = computed(() => {
+    if (!props.post.caption?.trim() || !completedHook.value) {
+        return null;
+    }
+
+    // Hide seed / OCR junk (e.g. a lone "h") from the glance row.
+    const meaningful = completedHook.value.replace(/[^a-z0-9]/gi, '');
+
+    if (meaningful.length < 2) {
+        return null;
+    }
+
+    return completedHook.value;
+});
+
 const displayCaption = computed(() => {
     if (captionSource.value) {
         return captionSource.value;
@@ -87,30 +118,20 @@ const displayCaption = computed(() => {
 });
 
 const captionNeedsToggle = computed(() => {
-    const raw = captionSource.value;
+    const caption = displayCaption.value;
+    const hook = hookLine.value ?? '';
+    const text = [caption, hook].filter(Boolean).join('\n');
 
-    if (!raw) {
+    if (!text) {
         return false;
     }
 
-    return raw.length > 320 || raw.split(/\n/).length > 8;
+    return text.length > 140 || text.split(/\n/).length > 3;
 });
 
-const completedHook = computed(() => {
-    if (!analysisCompleted.value) {
-        return null;
-    }
-
-    return props.post.analysis?.hook?.trim() || null;
-});
-
-const completedConcept = computed(() => {
-    if (!analysisCompleted.value) {
-        return null;
-    }
-
-    return props.post.analysis?.concept?.trim() || null;
-});
+const showHookLine = computed(
+    () => Boolean(hookLine.value) && !props.compact && (captionExpanded.value || !captionNeedsToggle.value),
+);
 
 const tags = computed(() => {
     if (!analysisCompleted.value) {
@@ -147,21 +168,6 @@ const statusStamp = computed((): { label: string; icon: Component } | null => {
     }
 
     return null;
-});
-
-const hookLine = computed(() => {
-    if (!props.post.caption?.trim() || !completedHook.value) {
-        return null;
-    }
-
-    // Hide seed / OCR junk (e.g. a lone "h") from the glance row.
-    const meaningful = completedHook.value.replace(/[^a-z0-9]/gi, '');
-
-    if (meaningful.length < 2) {
-        return null;
-    }
-
-    return completedHook.value;
 });
 
 const winnerScore = computed(() => {
@@ -202,7 +208,7 @@ function toggleCaption(event: Event): void {
                     decoding="async"
                 >
                 <span class="snitch-contact-cell-platform-text">
-                    {{ productPlatformLabel(platform) }} · {{ postTypeLabel(post.type) }}
+                    {{ postTypeLabel(post.type) }}
                 </span>
             </span>
             <span
@@ -231,6 +237,12 @@ function toggleCaption(event: Event): void {
                     :class="!captionExpanded && captionNeedsToggle ? 'snitch-glance-collapsed' : ''"
                 >
                     {{ displayCaption }}
+                </p>
+                <p
+                    v-if="showHookLine"
+                    class="snitch-glance-hook whitespace-pre-wrap break-words"
+                >
+                    {{ hookLine }}
                 </p>
                 <button
                     v-if="captionNeedsToggle"
@@ -261,13 +273,7 @@ function toggleCaption(event: Event): void {
                 </li>
             </ul>
             <p
-                v-if="hookLine && !compact"
-                class="snitch-glance-hook whitespace-pre-wrap break-words"
-            >
-                {{ hookLine }}
-            </p>
-            <p
-                v-else-if="statusStamp"
+                v-if="statusStamp"
                 class="snitch-glance-status"
             >
                 <component

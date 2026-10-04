@@ -1962,7 +1962,7 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
     }
 
     /*
-     * Wide canvas must not stretch 3/4 stills into posters. Cap each
+     * Wide canvas must not stretch 4/5 stills into posters. Cap each
      * proof frame and let extra columns fill as the sheet grows.
      */
     .snitch-contact-sheet-proof {
@@ -2178,7 +2178,7 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
         background: color-mix(in oklab, var(--snitch-paper) 78%, var(--snitch-lift));
         color: var(--snitch-ink);
         font-family: var(--font-display);
-        font-size: 0.72rem;
+        font-size: 0.875rem;
         letter-spacing: 0.04em;
         line-height: 1.2;
         box-shadow: 1px 1px 0 color-mix(in oklab, var(--snitch-spot) 60%, transparent);
@@ -2193,9 +2193,9 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
         min-width: 0;
         font-size: 0.875rem;
         font-weight: 600;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.02em;
         line-height: 1.25;
-        text-transform: uppercase;
+        text-transform: none;
         color: color-mix(in oklab, var(--snitch-ink) 60%, transparent);
     }
 
@@ -2218,7 +2218,7 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
         background: color-mix(in oklab, var(--snitch-spot) 88%, var(--snitch-lift));
         color: var(--snitch-on-spot);
         font-family: var(--font-display);
-        font-size: 0.7rem;
+        font-size: 0.875rem;
         letter-spacing: 0.03em;
         line-height: 1.2;
         box-shadow: 1px 1px 0 color-mix(in oklab, var(--snitch-ink) 35%, transparent);
@@ -2247,7 +2247,8 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
 
     .snitch-contact-cell-frame {
         position: relative;
-        aspect-ratio: 3 / 4;
+        aspect-ratio: 4 / 5;
+        max-height: 13.5rem;
         overflow: hidden;
         background: #000;
     }
@@ -2301,9 +2302,9 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
         display: flex;
         flex: 1 1 auto;
         flex-direction: column;
-        gap: 0.55rem;
+        gap: 0.3rem;
         min-width: 0;
-        padding: 0.7rem 0.6rem 0.75rem;
+        padding: 0.45rem 0.6rem 0.55rem;
         color: var(--snitch-ink);
         container-type: inline-size;
     }
@@ -2320,7 +2321,7 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
 
     /* Collapse without ellipsis - full caption behind Show more. */
     .snitch-glance-collapsed {
-        max-height: 6.5em; /* ~5 lines at 1.3 */
+        max-height: 3.9em; /* ~3 lines at 1.3 */
         overflow: hidden;
     }
 
@@ -2388,7 +2389,7 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
 
     .snitch-glance-hook {
         margin: 0;
-        font-size: 0.78rem;
+        font-size: 0.875rem;
         line-height: 1.35;
         color: color-mix(in oklab, var(--snitch-ink) 78%, transparent);
     }
@@ -2398,10 +2399,10 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
         align-items: center;
         gap: 0.35rem;
         margin: 0;
-        font-size: 0.62rem;
+        font-size: 0.875rem;
         font-weight: 600;
-        letter-spacing: 0.12em;
-        line-height: 1.1;
+        letter-spacing: 0.06em;
+        line-height: 1.2;
         text-transform: uppercase;
         color: color-mix(in oklab, var(--snitch-ink) 55%, transparent);
     }
@@ -2750,23 +2751,6 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
         justify-content: center;
         padding: 1rem;
         text-align: center;
-    }
-
-    .snitch-platform-embed-play {
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        z-index: 2;
-        transform: translate(-50%, -50%);
-        padding: 0.35rem 0.65rem;
-        background: color-mix(in oklab, var(--snitch-ink) 78%, transparent);
-        color: var(--snitch-paper);
-        font-family: var(--font-display, 'Young Serif', serif);
-        font-size: 0.7rem;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        pointer-events: none;
-        box-shadow: 2px 2px 0 color-mix(in oklab, var(--snitch-spot) 70%, transparent);
     }
 
     .snitch-platform-embed-open {

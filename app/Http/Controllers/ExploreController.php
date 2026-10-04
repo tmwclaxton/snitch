@@ -52,7 +52,7 @@ class ExploreController extends Controller
         $topics = $this->slugList($request, 'topics', 'topic');
         $visualCrafts = $this->slugList($request, 'visual_crafts', 'visual_craft');
         $trackedPlatforms = $this->trackedPlatforms($user);
-        $platform = $this->resolvePlatformFilter($request, $trackedPlatforms);
+        $platform = $this->resolvePlatformFilter($request);
         $sort = $this->resolveSort($request);
         $queryText = $this->nullableString($request->query('q'));
         $customTag = $this->nullableString($request->query('custom_tag'));
@@ -166,27 +166,15 @@ class ExploreController extends Controller
             ->all();
     }
 
-    /**
-     * @param  list<string>  $trackedPlatforms
-     */
-    private function resolvePlatformFilter(Request $request, array $trackedPlatforms): ?string
+    private function resolvePlatformFilter(Request $request): ?string
     {
-        if ($request->query->has('platform')) {
-            $raw = $this->nullableString($request->query('platform'));
+        $raw = $this->nullableString($request->query('platform'));
 
-            if ($raw === null || $raw === 'all') {
-                return null;
-            }
-
-            return in_array($raw, array_column(Platform::cases(), 'value'), true) ? $raw : null;
+        if ($raw === null || $raw === 'all') {
+            return null;
         }
 
-        // First visit (no platform key): default to the sole tracked platform.
-        if (count($trackedPlatforms) === 1) {
-            return $trackedPlatforms[0];
-        }
-
-        return null;
+        return in_array($raw, array_column(Platform::cases(), 'value'), true) ? $raw : null;
     }
 
     private function resolveSort(Request $request): string

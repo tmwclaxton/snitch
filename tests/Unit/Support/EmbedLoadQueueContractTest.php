@@ -29,6 +29,8 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('snitch-glance-collapsed', $source);
         $this->assertStringContainsString('whitespace-pre-wrap break-words', $source);
         $this->assertStringContainsString('POSITIVE_INFINITY', $source);
+        $this->assertStringContainsString('showHookLine', $source);
+        $this->assertStringContainsString('text.length > 140', $source);
         $this->assertDoesNotMatchRegularExpression('/snitch-glance-hook[^>]*(line-clamp|snitch-glance-collapsed)/', $source);
     }
 
@@ -106,6 +108,8 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString("'/embed/captioned/'", $source);
         $this->assertStringContainsString("'/embed/'", $source);
         $this->assertStringContainsString('fallback="paper"', $source);
+        $this->assertStringNotContainsString('snitch-platform-embed-play', $source);
+        $this->assertStringNotContainsString('showPlayHint', $source);
         $this->assertStringNotContainsString('Preview unavailable', $source);
         $this->assertStringNotContainsString('media link expired', $source);
         $this->assertStringNotContainsString('acquireEmbedSlot', $source);
@@ -143,6 +147,15 @@ class EmbedLoadQueueContractTest extends TestCase
             'repeat(auto-fit, minmax(12rem, 1fr))',
             $css,
         );
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-contact-cell-frame\s*\{[^}]*aspect-ratio:\s*4\s*\/\s*5/s',
+            $css,
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-contact-cell-frame\s*\{[^}]*max-height:\s*13\.5rem/s',
+            $css,
+        );
+        $this->assertStringNotContainsString('.snitch-platform-embed-play', $css);
         $this->assertStringNotContainsString('min-height: 14rem', $css);
 
         $dashboard = file_get_contents(base_path('resources/js/pages/Dashboard.vue'));
