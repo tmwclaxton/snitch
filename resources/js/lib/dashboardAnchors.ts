@@ -2,9 +2,10 @@ import { router } from '@inertiajs/vue3';
 
 const WAIT_MS = 2500;
 const POLL_MS = 50;
-const HEADER_OFFSET_PX = 80;
-const REALIGN_MS = [80, 200, 500, 1000, 2000, 3500, 5000];
-const OBSERVE_MS = 6000;
+const HEADER_OFFSET_PX = 64;
+const REALIGN_MS = [80, 250, 600, 1200];
+const REALIGN_WINDOW_MS = 1400;
+const CANCEL_EVENTS = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const;
 
 type JumpHandle = {
     stop: () => void;
@@ -63,57 +64,86 @@ export async function scrollToDashboardAnchor(id: string): Promise<boolean> {
 
     activeJump?.stop();
 
+    let stopped = false;
+    let ignoreScrollUntil = 0;
+    const pendingImages: HTMLImageElement[] = [];
+
     const realign = (): void => {
-        alignToAnchor(el);
-    };
-
-    realign();
-
-    const timers = REALIGN_MS.map((delay) => window.setTimeout(realign, delay));
-
-    document.querySelectorAll('img').forEach((img) => {
-        if (!img.complete) {
-            img.addEventListener('load', realign, { once: true });
-        }
-    });
-
-    const removeFinish = router.on('finish', (event) => {
-        if (event.detail.visit.preserveScroll) {
+        if (stopped) {
             return;
         }
 
-        realign();
-    });
+        ignoreScrollUntil = performance.now() + 80;
+        alignToAnchor(el);
+    };
 
-    let observer: ResizeObserver | null = null;
+    const onUserIntent = (): void => {
+        stop();
+    };
 
-    if (typeof ResizeObserver !== 'undefined') {
-        observer = new ResizeObserver(() => {
-            realign();
-        });
-        observer.observe(el);
-
-        const canvas = document.querySelector('.snitch-app-canvas, .snitch-app-chrome');
-
-        if (canvas instanceof HTMLElement) {
-            observer.observe(canvas);
+    const onScroll = (): void => {
+        if (stopped || performance.now() < ignoreScrollUntil) {
+            return;
         }
-    }
+
+        stop();
+    };
 
     const stop = (): void => {
+        if (stopped) {
+            return;
+        }
+
+        stopped = true;
+
         for (const timer of timers) {
             window.clearTimeout(timer);
         }
 
+        window.clearTimeout(windowTimer);
         removeFinish();
-        observer?.disconnect();
+
+        for (const type of CANCEL_EVENTS) {
+            window.removeEventListener(type, onUserIntent, true);
+        }
+
+        window.removeEventListener('scroll', onScroll, true);
+
+        for (const img of pendingImages) {
+            img.removeEventListener('load', realign);
+        }
 
         if (activeJump?.stop === stop) {
             activeJump = null;
         }
     };
 
-    window.setTimeout(stop, OBSERVE_MS);
+    realign();
+
+    const timers = REALIGN_MS.map((delay) => window.setTimeout(realign, delay));
+    const windowTimer = window.setTimeout(stop, REALIGN_WINDOW_MS);
+
+    document.querySelectorAll('img').forEach((img) => {
+        if (!img.complete) {
+            pendingImages.push(img);
+            img.addEventListener('load', realign, { once: true });
+        }
+    });
+
+    const removeFinish = router.on('finish', (event) => {
+        if (stopped || event.detail.visit.preserveScroll) {
+            return;
+        }
+
+        realign();
+    });
+
+    for (const type of CANCEL_EVENTS) {
+        window.addEventListener(type, onUserIntent, { capture: true, passive: true });
+    }
+
+    window.addEventListener('scroll', onScroll, { capture: true, passive: true });
+
     activeJump = { stop };
 
     return true;

@@ -535,7 +535,7 @@ const detailsOpen = ref(false);
                 <!-- 1. What should we post? -->
                 <section
                     id="what-to-post"
-                    class="mt-3 scroll-mt-20 space-y-4"
+                    class="mt-3 scroll-mt-16 space-y-4"
                 >
                     <header class="space-y-2">
                         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
@@ -657,7 +657,7 @@ const detailsOpen = ref(false);
                 <!-- 2. How are they performing? -->
                 <section
                     id="performance"
-                    class="mt-5 scroll-mt-20 space-y-4 border-t border-snitch-ink/10 pt-5"
+                    class="mt-5 scroll-mt-16 space-y-4 border-t border-snitch-ink/10 pt-5"
                 >
                     <header class="space-y-2">
                         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
@@ -808,7 +808,7 @@ const detailsOpen = ref(false);
                 <!-- 3. Are they running ads? -->
                 <section
                     id="ads"
-                    class="mt-5 scroll-mt-20 space-y-4 border-t border-snitch-ink/10 pt-5"
+                    class="mt-5 scroll-mt-16 space-y-4 border-t border-snitch-ink/10 pt-5"
                 >
                     <header class="space-y-2">
                         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
@@ -909,7 +909,7 @@ const detailsOpen = ref(false);
             <section
                 v-if="showTrackedBy"
                 id="tracked-by"
-                    class="mt-5 scroll-mt-20 space-y-3 border-t border-snitch-ink/10 pt-5"
+                    class="mt-5 scroll-mt-16 space-y-3 border-t border-snitch-ink/10 pt-5"
             >
                 <header>
                     <h2 class="snitch-hero-display text-2xl text-snitch-ink md:text-3xl">
@@ -921,7 +921,7 @@ const detailsOpen = ref(false);
 
             <section
                 id="vote"
-                    class="mt-5 scroll-mt-20 space-y-3 border-t border-snitch-ink/10 pt-5"
+                    class="mt-5 scroll-mt-16 space-y-3 border-t border-snitch-ink/10 pt-5"
             >
                 <header>
                     <h2 class="snitch-hero-display text-2xl text-snitch-ink md:text-3xl">
