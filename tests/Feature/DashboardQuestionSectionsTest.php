@@ -68,12 +68,22 @@ class DashboardQuestionSectionsTest extends TestCase
         $this->assertIsString($css);
         $this->assertStringContainsString('HEADER_OFFSET_PX = 80', $anchors);
         $this->assertStringContainsString('window.scrollTo', $anchors);
+        $this->assertStringContainsString('REALIGN_MS', $anchors);
+        $this->assertStringContainsString('ResizeObserver', $anchors);
         $this->assertStringNotContainsString('snitch-dash-anchor-flash', $anchors);
         $this->assertStringNotContainsString('classList.add', $anchors);
         $this->assertStringNotContainsString('snitch-dash-anchor-flash', $css);
         $this->assertStringContainsString('scroll-margin-top: 5rem', $css);
         $this->assertStringContainsString('#what-to-post:target', $css);
         $this->assertStringContainsString('scroll-mt-20', $dashboard);
+        $this->assertStringContainsString('snitch-section-answer', $dashboard);
+        $this->assertStringNotContainsString('max-w-4xl text-2xl', $dashboard);
+        $this->assertStringContainsString('min-height: calc(100svh - 5rem)', $css);
+        $this->assertStringContainsString('.snitch-section-answer', $css);
+
+        $today = file_get_contents(resource_path('js/pages/today/Index.vue'));
+        $this->assertIsString($today);
+        $this->assertStringContainsString('snitch-section-answer', $today);
     }
 
     public function test_resolve_active_dashboard_section_algorithm(): void

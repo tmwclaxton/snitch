@@ -539,7 +539,7 @@ const detailsOpen = ref(false);
                         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
                             What should we post?
                         </p>
-                        <h2 class="snitch-hero-display max-w-4xl text-2xl text-snitch-ink md:text-3xl">
+                        <h2 class="snitch-hero-display snitch-section-answer text-snitch-ink">
                             <SnitchHighlightedText :text="whatToPostHeadline" />
                         </h2>
                     </header>
@@ -661,7 +661,7 @@ const detailsOpen = ref(false);
                         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
                             How are they performing?
                         </p>
-                        <h2 class="snitch-hero-display max-w-4xl text-2xl text-snitch-ink md:text-3xl">
+                        <h2 class="snitch-hero-display snitch-section-answer text-snitch-ink">
                             <SnitchHighlightedText :text="performanceHeadline" />
                         </h2>
                     </header>
@@ -812,7 +812,7 @@ const detailsOpen = ref(false);
                         <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
                             Are they running ads?
                         </p>
-                        <h2 class="snitch-hero-display max-w-4xl text-2xl text-snitch-ink md:text-3xl">
+                        <h2 class="snitch-hero-display snitch-section-answer text-snitch-ink">
                             <SnitchHighlightedText :text="adsHeadline" />
                         </h2>
                     </header>

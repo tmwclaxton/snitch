@@ -797,6 +797,16 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
         line-height: 1.05;
     }
 
+    /*
+     * Dashboard / Today answer lines: sit on one line at laptop width.
+     * Wrap only when the sentence is longer than the canvas.
+     */
+    .snitch-section-answer {
+        max-width: none;
+        font-size: clamp(1.375rem, 1.375rem + 0.3vw, 1.625rem);
+        line-height: 1.15;
+    }
+
     /* Mono annotation / labels - charcoal for contrast; spot yellow is accents only */
     .snitch-annotation {
         font-family: var(--font-annotation);
@@ -2019,6 +2029,12 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
     #recent_posts,
     #winners {
         scroll-margin-top: 5rem;
+    }
+
+    /* Last dashboard section can scroll its heading under the sticky header. */
+    #vote {
+        min-height: calc(100svh - 5rem);
+        padding-bottom: 3rem;
     }
 
     #what-to-post:target,

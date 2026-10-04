@@ -213,7 +213,7 @@ function formatMix(counts: Record<string, number>): string {
             </header>
 
             <section v-if="brief" class="grid items-start gap-6">
-                <p class="snitch-hero-display text-2xl leading-snug text-snitch-ink sm:text-3xl">
+                <p class="snitch-hero-display snitch-section-answer text-snitch-ink">
                     {{ brief.headline }}
                 </p>
 
