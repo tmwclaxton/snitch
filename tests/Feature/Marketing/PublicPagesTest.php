@@ -298,7 +298,7 @@ class PublicPagesTest extends TestCase
         $this->assertNotFalse($layout);
         $this->assertNotFalse($css);
         $this->assertMatchesRegularExpression('/class="snitch-public-shell dark\b/', $layout);
-        $this->assertMatchesRegularExpression('/html:has\(\.snitch-public-shell\)\s*\{[^}]*background-color:\s*#0e0e10/s', $css);
+        $this->assertMatchesRegularExpression('/html:has\(\.snitch-public-shell\)[^{]*\{[^}]*background-color:\s*#0e0e10/s', $css);
         $this->assertStringContainsString(":root,\n.snitch-light {", $css);
         $this->assertStringContainsString('.snitch-public-shell .snitch-btn {', $css);
 
