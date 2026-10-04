@@ -21,11 +21,13 @@ const props = withDefaults(
         label?: string;
         collapsible?: boolean;
         defaultOpen?: boolean;
+        tight?: boolean;
     }>(),
     {
         label: 'Platform',
         collapsible: false,
         defaultOpen: false,
+        tight: false,
     },
 );
 
@@ -90,10 +92,13 @@ function toggleGroup(): void {
 </script>
 
 <template>
-    <SidebarGroup class="px-2 pb-0 pt-3 first:pt-2.5">
+    <SidebarGroup
+        class="px-2 pb-0"
+        :class="tight ? 'pt-2.5' : 'pt-3 first:pt-2.5'"
+    >
         <SidebarGroupLabel
-            class="mb-1 h-3.5 gap-1 px-2 text-sm leading-none"
-            :class="collapsible ? 'cursor-pointer select-none' : ''"
+            class="h-3.5 gap-1 px-2 text-sm leading-none"
+            :class="[tight ? 'mb-0.5' : 'mb-1', collapsible ? 'cursor-pointer select-none' : '']"
             :as="collapsible ? 'button' : undefined"
             :aria-expanded="collapsible ? open : undefined"
             @click="toggleGroup"

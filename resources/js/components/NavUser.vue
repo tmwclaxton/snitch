@@ -14,6 +14,15 @@ import {
 import UserInfo from '@/components/UserInfo.vue';
 import UserMenuContent from '@/components/UserMenuContent.vue';
 
+withDefaults(
+    defineProps<{
+        compact?: boolean;
+    }>(),
+    {
+        compact: false,
+    },
+);
+
 const page = usePage();
 const user = page.props.auth?.user ?? null;
 </script>
@@ -25,7 +34,8 @@ const user = page.props.auth?.user ?? null;
                 <DropdownMenuTrigger as-child>
                     <SidebarMenuButton
                         size="lg"
-                        class="h-12 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                        class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                        :class="compact ? 'h-10' : 'h-12'"
                         data-test="sidebar-menu-button"
                     >
                         <UserInfo :user="user" />

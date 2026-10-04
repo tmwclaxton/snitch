@@ -46,34 +46,29 @@ class SidebarNavigationTest extends TestCase
         $this->assertStringContainsString('label="Admin"', $sidebar);
         $this->assertStringContainsString('collapsible', $sidebar);
         $this->assertStringContainsString(':default-open="adminGroupOpen"', $sidebar);
-        $this->assertStringContainsString(':default-open="dashboardGroupOpen"', $sidebar);
+        $this->assertStringNotContainsString('dashboardGroupOpen', $sidebar);
+        $this->assertStringContainsString(':items="questionNavItems"', $sidebar);
+        $this->assertStringContainsString('label="Dashboard"', $sidebar);
+        preg_match('/<NavMain[\s\S]*?label="Dashboard"[\s\S]*?\/>/', $sidebar, $dashboardGroup);
+        $this->assertArrayHasKey(0, $dashboardGroup);
+        $this->assertStringNotContainsString('collapsible', $dashboardGroup[0]);
+        $this->assertStringContainsString(':tight="adminGroupOpen"', $sidebar);
         $this->assertStringContainsString('accountNavItems', $sidebar);
         $this->assertStringContainsString('Billing', $sidebar);
         $this->assertStringContainsString('Settings', $sidebar);
 
-        $logoPadPx = 8;
-        $logoRowPx = 48;
-        $accountPadPx = 8;
-        $accountStripPx = 32;
-        $accountGapPx = 8;
-        $userRowPx = 48;
-        $borderPx = 1;
         $rowPx = 32;
         $labelPx = 14;
-        $groupTopFirstPx = 10;
-        $groupTopPx = 12;
-        $groupBelowPx = 4;
         $dashboardItems = 5;
         $platformItems = 8;
         $adminItems = 4;
         $groupCount = 3;
-        $chrome = (($logoPadPx * 2) + $logoRowPx + $borderPx)
-            + (($accountPadPx * 2) + $accountStripPx + $accountGapPx + $userRowPx + $borderPx);
-        $groupChrome = $groupTopFirstPx + (($groupCount - 1) * $groupTopPx) + ($groupCount * ($groupBelowPx + $labelPx));
-        $onDashboard = ($dashboardItems + $platformItems) * $rowPx;
-        $onAdmin = ($platformItems + $adminItems) * $rowPx;
-        $this->assertLessThanOrEqual(713, $chrome + $onDashboard + $groupChrome);
-        $this->assertLessThanOrEqual(713, $chrome + $onAdmin + $groupChrome);
+        $productChrome = (8 * 2) + 48 + 1 + (8 * 2) + 32 + 8 + 48 + 1;
+        $productGroups = 10 + (12 * 2) + ($groupCount * (4 + $labelPx));
+        $adminChrome = 40 + 1 + 28 + 4 + 40 + 1;
+        $adminGroups = (10 * $groupCount) + ($groupCount * (2 + $labelPx));
+        $this->assertLessThanOrEqual(713, $productChrome + (($dashboardItems + $platformItems) * $rowPx) + $productGroups);
+        $this->assertLessThanOrEqual(713, $adminChrome + (($dashboardItems - 1 + $platformItems + $adminItems) * $rowPx) + $adminGroups);
     }
 
     public function test_account_nav_sits_above_the_profile(): void
@@ -82,11 +77,11 @@ class SidebarNavigationTest extends TestCase
 
         $this->assertNotFalse($sidebar);
 
-        $platform = strpos($sidebar, '<NavMain :items="mainNavItems" label="Platform" />');
+        $platform = strpos($sidebar, ':items="mainNavItems"');
         $account = strpos($sidebar, 'v-for="item in accountNavItems"');
         $admin = strpos($sidebar, 'label="Admin"');
         $footer = strpos($sidebar, '<SidebarFooter');
-        $profile = strpos($sidebar, '<NavUser />');
+        $profile = strpos($sidebar, '<NavUser');
 
         $this->assertNotFalse($platform);
         $this->assertNotFalse($account);

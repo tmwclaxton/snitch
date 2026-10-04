@@ -57,9 +57,18 @@ class DashboardQuestionSectionsTest extends TestCase
         $this->assertIsString($nav);
         $this->assertIsString($menu);
         $this->assertStringContainsString('snitch-nav-current', $nav);
-        $this->assertStringContainsString('mb-1 h-3.5 gap-1 px-2 text-sm leading-none', $nav);
-        $this->assertStringContainsString('pt-3 first:pt-2.5', $nav);
+        $this->assertStringContainsString('h-3.5 gap-1 px-2 text-sm leading-none', $nav);
+        $this->assertStringContainsString("tight ? 'mb-0.5' : 'mb-1'", $nav);
+        $this->assertStringContainsString("tight ? 'pt-2.5' : 'pt-3 first:pt-2.5'", $nav);
         $this->assertStringContainsString('collapsible', $nav);
+        $this->assertMatchesRegularExpression(
+            '/<NavMain[\s\S]*?label="Dashboard"[\s\S]*?\/>/',
+            $sidebar,
+        );
+        preg_match('/<NavMain[\s\S]*?label="Dashboard"[\s\S]*?\/>/', $sidebar, $dashboardGroup);
+        $this->assertArrayHasKey(0, $dashboardGroup);
+        $this->assertStringNotContainsString('collapsible', $dashboardGroup[0]);
+        $this->assertStringNotContainsString('dashboardGroupOpen', $sidebar);
         $this->assertStringNotContainsString('[&>span:last-child]:truncate', $menu);
         $this->assertStringContainsString('data-[active=true]:bg-[#fcd700]!', $menu);
         $this->assertStringContainsString('sm: "h-8 py-0 text-sm"', $menu);

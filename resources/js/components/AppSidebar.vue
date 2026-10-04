@@ -56,9 +56,6 @@ const isAdmin = computed(() => Boolean(page.props.auth?.user?.is_admin));
 const adminGroupOpen = computed(
     () => currentUrl.value === '/admin' || currentUrl.value.startsWith('/admin/'),
 );
-const dashboardGroupOpen = computed(
-    () => currentUrl.value === '/dashboard' || currentUrl.value.startsWith('/dashboard?'),
-);
 
 const trackedBy = computed(() => {
     const raw = (page.props as { trackedBy?: { count: number; since?: string | null } | null }).trackedBy;
@@ -207,10 +204,17 @@ const accountNavItems: NavItem[] = [
         variant="sidebar"
         class="border-r border-white/10 bg-black"
     >
-        <SidebarHeader class="shrink-0 border-b border-snitch-ink/10 px-2 py-2">
+        <SidebarHeader
+            class="shrink-0 border-b border-snitch-ink/10 px-2"
+            :class="adminGroupOpen ? 'py-0' : 'py-2'"
+        >
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton size="lg" class="h-12" as-child>
+                    <SidebarMenuButton
+                        size="lg"
+                        :class="adminGroupOpen ? 'h-10' : 'h-12'"
+                        as-child
+                    >
                         <Link :href="home()">
                             <AppLogo />
                         </Link>
@@ -223,21 +227,31 @@ const accountNavItems: NavItem[] = [
             <NavMain
                 :items="questionNavItems"
                 label="Dashboard"
-                collapsible
-                :default-open="dashboardGroupOpen"
+                :tight="adminGroupOpen"
             />
-            <NavMain :items="mainNavItems" label="Platform" />
+            <NavMain
+                :items="mainNavItems"
+                label="Platform"
+                :tight="adminGroupOpen"
+            />
             <NavMain
                 v-if="adminNavItems.length"
                 :items="adminNavItems"
                 label="Admin"
                 collapsible
                 :default-open="adminGroupOpen"
+                :tight="adminGroupOpen"
             />
         </SidebarContent>
 
-        <SidebarFooter class="shrink-0 border-t border-snitch-ink/10 px-2 py-2">
-            <div class="flex h-8 items-center gap-3 px-2 text-sm">
+        <SidebarFooter
+            class="shrink-0 border-t border-snitch-ink/10 px-2"
+            :class="adminGroupOpen ? 'py-0' : 'py-2'"
+        >
+            <div
+                class="flex items-center gap-3 px-2 text-sm"
+                :class="adminGroupOpen ? 'h-7' : 'h-8'"
+            >
                 <Link
                     v-for="item in accountNavItems"
                     :key="item.title"
@@ -248,8 +262,8 @@ const accountNavItems: NavItem[] = [
                     {{ item.title }}
                 </Link>
             </div>
-            <div class="mt-2">
-                <NavUser />
+            <div :class="adminGroupOpen ? 'mt-1' : 'mt-2'">
+                <NavUser :compact="adminGroupOpen" />
             </div>
         </SidebarFooter>
     </Sidebar>
