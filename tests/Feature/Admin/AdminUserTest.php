@@ -113,4 +113,21 @@ class AdminUserTest extends TestCase
         $this->assertSame(1, $result['users']['total']);
         $this->assertSame('FindMe@Example.com', $result['users']['data'][0]['email']);
     }
+
+    public function test_users_index_headers_share_row_grid_and_right_align_balance(): void
+    {
+        $page = file_get_contents(resource_path('js/pages/admin/users/Index.vue'));
+
+        $this->assertNotFalse($page);
+        $this->assertStringContainsString('snitch-admin-users-row', $page);
+        $this->assertStringContainsString('userRowClass', $page);
+        $this->assertStringContainsString('text-right text-sm font-medium', $page);
+        $this->assertStringContainsString('text-right text-sm tabular-nums', $page);
+        $this->assertStringContainsString('planLabel', $page);
+        $this->assertStringContainsString("none: 'None'", $page);
+        $this->assertStringNotContainsString('line-clamp', $page);
+        $this->assertStringNotContainsString('truncate', $page);
+        $this->assertStringNotContainsString('text-xs', $page);
+        $this->assertStringNotContainsString('snitch-ink-label border-b', $page);
+    }
 }

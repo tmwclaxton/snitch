@@ -23,7 +23,7 @@ paths:
 
 Additional web-only admin routes:
 - `GET /admin/activity` (`admin.activity`) - platform activity graphs and merged recent-event log from `credit_ledger_entries`, `mcp_tool_invocations`, `users`, and `post_analyses` (no separate audit table).
-- `GET /admin/users` (`admin.users.index`) - paginated user list with search, plan filter, sort.
+- `GET /admin/users` (`admin.users.index`) - paginated user list with search, plan filter, sort. Header and rows share one `.snitch-admin-users-row` grid (same columns, `px-2 py-2`, 14px). Balance is right-aligned in the header and cells. No truncate. Plan values are plain words (`None`, `Active`).
 - `GET /admin/users/{user}` (`admin.users.show`) - user profile, spend/usage charts, per-user activity log (ledger + MCP).
 - Referral admin (`/admin/referrals`) is hidden. `snitch.show_admin_referrals` is false, those routes 404, and the sidebar has no Referrals item. Public referral attribution still runs. Turn the flag on and restore the sidebar item to bring the screen back.
 

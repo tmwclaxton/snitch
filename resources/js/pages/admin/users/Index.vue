@@ -94,6 +94,22 @@ const sortIndicator = computed(() => (column: string) => {
 
     return props.filters.direction === 'asc' ? ' ↑' : ' ↓';
 });
+
+const userRowClass =
+    'snitch-admin-users-row grid min-w-[48rem] grid-cols-[minmax(11rem,1.4fr)_minmax(7rem,1fr)_minmax(8.5rem,0.95fr)_minmax(6rem,0.7fr)_minmax(5.5rem,0.7fr)_minmax(6rem,0.7fr)_minmax(8.5rem,0.95fr)] items-start gap-x-0';
+
+function planLabel(status: string): string {
+    const labels: Record<string, string> = {
+        none: 'None',
+        active: 'Active',
+        trialing: 'Trial',
+        past_due: 'Past due',
+        cancelled: 'Cancelled',
+        canceled: 'Cancelled',
+    };
+
+    return labels[status] ?? status.replaceAll('_', ' ');
+}
 </script>
 
 <template>
@@ -149,65 +165,145 @@ const sortIndicator = computed(() => (column: string) => {
             </form>
 
             <div class="overflow-x-auto">
-                <table class="w-full min-w-[48rem] text-left text-sm">
-                    <thead>
-                        <tr class="snitch-ink-label border-b border-snitch-ink/10">
-                            <th class="py-2 pr-3 font-normal">
-                                <button type="button" class="hover:text-snitch-ink" @click="toggleSort('email')">
-                                    Email{{ sortIndicator('email') }}
-                                </button>
-                            </th>
-                            <th class="py-2 pr-3 font-normal">
-                                <button type="button" class="hover:text-snitch-ink" @click="toggleSort('name')">
-                                    Name{{ sortIndicator('name') }}
-                                </button>
-                            </th>
-                            <th class="py-2 pr-3 font-normal">
-                                <button type="button" class="hover:text-snitch-ink" @click="toggleSort('created_at')">
-                                    Joined{{ sortIndicator('created_at') }}
-                                </button>
-                            </th>
-                            <th class="py-2 pr-3 font-normal">Plan</th>
-                            <th class="py-2 pr-3 font-normal">
-                                <button type="button" class="hover:text-snitch-ink" @click="toggleSort('balance')">
-                                    Balance{{ sortIndicator('balance') }}
-                                </button>
-                            </th>
-                            <th class="py-2 pr-3 font-normal">Referral</th>
-                            <th class="py-2 font-normal">Last activity</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="row in users.data"
-                            :key="row.id"
-                            class="border-b border-snitch-ink/8 align-top hover:bg-snitch-ink/3"
+                <div
+                    class="w-full"
+                    role="table"
+                    aria-label="Users"
+                >
+                    <div
+                        :class="[userRowClass, 'border-b border-snitch-ink/10']"
+                        role="row"
+                    >
+                        <div
+                            class="px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
+                            role="columnheader"
                         >
-                            <td class="py-2 pr-3">
-                                <Link
-                                    :href="adminUserShow(row.id)"
-                                    class="font-medium underline decoration-snitch-ink/25 underline-offset-2 hover:decoration-snitch-ink"
-                                >
-                                    {{ row.email }}
-                                </Link>
-                            </td>
-                            <td class="py-2 pr-3 text-snitch-ink/80">{{ row.name || '-' }}</td>
-                            <td class="py-2 pr-3 whitespace-nowrap text-snitch-ink/70">{{ formatWhen(row.created_at) }}</td>
-                            <td class="py-2 pr-3">
-                                <span class="snitch-ink-label">{{ row.plan_status }}</span>
-                            </td>
-                            <td class="py-2 pr-3 tabular-nums">{{ formatPenceAsGbp(row.balance_pence) }}</td>
-                            <td class="py-2 pr-3 text-snitch-ink/70">
-                                <span v-if="row.referral_code">{{ row.referral_code }}</span>
-                                <span v-else>-</span>
-                            </td>
-                            <td class="py-2 whitespace-nowrap text-snitch-ink/70">{{ formatWhen(row.last_activity_at) }}</td>
-                        </tr>
-                        <tr v-if="!users.data.length">
-                            <td colspan="7" class="py-3 text-snitch-ink/55">No users match.</td>
-                        </tr>
-                    </tbody>
-                </table>
+                            <button
+                                type="button"
+                                class="w-full text-left hover:text-snitch-ink"
+                                @click="toggleSort('email')"
+                            >
+                                Email{{ sortIndicator('email') }}
+                            </button>
+                        </div>
+                        <div
+                            class="px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
+                            role="columnheader"
+                        >
+                            <button
+                                type="button"
+                                class="w-full text-left hover:text-snitch-ink"
+                                @click="toggleSort('name')"
+                            >
+                                Name{{ sortIndicator('name') }}
+                            </button>
+                        </div>
+                        <div
+                            class="px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
+                            role="columnheader"
+                        >
+                            <button
+                                type="button"
+                                class="w-full text-left hover:text-snitch-ink"
+                                @click="toggleSort('created_at')"
+                            >
+                                Joined{{ sortIndicator('created_at') }}
+                            </button>
+                        </div>
+                        <div
+                            class="px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
+                            role="columnheader"
+                        >
+                            Plan
+                        </div>
+                        <div
+                            class="px-2 py-2 text-right text-sm font-medium text-snitch-ink/70"
+                            role="columnheader"
+                        >
+                            <button
+                                type="button"
+                                class="w-full text-right hover:text-snitch-ink"
+                                @click="toggleSort('balance')"
+                            >
+                                Balance{{ sortIndicator('balance') }}
+                            </button>
+                        </div>
+                        <div
+                            class="px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
+                            role="columnheader"
+                        >
+                            Referral
+                        </div>
+                        <div
+                            class="px-2 py-2 text-left text-sm font-medium text-snitch-ink/70"
+                            role="columnheader"
+                        >
+                            Last activity
+                        </div>
+                    </div>
+                    <div
+                        v-for="row in users.data"
+                        :key="row.id"
+                        :class="[userRowClass, 'border-b border-snitch-ink/8 hover:bg-snitch-ink/3']"
+                        role="row"
+                    >
+                        <div
+                            class="px-2 py-2 text-left text-sm"
+                            role="cell"
+                        >
+                            <Link
+                                :href="adminUserShow(row.id)"
+                                class="font-medium underline decoration-snitch-ink/25 underline-offset-2 hover:decoration-snitch-ink"
+                            >
+                                {{ row.email }}
+                            </Link>
+                        </div>
+                        <div
+                            class="px-2 py-2 text-left text-sm text-snitch-ink/80"
+                            role="cell"
+                        >
+                            {{ row.name || '-' }}
+                        </div>
+                        <div
+                            class="px-2 py-2 text-left text-sm text-snitch-ink/70"
+                            role="cell"
+                        >
+                            {{ formatWhen(row.created_at) }}
+                        </div>
+                        <div
+                            class="px-2 py-2 text-left text-sm"
+                            role="cell"
+                        >
+                            {{ planLabel(row.plan_status) }}
+                        </div>
+                        <div
+                            class="px-2 py-2 text-right text-sm tabular-nums"
+                            role="cell"
+                        >
+                            {{ formatPenceAsGbp(row.balance_pence) }}
+                        </div>
+                        <div
+                            class="px-2 py-2 text-left text-sm text-snitch-ink/70"
+                            role="cell"
+                        >
+                            <span v-if="row.referral_code">{{ row.referral_code }}</span>
+                            <span v-else>-</span>
+                        </div>
+                        <div
+                            class="px-2 py-2 text-left text-sm text-snitch-ink/70"
+                            role="cell"
+                        >
+                            {{ formatWhen(row.last_activity_at) }}
+                        </div>
+                    </div>
+                    <div
+                        v-if="!users.data.length"
+                        class="px-2 py-3 text-sm text-snitch-ink/55"
+                        role="row"
+                    >
+                        No users match.
+                    </div>
+                </div>
             </div>
 
             <nav v-if="users.last_page > 1" class="flex flex-wrap gap-2 pt-2">
@@ -215,7 +311,7 @@ const sortIndicator = computed(() => (column: string) => {
                     <Link
                         v-if="link.url"
                         :href="link.url"
-                        class="border border-snitch-ink/15 px-2 py-1 text-xs"
+                        class="border border-snitch-ink/15 px-2 py-1 text-sm"
                         :class="link.active ? 'snitch-choice-active' : 'text-snitch-ink/70'"
                         preserve-state
                     >
@@ -223,7 +319,7 @@ const sortIndicator = computed(() => (column: string) => {
                     </Link>
                     <span
                         v-else
-                        class="border border-snitch-ink/15 px-2 py-1 text-xs text-snitch-ink/45"
+                        class="border border-snitch-ink/15 px-2 py-1 text-sm text-snitch-ink/45"
                         v-html="link.label"
                     />
                 </template>
