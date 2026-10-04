@@ -3,6 +3,8 @@ import { router } from '@inertiajs/vue3';
 const WAIT_MS = 2500;
 const POLL_MS = 50;
 const HEADER_OFFSET_PX = 80;
+const REALIGN_MS = [120, 400, 900, 1600];
+const OBSERVE_MS = 2500;
 
 function waitForElement(id: string, timeoutMs: number): Promise<HTMLElement | null> {
     const existing = document.getElementById(id);
@@ -36,6 +38,11 @@ function waitForElement(id: string, timeoutMs: number): Promise<HTMLElement | nu
     });
 }
 
+function alignToAnchor(el: HTMLElement, behavior: ScrollBehavior): void {
+    const top = window.scrollY + el.getBoundingClientRect().top - HEADER_OFFSET_PX;
+    window.scrollTo({ top: Math.max(0, top), behavior });
+}
+
 export async function scrollToDashboardAnchor(id: string): Promise<boolean> {
     const el = await waitForElement(id, WAIT_MS);
 
@@ -43,8 +50,36 @@ export async function scrollToDashboardAnchor(id: string): Promise<boolean> {
         return false;
     }
 
-    const top = window.scrollY + el.getBoundingClientRect().top - HEADER_OFFSET_PX;
-    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    alignToAnchor(el, 'auto');
+
+    const realign = (): void => {
+        alignToAnchor(el, 'auto');
+    };
+
+    for (const delay of REALIGN_MS) {
+        window.setTimeout(realign, delay);
+    }
+
+    document.querySelectorAll('img').forEach((img) => {
+        if (!img.complete) {
+            img.addEventListener('load', realign, { once: true });
+        }
+    });
+
+    if (typeof ResizeObserver !== 'undefined') {
+        const observer = new ResizeObserver(() => {
+            realign();
+        });
+        observer.observe(el);
+
+        const canvas = document.querySelector('.snitch-app-canvas');
+
+        if (canvas instanceof HTMLElement) {
+            observer.observe(canvas);
+        }
+
+        window.setTimeout(() => observer.disconnect(), OBSERVE_MS);
+    }
 
     return true;
 }
