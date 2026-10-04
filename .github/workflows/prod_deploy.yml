@@ -283,7 +283,7 @@ jobs:
             SKIP_GHCR_PULL=1 ./deploy-production.sh
           "
 
-      - name: Confirm schedule, refresh user 1 reports, audit
+      - name: Confirm schedule and print snitch:audit
         continue-on-error: true
         run: |
           set -euo pipefail
@@ -293,7 +293,6 @@ jobs:
           APP="snitch-app-${SLOT}"
           echo "LIVE_SLOT=${SLOT}"
           docker exec "$APP" php artisan schedule:list
-          docker exec "$APP" php artisan tinker --execute '$u = \App\Models\User::query()->find(1); $b = app(\App\Services\Growth\MonthlyReportBuilder::class); foreach (["2026-08", "2026-09"] as $m) { $r = $b->persist($u, $b->monthStart($m)); echo $m." id=".$r->id." you_x=".data_get($r->payload, "kpis.avg_multiplier.you")." you_fol=".data_get($r->payload, "kpis.followers.you").PHP_EOL; }'
           docker exec "$APP" php artisan snitch:audit --json || true
           REMOTE
 

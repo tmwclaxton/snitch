@@ -174,5 +174,6 @@ class DataCadenceAndAuditTest extends TestCase
         $this->assertTrue($types->contains('engagement_over_100pct'));
         $this->assertNotSame('fail', $status['monthly_report_consistency']);
         $this->assertNotSame('fail', $status['growth_consistency']);
+        $this->assertNotSame('fail', $status['brief_freshness']);
     }
 }

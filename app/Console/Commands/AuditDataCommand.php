@@ -353,7 +353,9 @@ class AuditDataCommand extends Command
                 $status = $status === 'fail' ? 'fail' : 'warn';
             }
 
-            if (Schema::hasTable('daily_briefs')) {
+            $user = $users->firstWhere('id', $userId);
+
+            if (Schema::hasTable('daily_briefs') && $user?->daily_brief_enabled) {
                 $daily = DB::table('daily_briefs')->where('user_id', $userId)->max('created_at');
                 $dailyAge = $daily === null ? null : round(CarbonImmutable::parse($daily)->diffInHours(now(), true), 1);
                 $row['daily_last_created_at'] = $daily;
