@@ -56,6 +56,9 @@ const isAdmin = computed(() => Boolean(page.props.auth?.user?.is_admin));
 const adminGroupOpen = computed(
     () => currentUrl.value === '/admin' || currentUrl.value.startsWith('/admin/'),
 );
+const dashboardGroupOpen = computed(
+    () => currentUrl.value === '/dashboard' || currentUrl.value.startsWith('/dashboard?'),
+);
 
 const trackedBy = computed(() => {
     const raw = (page.props as { trackedBy?: { count: number; since?: string | null } | null }).trackedBy;
@@ -204,10 +207,10 @@ const accountNavItems: NavItem[] = [
         variant="sidebar"
         class="border-r border-white/10 bg-black"
     >
-        <SidebarHeader class="shrink-0 border-b border-snitch-ink/10 px-1 py-0">
+        <SidebarHeader class="shrink-0 border-b border-snitch-ink/10 px-2 py-2">
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton size="lg" class="h-10" as-child>
+                    <SidebarMenuButton size="lg" class="h-12" as-child>
                         <Link :href="home()">
                             <AppLogo />
                         </Link>
@@ -217,7 +220,12 @@ const accountNavItems: NavItem[] = [
         </SidebarHeader>
 
         <SidebarContent class="min-h-0 flex-1 gap-0 overflow-y-auto">
-            <NavMain :items="questionNavItems" label="Dashboard" />
+            <NavMain
+                :items="questionNavItems"
+                label="Dashboard"
+                collapsible
+                :default-open="dashboardGroupOpen"
+            />
             <NavMain :items="mainNavItems" label="Platform" />
             <NavMain
                 v-if="adminNavItems.length"
@@ -228,8 +236,8 @@ const accountNavItems: NavItem[] = [
             />
         </SidebarContent>
 
-        <SidebarFooter class="shrink-0 border-t border-snitch-ink/10 px-1 py-0">
-            <div class="flex h-7 items-center gap-3 px-2 text-sm">
+        <SidebarFooter class="shrink-0 border-t border-snitch-ink/10 px-2 py-2">
+            <div class="flex h-8 items-center gap-3 px-2 text-sm">
                 <Link
                     v-for="item in accountNavItems"
                     :key="item.title"
@@ -240,7 +248,9 @@ const accountNavItems: NavItem[] = [
                     {{ item.title }}
                 </Link>
             </div>
-            <NavUser />
+            <div class="mt-2">
+                <NavUser />
+            </div>
         </SidebarFooter>
     </Sidebar>
     <slot />

@@ -2,7 +2,7 @@ import { router } from '@inertiajs/vue3';
 
 const WAIT_MS = 2500;
 const POLL_MS = 50;
-const HEADER_OFFSET_PX = 64;
+const HEADER_OFFSET_PX = 72;
 const REALIGN_MS = [80, 250, 600, 1200];
 const REALIGN_WINDOW_MS = 1400;
 const CANCEL_EVENTS = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const;
@@ -45,12 +45,18 @@ function waitForElement(id: string, timeoutMs: number): Promise<HTMLElement | nu
     });
 }
 
-function headingOf(section: HTMLElement): HTMLElement {
-    return section.querySelector('h1, h2') ?? section;
+function landingOf(section: HTMLElement): HTMLElement {
+    const eyebrow = section.querySelector('.snitch-dash-eyebrow');
+
+    if (eyebrow instanceof HTMLElement) {
+        return eyebrow;
+    }
+
+    return section;
 }
 
 function alignToAnchor(section: HTMLElement): void {
-    const target = headingOf(section);
+    const target = landingOf(section);
     const top = window.scrollY + target.getBoundingClientRect().top - HEADER_OFFSET_PX;
     window.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
 }

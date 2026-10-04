@@ -46,35 +46,34 @@ class SidebarNavigationTest extends TestCase
         $this->assertStringContainsString('label="Admin"', $sidebar);
         $this->assertStringContainsString('collapsible', $sidebar);
         $this->assertStringContainsString(':default-open="adminGroupOpen"', $sidebar);
+        $this->assertStringContainsString(':default-open="dashboardGroupOpen"', $sidebar);
         $this->assertStringContainsString('accountNavItems', $sidebar);
         $this->assertStringContainsString('Billing', $sidebar);
         $this->assertStringContainsString('Settings', $sidebar);
 
-        $logoRowPx = 40;
-        $accountStripPx = 28;
-        $userRowPx = 40;
+        $logoPadPx = 8;
+        $logoRowPx = 48;
+        $accountPadPx = 8;
+        $accountStripPx = 32;
+        $accountGapPx = 8;
+        $userRowPx = 48;
         $borderPx = 1;
         $rowPx = 32;
         $labelPx = 14;
         $groupTopFirstPx = 10;
         $groupTopPx = 12;
         $groupBelowPx = 4;
-        $dashboardItemsCollapsed = 5;
-        $dashboardItemsExpanded = 4;
+        $dashboardItems = 5;
         $platformItems = 8;
         $adminItems = 4;
-        $groupCountCollapsed = 3;
-        $groupCountExpanded = 3;
-        $chrome = ($logoRowPx + $borderPx) + ($accountStripPx + $userRowPx + $borderPx);
-        $groupChrome = static function (int $groups) use ($groupTopFirstPx, $groupTopPx, $groupBelowPx, $labelPx): int {
-            $tops = $groupTopFirstPx + ($groups - 1) * $groupTopPx;
-
-            return $tops + ($groups * ($groupBelowPx + $labelPx));
-        };
-        $collapsedItems = $dashboardItemsCollapsed + $platformItems;
-        $expandedItems = $dashboardItemsExpanded + $platformItems + $adminItems;
-        $this->assertLessThanOrEqual(713, $chrome + ($collapsedItems * $rowPx) + $groupChrome($groupCountCollapsed));
-        $this->assertLessThanOrEqual(713, $chrome + ($expandedItems * $rowPx) + $groupChrome($groupCountExpanded));
+        $groupCount = 3;
+        $chrome = (($logoPadPx * 2) + $logoRowPx + $borderPx)
+            + (($accountPadPx * 2) + $accountStripPx + $accountGapPx + $userRowPx + $borderPx);
+        $groupChrome = $groupTopFirstPx + (($groupCount - 1) * $groupTopPx) + ($groupCount * ($groupBelowPx + $labelPx));
+        $onDashboard = ($dashboardItems + $platformItems) * $rowPx;
+        $onAdmin = ($platformItems + $adminItems) * $rowPx;
+        $this->assertLessThanOrEqual(713, $chrome + $onDashboard + $groupChrome);
+        $this->assertLessThanOrEqual(713, $chrome + $onAdmin + $groupChrome);
     }
 
     public function test_account_nav_sits_above_the_profile(): void

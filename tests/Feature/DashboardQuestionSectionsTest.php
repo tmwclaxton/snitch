@@ -68,7 +68,7 @@ class DashboardQuestionSectionsTest extends TestCase
         $css = file_get_contents(resource_path('css/app.css'));
         $this->assertIsString($anchors);
         $this->assertIsString($css);
-        $this->assertStringContainsString('HEADER_OFFSET_PX = 64', $anchors);
+        $this->assertStringContainsString('HEADER_OFFSET_PX = 72', $anchors);
         $this->assertStringContainsString('window.scrollTo', $anchors);
         $this->assertStringContainsString('REALIGN_MS', $anchors);
         $this->assertStringContainsString('REALIGN_WINDOW_MS = 1400', $anchors);
@@ -78,7 +78,9 @@ class DashboardQuestionSectionsTest extends TestCase
         $this->assertStringContainsString("'pointerdown'", $anchors);
         $this->assertStringNotContainsString('ResizeObserver', $anchors);
         $this->assertStringNotContainsString('OBSERVE_MS', $anchors);
-        $this->assertStringContainsString("querySelector('h1, h2')", $anchors);
+        $this->assertStringContainsString("querySelector('.snitch-dash-eyebrow')", $anchors);
+        $this->assertStringNotContainsString("querySelector('h1, h2')", $anchors);
+        $this->assertStringContainsString('snitch-dash-eyebrow', $dashboard);
         $this->assertStringContainsString("router.on('finish'", $anchors);
         $this->assertStringContainsString('preserveScroll', $anchors);
         $this->assertStringContainsString('snitch-dash-anchor-pad', $dashboard);
@@ -88,9 +90,10 @@ class DashboardQuestionSectionsTest extends TestCase
         $this->assertStringNotContainsString('snitch-dash-anchor-flash', $anchors);
         $this->assertStringNotContainsString('classList.add', $anchors);
         $this->assertStringNotContainsString('snitch-dash-anchor-flash', $css);
-        $this->assertStringContainsString('scroll-margin-top: 4rem', $css);
+        $this->assertStringContainsString('scroll-margin-top: 4.5rem', $css);
         $this->assertStringContainsString('#what-to-post:target', $css);
-        $this->assertStringContainsString('scroll-mt-16', $dashboard);
+        $this->assertStringContainsString('scroll-mt-[4.5rem]', $dashboard);
+        $this->assertStringNotContainsString('scroll-mt-16', $dashboard);
         $this->assertStringNotContainsString('scroll-mt-20', $dashboard);
         $this->assertStringContainsString('snitch-section-answer', $dashboard);
         $this->assertStringContainsString('snitch-app-canvas', $dashboard);

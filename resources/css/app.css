@@ -2037,7 +2037,7 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
     #caption_intel,
     #recent_posts,
     #winners {
-        scroll-margin-top: 4rem;
+        scroll-margin-top: 4.5rem;
     }
 
     /* Last dashboard section can scroll its heading under the sticky header. */
