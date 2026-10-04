@@ -5,6 +5,8 @@ type Row = {
     handle: string;
     is_own_account?: boolean;
     er?: number | null;
+    er_reason?: string | null;
+    row_note?: string | null;
     followers?: number | null;
     posts_per_week?: number | null;
 };
@@ -39,7 +41,9 @@ const ranked = computed(() => {
         hasData: row.hasData,
         width: row.hasData ? `${Math.max(8, (Number(row.er) / max) * 100)}%` : '0%',
         label: row.is_own_account ? 'You' : `@${row.handle}`,
-        erLabel: row.hasData ? `${Number(row.er).toFixed(1)}%` : 'no data yet',
+        erLabel: row.hasData
+            ? `${Number(row.er).toFixed(1)}%`
+            : (row.er_reason || row.row_note || 'No measurable engagement yet'),
     }));
 });
 </script>

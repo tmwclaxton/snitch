@@ -267,7 +267,7 @@ function formatKpiValue(card: Record<string, unknown>): string {
     }
 
     if (you == null) {
-        return '-';
+        return 'n/a';
     }
 
     if (unit === 'pct') {
@@ -384,6 +384,8 @@ const leaderboardRows = computed(
         handle: string;
         is_own_account?: boolean;
         er?: number | null;
+        er_reason?: string | null;
+        row_note?: string | null;
         followers?: number | null;
         posts_per_week?: number | null;
     }>,
@@ -687,6 +689,7 @@ const detailsOpen = ref(false);
                                 :label="String(card.label)"
                                 :value="formatKpiValue(card)"
                                 :gap="(card.gap as Gap | null) ?? null"
+                                :note="card.you == null ? (card.reason as string | null) ?? null : null"
                             />
                         </template>
                         <template v-else>

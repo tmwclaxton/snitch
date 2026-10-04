@@ -80,6 +80,58 @@ class ExecutiveDashboardTest extends TestCase
     }
 
     #[Test]
+    public function builder_writes_posting_counts_without_multiples_or_dashes(): void
+    {
+        $brief = app(ExecutiveBriefBuilder::class)->build(
+            ownRow: ['posts_n' => 4],
+            kpis: [
+                'data' => [
+                    'cards' => [
+                        [
+                            'key' => 'er',
+                            'you' => null,
+                            'peer_median' => 0.7,
+                        ],
+                        [
+                            'key' => 'posts_per_week',
+                            'you' => 1.0,
+                            'peer_median' => 3.0,
+                        ],
+                    ],
+                ],
+            ],
+            insights: [
+                'data' => [
+                    'items' => [
+                        [
+                            'text' => 'You posted **4 times in the last 4 weeks**; your competitors post a median of **3 a week**.',
+                            'score' => 2.0,
+                            'n' => 20,
+                            'metric' => '3',
+                        ],
+                    ],
+                ],
+            ],
+            formatLift: ['data' => ['peer_median_lift' => []]],
+            activity: null,
+            bestTimes: null,
+            adsPanel: ['running_ads' => 0, 'recommendation' => ''],
+        );
+
+        $this->assertSame(
+            'You post 1 a week; rivals post 3. Room to publish more.',
+            $brief['performance']['headline'],
+        );
+        $this->assertStringNotContainsString('×', $brief['performance']['headline']);
+        $this->assertStringNotContainsString(' - ', $brief['performance']['headline']);
+        $this->assertSame('3', $brief['what_to_post']['takeaways'][0]['metric']);
+        $this->assertSame(
+            'You posted 4 times in the last 4 weeks; your competitors post a median of 3 a week.',
+            $brief['what_to_post']['takeaways'][0]['text'],
+        );
+    }
+
+    #[Test]
     public function builder_hides_takeaways_with_blank_interpolated_values(): void
     {
         $brief = app(ExecutiveBriefBuilder::class)->build(

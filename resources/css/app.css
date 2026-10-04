@@ -619,9 +619,14 @@ html:has(.snitch-public-shell) {
         font-variant-numeric: tabular-nums;
     }
 
-    .snitch-highlight {
-        background-color: var(--snitch-spot);
-        color: var(--snitch-ink);
+    .snitch-highlight,
+    .snitch-highlight.text-snitch-ink,
+    html.dark .snitch-highlight,
+    html.dark .snitch-highlight.text-snitch-ink,
+    .dark .snitch-highlight,
+    .dark .snitch-highlight.text-snitch-ink {
+        background-color: #ffd60a;
+        color: #141414;
         box-decoration-break: clone;
         -webkit-box-decoration-break: clone;
         padding: 0 0.18em;

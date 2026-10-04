@@ -466,8 +466,10 @@ PROMPT;
                     'label' => 'Change since yesterday',
                     'value' => is_array($change1d) && ($change1d['available'] ?? false)
                         ? (string) ($change1d['change'] ?? 'Unknown')
-                        : (is_array($change1d) ? (string) ($change1d['label'] ?? 'Daily tracking starts today') : 'Daily tracking starts today'),
-                    'note' => is_array($change1d) && ($change1d['available'] ?? false) ? ($change1d['label'] ?? null) : 'Daily tracking starts today',
+                        : (is_array($change1d) ? (string) ($change1d['value'] ?? 'New') : 'New'),
+                    'note' => is_array($change1d)
+                        ? (string) ($change1d['label'] ?? $this->dailyTrackingStartedNote($facts))
+                        : $this->dailyTrackingStartedNote($facts),
                 ],
                 [
                     'label' => 'Your posts this week',
@@ -580,6 +582,21 @@ PROMPT;
         }
 
         return $rows;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    private function dailyTrackingStartedNote(array $facts): string
+    {
+        $date = filled($facts['brief_date'] ?? null)
+            ? CarbonImmutable::parse((string) $facts['brief_date'], DashboardMath::TIMEZONE)
+            : CarbonImmutable::now(DashboardMath::TIMEZONE);
+
+        return sprintf(
+            'Daily tracking started %s; first comparison tomorrow',
+            $date->format('j M'),
+        );
     }
 
     private function maybeMail(User $user, DailyBrief $brief): void

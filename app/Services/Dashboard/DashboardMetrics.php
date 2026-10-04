@@ -1087,13 +1087,14 @@ class DashboardMetrics
             $reason = 'No posts imported yet';
             $youValue = null;
             $display = null;
-        } elseif ($requireN && $you !== null && $sampleN < DashboardMath::MIN_SAMPLE) {
+        } elseif ($requireN && $you !== null && $youValue === null) {
             $status = 'insufficient';
             $hiddenN = (int) ($you['hidden_likes_n'] ?? 0);
             $reason = $sampleN === 0 && $hiddenN > 0
                 ? 'Likes hidden on Instagram'
-                : $this->math->insufficientReason($sampleN);
-            $youValue = null;
+                : ($sampleN === 0
+                    ? 'No measurable engagement yet'
+                    : $this->math->insufficientReason($sampleN));
             $display = $displayKey !== '' ? $display : null;
         } elseif ($you === null) {
             $status = 'insufficient';
@@ -1109,11 +1110,16 @@ class DashboardMetrics
                     'value' => $this->math->round1((float) $youValue - (float) $peerMedian),
                 ];
             } else {
-                $ratio = (float) $youValue / (float) $peerMedian;
+                $youShown = (float) $this->countLabel((float) $youValue);
+                $peerShown = (float) $this->countLabel((float) $peerMedian);
+                $lower = $youShown < $peerShown;
+                $multiplier = $lower
+                    ? ($youShown > 0 ? $peerShown / $youShown : $peerShown)
+                    : ($peerShown > 0 ? $youShown / $peerShown : $youShown);
                 $gap = [
                     'type' => 'x',
-                    'value' => $this->math->round1($ratio),
-                    'lower' => $ratio < 1,
+                    'value' => $this->math->round1($multiplier),
+                    'lower' => $lower,
                 ];
             }
         }
@@ -1156,7 +1162,7 @@ class DashboardMetrics
                 $measurable = (int) ($row['measurable_posts_n'] ?? $n);
                 $hiddenN = (int) ($row['hidden_likes_n'] ?? 0);
                 $noPosts = $n === 0;
-                $erUnavailable = $measurable < DashboardMath::MIN_SAMPLE;
+                $erMissing = $row['er'] === null || $measurable === 0;
 
                 $rowNote = null;
 
@@ -1164,7 +1170,7 @@ class DashboardMetrics
                     $rowNote = 'No posts yet';
                 } elseif ($measurable === 0 && $hiddenN > 0) {
                     $rowNote = 'Likes hidden on Instagram';
-                } elseif ($erUnavailable && $hiddenN > 0) {
+                } elseif ($erMissing && $hiddenN > 0) {
                     $rowNote = "Only {$measurable} posts with visible likes";
                 }
 
@@ -1178,16 +1184,16 @@ class DashboardMetrics
                     'growth_pct' => $row['growth_pct'] === null ? null : $this->math->round1((float) $row['growth_pct']),
                     'posts_per_week' => $noPosts ? null : $this->math->round1((float) $row['posts_per_week']),
                     'consistency' => $row['consistency'],
-                    // Treat unavailable / all-zero measurable samples as null, never 0.00%.
-                    'er' => ($erUnavailable || $row['er'] === null || ($measurable === 0 && (float) ($row['er'] ?? 0) === 0.0))
+                    // Show the computed rate whenever likes are measurable, even below n=5.
+                    'er' => ($erMissing || ($measurable === 0 && (float) ($row['er'] ?? 0) === 0.0))
                         ? null
                         : $this->math->round2($row['er']),
-                    'er_reason' => $erUnavailable || $measurable === 0
+                    'er_reason' => $erMissing
                         ? ($measurable === 0 && $hiddenN > 0
                             ? 'Likes hidden on Instagram'
-                            : ($measurable === 0
-                                ? 'No measurable engagement yet'
-                                : $this->math->insufficientReason($measurable)))
+                            : ($noPosts
+                                ? 'No posts yet'
+                                : 'No measurable engagement yet'))
                         : null,
                     'comments_per_post' => $noPosts ? null : $this->math->round1($row['comments_per_post']),
                     'top_format' => ($noPosts || $measurable === 0) ? null : $row['top_format'],
@@ -2272,6 +2278,11 @@ class DashboardMetrics
             ->get(['id', 'social_account_id', 'caption', 'type', 'metrics', 'posted_at', 'raw_payload']);
 
         return $this->competitorInsights->captionIntel($posts);
+    }
+
+    private function countLabel(float $value): string
+    {
+        return rtrim(rtrim(number_format($value, 1, '.', ''), '0'), '.') ?: '0';
     }
 
     private function compactNumber(int|float $value): string

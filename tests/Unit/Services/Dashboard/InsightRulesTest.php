@@ -56,7 +56,10 @@ class InsightRulesTest extends TestCase
 
         $this->assertNotEmpty($items);
         $this->assertSame('frequency', $items[0]['category']);
-        $this->assertStringContainsString('3.5', $items[0]['text']);
+        $this->assertSame('3.5', $items[0]['metric']);
+        $this->assertStringContainsString('a median of **3.5 a week**', $items[0]['text']);
+        $this->assertStringNotContainsString('×', $items[0]['text']);
+        $this->assertStringNotContainsString('median /week', $items[0]['text']);
     }
 
     public function test_top_returns_at_most_one_per_category(): void

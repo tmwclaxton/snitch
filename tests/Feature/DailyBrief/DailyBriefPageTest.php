@@ -53,6 +53,10 @@ class DailyBriefPageTest extends TestCase
                 ->component('today/Index')
                 ->where('brief.headline', 'Post a Reel tonight.')
                 ->has('history', 1)
+                ->where('brief.big_numbers.1.value', 'New')
+                ->where('brief.big_numbers.1.note', fn (mixed $note): bool => is_string($note)
+                    && str_contains($note, 'Daily tracking started')
+                    && str_contains($note, 'first comparison tomorrow'))
             );
     }
 
@@ -109,5 +113,36 @@ class DailyBriefPageTest extends TestCase
             ->assertRedirect();
 
         $this->assertNull($brief->fresh()->payload['actions'][0]['done_at']);
+    }
+
+    public function test_today_rewrites_legacy_change_since_yesterday_copy(): void
+    {
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        DailyBrief::factory()->for($user)->create([
+            'brief_date' => '2026-10-04',
+            'payload' => [
+                'headline' => 'Post a Reel tonight.',
+                'big_numbers' => [
+                    ['label' => 'Followers', 'value' => '98', 'note' => null],
+                    ['label' => 'Change since yesterday', 'value' => 'Daily tracking starts today', 'note' => 'Daily tracking starts today'],
+                ],
+                'actions' => [],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('today.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('today/Index')
+                ->where('brief.big_numbers.1.value', 'New')
+                ->where('brief.big_numbers.1.note', 'Daily tracking started 4 Oct; first comparison tomorrow')
+            );
+
+        $today = file_get_contents(resource_path('js/pages/today/Index.vue'));
+        $this->assertIsString($today);
+        $this->assertStringContainsString('Action points', $today);
+        $this->assertStringNotContainsString('Action <span class="snitch-highlight">points</span>', $today);
     }
 }

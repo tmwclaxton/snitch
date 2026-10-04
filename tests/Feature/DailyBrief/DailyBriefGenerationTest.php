@@ -53,6 +53,12 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertSame(1, DailyBrief::query()->where('user_id', $user->id)->count());
         $this->assertGreaterThanOrEqual(3, count($first->payload['actions'] ?? []));
         $this->assertLessThanOrEqual(5, count($first->payload['actions'] ?? []));
+
+        $change = collect($first->payload['big_numbers'] ?? [])->firstWhere('label', 'Change since yesterday');
+        $this->assertSame('New', $change['value'] ?? null);
+        $this->assertStringContainsString('Daily tracking started', (string) ($change['note'] ?? ''));
+        $this->assertStringContainsString('first comparison tomorrow', (string) ($change['note'] ?? ''));
+        $this->assertStringNotContainsString('Daily tracking starts today', (string) ($change['value'] ?? ''));
     }
 
     public function test_force_updates_in_place(): void

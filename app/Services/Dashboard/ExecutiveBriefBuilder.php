@@ -101,7 +101,7 @@ class ExecutiveBriefBuilder
         if ($slot !== null) {
             $preposition = preg_match('/^\d{1,2}(am|pm)$/i', $slot) === 1 ? 'around' : 'on';
 
-            return sprintf('Post next %s %s - that slot leads your rivals.', $preposition, $slot);
+            return sprintf('Post next %s %s. That slot leads your rivals.', $preposition, $slot);
         }
 
         return 'Sync more posts to get a clear posting plan.';
@@ -143,23 +143,26 @@ class ExecutiveBriefBuilder
         }
 
         if ($youPpw !== null && $peerPpw !== null && $peerPpw > 0) {
+            $youCount = $this->countLabel($youPpw);
+            $peerCount = $this->countLabel($peerPpw);
+
             if ($youPpw < $peerPpw) {
                 return sprintf(
-                    'You post %s× a week vs rivals at %s× - room to publish more.',
-                    $this->x($youPpw),
-                    $this->x($peerPpw),
+                    'You post %s a week; rivals post %s. Room to publish more.',
+                    $youCount,
+                    $peerCount,
                 );
             }
 
             return sprintf(
-                'You post %s× a week vs rivals at %s×.',
-                $this->x($youPpw),
-                $this->x($peerPpw),
+                'You post %s a week; rivals post %s.',
+                $youCount,
+                $peerCount,
             );
         }
 
         if (is_array($ownRow) && ($ownRow['posts_n'] ?? 0) > 0) {
-            return 'Keep tracking - enough posts to start comparing.';
+            return 'Keep tracking. Enough posts to start comparing.';
         }
 
         return 'Add rivals to see how you compare.';
@@ -210,7 +213,9 @@ class ExecutiveBriefBuilder
                 continue;
             }
 
-            $metric = $this->extractMetric($plain) ?? $this->x((float) ($item['score'] ?? 0)).'×';
+            $metric = filled($item['metric'] ?? null)
+                ? (string) $item['metric']
+                : ($this->extractMetric($plain) ?? $this->x((float) ($item['score'] ?? 0)).'×');
             $text = $this->takeawayLine($plain, $metric);
 
             if ($text === '' || $this->takeawayIncomplete($text)) {
@@ -464,6 +469,11 @@ class ExecutiveBriefBuilder
     private function x(float $value): string
     {
         return number_format($value, $value >= 10 ? 0 : 1);
+    }
+
+    private function countLabel(float $value): string
+    {
+        return rtrim(rtrim(number_format($value, 1, '.', ''), '0'), '.') ?: '0';
     }
 
     private function pct(float $value): string

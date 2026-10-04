@@ -608,7 +608,7 @@ class DailyBriefFactsBuilder
 
     /**
      * @param  Collection<int, FollowerSnapshot>  $snapshots
-     * @return array{from: int|null, to: int|null, change: int|null, from_date: string|null, available: bool, label: string}
+     * @return array{from: int|null, to: int|null, change: int|null, from_date: string|null, available: bool, label: string, value?: string}
      */
     private function followerChange(Collection $snapshots, ?int $now, CarbonImmutable $today, int $days): array
     {
@@ -624,7 +624,11 @@ class DailyBriefFactsBuilder
                 'change' => null,
                 'from_date' => null,
                 'available' => false,
-                'label' => 'Daily tracking starts today',
+                'value' => 'New',
+                'label' => sprintf(
+                    'Daily tracking started %s; first comparison tomorrow',
+                    $today->format('j M'),
+                ),
             ];
         }
 

@@ -12,7 +12,8 @@ namespace App\Services\Dashboard;
  *     n: int,
  *     links_to: string,
  *     detail?: string|null,
- *     post_id?: int|null
+ *     post_id?: int|null,
+ *     metric?: string
  * }
  */
 class InsightRules
@@ -385,17 +386,19 @@ class InsightRules
 
         $weeks = 4;
         $ownCount = (int) round($ownWk * $weeks);
+        $peerLabel = $this->x((float) $peerPostsWk);
 
         return [[
             'category' => 'frequency',
             'text' => sprintf(
-                'You posted **%s in the last 4 weeks**; your competitors post a median **%s×/week**.',
+                'You posted **%s in the last 4 weeks**; your competitors post a median of **%s a week**.',
                 $ownCount === 1 ? 'once' : "{$ownCount} times",
-                $this->x((float) $peerPostsWk),
+                $peerLabel,
             ),
             'score' => (((float) $peerPostsWk / max($ownWk, 0.1)) - 1) * min(1, $n / 20),
             'n' => $n,
             'links_to' => 'rail',
+            'metric' => $peerLabel,
         ]];
     }
 

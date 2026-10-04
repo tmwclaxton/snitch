@@ -237,7 +237,7 @@ function formatMix(counts: Record<string, number>): string {
 
                 <section class="rounded border border-snitch-ink/10 bg-snitch-lift p-4 sm:p-5">
                     <h2 class="snitch-display text-2xl text-snitch-ink">
-                        Action <span class="snitch-highlight">points</span>
+                        Action points
                     </h2>
                     <ul class="mt-4 grid items-start gap-4">
                         <li

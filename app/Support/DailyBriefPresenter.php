@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Mcp\Support\McpAppUrls;
 use App\Models\DailyBrief;
 use App\Services\Dashboard\DashboardMath;
+use Carbon\CarbonImmutable;
 
 class DailyBriefPresenter
 {
@@ -14,6 +15,7 @@ class DailyBriefPresenter
     public function payload(DailyBrief $brief): array
     {
         $payload = is_array($brief->payload) ? $brief->payload : [];
+        $payload = $this->normalizeChangeSinceYesterday($payload, $brief);
 
         return [
             ...$payload,
@@ -106,5 +108,48 @@ class DailyBriefPresenter
     public static function appUrl(?string $date = null): string
     {
         return McpAppUrls::today($date);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function normalizeChangeSinceYesterday(array $payload, DailyBrief $brief): array
+    {
+        $numbers = $payload['big_numbers'] ?? [];
+
+        if (! is_array($numbers)) {
+            return $payload;
+        }
+
+        $started = $brief->brief_date?->timezone(DashboardMath::TIMEZONE)
+            ?? CarbonImmutable::now(DashboardMath::TIMEZONE);
+        $note = sprintf(
+            'Daily tracking started %s; first comparison tomorrow',
+            $started->format('j M'),
+        );
+
+        foreach ($numbers as $index => $row) {
+            if (! is_array($row) || ($row['label'] ?? '') !== 'Change since yesterday') {
+                continue;
+            }
+
+            $value = trim((string) ($row['value'] ?? ''));
+            $existingNote = trim((string) ($row['note'] ?? ''));
+            $legacy = $value === 'Daily tracking starts today'
+                || $existingNote === 'Daily tracking starts today'
+                || str_contains($value, 'Daily tracking starts');
+
+            if (! $legacy) {
+                continue;
+            }
+
+            $numbers[$index]['value'] = 'New';
+            $numbers[$index]['note'] = $note;
+        }
+
+        $payload['big_numbers'] = array_values($numbers);
+
+        return $payload;
     }
 }

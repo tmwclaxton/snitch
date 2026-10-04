@@ -66,8 +66,8 @@ const gapLabel = computed(() => {
         return `${sign}${numberFmt.format(props.gap.value)} points`;
     }
 
-    if (props.gap.lower || props.gap.value < 1) {
-        return `${numberFmt.format(1 / Math.max(props.gap.value, 0.01))}× lower`;
+    if (props.gap.lower) {
+        return `${numberFmt.format(props.gap.value)}× lower`;
     }
 
     return `${numberFmt.format(props.gap.value)}× rivals`;
@@ -84,7 +84,7 @@ const gapClass = computed(() => {
             : 'bg-snitch-alert text-snitch-paper';
     }
 
-    return props.gap.lower || props.gap.value < 1
+    return props.gap.lower
         ? 'bg-snitch-alert text-snitch-paper'
         : 'snitch-highlight';
 });

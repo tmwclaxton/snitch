@@ -25,7 +25,7 @@ class DailyBriefFactory extends Factory
                 'headline' => 'Post one short Reel tonight and reply to yesterday\'s comments.',
                 'big_numbers' => [
                     ['label' => 'Followers', 'value' => '98', 'note' => 'Weekly change not yet daily'],
-                    ['label' => 'Change since yesterday', 'value' => 'Daily tracking starts today', 'note' => null],
+                    ['label' => 'Change since yesterday', 'value' => 'New', 'note' => 'Daily tracking started '.now('Europe/London')->format('j M').'; first comparison tomorrow'],
                     ['label' => 'Your posts this week', 'value' => '3', 'note' => null],
                     ['label' => 'Competitor posts in the last day', 'value' => '2', 'note' => null],
                 ],
