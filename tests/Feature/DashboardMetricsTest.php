@@ -97,7 +97,7 @@ class DashboardMetricsTest extends TestCase
             );
     }
 
-    public function test_insufficient_sample_never_returns_zero_percent_er(): void
+    public function test_small_measurable_sample_still_returns_engagement_rate(): void
     {
         $user = User::factory()->onTrial()->create();
         BrandProfile::factory()->for($user)->create();
@@ -126,13 +126,13 @@ class DashboardMetricsTest extends TestCase
         $payload = app(DashboardMetrics::class)->forUser($user, ['tinyrival'], 30);
         $erCard = collect($payload['kpis']['data']['cards'])->firstWhere('key', 'er');
 
-        $this->assertSame('insufficient', $erCard['status']);
-        $this->assertNull($erCard['you']);
-        $this->assertStringContainsString('from 3 posts', (string) $erCard['reason']);
+        $this->assertSame('ok', $erCard['status']);
+        $this->assertSame(6.67, $erCard['you']);
+        $this->assertNull($erCard['reason']);
 
         $ownRow = collect($payload['leaderboard']['data']['rows'])->firstWhere('is_own_account', true);
-        $this->assertNull($ownRow['er']);
-        $this->assertStringContainsString('from 3 posts', (string) $ownRow['er_reason']);
+        $this->assertSame(6.67, $ownRow['er']);
+        $this->assertNull($ownRow['er_reason']);
     }
 
     public function test_unknown_followers_show_as_null_not_zero(): void
