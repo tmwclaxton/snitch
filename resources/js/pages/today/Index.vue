@@ -65,6 +65,7 @@ type CompetitorMove = {
     standout_winners: PostRow[];
     quiet: boolean;
     sync_empty: boolean;
+    sync_failed?: boolean;
     sync_status: string | null;
     days_since_last_post: number | null;
 };
@@ -85,7 +86,7 @@ type Brief = {
     trends: string[];
     ads: { items: Array<{ handle: string; title: string | null; url: string | null }>; empty_label: string };
     watch: string[];
-    data_freshness: Array<{ handle: string | null; last_synced_at: string | null; sync_status: string | null; sync_empty: boolean }>;
+    data_freshness: Array<{ handle: string | null; last_synced_at: string | null; sync_status: string | null; sync_empty: boolean; sync_failed?: boolean }>;
     generated_at: string | null;
 };
 
@@ -366,7 +367,10 @@ function formatMix(counts: Record<string, number>): string {
                                 class="rounded border border-snitch-ink/10 bg-snitch-paper p-3"
                             >
                                 <p class="text-base font-medium text-snitch-ink">@{{ move.handle }}</p>
-                                <p v-if="move.sync_empty" class="mt-1 text-sm text-snitch-ink/80">
+                                <p v-if="move.sync_failed" class="mt-1 text-sm text-snitch-ink/80">
+                                    Last refresh failed, so we cannot say this account is quiet.
+                                </p>
+                                <p v-else-if="move.sync_empty" class="mt-1 text-sm text-snitch-ink/80">
                                     Snitch has never been able to load posts for this account.
                                 </p>
                                 <p v-else-if="move.quiet" class="mt-1 text-sm text-snitch-ink/80">
@@ -425,7 +429,8 @@ function formatMix(counts: Record<string, number>): string {
                         <li v-for="row in brief.data_freshness" :key="row.handle ?? 'unknown'">
                             @{{ row.handle }}: {{ row.sync_status ?? 'unknown' }}
                             <span v-if="row.last_synced_at">, last synced {{ row.last_synced_at }}</span>
-                            <span v-if="row.sync_empty">, empty sync</span>
+                            <span v-if="row.sync_failed">, refresh failed</span>
+                            <span v-else-if="row.sync_empty">, empty sync</span>
                         </li>
                     </ul>
                 </details>

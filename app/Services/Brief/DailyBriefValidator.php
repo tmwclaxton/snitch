@@ -241,8 +241,12 @@ class DailyBriefValidator
     {
         $handles = [];
 
-        foreach ($facts['allowed_handles'] ?? [] as $handle) {
-            $normalised = $this->normaliseHandle((string) $handle);
+        foreach ([
+            ...$this->handleCandidates($facts['allowed_handles'] ?? []),
+            ...$this->handleCandidates($facts['brand']['own_handles'] ?? []),
+            ...$this->handleCandidates($facts['own']['handle'] ?? null),
+        ] as $handle) {
+            $normalised = $this->normaliseHandle($handle);
             if ($normalised !== '') {
                 $handles[] = $normalised;
             }
@@ -287,7 +291,7 @@ class DailyBriefValidator
      */
     public function handlesInText(string $text): array
     {
-        preg_match_all('/@([A-Za-z0-9._]+)/u', $text, $matches);
+        preg_match_all('/@([A-Za-z0-9._]*[A-Za-z0-9_])/u', $text, $matches);
 
         return array_values(array_unique(array_map(
             fn (string $handle): string => $this->normaliseHandle($handle),
@@ -300,7 +304,8 @@ class DailyBriefValidator
      */
     public function numbersInText(string $text): array
     {
-        preg_match_all('/\d[\d,.]*%?x?/u', $text, $matches);
+        $withoutClocks = preg_replace('/\b\d{1,2}:\d{2}\b/', ' ', $text) ?? $text;
+        preg_match_all('/\d[\d,.]*%?x?/u', $withoutClocks, $matches);
 
         return array_values(array_unique($matches[0] ?? []));
     }
@@ -374,10 +379,31 @@ class DailyBriefValidator
     {
         $errors = [];
         $dailyPosters = $this->dailyPosterHandles($facts);
+        $almostDailyPosters = $this->almostDailyPosterHandles($facts);
         $handles = $this->allowedHandles($facts);
         $sentences = preg_split('/(?:\R+|(?<=[.!?])\s+)/u', $text) ?: [$text];
 
         foreach ($sentences as $sentence) {
+            if ($this->claimsAlmostDailyPosting($sentence)) {
+                $mentioned = $this->handlesMentionedIn($sentence, $handles);
+
+                if ($mentioned === []) {
+                    if ($almostDailyPosters === []) {
+                        $errors[] = 'unsupported almost-daily claim';
+                    }
+
+                    continue;
+                }
+
+                foreach ($mentioned as $handle) {
+                    if (! in_array($handle, $almostDailyPosters, true)) {
+                        $errors[] = 'unsupported almost-daily claim for @'.$handle;
+                    }
+                }
+
+                continue;
+            }
+
             if (! $this->claimsDailyPosting($sentence)) {
                 continue;
             }
@@ -436,6 +462,44 @@ class DailyBriefValidator
         return array_values(array_unique($handles));
     }
 
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return list<string>
+     */
+    public function almostDailyPosterHandles(array $facts): array
+    {
+        $handles = [];
+
+        foreach ($facts['cadence'] ?? [] as $row) {
+            if (! is_array($row) || ! $this->cadenceLooksAlmostDaily($row)) {
+                continue;
+            }
+
+            $normalised = $this->normaliseHandle((string) ($row['handle'] ?? ''));
+            if ($normalised !== '') {
+                $handles[] = $normalised;
+            }
+        }
+
+        foreach ([$facts['own'] ?? null, ...($facts['competitors'] ?? [])] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $cadence = is_array($row['cadence'] ?? null) ? $row['cadence'] : [];
+            if (! $this->cadenceLooksAlmostDaily($cadence)) {
+                continue;
+            }
+
+            $normalised = $this->normaliseHandle((string) ($row['handle'] ?? ''));
+            if ($normalised !== '') {
+                $handles[] = $normalised;
+            }
+        }
+
+        return array_values(array_unique($handles));
+    }
+
     public function claimsDailyPosting(string $text): bool
     {
         if (preg_match('/\b(?:posts?|posting|posted)\s+(?:daily|every\s+day)\b/i', $text) === 1) {
@@ -448,6 +512,55 @@ class DailyBriefValidator
 
         return preg_match('/\bevery\s+day\b/i', $text) === 1
             && preg_match('/\b(?:posts?|posting|posted)\b/i', $text) === 1;
+    }
+
+    public function claimsAlmostDailyPosting(string $text): bool
+    {
+        if (preg_match('/\b(?:almost|nearly|practically|pretty\s+much)\s+(?:daily|every\s+day)\b/i', $text) === 1) {
+            return true;
+        }
+
+        return preg_match('/\b(?:posts?|posting|posted)\s+most\s+days\b/i', $text) === 1
+            || (
+                preg_match('/\bmost\s+days\b/i', $text) === 1
+                && preg_match('/\b(?:posts?|posting|posted)\b/i', $text) === 1
+            );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function handleCandidates(mixed $value): array
+    {
+        if (is_string($value) || is_numeric($value)) {
+            return [(string) $value];
+        }
+
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $handles = [];
+
+        foreach ($value as $item) {
+            if (is_string($item) || is_numeric($item)) {
+                $handles[] = (string) $item;
+            }
+        }
+
+        return $handles;
+    }
+
+    /**
+     * @param  array<string, mixed>  $cadence
+     */
+    private function cadenceLooksAlmostDaily(array $cadence): bool
+    {
+        if (($cadence['posted_almost_daily_last_7'] ?? false) || ($cadence['posted_every_day_last_7'] ?? false)) {
+            return true;
+        }
+
+        return (int) ($cadence['distinct_days_posted_last_7'] ?? 0) >= 6;
     }
 
     /**

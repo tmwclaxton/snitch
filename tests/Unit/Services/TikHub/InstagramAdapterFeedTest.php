@@ -142,6 +142,51 @@ class InstagramAdapterFeedTest extends TestCase
         $this->assertArrayNotHasKey('like_count_hidden', $carousel['metrics']);
     }
 
+    public function test_list_recent_posts_throws_when_feeds_fail_instead_of_returning_empty(): void
+    {
+        config([
+            'snitch.tikhub.api_key' => 'tikhub-key',
+            'snitch.tikhub.base_url' => 'https://api.tikhub.test',
+        ]);
+
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.tikhub.test/*' => Http::response(['detail' => 'Request failed.'], 500),
+        ]);
+
+        $adapter = new InstagramAdapter(app(TikHubClient::class));
+
+        $this->expectException(\RuntimeException::class);
+        $adapter->listRecentPosts('fuss.london', 6);
+    }
+
+    public function test_list_recent_posts_keeps_reels_when_posts_feed_fails(): void
+    {
+        config([
+            'snitch.tikhub.api_key' => 'tikhub-key',
+            'snitch.tikhub.base_url' => 'https://api.tikhub.test',
+            'snitch.sync.recency_days' => 30,
+        ]);
+
+        $reelsFixture = $this->fixtureWithRecentDates(
+            'instagram_user_reels_old_only.json',
+            [
+                'DUPEREEL' => 4,
+            ],
+        );
+
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.tikhub.test/api/v1/instagram/v2/fetch_user_posts*' => Http::response(['detail' => 'Request failed.'], 500),
+            'https://api.tikhub.test/api/v1/instagram/v2/fetch_user_reels*' => Http::response($reelsFixture),
+        ]);
+
+        $adapter = new InstagramAdapter(app(TikHubClient::class));
+        $posts = $adapter->listRecentPosts('fuss.london', 20, CarbonImmutable::now()->subDays(30));
+
+        $this->assertSame(['DUPEREEL'], array_map(fn (array $post): string => (string) $post['external_id'], $posts));
+    }
+
     public function test_map_post_types_product_type_clips_as_reel(): void
     {
         $adapter = new InstagramAdapter($this->createMock(TikHubClient::class));

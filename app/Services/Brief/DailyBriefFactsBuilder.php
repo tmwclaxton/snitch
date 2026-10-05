@@ -85,7 +85,11 @@ class DailyBriefFactsBuilder
         $timing = $this->bestTimes($user, $londonDate);
         $unusedIdeas = $this->unusedWeeklyIdeas($user);
         $formatMix = $this->formatMix($ownFacts, $competitorFacts);
-        $handles = $this->handles($accounts);
+        $ownHandles = $this->ownHandlesFromBrand($brand);
+        $handles = array_values(array_unique([
+            ...$this->handles($accounts),
+            ...$ownHandles,
+        ]));
 
         $facts = [
             'timezone' => DashboardMath::TIMEZONE,
@@ -97,6 +101,7 @@ class DailyBriefFactsBuilder
                 'name' => $brand?->name,
                 'description' => $brand?->description,
                 'competitor_brief' => $brand?->competitor_brief,
+                'own_handles' => $ownHandles,
             ],
             'allowed_handles' => $handles,
             'own' => $ownFacts,
@@ -127,6 +132,27 @@ class DailyBriefFactsBuilder
             ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function ownHandlesFromBrand(?BrandProfile $brand): array
+    {
+        $handles = [];
+
+        foreach ($brand?->own_handles ?? [] as $handle) {
+            if (! is_string($handle) && ! is_numeric($handle)) {
+                continue;
+            }
+
+            $normalised = $this->normaliseHandle((string) $handle);
+            if ($normalised !== '') {
+                $handles[] = $normalised;
+            }
+        }
+
+        return array_values(array_unique($handles));
     }
 
     /**
@@ -173,9 +199,13 @@ class DailyBriefFactsBuilder
             $daysSinceLast = $lastLondon === null ? null : (int) $lastLondon->startOfDay()->diffInDays($today);
         }
 
-        $quiet = $daysSinceLast !== null && $daysSinceLast >= 14;
         $syncStatus = (string) ($account->last_sync_status ?? '');
-        $emptySync = $syncStatus === 'empty' || ($syncStatus !== '' && $accountPosts->isEmpty() && $lastPostedAt === null);
+        $syncFailed = $syncStatus === 'failed';
+        $emptySync = ! $syncFailed
+            && $syncStatus === 'empty'
+            && $accountPosts->isEmpty()
+            && $lastPostedAt === null;
+        $quiet = ! $syncFailed && $daysSinceLast !== null && $daysSinceLast >= 14;
 
         $winners = $this->standoutWinners($account, $accountPosts, $today);
         $ads = $this->activeAds($socialId, $today);
@@ -216,6 +246,7 @@ class DailyBriefFactsBuilder
             'quiet' => $quiet,
             'sync_status' => $syncStatus === '' ? null : $syncStatus,
             'sync_empty' => $emptySync,
+            'sync_failed' => $syncFailed,
             'last_synced_at' => $account->last_synced_at?->timezone(DashboardMath::TIMEZONE)->toIso8601String(),
             'cadence' => $this->cadenceForAccount($posts7, $daysSinceLast, $lastPost instanceof Post ? $this->londonPostLabel($lastPost) : null, $today),
         ];
@@ -633,6 +664,7 @@ class DailyBriefFactsBuilder
             'distinct_days_posted_last_7' => count($postedDays),
             'posted_days_last_7' => $postedDays,
             'posted_every_day_last_7' => count($postedDays) === 7,
+            'posted_almost_daily_last_7' => count($postedDays) >= 6,
         ];
     }
 
@@ -657,6 +689,7 @@ class DailyBriefFactsBuilder
                 'days_since_last_post' => $cadence['days_since_last_post'] ?? $row['days_since_last_post'] ?? null,
                 'distinct_days_posted_last_7' => (int) ($cadence['distinct_days_posted_last_7'] ?? 0),
                 'posted_every_day_last_7' => (bool) ($cadence['posted_every_day_last_7'] ?? false),
+                'posted_almost_daily_last_7' => (bool) ($cadence['posted_almost_daily_last_7'] ?? ((int) ($cadence['distinct_days_posted_last_7'] ?? 0) >= 6)),
             ];
         }
 

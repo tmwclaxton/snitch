@@ -182,8 +182,12 @@ Rules:
 - hook is the literal first line, max 12 words. Never quote a scene description.
 - When likes are hidden, say "likes hidden" or use views vs their usual. Never print null or 0x.
 - Prefer "times their usual" over jargon.
-- Cadence is in facts.cadence: posts_last_7d, days_since_last_post, distinct_days_posted_last_7, posted_every_day_last_7.
-- Do not say an account posts daily or every day unless that handle has posted_every_day_last_7 true. Use the 7-day count and days since last post instead.
+- Cadence is in facts.cadence: posts_last_7d, days_since_last_post, distinct_days_posted_last_7, posted_every_day_last_7, posted_almost_daily_last_7.
+- Brand and own-account handles in facts.brand.own_handles and facts.own.handle are always allowed, even if they also appear in facts.allowed_handles.
+- Do not say an account posts daily or every day unless that handle has posted_every_day_last_7 true.
+- Do not say almost daily, nearly daily, almost every day, or posts most days unless posted_almost_daily_last_7 is true (6 or 7 distinct days with a post in the last 7).
+- Use the 7-day count and days since last post instead of a cadence adjective.
+- If sync_failed is true, say the refresh failed. Do not say the account is quiet or has not posted recently.
 PROMPT;
 
         if ($violations === null || $violations === []) {
@@ -275,14 +279,30 @@ PROMPT;
             'related_post_ids' => is_array($hit) && isset($hit['post_id']) ? [(int) $hit['post_id']] : [],
         ];
 
+        $failed = [];
         $quiet = [];
         foreach ($facts['competitors'] ?? [] as $row) {
-            if (($row['quiet'] ?? false) || ($row['sync_empty'] ?? false)) {
+            if ($row['sync_failed'] ?? false) {
+                $failed[] = $row;
+            } elseif (($row['quiet'] ?? false) || ($row['sync_empty'] ?? false)) {
                 $quiet[] = $row;
             }
         }
 
-        if ($quiet !== []) {
+        if ($failed !== []) {
+            $firstFailed = $failed[0];
+            $fHandle = (string) ($firstFailed['handle'] ?? '');
+            $actions[] = [
+                'title' => 'Check why @'.$fHandle.' failed to refresh.',
+                'why' => 'The last sync for @'.$fHandle.' failed, so we cannot say they have gone quiet.',
+                'how' => 'Open the competitor page and run sync again, or replace the handle if it is wrong.',
+                'when' => null,
+                'format' => 'Engage',
+                'hook' => null,
+                'related_handles' => $fHandle !== '' ? [$fHandle] : [],
+                'related_post_ids' => [],
+            ];
+        } elseif ($quiet !== []) {
             $firstQuiet = $quiet[0];
             $qHandle = (string) ($firstQuiet['handle'] ?? '');
             $actions[] = [
@@ -329,6 +349,19 @@ PROMPT;
             ];
         }
 
+        if (count($actions) < 3) {
+            $actions[] = [
+                'title' => 'Reply to two comments on your last post.',
+                'why' => '@'.$handle.' posted '.$posts7.' times in the last 7 days.',
+                'how' => 'Reply in the comments, then share the post to your Story.',
+                'when' => null,
+                'format' => 'Engage',
+                'hook' => null,
+                'related_handles' => $handle !== 'your account' ? [$handle] : [],
+                'related_post_ids' => [],
+            ];
+        }
+
         $ownSummary = $followers === null
             ? 'Follower history is still thin for @'.$handle.'.'
             : '@'.$handle.' has '.$followers.' followers and posted '.$posts7.' times in the last 7 days.';
@@ -364,7 +397,9 @@ PROMPT;
                 continue;
             }
 
-            if ($row['sync_empty'] ?? false) {
+            if ($row['sync_failed'] ?? false) {
+                $watch[] = '@'.$handle.' could not be refreshed. Do not treat this as silence until a sync succeeds.';
+            } elseif ($row['sync_empty'] ?? false) {
                 $watch[] = '@'.$handle.' returned no posts. Check the handle is right and the account is public, or swap in a more active competitor.';
             } elseif ($row['quiet'] ?? false) {
                 $days = (int) ($row['days_since_last_post'] ?? 14);
@@ -433,8 +468,9 @@ PROMPT;
                 'posts_last_7d_by_format' => $row['posts_last_7d_by_format'],
                 'posts_last_7d' => $row['posts_last_7d'],
                 'standout_winners' => $row['standout_winners'],
-                'quiet' => $row['quiet'],
-                'sync_empty' => $row['sync_empty'],
+                'quiet' => $row['quiet'] ?? false,
+                'sync_empty' => $row['sync_empty'] ?? false,
+                'sync_failed' => $row['sync_failed'] ?? false,
                 'sync_status' => $row['sync_status'],
                 'days_since_last_post' => $row['days_since_last_post'],
             ];
@@ -579,6 +615,7 @@ PROMPT;
                 'last_synced_at' => $row['last_synced_at'] ?? null,
                 'sync_status' => $row['sync_status'] ?? null,
                 'sync_empty' => $row['sync_empty'] ?? false,
+                'sync_failed' => $row['sync_failed'] ?? false,
             ];
         }
 

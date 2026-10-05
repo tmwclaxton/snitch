@@ -317,6 +317,205 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertSame(3, $row['days_since_last_post'] ?? null);
         $this->assertSame(4, $row['distinct_days_posted_last_7'] ?? null);
         $this->assertFalse($row['posted_every_day_last_7'] ?? true);
+        $this->assertFalse($row['posted_almost_daily_last_7'] ?? true);
+    }
+
+    public function test_validator_rejects_almost_daily_claims_the_cadence_does_not_support(): void
+    {
+        $facts = [
+            'allowed_handles' => ['sobersocial_'],
+            'allowed_post_ids' => [],
+            'cadence' => [
+                [
+                    'handle' => 'sobersocial_',
+                    'posts_last_7d' => 4,
+                    'days_since_last_post' => 1,
+                    'distinct_days_posted_last_7' => 4,
+                    'posted_every_day_last_7' => false,
+                    'posted_almost_daily_last_7' => false,
+                ],
+            ],
+        ];
+
+        $result = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => 'ok',
+            'watch' => ['@sobersocial_ posts almost daily'],
+        ], $facts);
+
+        $this->assertFalse($result['ok']);
+        $this->assertContains('unsupported almost-daily claim for @sobersocial_', $result['errors']);
+
+        $facts['cadence'][0]['distinct_days_posted_last_7'] = 6;
+        $facts['cadence'][0]['posted_almost_daily_last_7'] = true;
+        $ok = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => 'ok',
+            'watch' => ['@sobersocial_ posts almost daily'],
+        ], $facts);
+
+        $this->assertTrue($ok['ok'], implode('; ', $ok['errors']));
+
+        $daily = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => 'ok',
+            'watch' => ['@sobersocial_ posts daily'],
+        ], $facts);
+
+        $this->assertFalse($daily['ok']);
+        $this->assertContains('unsupported daily claim for @sobersocial_', $daily['errors']);
+    }
+
+    public function test_validator_allows_brand_own_handle_even_when_missing_from_allowed_handles(): void
+    {
+        $result = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for @letsgosocialuk',
+            'actions' => [
+                ['title' => 'Reply on @letsgosocialuk', 'why' => 'why', 'how' => 'how', 'related_handles' => ['letsgosocialuk'], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => '@letsgosocialuk posted twice this week.',
+            'competitor_summary' => 'ok',
+            'watch' => ['Keep replies on @letsgosocialuk.'],
+        ], [
+            'allowed_handles' => ['goodgym'],
+            'allowed_post_ids' => [],
+            'brand' => ['own_handles' => ['letsgosocialuk']],
+            'own' => null,
+        ]);
+
+        $this->assertTrue($result['ok'], implode('; ', $result['errors']));
+    }
+
+    public function test_generator_keeps_a_brief_that_mentions_the_brand_own_handle(): void
+    {
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create([
+            'name' => 'Let\'s Go Social',
+            'own_handles' => ['instagram' => '@letsgosocialuk'],
+        ]);
+        TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'goodgym',
+            'is_own_account' => false,
+            'kind' => TrackedAccountKind::Competitor,
+            'followers' => 100,
+            'last_sync_status' => 'success',
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response($this->llmResponse([
+                'headline' => 'Plan for @letsgosocialuk',
+                'actions' => [
+                    ['title' => 'Reply on @letsgosocialuk', 'why' => 'Own account needs replies.', 'how' => 'Reply to comments.', 'related_handles' => ['letsgosocialuk'], 'related_post_ids' => []],
+                    ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                    ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ],
+                'own_summary' => '@letsgosocialuk is the brand account to watch today.',
+                'competitor_summary' => '@goodgym posted this week.',
+                'watch' => ['Keep @letsgosocialuk replies tight'],
+            ])),
+        ]);
+
+        $brief = app(DailyBriefGenerator::class)->generate($user);
+
+        $this->assertContains('letsgosocialuk', $brief->facts['allowed_handles'] ?? []);
+        $this->assertFalse($brief->payload['validation']['used_fallback'] ?? true);
+        $this->assertStringContainsString('letsgosocialuk', (string) ($brief->payload['own_summary'] ?? ''));
+        $this->assertFalse(collect($brief->payload['validation']['diagnostics'] ?? [])->flatten()->contains(
+            fn (mixed $error): bool => is_string($error) && str_contains($error, 'unknown handle @letsgosocialuk'),
+        ));
+    }
+
+    public function test_failed_sync_is_not_treated_as_quiet_or_empty(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-05 08:00:00', 'Europe/London'));
+
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        $failed = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'fuss.london',
+            'is_own_account' => false,
+            'kind' => TrackedAccountKind::Competitor,
+            'last_sync_status' => 'failed',
+            'last_sync_error' => 'TikHub scrape failed.',
+        ]);
+        $quiet = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'london.theofflineclub',
+            'is_own_account' => false,
+            'kind' => TrackedAccountKind::Competitor,
+            'last_sync_status' => 'empty',
+        ]);
+        $empty = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'ghostclub',
+            'is_own_account' => false,
+            'kind' => TrackedAccountKind::Competitor,
+            'last_sync_status' => 'empty',
+            'last_sync_error' => 'No recent posts found for this handle.',
+        ]);
+
+        Post::factory()->forAccount($failed)->create([
+            'posted_at' => CarbonImmutable::parse('2026-09-10 12:00:00', 'Europe/London'),
+            'metrics' => ['likes' => 4, 'comments' => 0, 'views' => 0],
+        ]);
+        Post::factory()->forAccount($quiet)->create([
+            'posted_at' => CarbonImmutable::parse('2026-08-26 12:00:00', 'Europe/London'),
+            'metrics' => ['likes' => 8, 'comments' => 0, 'views' => 0],
+        ]);
+
+        $facts = app(DailyBriefFactsBuilder::class)->build($user, CarbonImmutable::parse('2026-10-05', 'Europe/London'));
+        $failedRow = collect($facts['competitors'] ?? [])->firstWhere('handle', 'fuss.london');
+        $quietRow = collect($facts['competitors'] ?? [])->firstWhere('handle', 'london.theofflineclub');
+        $emptyRow = collect($facts['competitors'] ?? [])->firstWhere('handle', 'ghostclub');
+
+        $this->assertTrue($failedRow['sync_failed'] ?? false);
+        $this->assertFalse($failedRow['quiet'] ?? true);
+        $this->assertFalse($failedRow['sync_empty'] ?? true);
+        $this->assertTrue($quietRow['quiet'] ?? false);
+        $this->assertFalse($quietRow['sync_empty'] ?? true);
+        $this->assertFalse($quietRow['sync_failed'] ?? true);
+        $this->assertTrue($emptyRow['sync_empty'] ?? false);
+        $this->assertFalse($emptyRow['quiet'] ?? true);
+
+        $payload = app(DailyBriefGenerator::class)->assemblePayload($facts, [
+            'headline' => 'Plan',
+            'actions' => [],
+            'own_summary' => '',
+            'competitor_summary' => '',
+            'watch' => [],
+        ], [], true);
+
+        $watch = implode("\n", $payload['watch'] ?? []);
+        $this->assertStringContainsString('could not be refreshed', $watch);
+        $this->assertStringNotContainsString('@fuss.london has been quiet', $watch);
+        $this->assertStringContainsString('@london.theofflineclub has been quiet', $watch);
+
+        $failedMove = collect($payload['competitor_moves'] ?? [])->firstWhere('handle', 'fuss.london');
+        $this->assertTrue($failedMove['sync_failed'] ?? false);
+        $this->assertFalse($failedMove['quiet'] ?? true);
+        $this->assertFalse($failedMove['sync_empty'] ?? true);
     }
 
     public function test_validator_lists_unknown_handle_and_invented_number(): void

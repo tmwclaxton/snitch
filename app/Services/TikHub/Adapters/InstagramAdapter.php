@@ -32,8 +32,26 @@ class InstagramAdapter extends AbstractTikHubAdapter
         $handle = $this->normalizeHandle($handleOrUrl);
         $fetch = max($limit, (int) ceil($limit * 2.5));
 
-        $postItems = $this->fetchUserMediaList('user_posts', $handle, $fetch);
-        $reelItems = $this->fetchUserMediaList('user_reels', $handle, $fetch);
+        $postError = null;
+        $reelError = null;
+
+        try {
+            $postItems = $this->fetchUserMediaList('user_posts', $handle, $fetch);
+        } catch (\Throwable $e) {
+            $postError = $e;
+            $postItems = [];
+        }
+
+        try {
+            $reelItems = $this->fetchUserMediaList('user_reels', $handle, $fetch);
+        } catch (\Throwable $e) {
+            $reelError = $e;
+            $reelItems = [];
+        }
+
+        if ($postItems === [] && $reelItems === [] && ($postError !== null || $reelError !== null)) {
+            throw $postError ?? $reelError;
+        }
 
         $merged = $this->sortMediaItemsByRecency(
             $this->mergeMediaItems($postItems, $reelItems),
@@ -47,14 +65,10 @@ class InstagramAdapter extends AbstractTikHubAdapter
      */
     private function fetchUserMediaList(string $endpointKey, string $handle, int $count): array
     {
-        try {
-            $payload = $this->client->get($this->endpoint($endpointKey), [
-                'username' => $handle,
-                'count' => $count,
-            ], 'instagram');
-        } catch (\Throwable) {
-            return [];
-        }
+        $payload = $this->client->get($this->endpoint($endpointKey), [
+            'username' => $handle,
+            'count' => $count,
+        ], 'instagram');
 
         return $this->extractList($payload, [
             'items',
