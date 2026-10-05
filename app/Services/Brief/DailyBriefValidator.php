@@ -123,6 +123,12 @@ class DailyBriefValidator
             }
         }
 
+        foreach ($texts as $text) {
+            foreach ($this->unsupportedDailyClaims($text, $facts) as $error) {
+                $errors[] = $error;
+            }
+        }
+
         $output['headline'] = $headline;
         $output['actions'] = array_values(array_filter($actions, fn (mixed $action): bool => is_array($action)));
         $output['own_summary'] = $ownSummary;
@@ -172,6 +178,41 @@ class DailyBriefValidator
         }
 
         $output['actions'] = $kept;
+
+        return $output;
+    }
+
+    /**
+     * Blank headline, summaries, and watch lines that still fail validation
+     * so deterministic fallback can replace them.
+     *
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function clearInvalidProse(array $output, array $facts): array
+    {
+        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+            $probe = $this->proseProbe($field, $output[$field] ?? '', []);
+            if (! $this->validate($probe, $facts)['ok']) {
+                $output[$field] = '';
+            }
+        }
+
+        $watch = [];
+
+        foreach ($output['watch'] ?? [] as $item) {
+            if (! is_string($item) || trim($item) === '') {
+                continue;
+            }
+
+            $probe = $this->proseProbe('watch', '', [$item]);
+            if ($this->validate($probe, $facts)['ok']) {
+                $watch[] = $item;
+            }
+        }
+
+        $output['watch'] = $watch;
 
         return $output;
     }
@@ -302,5 +343,135 @@ class DailyBriefValidator
     public function normaliseNumber(string $number): string
     {
         return strtolower(str_replace(',', '', trim($number)));
+    }
+
+    /**
+     * @param  list<string>  $watch
+     * @return array<string, mixed>
+     */
+    private function proseProbe(string $field, mixed $value, array $watch): array
+    {
+        $safeActions = [
+            ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+        ];
+
+        return [
+            'headline' => $field === 'headline' ? (string) $value : 'Plan for today',
+            'actions' => $safeActions,
+            'own_summary' => $field === 'own_summary' ? (string) $value : '',
+            'competitor_summary' => $field === 'competitor_summary' ? (string) $value : '',
+            'watch' => $field === 'watch' ? $watch : [],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return list<string>
+     */
+    public function unsupportedDailyClaims(string $text, array $facts): array
+    {
+        $errors = [];
+        $dailyPosters = $this->dailyPosterHandles($facts);
+        $handles = $this->allowedHandles($facts);
+        $sentences = preg_split('/(?:\R+|(?<=[.!?])\s+)/u', $text) ?: [$text];
+
+        foreach ($sentences as $sentence) {
+            if (! $this->claimsDailyPosting($sentence)) {
+                continue;
+            }
+
+            $mentioned = $this->handlesMentionedIn($sentence, $handles);
+
+            if ($mentioned === []) {
+                if ($dailyPosters === []) {
+                    $errors[] = 'unsupported daily claim';
+                }
+
+                continue;
+            }
+
+            foreach ($mentioned as $handle) {
+                if (! in_array($handle, $dailyPosters, true)) {
+                    $errors[] = 'unsupported daily claim for @'.$handle;
+                }
+            }
+        }
+
+        return array_values(array_unique($errors));
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return list<string>
+     */
+    public function dailyPosterHandles(array $facts): array
+    {
+        $handles = [];
+
+        foreach ($facts['cadence'] ?? [] as $row) {
+            if (is_array($row) && ($row['posted_every_day_last_7'] ?? false)) {
+                $normalised = $this->normaliseHandle((string) ($row['handle'] ?? ''));
+                if ($normalised !== '') {
+                    $handles[] = $normalised;
+                }
+            }
+        }
+
+        foreach ([$facts['own'] ?? null, ...($facts['competitors'] ?? [])] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $cadence = is_array($row['cadence'] ?? null) ? $row['cadence'] : [];
+            if ($cadence['posted_every_day_last_7'] ?? false) {
+                $normalised = $this->normaliseHandle((string) ($row['handle'] ?? ''));
+                if ($normalised !== '') {
+                    $handles[] = $normalised;
+                }
+            }
+        }
+
+        return array_values(array_unique($handles));
+    }
+
+    public function claimsDailyPosting(string $text): bool
+    {
+        if (preg_match('/\b(?:posts?|posting|posted)\s+(?:daily|every\s+day)\b/i', $text) === 1) {
+            return true;
+        }
+
+        if (preg_match('/\bdaily\s+(?:posts?|posting)\b/i', $text) === 1) {
+            return true;
+        }
+
+        return preg_match('/\bevery\s+day\b/i', $text) === 1
+            && preg_match('/\b(?:posts?|posting|posted)\b/i', $text) === 1;
+    }
+
+    /**
+     * @param  list<string>  $handles
+     * @return list<string>
+     */
+    public function handlesMentionedIn(string $text, array $handles): array
+    {
+        $found = [];
+
+        foreach ($handles as $handle) {
+            $normalised = $this->normaliseHandle($handle);
+
+            if ($normalised === '') {
+                continue;
+            }
+
+            $pattern = '/(?<![A-Za-z0-9.])@?'.preg_quote($normalised, '/').'(?![A-Za-z0-9.])/i';
+
+            if (preg_match($pattern, $text) === 1) {
+                $found[] = $normalised;
+            }
+        }
+
+        return $found;
     }
 }

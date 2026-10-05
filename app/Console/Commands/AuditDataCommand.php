@@ -10,6 +10,7 @@ use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Models\WinnerInsight;
 use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\UsageBillingService;
 use App\Services\Dashboard\DashboardMath;
 use App\Services\Growth\GrowthMetricsBuilder;
 use App\Services\Growth\MonthlyReportBuilder;
@@ -43,7 +44,7 @@ class AuditDataCommand extends Command
     /** @var list<array{key: string, status: string, summary: string, details: list<mixed>}> */
     private array $results = [];
 
-    public function handle(DashboardMath $math, PlanEntitlementService $entitlements): int
+    public function handle(DashboardMath $math, PlanEntitlementService $entitlements, UsageBillingService $billing): int
     {
         $users = $this->auditedUsers();
         $trackers = $this->activeTrackers($users, $entitlements);
@@ -53,7 +54,7 @@ class AuditDataCommand extends Command
             'scheduled_jobs' => fn () => $this->checkScheduledJobs(),
             'queue_failed_jobs_24h' => fn () => $this->checkFailedJobs(),
             'queue_backlog' => fn () => $this->checkQueueBacklog(),
-            'sync_freshness' => fn () => $this->checkSyncFreshness($trackers),
+            'sync_freshness' => fn () => $this->checkSyncFreshness($users, $entitlements, $billing),
             'sync_empty_results' => fn () => $this->checkEmptySyncs($trackers),
             'follower_snapshot_freshness' => fn () => $this->checkSnapshotFreshness($trackers),
             'brief_freshness' => fn () => $this->checkBriefFreshness($users, $trackers),
@@ -259,15 +260,37 @@ class AuditDataCommand extends Command
     // ---------------------------------------------------------- freshness
 
     /**
-     * @param  Collection<int, TrackedAccount>  $trackers
+     * @param  Collection<int, User>  $users
      */
-    private function checkSyncFreshness(Collection $trackers): void
+    private function checkSyncFreshness(Collection $users, PlanEntitlementService $entitlements, UsageBillingService $billing): void
     {
         $maxDays = max(1, (int) config('snitch.sync.min_interval_days', 7)) + 2;
         $details = [];
-        $bad = 0;
+        $fails = 0;
+        $skipped = 0;
+        $canRunCache = [];
+        $quotaCache = [];
+
+        $trackers = TrackedAccount::query()
+            ->whereIn('user_id', $users->pluck('id')->filter()->all() ?: [0])
+            ->where('platform', Platform::Instagram)
+            ->orderBy('id')
+            ->get();
 
         foreach ($trackers as $t) {
+            $user = $users->firstWhere('id', $t->user_id);
+            $userId = (int) $t->user_id;
+
+            if (! isset($canRunCache[$userId])) {
+                $canRunCache[$userId] = $user instanceof User && $billing->canRun($user);
+            }
+
+            if (! isset($quotaCache[$userId])) {
+                $quotaCache[$userId] = $user instanceof User
+                    ? array_fill_keys($entitlements->inQuotaTrackedAccountIds($user), true)
+                    : [];
+            }
+
             $age = $t->last_synced_at === null ? null : round($t->last_synced_at->diffInHours(now(), true) / 24, 2);
             $problem = match (true) {
                 $t->last_synced_at === null => 'never synced',
@@ -275,7 +298,22 @@ class AuditDataCommand extends Command
                 $age > $maxDays => "stale (> {$maxDays} days)",
                 default => null,
             };
-            $bad += $problem === null ? 0 : 1;
+
+            $skipReason = null;
+            if ($problem !== null) {
+                if (! ($quotaCache[$userId][$t->id] ?? false)) {
+                    $skipReason = 'skipped: over quota';
+                } elseif (! $canRunCache[$userId]) {
+                    $skipReason = 'skipped: low balance';
+                }
+            }
+
+            if ($skipReason !== null) {
+                $skipped++;
+            } elseif ($problem !== null) {
+                $fails++;
+            }
+
             $details[] = [
                 'user_id' => $t->user_id,
                 'tracker_id' => $t->id,
@@ -284,11 +322,18 @@ class AuditDataCommand extends Command
                 'last_synced_at' => $t->last_synced_at?->toIso8601String(),
                 'age_days' => $age,
                 'status' => $t->last_sync_status,
-                'problem' => $problem,
+                'problem' => $skipReason ?? $problem,
+                'skip_reason' => $skipReason,
             ];
         }
 
-        $this->record('sync_freshness', $bad === 0 ? 'pass' : 'fail', "{$bad} tracker(s) never synced, failed, or older than {$maxDays} days.", $details);
+        $status = $fails > 0 ? 'fail' : ($skipped > 0 ? 'warn' : 'pass');
+        $this->record(
+            'sync_freshness',
+            $status,
+            "{$fails} tracker(s) never synced, failed, or older than {$maxDays} days; {$skipped} skipped (low balance or over quota).",
+            $details,
+        );
     }
 
     /**

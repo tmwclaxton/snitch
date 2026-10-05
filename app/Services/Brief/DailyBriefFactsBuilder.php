@@ -109,6 +109,8 @@ class DailyBriefFactsBuilder
 
         $facts['allowed_post_ids'] = $this->collectPostIds($facts);
         $facts['top_competitor_hit'] = $this->topCompetitorHit($competitorFacts);
+        $facts['top_competitor_hit_24h'] = $this->topCompetitorHitLast24h($competitorFacts);
+        $facts['cadence'] = $this->cadenceIndex($ownFacts, $competitorFacts);
 
         return $facts;
     }
@@ -215,6 +217,7 @@ class DailyBriefFactsBuilder
             'sync_status' => $syncStatus === '' ? null : $syncStatus,
             'sync_empty' => $emptySync,
             'last_synced_at' => $account->last_synced_at?->timezone(DashboardMath::TIMEZONE)->toIso8601String(),
+            'cadence' => $this->cadenceForAccount($posts7, $daysSinceLast, $lastPost instanceof Post ? $this->londonPostLabel($lastPost) : null, $today),
         ];
     }
 
@@ -540,8 +543,7 @@ class DailyBriefFactsBuilder
 
         foreach ($competitors as $row) {
             foreach ($row['standout_winners'] ?? [] as $winner) {
-                $score = (float) ($winner['times_usual'] ?? $winner['views_vs_usual'] ?? 0);
-                if ($best === null || $score > (float) ($best['times_usual'] ?? $best['views_vs_usual'] ?? 0)) {
+                if ($this->hitScore($winner) > $this->hitScore($best)) {
                     $best = [
                         ...$winner,
                         'handle' => $row['handle'],
@@ -551,6 +553,114 @@ class DailyBriefFactsBuilder
         }
 
         return $best;
+    }
+
+    /**
+     * Best competitor post that is actually inside the last-day window.
+     * Do not reuse standout_winners (those can look back 30 days).
+     *
+     * @param  list<array<string, mixed>>  $competitors
+     * @return array<string, mixed>|null
+     */
+    private function topCompetitorHitLast24h(array $competitors): ?array
+    {
+        $best = null;
+
+        foreach ($competitors as $row) {
+            foreach ($row['posts_last_24h'] ?? [] as $post) {
+                if (! is_array($post)) {
+                    continue;
+                }
+
+                $candidate = [
+                    ...$post,
+                    'handle' => $row['handle'] ?? ($post['handle'] ?? null),
+                ];
+
+                if ($best === null || $this->hitScore($candidate) > $this->hitScore($best)) {
+                    $best = $candidate;
+
+                    continue;
+                }
+
+                if ($this->hitScore($candidate) === $this->hitScore($best)
+                    && strcmp((string) ($candidate['posted_at'] ?? ''), (string) ($best['posted_at'] ?? '')) > 0) {
+                    $best = $candidate;
+                }
+            }
+        }
+
+        return $best;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $row
+     */
+    private function hitScore(?array $row): float
+    {
+        if ($row === null) {
+            return -1.0;
+        }
+
+        $score = $row['times_usual'] ?? $row['views_vs_usual'] ?? null;
+
+        return is_numeric($score) ? (float) $score : -1.0;
+    }
+
+    /**
+     * @param  Collection<int, Post>  $posts7
+     * @return array<string, mixed>
+     */
+    private function cadenceForAccount(Collection $posts7, ?int $daysSinceLast, ?string $lastPostedLabel, CarbonImmutable $today): array
+    {
+        $expected = [];
+
+        for ($i = 7; $i >= 1; $i--) {
+            $expected[] = $today->subDays($i)->toDateString();
+        }
+
+        $postedDays = $posts7
+            ->map(fn (Post $post): ?string => $this->math->toLondon($post->posted_at)?->toDateString())
+            ->filter(fn (?string $day): bool => $day !== null && in_array($day, $expected, true))
+            ->unique()
+            ->values()
+            ->all();
+
+        return [
+            'posts_last_7d' => $posts7->count(),
+            'days_since_last_post' => $daysSinceLast,
+            'last_posted_label' => $lastPostedLabel,
+            'distinct_days_posted_last_7' => count($postedDays),
+            'posted_days_last_7' => $postedDays,
+            'posted_every_day_last_7' => count($postedDays) === 7,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $own
+     * @param  list<array<string, mixed>>  $competitors
+     * @return list<array<string, mixed>>
+     */
+    private function cadenceIndex(?array $own, array $competitors): array
+    {
+        $rows = [];
+
+        foreach ([$own, ...$competitors] as $row) {
+            if (! is_array($row) || ($row['handle'] ?? '') === '') {
+                continue;
+            }
+
+            $cadence = is_array($row['cadence'] ?? null) ? $row['cadence'] : [];
+            $rows[] = [
+                'handle' => $row['handle'],
+                'posts_last_7d' => (int) ($cadence['posts_last_7d'] ?? $row['posts_last_7d_count'] ?? 0),
+                'days_since_last_post' => $cadence['days_since_last_post'] ?? $row['days_since_last_post'] ?? null,
+                'distinct_days_posted_last_7' => (int) ($cadence['distinct_days_posted_last_7'] ?? 0),
+                'posted_every_day_last_7' => (bool) ($cadence['posted_every_day_last_7'] ?? false),
+            ];
+        }
+
+        return $rows;
     }
 
     /**

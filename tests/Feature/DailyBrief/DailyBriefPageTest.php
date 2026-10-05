@@ -5,6 +5,7 @@ namespace Tests\Feature\DailyBrief;
 use App\Models\BrandProfile;
 use App\Models\DailyBrief;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -117,6 +118,8 @@ class DailyBriefPageTest extends TestCase
 
     public function test_today_rewrites_legacy_change_since_yesterday_copy(): void
     {
+        $this->travelTo(CarbonImmutable::parse('2026-10-04 12:00:00', 'Europe/London'));
+
         $user = User::factory()->create(['daily_brief_enabled' => true]);
         BrandProfile::factory()->for($user)->create();
         DailyBrief::factory()->for($user)->create([

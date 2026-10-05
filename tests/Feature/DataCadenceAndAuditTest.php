@@ -9,6 +9,8 @@ use App\Models\FollowerSnapshot;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Services\Billing\PlanEntitlementService;
+use App\Services\Billing\UsageBillingService;
 use App\Services\Growth\MonthlyReportBuilder;
 use App\Services\Tracking\FollowerCountRefresher;
 use App\Support\ScheduleHeartbeat;
@@ -175,5 +177,95 @@ class DataCadenceAndAuditTest extends TestCase
         $this->assertNotSame('fail', $status['monthly_report_consistency']);
         $this->assertNotSame('fail', $status['growth_consistency']);
         $this->assertNotSame('fail', $status['brief_freshness']);
+    }
+
+    public function test_audit_treats_low_balance_stale_sync_as_warn(): void
+    {
+        $user = User::factory()->withoutStarterCredit()->create();
+        $this->assertFalse(app(UsageBillingService::class)->canRun($user));
+
+        $tracker = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'yellowzest',
+            'followers' => 1000,
+            'last_synced_at' => now()->subDays(20),
+            'last_sync_status' => 'success',
+        ]);
+        FollowerSnapshot::factory()->create([
+            'social_account_id' => $tracker->social_account_id,
+            'followers' => 1000,
+            'captured_on' => now()->toDateString(),
+        ]);
+        ScheduleHeartbeat::mark(ScheduleHeartbeat::TICK);
+
+        $this->artisan('snitch:audit', ['--json' => true, '--user' => [$user->id]])->assertSuccessful();
+
+        \Artisan::call('snitch:audit', ['--json' => true, '--user' => [$user->id]]);
+        $payload = json_decode(\Artisan::output(), true);
+        $check = collect($payload['checks'])->firstWhere('key', 'sync_freshness');
+
+        $this->assertSame('warn', $check['status'] ?? null);
+        $this->assertSame('skipped: low balance', $check['details'][0]['skip_reason'] ?? null);
+        $this->assertSame('skipped: low balance', $check['details'][0]['problem'] ?? null);
+    }
+
+    public function test_audit_treats_over_quota_stale_sync_as_warn(): void
+    {
+        $user = User::factory()->create();
+        $this->assertTrue(app(UsageBillingService::class)->canRun($user));
+
+        $stale = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'yellowzest',
+            'followers' => 1000,
+            'last_synced_at' => now()->subDays(20),
+            'last_sync_status' => 'success',
+        ]);
+        $fresh = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'keptfresh',
+            'followers' => 1000,
+            'last_synced_at' => now()->subDay(),
+            'last_sync_status' => 'success',
+        ]);
+        FollowerSnapshot::factory()->create([
+            'social_account_id' => $stale->social_account_id,
+            'followers' => 1000,
+            'captured_on' => now()->toDateString(),
+        ]);
+        FollowerSnapshot::factory()->create([
+            'social_account_id' => $fresh->social_account_id,
+            'followers' => 1000,
+            'captured_on' => now()->toDateString(),
+        ]);
+        ScheduleHeartbeat::mark(ScheduleHeartbeat::TICK);
+
+        $this->app->bind(PlanEntitlementService::class, function () use ($fresh) {
+            return new class((int) $fresh->id, app(UsageBillingService::class)) extends PlanEntitlementService
+            {
+                public function __construct(private int $allowedId, UsageBillingService $usage)
+                {
+                    parent::__construct($usage);
+                }
+
+                public function inQuotaTrackedAccountIds(User $user): array
+                {
+                    return [$this->allowedId];
+                }
+            };
+        });
+
+        $this->artisan('snitch:audit', ['--json' => true, '--user' => [$user->id]])->assertSuccessful();
+
+        \Artisan::call('snitch:audit', ['--json' => true, '--user' => [$user->id]]);
+        $payload = json_decode(\Artisan::output(), true);
+        $check = collect($payload['checks'])->firstWhere('key', 'sync_freshness');
+        $staleRow = collect($check['details'] ?? [])->firstWhere('tracker_id', $stale->id);
+        $freshRow = collect($check['details'] ?? [])->firstWhere('tracker_id', $fresh->id);
+
+        $this->assertSame('warn', $check['status'] ?? null);
+        $this->assertSame('skipped: over quota', $staleRow['skip_reason'] ?? null);
+        $this->assertNull($freshRow['skip_reason'] ?? null);
+        $this->assertNull($freshRow['problem'] ?? null);
     }
 }

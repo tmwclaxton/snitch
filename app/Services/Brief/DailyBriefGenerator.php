@@ -99,6 +99,7 @@ class DailyBriefGenerator
                 } else {
                     $usedFallback = true;
                     $partial = $this->validator->dropInvalidActions($second['output'] ?? $first['output'] ?? [], $facts);
+                    $partial = $this->validator->clearInvalidProse($partial, $facts);
                     $llmOutput = $this->mergeFallback($partial, $facts);
                 }
             }
@@ -181,6 +182,8 @@ Rules:
 - hook is the literal first line, max 12 words. Never quote a scene description.
 - When likes are hidden, say "likes hidden" or use views vs their usual. Never print null or 0x.
 - Prefer "times their usual" over jargon.
+- Cadence is in facts.cadence: posts_last_7d, days_since_last_post, distinct_days_posted_last_7, posted_every_day_last_7.
+- Do not say an account posts daily or every day unless that handle has posted_every_day_last_7 true. Use the 7-day count and days since last post instead.
 PROMPT;
 
         if ($violations === null || $violations === []) {
@@ -240,7 +243,7 @@ PROMPT;
         $whenNote = is_array($slot) && ($slot['early_signal'] ?? false)
             ? $block.' (early signal)'
             : (is_array($slot) ? (string) $slot['label'] : $block);
-        $hit = $facts['top_competitor_hit'] ?? null;
+        $hit = $facts['top_competitor_hit_24h'] ?? $facts['top_competitor_hit'] ?? null;
         $comp24 = (int) ($facts['format_mix']['competitor_posts_24h'] ?? 0);
         $comp7 = (int) ($facts['format_mix']['competitor_posts_7d'] ?? 0);
         $reels7 = (int) (($facts['format_mix']['competitors_7d']['Reel'] ?? 0));
@@ -396,7 +399,7 @@ PROMPT;
     {
         $own = is_array($facts['own'] ?? null) ? $facts['own'] : null;
         $change1d = is_array($own) ? ($own['followers_change_1d'] ?? null) : null;
-        $hit = $facts['top_competitor_hit'] ?? null;
+        $hit24 = $facts['top_competitor_hit_24h'] ?? null;
         $actions = [];
 
         foreach (array_values($llm['actions'] ?? []) as $index => $action) {
@@ -481,9 +484,7 @@ PROMPT;
                 [
                     'label' => 'Competitor posts in the last day',
                     'value' => (string) ($facts['format_mix']['competitor_posts_24h'] ?? 0),
-                    'note' => is_array($hit)
-                        ? '@'.($hit['handle'] ?? '').', '.($hit['times_usual_label'] ?? 'standout')
-                        : null,
+                    'note' => $this->lastDayCompetitorNote($facts, $hit24),
                 ],
             ],
             'actions' => $actions,
@@ -582,6 +583,28 @@ PROMPT;
         }
 
         return $rows;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @param  array<string, mixed>|null  $hit24
+     */
+    private function lastDayCompetitorNote(array $facts, ?array $hit24): string
+    {
+        $count = (int) ($facts['format_mix']['competitor_posts_24h'] ?? 0);
+
+        if ($count < 1 || $hit24 === null) {
+            return 'none in the last day';
+        }
+
+        $handle = trim((string) ($hit24['handle'] ?? ''), '@');
+        $label = trim((string) ($hit24['times_usual_label'] ?? ''));
+
+        if ($handle === '') {
+            return 'none in the last day';
+        }
+
+        return '@'.$handle.($label !== '' ? ', '.$label : '');
     }
 
     /**

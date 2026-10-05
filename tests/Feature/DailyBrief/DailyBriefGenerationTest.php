@@ -11,8 +11,10 @@ use App\Models\FollowerSnapshot;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Services\Brief\DailyBriefFactsBuilder;
 use App\Services\Brief\DailyBriefGenerator;
 use App\Services\Brief\DailyBriefValidator;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -115,6 +117,206 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertTrue($brief->payload['validation']['used_fallback'] ?? false);
         $this->assertGreaterThanOrEqual(3, count($brief->payload['actions'] ?? []));
         $this->assertDoesNotMatchRegularExpression('/@ghostclub/', json_encode($brief->payload['actions']) ?: '');
+    }
+
+    public function test_last_day_tile_uses_a_post_from_the_last_day_not_a_thirty_day_winner(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-05 08:00:00', 'Europe/London'));
+        $this->fakeValidLlm();
+
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        $onehouse = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'onehousesocialclub',
+            'is_own_account' => false,
+            'kind' => TrackedAccountKind::Competitor,
+        ]);
+        $sober = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'sobersocial_',
+            'is_own_account' => false,
+            'kind' => TrackedAccountKind::Competitor,
+        ]);
+
+        for ($i = 20; $i >= 11; $i--) {
+            Post::factory()->forAccount($onehouse)->create([
+                'posted_at' => CarbonImmutable::parse('2026-10-05', 'Europe/London')->subDays($i)->setTime(12, 0),
+                'metrics' => ['likes' => 10, 'comments' => 0, 'views' => 0],
+            ]);
+        }
+
+        Post::factory()->forAccount($onehouse)->create([
+            'posted_at' => CarbonImmutable::parse('2026-10-02 12:00:00', 'Europe/London'),
+            'metrics' => ['likes' => 59, 'comments' => 0, 'views' => 0],
+        ]);
+        Post::factory()->forAccount($sober)->create([
+            'posted_at' => CarbonImmutable::parse('2026-10-04 19:35:00', 'Europe/London'),
+            'metrics' => ['likes' => 4, 'comments' => 0, 'views' => 0],
+        ]);
+
+        $brief = app(DailyBriefGenerator::class)->generate($user);
+        $tile = collect($brief->payload['big_numbers'] ?? [])->firstWhere('label', 'Competitor posts in the last day');
+
+        $this->assertSame('1', $tile['value'] ?? null);
+        $this->assertStringContainsString('@sobersocial_', (string) ($tile['note'] ?? ''));
+        $this->assertStringNotContainsString('onehousesocialclub', (string) ($tile['note'] ?? ''));
+        $this->assertSame('sobersocial_', $brief->facts['top_competitor_hit_24h']['handle'] ?? null);
+        $this->assertSame('onehousesocialclub', $brief->facts['top_competitor_hit']['handle'] ?? null);
+        $this->assertFalse(collect($brief->facts['cadence'] ?? [])->firstWhere('handle', 'onehousesocialclub')['posted_every_day_last_7'] ?? true);
+    }
+
+    public function test_last_day_tile_says_none_when_no_competitor_posted(): void
+    {
+        $payload = app(DailyBriefGenerator::class)->assemblePayload([
+            'own' => null,
+            'format_mix' => ['competitor_posts_24h' => 0, 'competitors_7d' => []],
+            'top_competitor_hit' => [
+                'handle' => 'onehousesocialclub',
+                'times_usual_label' => '5.9 times their usual',
+            ],
+            'top_competitor_hit_24h' => null,
+            'competitors' => [],
+            'unused_weekly_ideas' => [],
+            'best_times' => ['thin' => true, 'weekday_evening_block' => 'weekday evenings'],
+            'ads_empty' => true,
+            'brief_date' => '2026-10-05',
+        ], [
+            'headline' => 'Plan',
+            'actions' => [],
+            'own_summary' => '',
+            'competitor_summary' => '',
+            'watch' => [],
+        ], [], true);
+
+        $tile = collect($payload['big_numbers'] ?? [])->firstWhere('label', 'Competitor posts in the last day');
+
+        $this->assertSame('0', $tile['value'] ?? null);
+        $this->assertSame('none in the last day', $tile['note'] ?? null);
+    }
+
+    public function test_validator_rejects_daily_claims_the_cadence_does_not_support(): void
+    {
+        $facts = [
+            'allowed_handles' => ['goodgym', 'sobersocial_'],
+            'allowed_post_ids' => [10],
+            'cadence' => [
+                [
+                    'handle' => 'goodgym',
+                    'posts_last_7d' => 6,
+                    'days_since_last_post' => 3,
+                    'distinct_days_posted_last_7' => 6,
+                    'posted_every_day_last_7' => false,
+                ],
+                [
+                    'handle' => 'sobersocial_',
+                    'posts_last_7d' => 4,
+                    'days_since_last_post' => 1,
+                    'distinct_days_posted_last_7' => 4,
+                    'posted_every_day_last_7' => false,
+                ],
+            ],
+        ];
+
+        $result = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => 'Goodgym posts daily but hides likes',
+            'watch' => ['sobersocial_ posts daily'],
+        ], $facts);
+
+        $this->assertFalse($result['ok']);
+        $this->assertContains('unsupported daily claim for @goodgym', $result['errors']);
+        $this->assertContains('unsupported daily claim for @sobersocial_', $result['errors']);
+
+        $facts['cadence'][0]['posted_every_day_last_7'] = true;
+        $ok = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => 'Goodgym posts daily but hides likes',
+            'watch' => ['Keep an eye on @sobersocial_'],
+        ], $facts);
+
+        $this->assertTrue($ok['ok'], implode('; ', $ok['errors']));
+    }
+
+    public function test_validator_rejects_daily_claims_then_retries_and_falls_back(): void
+    {
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        $this->seedAccounts($user);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::sequence()
+                ->push($this->llmResponse([
+                    'headline' => 'Plan for today',
+                    'actions' => [
+                        ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                        ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                        ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                    ],
+                    'own_summary' => 'ok',
+                    'competitor_summary' => 'Goodgym posts daily but hides likes',
+                    'watch' => ['ok'],
+                ]))
+                ->push($this->llmResponse([
+                    'headline' => 'Plan for today',
+                    'actions' => [
+                        ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                        ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                        ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                    ],
+                    'own_summary' => 'ok',
+                    'competitor_summary' => 'Goodgym still posts every day',
+                    'watch' => ['ok'],
+                ])),
+        ]);
+
+        $brief = app(DailyBriefGenerator::class)->generate($user);
+
+        $this->assertSame(2, $brief->llm_attempts);
+        $this->assertTrue($brief->payload['validation']['used_fallback'] ?? false);
+        $this->assertStringNotContainsString('posts daily', (string) ($brief->payload['competitor_summary'] ?? ''));
+        $this->assertStringNotContainsString('every day', (string) ($brief->payload['competitor_summary'] ?? ''));
+    }
+
+    public function test_facts_spell_out_cadence_for_each_account(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-05 08:00:00', 'Europe/London'));
+
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        $goodgym = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'goodgym',
+            'is_own_account' => false,
+            'kind' => TrackedAccountKind::Competitor,
+        ]);
+
+        foreach (['2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02'] as $day) {
+            Post::factory()->forAccount($goodgym)->create([
+                'posted_at' => CarbonImmutable::parse($day.' 12:00:00', 'Europe/London'),
+                'metrics' => ['likes' => 8, 'comments' => 0, 'views' => 0],
+            ]);
+        }
+
+        $facts = app(DailyBriefFactsBuilder::class)->build($user, CarbonImmutable::parse('2026-10-05', 'Europe/London'));
+        $row = collect($facts['cadence'] ?? [])->firstWhere('handle', 'goodgym');
+
+        $this->assertSame(4, $row['posts_last_7d'] ?? null);
+        $this->assertSame(3, $row['days_since_last_post'] ?? null);
+        $this->assertSame(4, $row['distinct_days_posted_last_7'] ?? null);
+        $this->assertFalse($row['posted_every_day_last_7'] ?? true);
     }
 
     public function test_validator_lists_unknown_handle_and_invented_number(): void
