@@ -361,6 +361,7 @@ return [
         'endpoints' => [
             'instagram' => [
                 'user_info' => '/api/v1/instagram/v2/fetch_user_info',
+                'user_info_by_username' => '/api/v1/instagram/v1/fetch_user_info_by_username_v2',
                 'user_posts' => '/api/v1/instagram/v2/fetch_user_posts',
                 'user_reels' => '/api/v1/instagram/v2/fetch_user_reels',
                 'search_users' => '/api/v1/instagram/v2/search_users',

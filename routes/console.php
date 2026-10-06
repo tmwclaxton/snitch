@@ -22,10 +22,20 @@ Schedule::command('blog:generate --length=long')
 
 // One UK morning pipeline (BST = UTC+1). Do not add a second scrape.
 // 07:00 BST / 06:00 UTC: calendar-day follower snapshots (interval 1).
+// 11:00 BST / 10:00 UTC: retry accounts whose 06:00 profile fetch failed.
 // 07:15 BST / 06:15 UTC: account sync (7-day gate) plus opt-in daily-brief light sync.
 // 07:25 BST / 06:25 UTC: daily brief after queued sync jobs have had time to drain.
 Schedule::command('snitch:refresh-followers')
+    ->name('snitch:refresh-followers')
     ->dailyAt('6:00')
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->onSuccess(fn () => ScheduleHeartbeat::mark('snitch:refresh-followers'))
+    ->onFailure(fn () => ScheduleHeartbeat::mark('snitch:refresh-followers', 'failure'));
+
+Schedule::command('snitch:refresh-followers')
+    ->name('snitch:refresh-followers-retry')
+    ->dailyAt('10:00')
     ->withoutOverlapping()
     ->onOneServer()
     ->onSuccess(fn () => ScheduleHeartbeat::mark('snitch:refresh-followers'))

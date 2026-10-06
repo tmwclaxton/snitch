@@ -307,8 +307,6 @@ class SyncTrackedAccountJob implements ShouldQueue
                 ])->save();
             }
 
-            app(FollowerSnapshotRecorder::class)->recordFromAccount($account->fresh() ?? $account);
-
             if ($account->followers !== null && $account->social_account_id !== null) {
                 app(FollowerCountRefresher::class)->propagate(
                     (int) $account->social_account_id,
@@ -395,6 +393,7 @@ class SyncTrackedAccountJob implements ShouldQueue
 
         if ($followers !== null && $account->social_account_id !== null) {
             app(FollowerCountRefresher::class)->propagate((int) $account->social_account_id, $followers);
+            app(FollowerSnapshotRecorder::class)->record((int) $account->social_account_id, $followers);
         }
 
         app(AvatarMirror::class)->apply(

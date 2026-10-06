@@ -44,7 +44,7 @@ class RefreshFollowersTest extends TestCase
             'handle' => 'untracked',
         ]);
 
-        $this->artisan('snitch:refresh-followers')
+        $this->artisan('snitch:refresh-followers', ['--queue' => true])
             ->expectsOutputToContain('Enqueued 1 follower refreshes.')
             ->assertSuccessful();
 

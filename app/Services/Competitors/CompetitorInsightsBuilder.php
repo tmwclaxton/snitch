@@ -10,7 +10,6 @@ use App\Models\SocialAd;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Dashboard\DashboardActivityBuilder;
-use App\Services\Tracking\FollowerSnapshotRecorder;
 use App\Support\SponsoredPostDetector;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -455,8 +454,6 @@ class CompetitorInsightsBuilder
                 ->values()
                 ->all();
 
-        $this->seedSnapshots($user, $ids);
-
         $today = CarbonImmutable::now()->toDateString();
         $week = CarbonImmutable::now()->subDays(7)->toDateString();
         $month = CarbonImmutable::now()->subDays(30)->toDateString();
@@ -647,42 +644,6 @@ class CompetitorInsightsBuilder
             'sponsored' => $sponsored,
             'running_ads' => $runningAds,
         ];
-    }
-
-    /**
-     * @param  list<int>  $socialAccountIds
-     */
-    private function seedSnapshots(User $user, array $socialAccountIds): void
-    {
-        if ($socialAccountIds === []) {
-            return;
-        }
-
-        $recorder = app(FollowerSnapshotRecorder::class);
-        $have = FollowerSnapshot::query()
-            ->whereIn('social_account_id', $socialAccountIds)
-            ->pluck('social_account_id')
-            ->map(fn (mixed $id): int => (int) $id)
-            ->unique()
-            ->all();
-
-        $accounts = TrackedAccount::query()
-            ->where('user_id', $user->id)
-            ->whereIn('social_account_id', $socialAccountIds)
-            ->whereNotNull('followers')
-            ->get(['social_account_id', 'followers']);
-
-        foreach ($accounts as $account) {
-            $id = (int) $account->social_account_id;
-            $followers = (int) $account->followers;
-
-            // Only record a real observation for today. Do not invent week/month
-            // anchors - platforms only return the current count.
-            if (! in_array($id, $have, true)) {
-                $recorder->record($id, $followers);
-                $have[] = $id;
-            }
-        }
     }
 
     /**

@@ -187,6 +187,7 @@ Rules:
 - Do not say an account posts daily or every day unless that handle has posted_every_day_last_7 true.
 - Do not say almost daily, nearly daily, almost every day, or posts most days unless posted_almost_daily_last_7 is true (6 or 7 distinct days with a post in the last 7).
 - Use the 7-day count and days since last post instead of a cadence adjective.
+- When describing follower change, use facts.own.followers_change_7d.label (for example +4 since 27 September). Do not say gained or lost in the last 7 days or this week unless from_date is exactly 7 days before brief_date.
 - If sync_failed is true, say the refresh failed. Do not say the account is quiet or has not posted recently.
 PROMPT;
 
@@ -252,10 +253,14 @@ PROMPT;
         $comp7 = (int) ($facts['format_mix']['competitor_posts_7d'] ?? 0);
         $reels7 = (int) (($facts['format_mix']['competitors_7d']['Reel'] ?? 0));
         $change7 = is_array($own) ? ($own['followers_change_7d']['change'] ?? null) : null;
+        $changeLabel = is_array($own) ? (string) ($own['followers_change_7d']['label'] ?? '') : '';
 
         $headline = 'Your next move is a Reel today.';
         if (is_numeric($change7) && (int) $change7 !== 0 && $reels7 > 0) {
-            $headline = 'You are '.((int) $change7 > 0 ? 'up '.(int) $change7 : (string) (int) $change7).' followers this week but competitors posted '.$reels7.' Reels. Post one Reel today.';
+            $changeNote = $changeLabel !== ''
+                ? $changeLabel
+                : ((int) $change7 > 0 ? 'up '.(int) $change7 : (string) (int) $change7).' followers';
+            $headline = 'You are '.$changeNote.' but competitors posted '.$reels7.' Reels. Post one Reel today.';
         } elseif ($daysSince !== null && (int) $daysSince >= 3) {
             $headline = 'It has been '.(int) $daysSince.' days since you posted. Put out a Reel today at '.$when.'.';
         }
@@ -365,6 +370,9 @@ PROMPT;
         $ownSummary = $followers === null
             ? 'Follower history is still thin for @'.$handle.'.'
             : '@'.$handle.' has '.$followers.' followers and posted '.$posts7.' times in the last 7 days.';
+        if ($changeLabel !== '' && is_numeric($change7)) {
+            $ownSummary .= ' Follower change: '.$changeLabel.'.';
+        }
         if ($daysSince !== null) {
             $ownSummary .= ' Last post was '.$daysSince.' days ago.';
         }

@@ -155,9 +155,9 @@ class CompetitorGrowthAndAdsTest extends TestCase
         ]);
 
         $recorder = app(FollowerSnapshotRecorder::class);
-        $recorder->recordFromAccount($account);
+        $recorder->record((int) $account->social_account_id, 500);
         $account->followers = 520;
-        $recorder->recordFromAccount($account);
+        $recorder->record((int) $account->social_account_id, 520);
 
         $this->assertSame(1, FollowerSnapshot::query()->count());
         $this->assertSame(
@@ -176,7 +176,7 @@ class CompetitorGrowthAndAdsTest extends TestCase
             $account = TrackedAccount::factory()->for($user)->create([
                 'followers' => 1000,
             ]);
-            app(FollowerSnapshotRecorder::class)->recordFromAccount($account);
+            app(FollowerSnapshotRecorder::class)->record((int) $account->social_account_id, (int) $account->followers);
 
             $this->assertSame(1, FollowerSnapshot::query()->count());
             $this->assertFalse(

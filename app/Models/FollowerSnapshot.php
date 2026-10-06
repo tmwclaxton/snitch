@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'social_account_id',
     'followers',
+    'source',
     'captured_on',
 ])]
 class FollowerSnapshot extends Model

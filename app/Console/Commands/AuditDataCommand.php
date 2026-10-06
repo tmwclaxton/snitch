@@ -56,7 +56,7 @@ class AuditDataCommand extends Command
             'queue_backlog' => fn () => $this->checkQueueBacklog(),
             'sync_freshness' => fn () => $this->checkSyncFreshness($users, $entitlements, $billing),
             'sync_empty_results' => fn () => $this->checkEmptySyncs($trackers),
-            'follower_snapshot_freshness' => fn () => $this->checkSnapshotFreshness($trackers),
+            'follower_snapshot_freshness' => fn () => $this->checkSnapshotFreshness($trackers, $users, $billing),
             'brief_freshness' => fn () => $this->checkBriefFreshness($users, $trackers),
             'impossible_values' => fn () => $this->checkImpossibleValues($trackers, $math),
             'duplicate_posts' => fn () => $this->checkDuplicatePosts($trackers),
@@ -65,7 +65,7 @@ class AuditDataCommand extends Command
             'monthly_report_consistency' => fn () => $this->checkMonthlyReports($users, $trackers, $math),
             'growth_consistency' => fn () => $this->checkGrowth($users, $trackers, $math),
             'missing_thumbnails' => fn () => $this->checkThumbnails($trackers),
-            'trackers_zero_posts' => fn () => $this->checkZeroPosts($trackers),
+            'trackers_zero_posts' => fn () => $this->checkZeroPosts($trackers, $users, $billing),
             'analysis_backlog' => fn () => $this->checkAnalysisBacklog($trackers),
             'daily_stats_consistency' => fn () => $this->checkDailyStats(),
         ];
@@ -350,32 +350,91 @@ class AuditDataCommand extends Command
 
     /**
      * @param  Collection<int, TrackedAccount>  $trackers
+     * @param  Collection<int, User>  $users
      */
-    private function checkSnapshotFreshness(Collection $trackers): void
+    private function checkSnapshotFreshness(Collection $trackers, Collection $users, UsageBillingService $billing): void
     {
         $maxDays = max(1, (int) config('snitch.followers.refresh_interval_days', 1)) + 1;
         $details = [];
-        $bad = 0;
+        $fails = 0;
+        $skipped = 0;
+        $copied = 0;
+        $canRunCache = [];
+        $today = now()->toDateString();
+        $yesterday = now()->subDay()->toDateString();
 
         foreach ($trackers->unique('social_account_id') as $t) {
+            $userId = (int) $t->user_id;
+
+            if (! isset($canRunCache[$userId])) {
+                $user = $users->firstWhere('id', $userId);
+                $canRunCache[$userId] = $user instanceof User && $billing->canRun($user);
+            }
+
             $latest = FollowerSnapshot::query()
                 ->where('social_account_id', $t->social_account_id)
                 ->orderByDesc('captured_on')
-                ->first(['captured_on', 'followers']);
+                ->orderByDesc('id')
+                ->first(['captured_on', 'followers', 'source']);
             $age = $latest?->captured_on === null ? null : (int) $latest->captured_on->startOfDay()->diffInDays(now()->startOfDay(), true);
-            $problem = $latest === null ? 'no snapshot' : ($age > $maxDays ? "stale (> {$maxDays} days)" : null);
-            $bad += $problem === null ? 0 : 1;
+            $todayRow = $latest !== null && $latest->captured_on?->toDateString() === $today ? $latest : null;
+            $yesterdayCount = FollowerSnapshot::query()
+                ->where('social_account_id', $t->social_account_id)
+                ->whereDate('captured_on', $yesterday)
+                ->value('followers');
+
+            $problem = match (true) {
+                $latest === null => 'no snapshot',
+                $age > $maxDays => "stale (> {$maxDays} days)",
+                $todayRow !== null && $todayRow->source !== 'profile' => 'copied or not freshly fetched',
+                default => null,
+            };
+
+            if (
+                $problem === null
+                && $todayRow !== null
+                && is_numeric($yesterdayCount)
+                && (int) $todayRow->followers === (int) $yesterdayCount
+                && $todayRow->source !== 'profile'
+            ) {
+                $problem = 'copied from yesterday';
+            }
+
+            $skipReason = null;
+            if ($problem !== null && ! $canRunCache[$userId]) {
+                $skipReason = 'skipped: low balance';
+            }
+
+            if ($skipReason !== null) {
+                $skipped++;
+            } elseif ($problem === 'copied or not freshly fetched' || $problem === 'copied from yesterday') {
+                $copied++;
+                $fails++;
+            } elseif ($problem !== null) {
+                $fails++;
+            }
+
             $details[] = [
                 'social_account_id' => $t->social_account_id,
+                'user_id' => $t->user_id,
+                'tracker_id' => $t->id,
                 'handle' => $t->handle,
                 'last_captured_on' => $latest?->captured_on?->toDateString(),
                 'followers' => $latest?->followers,
+                'source' => $latest?->source,
                 'age_days' => $age,
-                'problem' => $problem,
+                'problem' => $skipReason ?? $problem,
+                'skip_reason' => $skipReason,
             ];
         }
 
-        $this->record('follower_snapshot_freshness', $bad === 0 ? 'pass' : 'fail', "{$bad} tracked account(s) with no follower snapshot in {$maxDays} days.", $details);
+        $status = $fails > 0 ? 'fail' : ($skipped > 0 ? 'warn' : 'pass');
+        $this->record(
+            'follower_snapshot_freshness',
+            $status,
+            "{$fails} tracked account(s) with no fresh follower snapshot in {$maxDays} days; {$copied} copied; {$skipped} skipped (low balance).",
+            $details,
+        );
     }
 
     /**
@@ -711,22 +770,49 @@ class AuditDataCommand extends Command
 
     /**
      * @param  Collection<int, TrackedAccount>  $trackers
+     * @param  Collection<int, User>  $users
      */
-    private function checkZeroPosts(Collection $trackers): void
+    private function checkZeroPosts(Collection $trackers, Collection $users, UsageBillingService $billing): void
     {
         $recency = max(1, (int) config('snitch.sync.recency_days', 30));
         $rows = [];
+        $skipped = 0;
+        $canRunCache = [];
 
         foreach ($trackers as $t) {
             $total = Post::query()->where('social_account_id', $t->social_account_id)->count();
             $recent = Post::query()->where('social_account_id', $t->social_account_id)->where('posted_at', '>=', now()->subDays($recency))->count();
 
             if ($total === 0 || $recent === 0) {
-                $rows[] = ['tracker_id' => $t->id, 'handle' => $t->handle, 'posts_total' => $total, "posts_last_{$recency}d" => $recent, 'last_sync_status' => $t->last_sync_status];
+                $userId = (int) $t->user_id;
+
+                if (! isset($canRunCache[$userId])) {
+                    $user = $users->firstWhere('id', $userId);
+                    $canRunCache[$userId] = $user instanceof User && $billing->canRun($user);
+                }
+
+                $skipReason = $canRunCache[$userId] ? null : 'skipped: low balance';
+                if ($skipReason !== null) {
+                    $skipped++;
+                }
+
+                $rows[] = [
+                    'tracker_id' => $t->id,
+                    'handle' => $t->handle,
+                    'posts_total' => $total,
+                    "posts_last_{$recency}d" => $recent,
+                    'last_sync_status' => $t->last_sync_status,
+                    'skip_reason' => $skipReason,
+                ];
             }
         }
 
-        $this->record('trackers_zero_posts', $rows === [] ? 'pass' : 'warn', count($rows)." tracker(s) with zero posts overall or in the last {$recency} days.", $rows);
+        $this->record(
+            'trackers_zero_posts',
+            $rows === [] ? 'pass' : 'warn',
+            count($rows)." tracker(s) with zero posts overall or in the last {$recency} days; {$skipped} skipped (low balance).",
+            $rows,
+        );
     }
 
     /**

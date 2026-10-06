@@ -227,7 +227,7 @@ class EngagementDataQualityTest extends TestCase
             $account = TrackedAccount::factory()->create([
                 'followers' => 1158,
             ]);
-            app(FollowerSnapshotRecorder::class)->recordFromAccount($account);
+            app(FollowerSnapshotRecorder::class)->record((int) $account->social_account_id, (int) $account->followers);
 
             $this->assertSame(1, FollowerSnapshot::query()->count());
             $this->assertFalse(

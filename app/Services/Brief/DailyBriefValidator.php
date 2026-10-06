@@ -2,6 +2,8 @@
 
 namespace App\Services\Brief;
 
+use Carbon\CarbonImmutable;
+
 class DailyBriefValidator
 {
     /**
@@ -126,6 +128,11 @@ class DailyBriefValidator
         foreach ($texts as $text) {
             foreach ($this->unsupportedDailyClaims($text, $facts) as $error) {
                 $errors[] = $error;
+            }
+
+            $windowError = $this->unsupportedFollowerWindow($text, $facts);
+            if ($windowError !== null) {
+                $errors[] = $windowError;
             }
         }
 
@@ -307,7 +314,10 @@ class DailyBriefValidator
         $withoutClocks = preg_replace('/\b\d{1,2}:\d{2}\b/', ' ', $text) ?? $text;
         preg_match_all('/\d[\d,.]*%?x?/u', $withoutClocks, $matches);
 
-        return array_values(array_unique($matches[0] ?? []));
+        return array_values(array_unique(array_map(
+            fn (string $number): string => $this->normaliseNumber($number),
+            $matches[0] ?? [],
+        )));
     }
 
     public function numberIsKnown(string $number, array $allowed): bool
@@ -347,7 +357,14 @@ class DailyBriefValidator
 
     public function normaliseNumber(string $number): string
     {
-        return strtolower(str_replace(',', '', trim($number)));
+        $normalised = strtolower(str_replace(',', '', trim($number)));
+
+        // Sentence-end "97." is the same fact number as 97.
+        if (preg_match('/^\d+\.$/', $normalised) === 1) {
+            return rtrim($normalised, '.');
+        }
+
+        return $normalised;
     }
 
     /**
@@ -426,6 +443,34 @@ class DailyBriefValidator
         }
 
         return array_values(array_unique($errors));
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    public function unsupportedFollowerWindow(string $text, array $facts): ?string
+    {
+        if (preg_match('/\b(gained|lost|grew|up|down)\b.{0,40}\b(last 7 days|this week)\b|\b(last 7 days|this week)\b.{0,40}\bfollowers?\b/i', $text) !== 1) {
+            return null;
+        }
+
+        $from = data_get($facts, 'own.followers_change_7d.from_date');
+        $briefDate = data_get($facts, 'brief_date');
+        $label = data_get($facts, 'own.followers_change_7d.label');
+
+        if (! is_string($from) || $from === '' || ! is_string($briefDate) || $briefDate === '') {
+            return 'follower change window is not the last 7 days';
+        }
+
+        $expected = CarbonImmutable::parse($briefDate)->subDays(7)->toDateString();
+
+        if ($from === $expected) {
+            return null;
+        }
+
+        return is_string($label) && $label !== ''
+            ? 'follower change window is not the last 7 days; use '.$label
+            : 'follower change window is not the last 7 days';
     }
 
     /**

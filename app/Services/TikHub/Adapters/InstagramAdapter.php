@@ -4,9 +4,12 @@ namespace App\Services\TikHub\Adapters;
 
 use App\Enums\Platform;
 use App\Enums\PostType;
+use App\Models\SocialAccount;
 use App\Support\InstagramMetrics;
 use App\Support\InstagramPostId;
 use Carbon\CarbonImmutable;
+use RuntimeException;
+use Throwable;
 
 class InstagramAdapter extends AbstractTikHubAdapter
 {
@@ -18,13 +21,49 @@ class InstagramAdapter extends AbstractTikHubAdapter
     public function resolveProfile(string $handleOrUrl): array
     {
         $handle = $this->normalizeHandle($handleOrUrl);
-        $payload = $this->client->get($this->endpoint('user_info'), [
-            'username' => $handle,
-        ], 'instagram');
+        $userId = SocialAccount::query()
+            ->where('platform', Platform::Instagram)
+            ->where('handle', $handle)
+            ->whereNotNull('external_id')
+            ->value('external_id');
 
-        $item = $this->extractObject($payload, ['data.data', 'data', 'user', 'data.user', 'user_info']);
+        $attempts = [
+            ['user_info', ['username' => $handle]],
+        ];
 
-        return $this->profileFromItems([$item !== [] ? $item : $payload], $handle);
+        if (filled($userId)) {
+            $attempts[] = ['user_info', [
+                'username' => $handle,
+                'user_id' => (string) $userId,
+            ]];
+        }
+
+        $attempts[] = ['user_info_by_username', ['username' => $handle]];
+
+        $lastError = null;
+        $lastProfile = null;
+
+        foreach ($attempts as [$key, $query]) {
+            try {
+                $payload = $this->client->get($this->endpoint($key), $query, 'instagram');
+                $item = $this->extractObject($payload, ['data.data', 'data', 'user', 'data.user', 'user_info']);
+                $profile = $this->profileFromItems([$item !== [] ? $item : $payload], $handle);
+
+                if (isset($profile['followers']) && is_numeric($profile['followers'])) {
+                    return $profile;
+                }
+
+                $lastProfile = $profile;
+            } catch (Throwable $exception) {
+                $lastError = $exception;
+            }
+        }
+
+        if (is_array($lastProfile)) {
+            return $lastProfile;
+        }
+
+        throw $lastError ?? new RuntimeException('TikHub Instagram profile lookup failed.');
     }
 
     public function listRecentPosts(string $handleOrUrl, int $limit = 12, ?CarbonImmutable $since = null): array
@@ -37,14 +76,14 @@ class InstagramAdapter extends AbstractTikHubAdapter
 
         try {
             $postItems = $this->fetchUserMediaList('user_posts', $handle, $fetch);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $postError = $e;
             $postItems = [];
         }
 
         try {
             $reelItems = $this->fetchUserMediaList('user_reels', $handle, $fetch);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $reelError = $e;
             $reelItems = [];
         }

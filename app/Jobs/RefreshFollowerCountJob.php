@@ -11,7 +11,10 @@ class RefreshFollowerCountJob implements ShouldQueue
 {
     use Queueable;
 
-    public int $tries = 1;
+    public int $tries = 3;
+
+    /** @var list<int> */
+    public array $backoff = [900, 3600];
 
     public function __construct(
         public int $socialAccountId,

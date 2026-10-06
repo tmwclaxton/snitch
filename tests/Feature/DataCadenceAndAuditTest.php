@@ -6,6 +6,7 @@ use App\Enums\Platform;
 use App\Jobs\RefreshFollowerCountJob;
 use App\Models\BrandProfile;
 use App\Models\FollowerSnapshot;
+use App\Models\MonthlyReport;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
@@ -36,11 +37,15 @@ class DataCadenceAndAuditTest extends TestCase
         $events = collect(app(Schedule::class)->events())
             ->mapWithKeys(fn (Event $e): array => [(string) ($e->command ?? $e->description) => $e->expression]);
 
-        $refresh = $events->first(fn ($expr, $cmd) => str_contains($cmd, 'snitch:refresh-followers'));
+        $refreshTimes = collect(app(Schedule::class)->events())
+            ->filter(fn (Event $event): bool => str_contains((string) ($event->command ?? $event->description), 'snitch:refresh-followers'))
+            ->map(fn (Event $event): string => $event->expression)
+            ->values();
         $sync = $events->first(fn ($expr, $cmd) => str_contains($cmd, 'snitch:sync-accounts'));
         $briefs = $events->first(fn ($expr, $cmd) => str_contains($cmd, 'snitch:generate-daily-briefs'));
 
-        $this->assertSame('0 6 * * *', $refresh);
+        $this->assertContains('0 6 * * *', $refreshTimes);
+        $this->assertContains('0 10 * * *', $refreshTimes);
         $this->assertSame('15 6 * * *', $sync);
         $this->assertSame('25 6 * * *', $briefs);
         $this->assertTrue($events->keys()->contains(fn ($cmd) => str_contains($cmd, 'snitch:scheduler-heartbeat')));
@@ -267,5 +272,86 @@ class DataCadenceAndAuditTest extends TestCase
         $this->assertSame('skipped: over quota', $staleRow['skip_reason'] ?? null);
         $this->assertNull($freshRow['skip_reason'] ?? null);
         $this->assertNull($freshRow['problem'] ?? null);
+    }
+
+    public function test_audit_treats_low_balance_missing_snapshot_as_warn(): void
+    {
+        $user = User::factory()->withoutStarterCredit()->create();
+        $this->assertFalse(app(UsageBillingService::class)->canRun($user));
+
+        TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'samsung',
+            'followers' => null,
+            'last_synced_at' => null,
+            'last_sync_status' => null,
+        ]);
+        ScheduleHeartbeat::mark(ScheduleHeartbeat::TICK);
+
+        $this->artisan('snitch:audit', ['--json' => true, '--user' => [$user->id]])->assertSuccessful();
+
+        \Artisan::call('snitch:audit', ['--json' => true, '--user' => [$user->id]]);
+        $payload = json_decode(\Artisan::output(), true);
+        $snapshot = collect($payload['checks'])->firstWhere('key', 'follower_snapshot_freshness');
+        $zeroPosts = collect($payload['checks'])->firstWhere('key', 'trackers_zero_posts');
+
+        $this->assertSame('warn', $snapshot['status'] ?? null);
+        $this->assertSame('skipped: low balance', $snapshot['details'][0]['skip_reason'] ?? null);
+        $this->assertSame('warn', $zeroPosts['status'] ?? null);
+        $this->assertSame('skipped: low balance', $zeroPosts['details'][0]['skip_reason'] ?? null);
+    }
+
+    public function test_audit_fails_when_todays_snapshot_was_copied(): void
+    {
+        $user = User::factory()->create();
+        $this->assertTrue(app(UsageBillingService::class)->canRun($user));
+
+        $tracker = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'letsgosocialuk',
+            'followers' => 97,
+            'last_synced_at' => now()->subHours(2),
+            'last_sync_status' => 'success',
+        ]);
+        FollowerSnapshot::factory()->create([
+            'social_account_id' => $tracker->social_account_id,
+            'followers' => 97,
+            'source' => 'profile',
+            'captured_on' => now()->subDay()->toDateString(),
+        ]);
+        FollowerSnapshot::factory()->create([
+            'social_account_id' => $tracker->social_account_id,
+            'followers' => 97,
+            'source' => null,
+            'captured_on' => now()->toDateString(),
+        ]);
+        ScheduleHeartbeat::mark(ScheduleHeartbeat::TICK);
+
+        $this->artisan('snitch:audit', ['--json' => true, '--user' => [$user->id]])->assertExitCode(1);
+
+        \Artisan::call('snitch:audit', ['--json' => true, '--user' => [$user->id]]);
+        $payload = json_decode(\Artisan::output(), true);
+        $snapshot = collect($payload['checks'])->firstWhere('key', 'follower_snapshot_freshness');
+
+        $this->assertSame('fail', $snapshot['status'] ?? null);
+        $this->assertSame('copied or not freshly fetched', $snapshot['details'][0]['problem'] ?? null);
+    }
+
+    public function test_generate_daily_briefs_persists_the_current_month_report(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-06 07:00:00', 'Europe/London'));
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'is_own_account' => true,
+            'followers' => 97,
+        ]);
+
+        $this->artisan('snitch:generate-daily-briefs')->assertSuccessful();
+
+        $report = MonthlyReport::query()->where('user_id', $user->id)->first();
+        $this->assertNotNull($report);
+        $this->assertSame('2026-10', $report->payload['month'] ?? null);
     }
 }

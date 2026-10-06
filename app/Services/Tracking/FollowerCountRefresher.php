@@ -9,6 +9,7 @@ use App\Models\TrackedAccount;
 use App\Services\Apify\PlatformAdapterManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 use Throwable;
 
 class FollowerCountRefresher
@@ -16,7 +17,7 @@ class FollowerCountRefresher
     public function __construct(private PlatformAdapterManager $adapters) {}
 
     /**
-     * Social accounts that still have a tracker and no recent follower snapshot.
+     * Social accounts that still have a tracker and no fresh profile snapshot.
      *
      * @return list<int>
      */
@@ -28,8 +29,26 @@ class FollowerCountRefresher
             ->where('platform', Platform::Instagram)
             ->whereHas('trackedAccounts')
             ->whereDoesntHave('followerSnapshots', function ($query) use ($cutoff): void {
-                $query->whereDate('captured_on', '>=', $cutoff);
+                $query->whereDate('captured_on', '>=', $cutoff)
+                    ->where('source', FollowerSnapshotRecorder::SOURCE_PROFILE);
             })
+            ->orderBy('id')
+            ->pluck('id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->all();
+    }
+
+    /**
+     * Every Instagram social account that still has a tracker, including those
+     * with a profile snapshot today. Used by --force.
+     *
+     * @return list<int>
+     */
+    public function allTrackedInstagramSocialAccountIds(): array
+    {
+        return SocialAccount::query()
+            ->where('platform', Platform::Instagram)
+            ->whereHas('trackedAccounts')
             ->orderBy('id')
             ->pluck('id')
             ->map(fn (mixed $id): int => (int) $id)
@@ -44,22 +63,26 @@ class FollowerCountRefresher
             return false;
         }
 
-        $todayExists = $social->followerSnapshots()
+        $today = $social->followerSnapshots()
             ->whereDate('captured_on', CarbonImmutable::now()->toDateString())
-            ->exists();
+            ->first();
 
-        if ($todayExists) {
+        $todayIsFresh = $today !== null
+            && $today->source === FollowerSnapshotRecorder::SOURCE_PROFILE;
+
+        if ($todayIsFresh && ! $force) {
             $this->seedMissingTrackers($social->id);
 
             return false;
         }
 
         $cutoff = $this->cutoffDate();
-        $recent = $social->followerSnapshots()
+        $recentFresh = $social->followerSnapshots()
             ->whereDate('captured_on', '>=', $cutoff)
+            ->where('source', FollowerSnapshotRecorder::SOURCE_PROFILE)
             ->exists();
 
-        if ($recent && ! $force) {
+        if ($recentFresh && ! $force) {
             // A second tracker of an already-refreshed account must still inherit
             // the latest known count without paying for another profile scrape.
             $this->seedMissingTrackers($social->id);
@@ -74,15 +97,8 @@ class FollowerCountRefresher
         }
 
         try {
-            $profile = $this->adapters->for($social->platform)->resolveProfile($sample->handle);
-        } catch (Throwable $exception) {
-            Log::warning('Follower refresh failed', [
-                'social_account_id' => $social->id,
-                'platform' => $social->platform->value,
-                'handle' => $social->handle,
-                'message' => $exception->getMessage(),
-            ]);
-
+            $profile = $this->resolveProfile($social, $sample);
+        } catch (Throwable) {
             return false;
         }
 
@@ -179,6 +195,48 @@ class FollowerCountRefresher
         $days = max(1, (int) config('snitch.followers.refresh_interval_days', 1));
 
         return CarbonImmutable::now()->startOfDay()->subDays($days - 1)->toDateString();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function resolveProfile(SocialAccount $social, TrackedAccount $sample): array
+    {
+        $primaryError = null;
+
+        try {
+            $profile = $this->adapters->for($social->platform)->resolveProfile($sample->handle);
+            if ($this->followersFromProfile($profile) !== null) {
+                return $profile;
+            }
+        } catch (Throwable $exception) {
+            $primaryError = $exception;
+            Log::warning('Follower refresh failed', [
+                'social_account_id' => $social->id,
+                'platform' => $social->platform->value,
+                'handle' => $social->handle,
+                'driver' => $this->adapters->driverFor($social->platform),
+                'message' => $exception->getMessage(),
+            ]);
+        }
+
+        if ($this->adapters->driverFor($social->platform) === 'tikhub') {
+            try {
+                $profile = $this->adapters->apifyAdapter($social->platform)->resolveProfile($sample->handle);
+                if ($this->followersFromProfile($profile) !== null) {
+                    return $profile;
+                }
+            } catch (Throwable $exception) {
+                Log::warning('Follower refresh Apify fallback failed', [
+                    'social_account_id' => $social->id,
+                    'platform' => $social->platform->value,
+                    'handle' => $social->handle,
+                    'message' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        throw $primaryError ?? new RuntimeException('Follower refresh returned no count.');
     }
 
     /**

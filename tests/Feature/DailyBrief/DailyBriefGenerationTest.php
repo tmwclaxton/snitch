@@ -518,6 +518,84 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertFalse($failedMove['sync_empty'] ?? true);
     }
 
+    public function test_validator_accepts_a_fact_number_with_a_trailing_period(): void
+    {
+        $result = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => '@letsgosocialuk has 97. followers.',
+            'competitor_summary' => 'ok',
+            'watch' => [],
+        ], [
+            'allowed_handles' => ['letsgosocialuk'],
+            'allowed_post_ids' => [],
+            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
+            'brief_date' => '2026-10-06',
+        ]);
+
+        $this->assertTrue($result['ok'], implode('; ', $result['errors']));
+    }
+
+    public function test_validator_rejects_last_7_days_when_follower_from_date_is_older(): void
+    {
+        $result = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => '@letsgosocialuk gained 4 in the last 7 days.',
+            'competitor_summary' => 'ok',
+            'watch' => [],
+        ], [
+            'allowed_handles' => ['letsgosocialuk'],
+            'allowed_post_ids' => [],
+            'brief_date' => '2026-10-06',
+            'own' => [
+                'handle' => 'letsgosocialuk',
+                'followers_now' => 97,
+                'followers_change_7d' => [
+                    'change' => 4,
+                    'from_date' => '2026-09-27',
+                    'label' => '+4 since 27 September',
+                ],
+            ],
+        ]);
+
+        $this->assertFalse($result['ok']);
+        $this->assertTrue(collect($result['errors'])->contains(
+            fn (string $error): bool => str_contains($error, 'follower change window is not the last 7 days'),
+        ));
+    }
+
+    public function test_deterministic_own_summary_uses_the_change_label(): void
+    {
+        $narrative = app(DailyBriefGenerator::class)->deterministicNarrative([
+            'own' => [
+                'handle' => 'letsgosocialuk',
+                'followers_now' => 97,
+                'posts_last_7d_count' => 2,
+                'days_since_last_post' => 2,
+                'followers_change_7d' => [
+                    'change' => 4,
+                    'from_date' => '2026-09-27',
+                    'label' => '+4 since 27 September',
+                ],
+            ],
+            'format_mix' => ['competitor_posts_24h' => 0, 'competitor_posts_7d' => 0, 'competitors_7d' => []],
+            'best_times' => ['today_slot' => null, 'weekday_evening_block' => 'weekday evenings 19:00-21:00'],
+            'competitors' => [],
+        ]);
+
+        $this->assertStringContainsString('+4 since 27 September', $narrative['own_summary']);
+        $this->assertStringNotContainsString('gained 4 in the last 7 days', $narrative['own_summary']);
+    }
+
     public function test_validator_lists_unknown_handle_and_invented_number(): void
     {
         $facts = [

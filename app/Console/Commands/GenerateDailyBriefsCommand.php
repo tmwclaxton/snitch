@@ -5,8 +5,10 @@ namespace App\Console\Commands;
 use App\Jobs\GenerateDailyBriefJob;
 use App\Models\User;
 use App\Services\Brief\DailyBriefGenerator;
+use App\Services\Growth\MonthlyReportBuilder;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
+use Throwable;
 
 class GenerateDailyBriefsCommand extends Command
 {
@@ -18,7 +20,7 @@ class GenerateDailyBriefsCommand extends Command
 
     protected $description = 'Generate the daily executive summary for opted-in users';
 
-    public function handle(DailyBriefGenerator $generator): int
+    public function handle(DailyBriefGenerator $generator, MonthlyReportBuilder $reports): int
     {
         $force = (bool) $this->option('force');
         $userFilter = $this->option('user');
@@ -50,7 +52,7 @@ class GenerateDailyBriefsCommand extends Command
                     $brief = $generator->generate($user, $date, $force);
                     $this->info("User {$user->id}: daily brief #{$brief->id} for {$date->toDateString()}.");
                     $count++;
-                } catch (\Throwable $exception) {
+                } catch (Throwable $exception) {
                     $this->warn("User {$user->id}: ".$exception->getMessage());
                 }
 
@@ -62,7 +64,29 @@ class GenerateDailyBriefsCommand extends Command
         }
 
         $this->info("Queued or generated {$count} daily briefs for {$date->toDateString()} (skipped {$skipped}).");
+        $this->persistCurrentMonthlyReports($reports);
 
         return self::SUCCESS;
+    }
+
+    private function persistCurrentMonthlyReports(MonthlyReportBuilder $reports): void
+    {
+        $monthStart = $reports->monthStart(now('Europe/London')->toDateString());
+        $users = User::query()
+            ->whereHas('trackedAccounts')
+            ->orderBy('id')
+            ->get();
+        $updated = 0;
+
+        foreach ($users as $user) {
+            try {
+                $reports->persist($user, $monthStart);
+                $updated++;
+            } catch (Throwable $exception) {
+                $this->warn("Monthly report user {$user->id}: ".$exception->getMessage());
+            }
+        }
+
+        $this->info("Refreshed {$updated} current-month report(s) for {$monthStart->format('Y-m')}.");
     }
 }

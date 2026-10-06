@@ -19,6 +19,7 @@ class FollowerSnapshotFactory extends Factory
         return [
             'social_account_id' => SocialAccount::factory(),
             'followers' => fake()->numberBetween(100, 500000),
+            'source' => 'profile',
             'captured_on' => now()->toDateString(),
         ];
     }
