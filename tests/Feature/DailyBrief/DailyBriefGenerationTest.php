@@ -18,6 +18,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Sleep;
 use Tests\TestCase;
 
 class DailyBriefGenerationTest extends TestCase
@@ -77,6 +78,80 @@ class DailyBriefGenerationTest extends TestCase
 
         $this->assertSame($first->id, $second->id);
         $this->assertSame(1, DailyBrief::query()->where('user_id', $user->id)->count());
+    }
+
+    public function test_llm_retries_on_429_then_succeeds(): void
+    {
+        Sleep::fake();
+
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        $this->seedAccounts($user);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::sequence()
+                ->push('rate limited', 429, ['Retry-After' => '2'])
+                ->push($this->llmResponse([
+                    'headline' => 'Post a Reel today at 20:00.',
+                    'actions' => [
+                        ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                        ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                        ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                    ],
+                    'own_summary' => 'ok',
+                    'competitor_summary' => 'ok',
+                    'watch' => [],
+                ])),
+        ]);
+
+        $brief = app(DailyBriefGenerator::class)->generate($user);
+
+        $this->assertFalse($brief->payload['validation']['used_fallback'] ?? true);
+        $this->assertSame('Post a Reel today at 20:00.', $brief->headline);
+        Http::assertSentCount(2);
+        Sleep::assertSlept(fn ($interval): bool => (int) $interval->totalSeconds === 2, 1);
+    }
+
+    public function test_force_does_not_replace_an_llm_brief_with_fallback(): void
+    {
+        Sleep::fake();
+        $this->fakeValidLlm();
+
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        $this->seedAccounts($user);
+
+        $generator = app(DailyBriefGenerator::class);
+        $first = $generator->generate($user);
+        $generatedAt = $first->generated_at?->toIso8601String();
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response('rate limited', 429, ['Retry-After' => '0']),
+        ]);
+
+        $second = $generator->generate($user, force: true);
+
+        $this->assertSame($first->id, $second->id);
+        $this->assertSame($first->headline, $second->headline);
+        $this->assertFalse($second->payload['validation']['used_fallback'] ?? true);
+        $this->assertSame($generatedAt, $second->generated_at?->toIso8601String());
+    }
+
+    public function test_first_brief_still_uses_fallback_when_llm_fails(): void
+    {
+        Sleep::fake();
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response('rate limited', 429, ['Retry-After' => '0']),
+        ]);
+
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        $this->seedAccounts($user);
+
+        $brief = app(DailyBriefGenerator::class)->generate($user);
+
+        $this->assertTrue($brief->payload['validation']['used_fallback'] ?? false);
+        $this->assertNotSame('', $brief->headline);
     }
 
     public function test_validator_rejects_invented_handles_and_numbers_then_retries_and_falls_back(): void
@@ -892,6 +967,104 @@ class DailyBriefGenerationTest extends TestCase
 
         $this->assertStringContainsString('+4 since 27 September', $narrative['own_summary']);
         $this->assertStringNotContainsString('gained 4 in the last 7 days', $narrative['own_summary']);
+    }
+
+    public function test_fallback_pluralises_a_single_post(): void
+    {
+        $narrative = app(DailyBriefGenerator::class)->deterministicNarrative([
+            'own' => [
+                'handle' => 'letsgosocialuk',
+                'followers_now' => 97,
+                'posts_last_7d_count' => 1,
+                'days_since_last_post' => 1,
+            ],
+            'format_mix' => ['competitor_posts_24h' => 1, 'competitor_posts_7d' => 1, 'competitors_7d' => ['Reel' => 1]],
+            'best_times' => ['today_slot' => null, 'weekday_evening_block' => 'weekday evenings 19:00-21:00'],
+            'competitors' => [],
+        ]);
+
+        $this->assertStringContainsString('posted 1 time in the last 7 days', $narrative['own_summary']);
+        $this->assertStringNotContainsString('posted 1 times', $narrative['own_summary']);
+        $this->assertStringContainsString('Last post was 1 day ago', $narrative['own_summary']);
+        $this->assertStringContainsString('published 1 post in the last 7 days, including 1 post in the last 24 hours', $narrative['competitor_summary']);
+    }
+
+    public function test_fallback_omits_below_usual_posts_as_hits_or_inspiration(): void
+    {
+        $facts = [
+            'own' => [
+                'handle' => 'letsgosocialuk',
+                'followers_now' => 97,
+                'posts_last_7d_count' => 1,
+                'days_since_last_post' => 1,
+            ],
+            'format_mix' => ['competitor_posts_24h' => 1, 'competitor_posts_7d' => 1, 'competitors_7d' => ['Reel' => 1]],
+            'best_times' => ['today_slot' => null, 'weekday_evening_block' => 'weekday evenings 19:00-21:00'],
+            'competitors' => [],
+            'top_competitor_hit_24h' => [
+                'handle' => 'goodgym',
+                'post_id' => 218,
+                'times_usual' => 0.5,
+                'format' => 'Reel',
+                'hook' => 'Parkrun Saturday',
+                'url' => 'https://www.instagram.com/p/abc/',
+            ],
+            'top_competitor_hit_7d' => [
+                'handle' => 'goodgym',
+                'post_id' => 218,
+                'times_usual' => 0.5,
+                'format' => 'Reel',
+            ],
+            'top_competitor_hit' => [
+                'handle' => 'goodgym',
+                'post_id' => 218,
+                'times_usual' => 0.5,
+                'format' => 'Reel',
+            ],
+        ];
+
+        $generator = app(DailyBriefGenerator::class);
+        $narrative = $generator->deterministicNarrative($facts);
+        $payload = $generator->assemblePayload($facts, $narrative, [], true);
+
+        $this->assertStringNotContainsString('Biggest recent hit', $narrative['competitor_summary']);
+        $this->assertStringNotContainsString('0.5', $narrative['actions'][0]['why']);
+        $this->assertStringNotContainsString('goodgym', $narrative['actions'][0]['why']);
+        $this->assertSame([], $narrative['actions'][0]['related_post_ids']);
+        $this->assertNull($narrative['actions'][0]['hook']);
+        $this->assertSame([], $payload['actions'][0]['inspiration']);
+    }
+
+    public function test_fallback_uses_a_post_that_beat_usual_as_inspiration(): void
+    {
+        $facts = [
+            'own' => [
+                'handle' => 'letsgosocialuk',
+                'followers_now' => 97,
+                'posts_last_7d_count' => 2,
+                'days_since_last_post' => 2,
+            ],
+            'format_mix' => ['competitor_posts_24h' => 1, 'competitor_posts_7d' => 3, 'competitors_7d' => ['Reel' => 3]],
+            'best_times' => ['today_slot' => null, 'weekday_evening_block' => 'weekday evenings 19:00-21:00'],
+            'competitors' => [],
+            'top_competitor_hit_24h' => [
+                'handle' => 'goodgym',
+                'post_id' => 99,
+                'times_usual' => 2.4,
+                'format' => 'Reel',
+                'hook' => 'Parkrun Saturday',
+                'url' => 'https://www.instagram.com/p/hit/',
+            ],
+        ];
+
+        $generator = app(DailyBriefGenerator::class);
+        $narrative = $generator->deterministicNarrative($facts);
+        $payload = $generator->assemblePayload($facts, $narrative, [], true);
+
+        $this->assertStringContainsString('Biggest recent hit: @goodgym', $narrative['competitor_summary']);
+        $this->assertSame([99], $narrative['actions'][0]['related_post_ids']);
+        $this->assertSame('Parkrun Saturday', $narrative['actions'][0]['hook']);
+        $this->assertSame(99, $payload['actions'][0]['inspiration'][0]['post_id'] ?? null);
     }
 
     public function test_validator_lists_unknown_handle_and_invented_number(): void

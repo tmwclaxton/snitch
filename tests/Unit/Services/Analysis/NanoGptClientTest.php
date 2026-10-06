@@ -4,6 +4,8 @@ namespace Tests\Unit\Services\Analysis;
 
 use App\Services\Analysis\NanoGptClient;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
+use RuntimeException;
 use Tests\TestCase;
 
 class NanoGptClientTest extends TestCase
@@ -38,6 +40,102 @@ class NanoGptClientTest extends TestCase
 
         Http::assertSentCount(2);
         $this->assertSame('{"ok":true}', data_get($response, 'choices.0.message.content'));
+    }
+
+    public function test_chat_retries_429_and_honours_retry_after(): void
+    {
+        config([
+            'snitch.nanogpt.api_key' => 'secret-nano-token',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+            'snitch.nanogpt.timeout' => 5,
+            'snitch.video_analysis.model' => 'test-model',
+        ]);
+
+        Sleep::fake();
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://nano-gpt.test/api/v1/*' => Http::sequence()
+                ->push('rate limited', 429, ['Retry-After' => '2'])
+                ->push([
+                    'choices' => [
+                        [
+                            'message' => [
+                                'content' => '{"ok":true}',
+                            ],
+                        ],
+                    ],
+                ]),
+        ]);
+
+        $response = app(NanoGptClient::class)->chat([
+            ['role' => 'user', 'content' => 'ping'],
+        ], null, ['tries' => 4]);
+
+        Http::assertSentCount(2);
+        $this->assertSame('{"ok":true}', data_get($response, 'choices.0.message.content'));
+        Sleep::assertSlept(fn ($interval): bool => (int) $interval->totalSeconds === 2, 1);
+    }
+
+    public function test_chat_retries_503_with_backoff(): void
+    {
+        config([
+            'snitch.nanogpt.api_key' => 'secret-nano-token',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+            'snitch.nanogpt.timeout' => 5,
+            'snitch.video_analysis.model' => 'test-model',
+        ]);
+
+        Sleep::fake();
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://nano-gpt.test/api/v1/*' => Http::sequence()
+                ->push('upstream', 503)
+                ->push([
+                    'choices' => [
+                        [
+                            'message' => [
+                                'content' => '{"ok":true}',
+                            ],
+                        ],
+                    ],
+                ]),
+        ]);
+
+        $response = app(NanoGptClient::class)->chat([
+            ['role' => 'user', 'content' => 'ping'],
+        ], null, ['tries' => 4]);
+
+        Http::assertSentCount(2);
+        $this->assertSame('{"ok":true}', data_get($response, 'choices.0.message.content'));
+        Sleep::assertSleptTimes(1);
+    }
+
+    public function test_chat_does_not_retry_429_when_tries_is_one(): void
+    {
+        config([
+            'snitch.nanogpt.api_key' => 'secret-nano-token',
+            'snitch.nanogpt.base_url' => 'https://nano-gpt.test/api/v1',
+            'snitch.nanogpt.timeout' => 5,
+            'snitch.video_analysis.model' => 'test-model',
+        ]);
+
+        Sleep::fake();
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://nano-gpt.test/api/v1/*' => Http::response('rate limited', 429, ['Retry-After' => '2']),
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('NanoGPT request failed');
+
+        try {
+            app(NanoGptClient::class)->chat([
+                ['role' => 'user', 'content' => 'ping'],
+            ]);
+        } finally {
+            Http::assertSentCount(1);
+            Sleep::assertNeverSlept();
+        }
     }
 
     public function test_extract_usage_reads_openai_and_alias_keys(): void

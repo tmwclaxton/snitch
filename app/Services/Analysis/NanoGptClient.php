@@ -4,7 +4,10 @@ namespace App\Services\Analysis;
 
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Sleep;
 use RuntimeException;
 
 class NanoGptClient
@@ -24,13 +27,61 @@ class NanoGptClient
             $payload['response_format'] = $options['response_format'];
         }
 
-        $response = $this->http($options)->post('/chat/completions', $payload);
+        $tries = max(1, (int) ($options['tries'] ?? 1));
+        $response = null;
 
-        if (! $response->successful()) {
-            throw new RuntimeException('NanoGPT request failed: '.$response->body());
+        for ($attempt = 1; $attempt <= $tries; $attempt++) {
+            $response = $this->http($options)->post('/chat/completions', $payload);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            if (! $this->shouldRetryChat($response) || $attempt === $tries) {
+                break;
+            }
+
+            $sleepMs = $this->chatRetryDelayMs($response, $attempt);
+
+            Log::warning('NanoGPT transient failure, retrying', [
+                'status' => $response->status(),
+                'attempt' => $attempt,
+                'sleep_ms' => $sleepMs,
+            ]);
+
+            Sleep::for($sleepMs)->milliseconds();
         }
 
-        return $response->json();
+        throw new RuntimeException('NanoGPT request failed: '.($response?->body() ?? 'empty response'));
+    }
+
+    /**
+     * Retry rate limits and upstream 5xx. 4xx other than 429 is a permanent reject.
+     */
+    private function shouldRetryChat(Response $response): bool
+    {
+        $status = $response->status();
+
+        return $status === 429 || $status >= 500;
+    }
+
+    private function chatRetryDelayMs(Response $response, int $attempt): int
+    {
+        $header = $response->header('Retry-After');
+
+        if (is_numeric($header)) {
+            return min(30_000, max(0, (int) $header) * 1000);
+        }
+
+        if (is_string($header) && $header !== '') {
+            $until = strtotime($header);
+
+            if ($until !== false) {
+                return min(30_000, max(0, $until - time()) * 1000);
+            }
+        }
+
+        return min(8_000, 1000 * (2 ** max(0, $attempt - 1)));
     }
 
     public function extractAssistantText(array $response): string
@@ -188,6 +239,6 @@ class NanoGptClient
             ->withToken($apiKey)
             ->acceptJson()
             ->timeout($timeout)
-            ->retry(2, 1000, fn (mixed $exception): bool => $exception instanceof ConnectionException);
+            ->retry(2, 1000, fn (mixed $exception): bool => $exception instanceof ConnectionException, false);
     }
 }

@@ -63,6 +63,8 @@ class DailyBriefGenerator
             return $existing;
         }
 
+        $kept = $this->snapshotExistingLlmBrief($existing);
+
         $brief = $existing ?? new DailyBrief([
             'user_id' => $user->id,
             'brief_date' => $date->toDateString(),
@@ -113,6 +115,29 @@ class DailyBriefGenerator
             $diagnostics[] = ['attempt' => $attempts, 'errors' => [$exception->getMessage()]];
         }
 
+        if ($usedFallback && $kept !== null) {
+            Log::warning('Daily brief fallback skipped; keeping existing LLM brief', [
+                'user_id' => $user->id,
+                'brief_id' => $brief->id,
+                'brief_date' => $date->toDateString(),
+            ]);
+
+            $brief->fill([
+                'status' => 'ready',
+                'headline' => $kept['headline'],
+                'payload' => $kept['payload'],
+                'facts' => $kept['facts'],
+                'model' => $kept['model'],
+                'llm_attempts' => $kept['llm_attempts'],
+                'was_free' => true,
+                'credits_charged_pence' => 0,
+                'generated_at' => $kept['generated_at'],
+            ]);
+            $brief->save();
+
+            return $brief;
+        }
+
         $payload = $this->assemblePayload($facts, $llmOutput ?? [], $diagnostics, $usedFallback, $existing?->payload);
 
         $brief->fill([
@@ -151,6 +176,7 @@ class DailyBriefGenerator
         $decoded = $this->client->chatJson($messages, $model, [
             'temperature' => 0.3,
             'max_tokens' => 1800,
+            'tries' => (int) config('snitch.daily_brief.llm_tries', 4),
         ]);
 
         if (! is_array($decoded)) {
@@ -251,7 +277,8 @@ PROMPT;
         $whenNote = is_array($slot) && ($slot['early_signal'] ?? false)
             ? $block.' (early signal)'
             : (is_array($slot) ? (string) $slot['label'] : $block);
-        $hit = $facts['top_competitor_hit_24h'] ?? $facts['top_competitor_hit'] ?? null;
+        $hit = $this->fallbackInspirationPost($facts);
+        $inWindow = $facts['top_competitor_hit_24h'] ?? $facts['top_competitor_hit_7d'] ?? null;
         $comp24 = (int) ($facts['format_mix']['competitor_posts_24h'] ?? 0);
         $comp7 = (int) ($facts['format_mix']['competitor_posts_7d'] ?? 0);
         $reels7 = (int) (($facts['format_mix']['competitors_7d']['Reel'] ?? 0));
@@ -263,14 +290,17 @@ PROMPT;
             $changeNote = $changeLabel !== ''
                 ? $changeLabel
                 : ((int) $change7 > 0 ? 'up '.(int) $change7 : (string) (int) $change7).' followers';
-            $headline = 'You are '.$changeNote.' but competitors posted '.$reels7.' Reels. Post one Reel today.';
+            $headline = 'You are '.$changeNote.' but competitors posted '.$this->pluralise($reels7, 'Reel').'. Post one Reel today.';
         } elseif ($daysSince !== null && (int) $daysSince >= 3) {
-            $headline = 'It has been '.(int) $daysSince.' days since you posted. Put out a Reel today at '.$when.'.';
+            $headline = 'It has been '.$this->pluralise((int) $daysSince, 'day').' since you posted. Put out a Reel today at '.$when.'.';
         }
 
         $actions = [];
         $hitHandle = is_array($hit) ? (string) ($hit['handle'] ?? '') : '';
-        $hitFormat = is_array($hit) ? (string) ($hit['format'] ?? 'Reel') : 'Reel';
+        $hitFormat = is_array($hit)
+            ? (string) ($hit['format'] ?? 'Reel')
+            : (is_array($inWindow) ? (string) ($inWindow['format'] ?? 'Reel') : 'Reel');
+        $hitFormat = $hitFormat !== '' ? $hitFormat : 'Reel';
         $hitPi = is_array($hit) ? ($hit['times_usual'] ?? $hit['views_vs_usual'] ?? null) : null;
         $hitLabel = is_numeric($hitPi) ? number_format((float) $hitPi, 1).' times their usual' : 'their best recent post';
 
@@ -278,7 +308,7 @@ PROMPT;
             'title' => 'Post a '.$hitFormat.' today at '.$when.'.',
             'why' => $hitHandle !== ''
                 ? '@'.$hitHandle.' is getting '.$hitLabel.' with '.$hitFormat.'s.'
-                : 'Competitors posted '.$reels7.' Reels in the last 7 days.',
+                : 'Competitors posted '.$this->pluralise($reels7, 'Reel').' in the last 7 days.',
             'how' => 'Keep it under 30 seconds. Open with a first-person line. Ask people to comment or DM.',
             'when' => $when,
             'format' => $hitFormat,
@@ -360,7 +390,7 @@ PROMPT;
         if (count($actions) < 3) {
             $actions[] = [
                 'title' => 'Reply to two comments on your last post.',
-                'why' => '@'.$handle.' posted '.$posts7.' times in the last 7 days.',
+                'why' => '@'.$handle.' posted '.$this->pluralise($posts7, 'time').' in the last 7 days.',
                 'how' => 'Reply in the comments, then share the post to your Story.',
                 'when' => null,
                 'format' => 'Engage',
@@ -372,15 +402,15 @@ PROMPT;
 
         $ownSummary = $followers === null
             ? 'Follower history is still thin for @'.$handle.'.'
-            : '@'.$handle.' has '.$followers.' followers and posted '.$posts7.' times in the last 7 days.';
+            : '@'.$handle.' has '.$followers.' followers and posted '.$this->pluralise($posts7, 'time').' in the last 7 days.';
         if ($changeLabel !== '' && is_numeric($change7)) {
             $ownSummary .= ' Follower change: '.$changeLabel.'.';
         }
         if ($daysSince !== null) {
-            $ownSummary .= ' Last post was '.$daysSince.' days ago.';
+            $ownSummary .= ' Last post was '.$this->pluralise((int) $daysSince, 'day').' ago.';
         }
 
-        $competitorSummary = 'Competitors published '.$comp7.' posts in the last 7 days, including '.$comp24.' in the last 24 hours.';
+        $competitorSummary = 'Competitors published '.$this->pluralise($comp7, 'post').' in the last 7 days, including '.$this->pluralise($comp24, 'post').' in the last 24 hours.';
         if (is_array($hit) && $hitHandle !== '') {
             $competitorSummary .= ' Biggest recent hit: @'.$hitHandle.', '.$hitLabel.'.';
         }
@@ -524,7 +554,7 @@ PROMPT;
                 [
                     'label' => 'Your posts this week',
                     'value' => (string) (is_array($own) ? ($own['posts_last_7d_count'] ?? 0) : 0),
-                    'note' => is_array($own) && $own['last_posted_label']
+                    'note' => is_array($own) && filled($own['last_posted_label'] ?? null)
                         ? 'Last post: '.$own['last_posted_label']
                         : null,
                 ],
@@ -668,6 +698,79 @@ PROMPT;
             'Daily tracking started %s; first comparison tomorrow',
             $date->format('j M'),
         );
+    }
+
+    /**
+     * @return array{headline: string, payload: array<string, mixed>, facts: array<string, mixed>, model: string|null, llm_attempts: int, generated_at: mixed}|null
+     */
+    private function snapshotExistingLlmBrief(?DailyBrief $brief): ?array
+    {
+        if ($brief === null || $brief->status !== 'ready') {
+            return null;
+        }
+
+        $payload = is_array($brief->payload) ? $brief->payload : [];
+
+        if (($payload['validation']['used_fallback'] ?? false) === true) {
+            return null;
+        }
+
+        if ((int) $brief->llm_attempts < 1 && ! filled($brief->model)) {
+            return null;
+        }
+
+        if (! filled($brief->headline) || $payload === []) {
+            return null;
+        }
+
+        return [
+            'headline' => (string) $brief->headline,
+            'payload' => $payload,
+            'facts' => is_array($brief->facts) ? $brief->facts : [],
+            'model' => $brief->model,
+            'llm_attempts' => (int) $brief->llm_attempts,
+            'generated_at' => $brief->generated_at,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>|null
+     */
+    private function fallbackInspirationPost(array $facts): ?array
+    {
+        foreach ([
+            $facts['top_competitor_hit_24h'] ?? null,
+            $facts['top_competitor_hit_7d'] ?? null,
+            $facts['top_competitor_hit'] ?? null,
+        ] as $row) {
+            if ($this->beatUsual(is_array($row) ? $row : null)) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $row
+     */
+    private function beatUsual(?array $row): bool
+    {
+        if ($row === null) {
+            return false;
+        }
+
+        $score = $row['times_usual'] ?? $row['views_vs_usual'] ?? null;
+
+        return is_numeric($score) && (float) $score > 1.0;
+    }
+
+    private function pluralise(int $count, string $singular, ?string $plural = null): string
+    {
+        $plural ??= $singular.'s';
+
+        return $count.' '.($count === 1 ? $singular : $plural);
     }
 
     private function maybeMail(User $user, DailyBrief $brief): void

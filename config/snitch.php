@@ -285,6 +285,8 @@ return [
         'refresh_time' => env('SNITCH_DAILY_BRIEF_REFRESH_TIME', '06:15'),
         // 07:25 BST / 06:25 UTC: after 06:15 sync jobs have started to drain.
         'generate_time' => env('SNITCH_DAILY_BRIEF_GENERATE_TIME', '06:25'),
+        // Total HTTP tries per model call on 429 / 5xx (honours Retry-After).
+        'llm_tries' => (int) env('SNITCH_DAILY_BRIEF_LLM_TRIES', 4),
         'winner_lookback_days' => (int) env('SNITCH_DAILY_BRIEF_WINNER_LOOKBACK_DAYS', 7),
         'max_actions' => (int) env('SNITCH_DAILY_BRIEF_MAX_ACTIONS', 5),
         'ads_refresh_every_days' => (int) env('SNITCH_DAILY_BRIEF_ADS_REFRESH_DAYS', 3),
