@@ -518,6 +518,74 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertFalse($failedMove['sync_empty'] ?? true);
     }
 
+    public function test_validator_rewrites_internal_post_ids_in_copy(): void
+    {
+        $result = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                [
+                    'title' => 'Comment on their latest Reel',
+                    'why' => 'why',
+                    'how' => 'Leave genuine, non-spammy comments on post 218',
+                    'related_handles' => ['goodgym'],
+                    'related_post_ids' => [218],
+                ],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'Comment on post #218 tonight.', 'related_handles' => [], 'related_post_ids' => [218]],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => 'ok',
+            'watch' => [],
+        ], [
+            'allowed_handles' => ['goodgym'],
+            'allowed_post_ids' => [218],
+            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
+            'top_competitor_hit_24h' => [
+                'post_id' => 218,
+                'handle' => 'goodgym',
+                'format' => 'Reel',
+                'hook' => 'Living Room Listens',
+            ],
+        ]);
+
+        $this->assertTrue($result['ok'], implode('; ', $result['errors']));
+        $this->assertSame(
+            'Leave genuine, non-spammy comments on their Living Room Listens Reel',
+            $result['output']['actions'][0]['how'] ?? null,
+        );
+        $this->assertSame(
+            'Comment on their Living Room Listens Reel tonight.',
+            $result['output']['actions'][2]['how'] ?? null,
+        );
+        $this->assertSame([218], $result['output']['actions'][0]['related_post_ids'] ?? null);
+        $this->assertStringNotContainsString('post 218', strtolower(json_encode($result['output']['actions']) ?: ''));
+        $this->assertStringNotContainsString('post #218', strtolower(json_encode($result['output']['actions']) ?: ''));
+    }
+
+    public function test_validator_rejects_an_unknown_internal_post_id_in_copy(): void
+    {
+        $result = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'Comment on post 904', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => 'ok',
+            'watch' => [],
+        ], [
+            'allowed_handles' => ['letsgosocialuk'],
+            'allowed_post_ids' => [10],
+            'own' => ['followers_now' => 97],
+        ]);
+
+        $this->assertFalse($result['ok']);
+        $this->assertTrue(collect($result['errors'])->contains(
+            fn (string $error): bool => str_contains($error, 'internal post id in copy'),
+        ));
+    }
+
     public function test_validator_accepts_a_fact_number_with_a_trailing_period(): void
     {
         $result = app(DailyBriefValidator::class)->validate([

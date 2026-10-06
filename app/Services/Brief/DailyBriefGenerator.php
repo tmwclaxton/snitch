@@ -177,6 +177,7 @@ Rules:
 - Never invent numbers. Only use numbers present in the facts.
 - Only use handles present in facts.allowed_handles. Strip or keep @, but the handle must match.
 - Only use related_post_ids from facts.allowed_post_ids.
+- Never mention internal post ids in any text field. Do not write "post 218" or "post #218". Refer to the post by a short description such as "their Living Room Listens Reel". Keep the database id only in related_post_ids.
 - No em dashes or en dashes. Use a comma or hyphen.
 - Do not truncate with ...
 - hook is the literal first line, max 12 words. Never quote a scene description.

@@ -14,6 +14,7 @@ class DailyBriefValidator
     public function validate(array $output, array $facts): array
     {
         $output = $this->replaceDashes($output);
+        $output = $this->rewriteInternalPostIds($output, $facts);
         $errors = [];
 
         $headline = trim((string) ($output['headline'] ?? ''));
@@ -134,6 +135,10 @@ class DailyBriefValidator
             if ($windowError !== null) {
                 $errors[] = $windowError;
             }
+
+            foreach ($this->internalPostIdMentions($text, $facts) as $mention) {
+                $errors[] = 'internal post id in copy ('.$mention.')';
+            }
         }
 
         $output['headline'] = $headline;
@@ -180,7 +185,8 @@ class DailyBriefValidator
             ));
 
             if ($actionOnlyErrors === []) {
-                $kept[] = $action;
+                $rewritten = $result['output']['actions'][0] ?? $action;
+                $kept[] = is_array($rewritten) ? $rewritten : $action;
             }
         }
 
@@ -238,6 +244,161 @@ class DailyBriefValidator
         });
 
         return $value;
+    }
+
+    /**
+     * Replace "post 218" / "post #218" in user-facing copy with a short description.
+     *
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function rewriteInternalPostIds(array $output, array $facts): array
+    {
+        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+            if (isset($output[$field]) && is_string($output[$field])) {
+                $output[$field] = $this->rewriteInternalPostIdsInText($output[$field], $facts);
+            }
+        }
+
+        if (isset($output['watch']) && is_array($output['watch'])) {
+            $output['watch'] = array_map(
+                fn (mixed $item): mixed => is_string($item)
+                    ? $this->rewriteInternalPostIdsInText($item, $facts)
+                    : $item,
+                $output['watch'],
+            );
+        }
+
+        if (isset($output['actions']) && is_array($output['actions'])) {
+            foreach ($output['actions'] as $index => $action) {
+                if (! is_array($action)) {
+                    continue;
+                }
+
+                foreach (['title', 'why', 'how', 'hook'] as $field) {
+                    if (isset($action[$field]) && is_string($action[$field])) {
+                        $action[$field] = $this->rewriteInternalPostIdsInText($action[$field], $facts);
+                    }
+                }
+
+                $output['actions'][$index] = $action;
+            }
+        }
+
+        return $output;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    public function rewriteInternalPostIdsInText(string $text, array $facts): string
+    {
+        $posts = $this->postsById($facts);
+        $allowed = $this->allowedPostIds($facts);
+
+        $rewritten = preg_replace_callback(
+            '/\bpost(?:\s+id)?\s*#?\s*(\d+)\b/i',
+            function (array $match) use ($posts, $allowed): string {
+                $id = (int) $match[1];
+
+                if (! $this->isInternalPostIdReference($id, $allowed)) {
+                    return $match[0];
+                }
+
+                $post = $posts[$id] ?? null;
+
+                return is_array($post) ? $this->shortPostLabel($post) : $match[0];
+            },
+            $text,
+        );
+
+        return is_string($rewritten) ? $rewritten : $text;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return list<string>
+     */
+    public function internalPostIdMentions(string $text, array $facts): array
+    {
+        $allowed = $this->allowedPostIds($facts);
+        preg_match_all('/\bpost(?:\s+id)?\s*#?\s*(\d+)\b/i', $text, $matches, PREG_SET_ORDER);
+
+        $hits = [];
+
+        foreach ($matches as $match) {
+            $id = (int) ($match[1] ?? 0);
+
+            if ($this->isInternalPostIdReference($id, $allowed)) {
+                $hits[] = $match[0];
+            }
+        }
+
+        return array_values(array_unique($hits));
+    }
+
+    /**
+     * @param  list<int>  $allowed
+     */
+    public function isInternalPostIdReference(int $id, array $allowed): bool
+    {
+        return in_array($id, $allowed, true) || $id >= 100;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return array<int, array<string, mixed>>
+     */
+    public function postsById(array $facts): array
+    {
+        $found = [];
+        $walk = function (mixed $node) use (&$walk, &$found): void {
+            if (! is_array($node)) {
+                return;
+            }
+
+            if (isset($node['post_id']) && is_numeric($node['post_id'])) {
+                $found[(int) $node['post_id']] = $node;
+            }
+
+            foreach ($node as $value) {
+                $walk($value);
+            }
+        };
+
+        $walk($facts);
+
+        return $found;
+    }
+
+    /**
+     * @param  array<string, mixed>  $post
+     */
+    public function shortPostLabel(array $post): string
+    {
+        $format = trim((string) ($post['format'] ?? ''));
+        if ($format === '') {
+            $format = 'post';
+        }
+
+        $hook = trim((string) ($post['hook'] ?? ''));
+        $caption = trim((string) ($post['caption'] ?? ''));
+        $title = $hook !== '' ? $hook : $caption;
+
+        if ($title !== '') {
+            $words = preg_split('/\s+/u', $title, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            $short = implode(' ', array_slice($words, 0, 6));
+
+            return 'their '.$short.' '.$format;
+        }
+
+        $handle = $this->normaliseHandle((string) ($post['handle'] ?? ''));
+        if ($handle !== '') {
+            return '@'.$handle.'\'s '.$format;
+        }
+
+        return 'their '.$format;
     }
 
     /**
