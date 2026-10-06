@@ -166,6 +166,236 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertFalse(collect($brief->facts['cadence'] ?? [])->firstWhere('handle', 'onehousesocialclub')['posted_every_day_last_7'] ?? true);
     }
 
+    public function test_week_best_post_facts_ignore_a_thirty_day_winner(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-06 08:00:00', 'Europe/London'));
+        $this->fakeValidLlm();
+
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        $friendship = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'great.friendship',
+            'is_own_account' => false,
+            'kind' => TrackedAccountKind::Competitor,
+        ]);
+
+        foreach (['2026-09-01', '2026-09-05', '2026-09-10', '2026-09-14'] as $day) {
+            Post::factory()->forAccount($friendship)->create([
+                'posted_at' => CarbonImmutable::parse($day.' 12:00:00', 'Europe/London'),
+                'metrics' => ['likes' => 10, 'comments' => 0, 'views' => 0],
+            ]);
+        }
+        Post::factory()->forAccount($friendship)->create([
+            'posted_at' => CarbonImmutable::parse('2026-09-21 12:00:00', 'Europe/London'),
+            'metrics' => ['likes' => 30, 'comments' => 0, 'views' => 0],
+        ]);
+        Post::factory()->forAccount($friendship)->create([
+            'posted_at' => CarbonImmutable::parse('2026-10-02 12:00:00', 'Europe/London'),
+            'metrics' => ['likes' => 9, 'comments' => 0, 'views' => 0],
+        ]);
+
+        $facts = app(DailyBriefFactsBuilder::class)->build($user, CarbonImmutable::parse('2026-10-06', 'Europe/London')->startOfDay());
+
+        $this->assertSame(3.0, (float) ($facts['top_competitor_hit']['times_usual'] ?? 0));
+        $this->assertSame(0.9, (float) ($facts['top_competitor_hit_7d']['times_usual'] ?? 0));
+        $this->assertSame(0.9, (float) ($facts['competitors'][0]['best_post_7d']['times_usual'] ?? 0));
+        $this->assertNotSame(
+            $facts['top_competitor_hit']['post_id'] ?? null,
+            $facts['top_competitor_hit_7d']['post_id'] ?? null,
+        );
+    }
+
+    public function test_cadence_gaps_mark_a_quieter_competitor_as_longest(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-06 08:00:00', 'Europe/London'));
+
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        $own = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'letsgosocialuk',
+            'is_own_account' => true,
+            'kind' => TrackedAccountKind::Competitor,
+        ]);
+        $fuss = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'fuss.london',
+            'is_own_account' => false,
+            'kind' => TrackedAccountKind::Competitor,
+        ]);
+
+        Post::factory()->forAccount($own)->create([
+            'posted_at' => CarbonImmutable::parse('2026-10-01 12:00:00', 'Europe/London'),
+            'metrics' => ['likes' => 8, 'comments' => 0, 'views' => 0],
+        ]);
+        Post::factory()->forAccount($fuss)->create([
+            'posted_at' => CarbonImmutable::parse('2026-09-24 12:00:00', 'Europe/London'),
+            'metrics' => ['likes' => 6, 'comments' => 0, 'views' => 0],
+        ]);
+
+        $facts = app(DailyBriefFactsBuilder::class)->build($user, CarbonImmutable::parse('2026-10-06', 'Europe/London')->startOfDay());
+
+        $this->assertSame(5, $facts['cadence_gaps']['own_days'] ?? null);
+        $this->assertSame('fuss.london', $facts['cadence_gaps']['longest_handle'] ?? null);
+        $this->assertSame(12, $facts['cadence_gaps']['longest_days'] ?? null);
+        $this->assertFalse($facts['cadence_gaps']['own_is_longest'] ?? true);
+    }
+
+    public function test_validator_rejects_a_thirty_day_winner_used_as_this_weeks_best(): void
+    {
+        $result = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => 'In the last 7 days @great.friendship\'s best post got 3.0 times usual engagement.',
+            'watch' => [],
+        ], [
+            'allowed_handles' => ['great.friendship'],
+            'allowed_post_ids' => [10],
+            'brief_date' => '2026-10-06',
+            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
+            'competitors' => [[
+                'handle' => 'great.friendship',
+                'posts_last_7d' => [[
+                    'post_id' => 10,
+                    'times_usual' => 0.9,
+                    'format' => 'Reel',
+                ]],
+                'best_post_7d' => ['post_id' => 10, 'times_usual' => 0.9],
+            ]],
+            'top_competitor_hit' => ['post_id' => 99, 'times_usual' => 3.0, 'handle' => 'great.friendship'],
+            'top_competitor_hit_7d' => ['post_id' => 10, 'times_usual' => 0.9, 'handle' => 'great.friendship'],
+        ]);
+
+        $this->assertFalse($result['ok']);
+        $this->assertContains('week best-post figure is not from the last 7 days', $result['errors']);
+
+        $allowed = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => 'In the last 7 days @great.friendship\'s best post got 0.9 times usual engagement.',
+            'watch' => [],
+        ], [
+            'allowed_handles' => ['great.friendship'],
+            'allowed_post_ids' => [10],
+            'brief_date' => '2026-10-06',
+            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
+            'competitors' => [[
+                'handle' => 'great.friendship',
+                'posts_last_7d' => [[
+                    'post_id' => 10,
+                    'times_usual' => 0.9,
+                    'format' => 'Reel',
+                ]],
+                'best_post_7d' => ['post_id' => 10, 'times_usual' => 0.9],
+            ]],
+            'top_competitor_hit' => ['post_id' => 99, 'times_usual' => 3.0, 'handle' => 'great.friendship'],
+            'top_competitor_hit_7d' => ['post_id' => 10, 'times_usual' => 0.9, 'handle' => 'great.friendship'],
+        ]);
+
+        $this->assertTrue($allowed['ok'], implode('; ', $allowed['errors']));
+    }
+
+    public function test_validator_rejects_a_false_longest_gap_claim(): void
+    {
+        $facts = [
+            'allowed_handles' => ['letsgosocialuk', 'fuss.london'],
+            'allowed_post_ids' => [],
+            'brief_date' => '2026-10-06',
+            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97, 'days_since_last_post' => 5],
+            'competitors' => [[
+                'handle' => 'fuss.london',
+                'days_since_last_post' => 12,
+                'posts_last_7d_count' => 0,
+            ]],
+            'cadence_gaps' => [
+                'own_days' => 5,
+                'longest_handle' => 'fuss.london',
+                'longest_days' => 12,
+                'own_is_longest' => false,
+            ],
+        ];
+
+        $rejected = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'Your 5-day posting gap is the longest among competitors.',
+            'competitor_summary' => 'ok',
+            'watch' => [],
+        ], $facts);
+
+        $this->assertFalse($rejected['ok']);
+        $this->assertTrue(collect($rejected['errors'])->contains(
+            fn (string $error): bool => str_contains($error, 'longest-gap claim is false'),
+        ));
+
+        $facts['cadence_gaps'] = [
+            'own_days' => 12,
+            'longest_handle' => 'letsgosocialuk',
+            'longest_days' => 12,
+            'own_is_longest' => true,
+        ];
+        $facts['own']['days_since_last_post'] = 12;
+
+        $allowed = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'Your 12-day posting gap is the longest among competitors.',
+            'competitor_summary' => 'ok',
+            'watch' => [],
+        ], $facts);
+
+        $this->assertTrue($allowed['ok'], implode('; ', $allowed['errors']));
+
+        $named = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => '@fuss.london has the longest posting gap among competitors.',
+            'competitor_summary' => 'ok',
+            'watch' => [],
+        ], [
+            'allowed_handles' => ['letsgosocialuk', 'fuss.london'],
+            'allowed_post_ids' => [],
+            'brief_date' => '2026-10-06',
+            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97, 'days_since_last_post' => 5],
+            'competitors' => [[
+                'handle' => 'fuss.london',
+                'days_since_last_post' => 12,
+                'posts_last_7d_count' => 0,
+            ]],
+            'cadence_gaps' => [
+                'own_days' => 5,
+                'longest_handle' => 'fuss.london',
+                'longest_days' => 12,
+                'own_is_longest' => false,
+            ],
+        ]);
+
+        $this->assertTrue($named['ok'], implode('; ', $named['errors']));
+    }
+
     public function test_last_day_tile_says_none_when_no_competitor_posted(): void
     {
         $payload = app(DailyBriefGenerator::class)->assemblePayload([

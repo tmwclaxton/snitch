@@ -7,6 +7,7 @@ use App\Models\BrandProfile;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Brief\WeeklyBriefGenerator;
+use App\Support\ScheduleHeartbeat;
 use Illuminate\Console\Command;
 
 class GenerateWeeklyBriefsCommand extends Command
@@ -82,6 +83,6 @@ class GenerateWeeklyBriefsCommand extends Command
 
         $this->info("Queued or generated {$count} weekly briefs for week {$weekStart->toDateString()} (skipped {$skipped}).");
 
-        return self::SUCCESS;
+        return ScheduleHeartbeat::record('snitch:generate-weekly-briefs', self::SUCCESS);
     }
 }

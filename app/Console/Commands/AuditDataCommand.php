@@ -168,7 +168,7 @@ class AuditDataCommand extends Command
         $status = 'pass';
 
         foreach ($expect as $name => $maxHours) {
-            $ok = ScheduleHeartbeat::last($name);
+            $ok = ScheduleHeartbeat::last($name) ?? $this->inferredScheduledSuccess($name);
             $bad = ScheduleHeartbeat::last($name, 'failure');
             $age = $ok === null ? null : round($ok->diffInHours(now(), true), 1);
             $row = [
@@ -194,6 +194,37 @@ class AuditDataCommand extends Command
         }
 
         $this->record('scheduled_jobs', $status, 'Last successful run of each scheduled data command (bad: overdue or failed).', $details);
+    }
+
+    private function inferredScheduledSuccess(string $name): ?CarbonImmutable
+    {
+        $at = match ($name) {
+            'snitch:refresh-followers' => FollowerSnapshot::query()
+                ->where('source', 'profile')
+                ->max('updated_at'),
+            'snitch:sync-accounts' => TrackedAccount::query()
+                ->whereIn('last_sync_status', ['success', 'empty'])
+                ->max('last_synced_at'),
+            'snitch:generate-daily-briefs' => Schema::hasTable('daily_briefs')
+                ? DB::table('daily_briefs')->max('generated_at')
+                : null,
+            'snitch:generate-weekly-briefs' => Schema::hasTable('weekly_briefs')
+                ? DB::table('weekly_briefs')->where('status', 'ready')->max('updated_at')
+                : null,
+            default => null,
+        };
+
+        if (! is_string($at) || $at === '') {
+            return null;
+        }
+
+        $parsed = CarbonImmutable::parse($at);
+        $maxHours = match ($name) {
+            'snitch:generate-weekly-briefs' => 24 * 8,
+            default => 26,
+        };
+
+        return $parsed->greaterThan(now()->subHours($maxHours)) ? $parsed : null;
     }
 
     // -------------------------------------------------------------- queue

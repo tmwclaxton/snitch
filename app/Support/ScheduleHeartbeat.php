@@ -21,6 +21,17 @@ class ScheduleHeartbeat
         Cache::forever(self::PREFIX.$name.':'.$outcome, now()->toIso8601String());
     }
 
+    /**
+     * Record a scheduled command from inside handle() so a run is stored even
+     * when Laravel's onSuccess hook does not fire after a deploy.
+     */
+    public static function record(string $name, int $exitCode): int
+    {
+        self::mark($name, $exitCode === 0 ? 'success' : 'failure');
+
+        return $exitCode;
+    }
+
     public static function last(string $name, string $outcome = 'success'): ?CarbonImmutable
     {
         $value = Cache::get(self::PREFIX.$name.':'.$outcome);

@@ -136,6 +136,16 @@ class DailyBriefValidator
                 $errors[] = $windowError;
             }
 
+            $weekBestError = $this->unsupportedWeekBestClaim($text, $facts);
+            if ($weekBestError !== null) {
+                $errors[] = $weekBestError;
+            }
+
+            $gapError = $this->unsupportedLongestGapClaim($text, $facts);
+            if ($gapError !== null) {
+                $errors[] = $gapError;
+            }
+
             foreach ($this->internalPostIdMentions($text, $facts) as $mention) {
                 $errors[] = 'internal post id in copy ('.$mention.')';
             }
@@ -632,6 +642,198 @@ class DailyBriefValidator
         return is_string($label) && $label !== ''
             ? 'follower change window is not the last 7 days; use '.$label
             : 'follower change window is not the last 7 days';
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    public function unsupportedWeekBestClaim(string $text, array $facts): ?string
+    {
+        if (preg_match('/\b(this week|last 7 days|in the last 7|past 7 days|in 7 days)\b/i', $text) !== 1) {
+            return null;
+        }
+
+        if (preg_match('/\b(best post|times (?:their |the )?usual|times usual)\b/i', $text) !== 1) {
+            return null;
+        }
+
+        $handles = $this->handlesMentionedIn($text, $this->allowedHandles($facts));
+        $allowed = $this->sevenDayTimesUsualNumbers($facts, $handles);
+
+        if (preg_match_all('/(\d+(?:\.\d+)?)\s*(?:x|times (?:their |the )?usual)/i', $text, $matches) === 0) {
+            return null;
+        }
+
+        foreach ($matches[1] as $raw) {
+            if (! $this->numberIsKnown((string) $raw, $allowed)) {
+                return 'week best-post figure is not from the last 7 days';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    public function unsupportedLongestGapClaim(string $text, array $facts): ?string
+    {
+        if (preg_match('/\blongest\b.{0,50}\b(gap|silence|quiet|among|competitor)|(?:posting |content )?gap.{0,40}\blongest\b|\blonger than (?:any|every|all)\b/i', $text) !== 1) {
+            return null;
+        }
+
+        $gaps = is_array($facts['cadence_gaps'] ?? null) ? $facts['cadence_gaps'] : $this->cadenceGapsFromFacts($facts);
+        $longestHandle = $this->normaliseHandle((string) ($gaps['longest_handle'] ?? ''));
+        $ownHandle = $this->normaliseHandle((string) data_get($facts, 'own.handle', ''));
+        $mentioned = $this->handlesMentionedIn($text, $this->allowedHandles($facts));
+        $claimsOwn = preg_match('/\b(your|you have|the brand)\b/i', $text) === 1
+            || ($ownHandle !== '' && in_array($ownHandle, $mentioned, true));
+
+        if ($claimsOwn && ($gaps['own_is_longest'] ?? false) !== true) {
+            return $this->longestGapError($gaps);
+        }
+
+        if (($gaps['own_is_longest'] ?? false) === true) {
+            return null;
+        }
+
+        if ($longestHandle !== '' && in_array($longestHandle, $mentioned, true)) {
+            return null;
+        }
+
+        return $this->longestGapError($gaps);
+    }
+
+    /**
+     * @param  array{own_days: int|null, longest_handle: string|null, longest_days: int|null, own_is_longest: bool}  $gaps
+     */
+    private function longestGapError(array $gaps): string
+    {
+        $handle = $this->normaliseHandle((string) ($gaps['longest_handle'] ?? ''));
+        $days = $gaps['longest_days'] ?? null;
+
+        if ($handle !== '' && is_numeric($days)) {
+            return 'longest-gap claim is false; @'.$handle.' has gone '.(int) $days.' days';
+        }
+
+        return 'longest-gap claim is false';
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @param  list<string>  $handles
+     * @return list<string>
+     */
+    public function sevenDayTimesUsualNumbers(array $facts, array $handles = []): array
+    {
+        $tokens = [];
+
+        foreach ($this->sevenDayPosts($facts, $handles) as $post) {
+            foreach (['times_usual', 'views_vs_usual'] as $key) {
+                if (! isset($post[$key]) || ! is_numeric($post[$key])) {
+                    continue;
+                }
+
+                $tokens[] = $this->normaliseNumber((string) $post[$key]);
+                $tokens[] = $this->normaliseNumber(number_format((float) $post[$key], 1, '.', ''));
+            }
+        }
+
+        return array_values(array_unique(array_filter($tokens)));
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @param  list<string>  $handles
+     * @return list<array<string, mixed>>
+     */
+    public function sevenDayPosts(array $facts, array $handles = []): array
+    {
+        $wanted = array_values(array_filter(array_map(
+            fn (string $handle): string => $this->normaliseHandle($handle),
+            $handles,
+        )));
+        $posts = [];
+
+        foreach ([$facts['own'] ?? null, ...($facts['competitors'] ?? [])] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $handle = $this->normaliseHandle((string) ($row['handle'] ?? ''));
+            if ($wanted !== [] && $handle !== '' && ! in_array($handle, $wanted, true)) {
+                continue;
+            }
+
+            foreach (['posts_last_7d', 'best_post_7d'] as $key) {
+                $value = $row[$key] ?? null;
+                if ($key === 'best_post_7d' && is_array($value) && isset($value['post_id'])) {
+                    $posts[] = $value;
+
+                    continue;
+                }
+
+                if (! is_array($value)) {
+                    continue;
+                }
+
+                foreach ($value as $post) {
+                    if (is_array($post)) {
+                        $posts[] = $post;
+                    }
+                }
+            }
+        }
+
+        $top = $facts['top_competitor_hit_7d'] ?? null;
+        if (is_array($top)) {
+            $handle = $this->normaliseHandle((string) ($top['handle'] ?? ''));
+            if ($wanted === [] || $handle === '' || in_array($handle, $wanted, true)) {
+                $posts[] = $top;
+            }
+        }
+
+        return $posts;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return array{own_days: int|null, longest_handle: string|null, longest_days: int|null, own_is_longest: bool}
+     */
+    public function cadenceGapsFromFacts(array $facts): array
+    {
+        $own = is_array($facts['own'] ?? null) ? $facts['own'] : null;
+        $ownDays = is_numeric($own['days_since_last_post'] ?? null) ? (int) $own['days_since_last_post'] : null;
+        $longestHandle = is_array($own) ? $this->normaliseHandle((string) ($own['handle'] ?? '')) : null;
+        $longestDays = $ownDays;
+
+        foreach ($facts['competitors'] ?? [] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $days = is_numeric($row['days_since_last_post'] ?? null) ? (int) $row['days_since_last_post'] : null;
+
+            if ($days === null && (($row['sync_empty'] ?? false) || ($row['last_posted_at'] ?? null) === null)) {
+                $days = 999;
+            }
+
+            if ($days === null) {
+                continue;
+            }
+
+            if ($longestDays === null || $days > $longestDays) {
+                $longestDays = $days;
+                $longestHandle = $this->normaliseHandle((string) ($row['handle'] ?? ''));
+            }
+        }
+
+        return [
+            'own_days' => $ownDays,
+            'longest_handle' => $longestHandle !== '' ? $longestHandle : null,
+            'longest_days' => $longestDays,
+            'own_is_longest' => $ownDays !== null && $longestDays !== null && $ownDays >= $longestDays,
+        ];
     }
 
     /**

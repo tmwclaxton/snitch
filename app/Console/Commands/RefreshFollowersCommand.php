@@ -6,6 +6,7 @@ use App\Jobs\RefreshFollowerCountJob;
 use App\Models\FollowerSnapshot;
 use App\Models\SocialAccount;
 use App\Services\Tracking\FollowerCountRefresher;
+use App\Support\ScheduleHeartbeat;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -34,7 +35,7 @@ class RefreshFollowersCommand extends Command
 
             $this->info('Enqueued '.count($ids).' follower refreshes.');
 
-            return self::SUCCESS;
+            return ScheduleHeartbeat::record('snitch:refresh-followers', self::SUCCESS);
         }
 
         $ok = 0;
@@ -64,10 +65,10 @@ class RefreshFollowersCommand extends Command
         if ($fail > 0 && $fail >= $ok) {
             $this->error('Follower refresh failed for every or most accounts.');
 
-            return self::FAILURE;
+            return ScheduleHeartbeat::record('snitch:refresh-followers', self::FAILURE);
         }
 
-        return self::SUCCESS;
+        return ScheduleHeartbeat::record('snitch:refresh-followers', self::SUCCESS);
     }
 
     private function backupTodaySnapshots(): ?string

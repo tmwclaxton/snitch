@@ -114,8 +114,10 @@ class DailyBriefFactsBuilder
 
         $facts['allowed_post_ids'] = $this->collectPostIds($facts);
         $facts['top_competitor_hit'] = $this->topCompetitorHit($competitorFacts);
+        $facts['top_competitor_hit_7d'] = $this->topCompetitorHitInWindow($competitorFacts, 'posts_last_7d');
         $facts['top_competitor_hit_24h'] = $this->topCompetitorHitLast24h($competitorFacts);
         $facts['cadence'] = $this->cadenceIndex($ownFacts, $competitorFacts);
+        $facts['cadence_gaps'] = $this->cadenceGaps($ownFacts, $competitorFacts);
 
         return $facts;
     }
@@ -240,6 +242,7 @@ class DailyBriefFactsBuilder
             'days_since_last_post' => $daysSinceLast,
             'last_posted_at' => $lastPostedAt,
             'last_posted_label' => $lastPost instanceof Post ? $this->londonPostLabel($lastPost) : null,
+            'best_post_7d' => $this->bestMappedPost($mapped7),
             'best_post_30d' => $best30,
             'standout_winners' => $winners,
             'ads' => $ads,
@@ -595,10 +598,19 @@ class DailyBriefFactsBuilder
      */
     private function topCompetitorHitLast24h(array $competitors): ?array
     {
+        return $this->topCompetitorHitInWindow($competitors, 'posts_last_24h');
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $competitors
+     * @return array<string, mixed>|null
+     */
+    private function topCompetitorHitInWindow(array $competitors, string $postsKey): ?array
+    {
         $best = null;
 
         foreach ($competitors as $row) {
-            foreach ($row['posts_last_24h'] ?? [] as $post) {
+            foreach ($row[$postsKey] ?? [] as $post) {
                 if (! is_array($post)) {
                     continue;
                 }
@@ -622,6 +634,73 @@ class DailyBriefFactsBuilder
         }
 
         return $best;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $mapped
+     * @return array<string, mixed>|null
+     */
+    private function bestMappedPost(array $mapped): ?array
+    {
+        return collect($mapped)
+            ->filter(fn (array $row): bool => is_numeric($row['times_usual'] ?? null) || is_numeric($row['views_vs_usual'] ?? null))
+            ->sortByDesc(fn (array $row): float => (float) ($row['times_usual'] ?? $row['views_vs_usual'] ?? 0))
+            ->first();
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $own
+     * @param  list<array<string, mixed>>  $competitors
+     * @return array{own_days: int|null, longest_handle: string|null, longest_days: int|null, own_is_longest: bool}
+     */
+    private function cadenceGaps(?array $own, array $competitors): array
+    {
+        $ownDays = $this->gapDays($own);
+        $longestHandle = is_array($own) ? $this->normaliseHandle((string) ($own['handle'] ?? '')) : null;
+        $longestDays = $ownDays;
+
+        foreach ($competitors as $row) {
+            $days = $this->gapDays($row);
+
+            if ($days === null) {
+                continue;
+            }
+
+            if ($longestDays === null || $days > $longestDays) {
+                $longestDays = $days;
+                $longestHandle = $this->normaliseHandle((string) ($row['handle'] ?? ''));
+            }
+        }
+
+        return [
+            'own_days' => $ownDays,
+            'longest_handle' => $longestHandle !== '' ? $longestHandle : null,
+            'longest_days' => $longestDays,
+            'own_is_longest' => $ownDays !== null && $longestDays !== null && $ownDays >= $longestDays,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $row
+     */
+    private function gapDays(?array $row): ?int
+    {
+        if (! is_array($row)) {
+            return null;
+        }
+
+        $days = $row['days_since_last_post'] ?? data_get($row, 'cadence.days_since_last_post');
+
+        if (is_numeric($days)) {
+            return max(0, (int) $days);
+        }
+
+        if (($row['sync_empty'] ?? false)
+            || (($row['last_posted_at'] ?? null) === null && (int) ($row['posts_last_7d_count'] ?? 0) === 0)) {
+            return 999;
+        }
+
+        return null;
     }
 
     /**

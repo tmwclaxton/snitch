@@ -9,6 +9,7 @@ use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Billing\PlanEntitlementService;
 use App\Services\Billing\UsageBillingService;
+use App\Support\ScheduleHeartbeat;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -105,7 +106,7 @@ class SyncAccountsCommand extends Command
 
         $this->info("Enqueued {$count} account sync jobs ({$skipped} skipped recently; {$overQuota} over quota; {$billingSkipped} low balance).");
 
-        return self::SUCCESS;
+        return ScheduleHeartbeat::record('snitch:sync-accounts', self::SUCCESS);
     }
 
     private function shouldForceDailyBriefSync(TrackedAccount $account, User $user): bool

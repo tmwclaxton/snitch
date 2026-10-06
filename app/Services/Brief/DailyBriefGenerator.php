@@ -189,6 +189,8 @@ Rules:
 - Do not say almost daily, nearly daily, almost every day, or posts most days unless posted_almost_daily_last_7 is true (6 or 7 distinct days with a post in the last 7).
 - Use the 7-day count and days since last post instead of a cadence adjective.
 - When describing follower change, use facts.own.followers_change_7d.label (for example +4 since 27 September). Do not say gained or lost in the last 7 days or this week unless from_date is exactly 7 days before brief_date.
+- standout_winners and top_competitor_hit may look back 30 days. For any "best post this week" or "last 7 days" claim, only use posts_last_7d, best_post_7d, or top_competitor_hit_7d.
+- Do not say the brand has the longest posting gap unless facts.cadence_gaps.own_is_longest is true. If you mention a longest gap, use cadence_gaps.longest_handle.
 - If sync_failed is true, say the refresh failed. Do not say the account is quiet or has not posted recently.
 PROMPT;
 

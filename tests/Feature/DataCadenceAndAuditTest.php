@@ -19,6 +19,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -335,6 +336,51 @@ class DataCadenceAndAuditTest extends TestCase
 
         $this->assertSame('fail', $snapshot['status'] ?? null);
         $this->assertSame('copied or not freshly fetched', $snapshot['details'][0]['problem'] ?? null);
+    }
+
+    public function test_scheduled_commands_record_a_heartbeat(): void
+    {
+        Queue::fake();
+        Cache::flush();
+
+        $this->artisan('snitch:refresh-followers', ['--queue' => true])->assertSuccessful();
+        $this->artisan('snitch:sync-accounts')->assertSuccessful();
+        $this->artisan('snitch:generate-daily-briefs')->assertSuccessful();
+        $this->artisan('snitch:generate-weekly-briefs')->assertSuccessful();
+
+        $this->assertNotNull(ScheduleHeartbeat::last('snitch:refresh-followers'));
+        $this->assertNotNull(ScheduleHeartbeat::last('snitch:sync-accounts'));
+        $this->assertNotNull(ScheduleHeartbeat::last('snitch:generate-daily-briefs'));
+        $this->assertNotNull(ScheduleHeartbeat::last('snitch:generate-weekly-briefs'));
+    }
+
+    public function test_audit_infers_scheduled_job_success_when_heartbeat_cache_is_empty(): void
+    {
+        Cache::flush();
+        $user = User::factory()->create();
+        $tracker = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'followers' => 1000,
+            'last_synced_at' => now()->subHour(),
+            'last_sync_status' => 'success',
+        ]);
+        FollowerSnapshot::factory()->create([
+            'social_account_id' => $tracker->social_account_id,
+            'followers' => 1000,
+            'captured_on' => now()->toDateString(),
+            'source' => 'profile',
+        ]);
+        ScheduleHeartbeat::mark(ScheduleHeartbeat::TICK);
+
+        \Artisan::call('snitch:audit', ['--json' => true, '--user' => [$user->id]]);
+        $payload = json_decode(\Artisan::output(), true);
+        $check = collect($payload['checks'] ?? [])->firstWhere('key', 'scheduled_jobs');
+        $details = collect($check['details'] ?? []);
+
+        $this->assertNotSame('never recorded', $details->firstWhere('command', 'snitch:refresh-followers')['problem'] ?? null);
+        $this->assertNotSame('never recorded', $details->firstWhere('command', 'snitch:sync-accounts')['problem'] ?? null);
+        $this->assertNotNull($details->firstWhere('command', 'snitch:refresh-followers')['last_success'] ?? null);
+        $this->assertNotNull($details->firstWhere('command', 'snitch:sync-accounts')['last_success'] ?? null);
     }
 
     public function test_generate_daily_briefs_persists_the_current_month_report(): void

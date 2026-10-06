@@ -6,6 +6,7 @@ use App\Jobs\GenerateDailyBriefJob;
 use App\Models\User;
 use App\Services\Brief\DailyBriefGenerator;
 use App\Services\Growth\MonthlyReportBuilder;
+use App\Support\ScheduleHeartbeat;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Throwable;
@@ -66,7 +67,7 @@ class GenerateDailyBriefsCommand extends Command
         $this->info("Queued or generated {$count} daily briefs for {$date->toDateString()} (skipped {$skipped}).");
         $this->persistCurrentMonthlyReports($reports);
 
-        return self::SUCCESS;
+        return ScheduleHeartbeat::record('snitch:generate-daily-briefs', self::SUCCESS);
     }
 
     private function persistCurrentMonthlyReports(MonthlyReportBuilder $reports): void
