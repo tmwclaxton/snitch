@@ -61,26 +61,12 @@ class DailyBriefPageTest extends TestCase
             );
     }
 
-    public function test_today_page_sanitizes_stored_post_ids_and_borrowed_names(): void
+    public function test_today_page_does_not_mutate_stored_brief_on_display(): void
     {
         $user = User::factory()->create(['daily_brief_enabled' => true]);
         BrandProfile::factory()->for($user)->create();
         $brief = DailyBrief::factory()->for($user)->create([
             'headline' => 'Post a Reel tonight.',
-            'facts' => [
-                'allowed_handles' => ['goodgym', 'letsgosocialuk'],
-                'allowed_post_ids' => [218],
-                'borrowed_competitor_names' => ['Jessie'],
-                'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
-                'top_competitor_hit_24h' => [
-                    'post_id' => 218,
-                    'handle' => 'goodgym',
-                    'format' => 'Reel',
-                    'hook' => 'Living Room Listens',
-                    'times_usual' => 1.0,
-                ],
-                'competitors' => [],
-            ],
             'payload' => [
                 'headline' => 'Post a Reel tonight.',
                 'big_numbers' => [
@@ -99,7 +85,7 @@ class DailyBriefPageTest extends TestCase
                     ],
                 ],
                 'unused_weekly_ideas' => [
-                    ['position' => 1, 'format' => 'Reel', 'hook' => "Jessie\u{2019}s story: nervous, alone, now a regular"],
+                    ['position' => 1, 'format' => 'Reel', 'hook' => "Jessie's story: nervous, alone, now a regular"],
                 ],
                 'watch' => [],
             ],
@@ -110,17 +96,13 @@ class DailyBriefPageTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('today/Index')
-                ->where('brief.actions.0.how', fn (mixed $how): bool => is_string($how)
-                    && str_contains($how, 'Living Room Listens')
-                    && ! str_contains($how, 'post_id'))
-                ->where('brief.unused_weekly_ideas.0.hook', fn (mixed $hook): bool => is_string($hook)
-                    && str_contains($hook, "member's story")
-                    && ! str_contains($hook, 'Jessie'))
+                ->where('brief.actions.0.how', 'Reply under (post_id 218)')
+                ->where('brief.unused_weekly_ideas.0.hook', "Jessie's story: nervous, alone, now a regular")
             );
 
         $brief->refresh();
-        $this->assertStringContainsString('Living Room Listens', (string) ($brief->payload['actions'][0]['how'] ?? ''));
-        $this->assertStringNotContainsString('Jessie', (string) ($brief->payload['unused_weekly_ideas'][0]['hook'] ?? ''));
+        $this->assertSame('Reply under (post_id 218)', $brief->payload['actions'][0]['how'] ?? null);
+        $this->assertSame("Jessie's story: nervous, alone, now a regular", $brief->payload['unused_weekly_ideas'][0]['hook'] ?? null);
     }
 
     public function test_admin_can_regenerate_non_admin_cannot(): void

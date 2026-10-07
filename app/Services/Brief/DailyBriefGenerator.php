@@ -61,9 +61,6 @@ class DailyBriefGenerator
         $existing = $this->briefForDate($user, $date);
 
         if ($existing !== null && ! $force && $existing->status === 'ready') {
-            $this->copySanitizer->sanitizeStored($existing);
-            $existing->refresh();
-
             return $existing;
         }
 

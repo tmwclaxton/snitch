@@ -20,26 +20,39 @@ class BorrowedCompetitorNameSanitizer
     private const APOSTROPHE = '[\'\x{2019}\x{2018}]';
 
     /**
-     * Common capitalized words that are not people.
+     * Extra brand / place / event tokens beyond the common-word list.
      *
      * @var list<string>
      */
-    private const STOPWORDS = [
+    private const EXTRA_STOPWORDS = [
         'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
         'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august',
         'september', 'october', 'november', 'december',
-        'london', 'uk', 'england', 'britain', 'instagram', 'reel', 'reels', 'story',
-        'stories', 'carousel', 'image', 'post', 'posts', 'community', 'member',
-        'members', 'friend', 'friends', 'friendship', 'dinner', 'traitors', 'pov',
-        'new', 'the', 'and', 'for', 'with', 'from', 'this', 'that', 'your', 'our',
-        'free', 'join', 'meet', 'here', 'what', 'when', 'where', 'how', 'why',
-        'great', 'good', 'best', 'first', 'last', 'next', 'today', 'tonight',
-        'tomorrow', 'week', 'weekend', 'social', 'club', 'event', 'events',
-        'ticket', 'tickets', 'link', 'bio', 'comment', 'comments', 'share', 'save',
-        'dm', 'dms', 'hello', 'hi', 'hey', 'yes', 'no', 'ok', 'okay',
-        'spotlight', 'regular', 'nervous', 'alone', 'now', 'was', 'were', 'been',
-        'open', 'close', 'start', 'finish', 'after', 'before', 'about', 'into',
+        'london', 'uk', 'england', 'britain', 'instagram', 'tiktok', 'youtube',
+        'reel', 'reels', 'story', 'stories', 'carousel', 'image', 'post', 'posts',
+        'community', 'member', 'members', 'friend', 'friends', 'friendship',
+        'dinner', 'traitors', 'pov', 'spotlight', 'meetup', 'club', 'social',
+        'event', 'events', 'ticket', 'tickets', 'dm', 'dms', 'bio',
+        'letsgosocial', 'onehousesocialclub', 'sobersocial', 'goodgym',
+        'greatfriendship', 'living', 'room', 'listens',
     ];
+
+    /**
+     * Patterns that introduce a person name in competitor captions.
+     *
+     * @var list<string>
+     */
+    private const PERSON_PATTERNS = [
+        // (?i:...) lowercases only the cue words; the name capture stays Title Case.
+        '/\b(?i:meet|meeting|introducing|featuring|welcoming|welcome)\s+([A-Z][a-z]{2,})\b/u',
+        '/\b(?i:say\s+hi\s+to|this\s+is|here(?:\'s|\x{2019}s))\s+([A-Z][a-z]{2,})\b/u',
+        '/\b(?i:(?:community\s+)?spotlight)\s*(?:[:\-]\s*|(?i:\s+on\s+)|\s+)(?i:meet\s+)?([A-Z][a-z]{2,})\b/u',
+        '/\b([A-Z][a-z]{2,})(?:'.self::APOSTROPHE.')s\s+(?i:story|journey|arc|experience)\b/u',
+        '/\b([A-Z][a-z]{2,})\s+(?i:joined)\b/u',
+    ];
+
+    /** @var array<string, true>|null */
+    private static ?array $commonWords = null;
 
     /**
      * @param  list<string>  $ownCaptions
@@ -90,17 +103,18 @@ class BorrowedCompetitorNameSanitizer
         $rewritten = $text;
 
         foreach ($borrowedNames as $name) {
-            if (! is_string($name) || $name === '') {
+            if (! is_string($name) || $name === '' || ! $this->isPlausiblePersonName($name)) {
                 continue;
             }
 
-            $quoted = preg_quote($name, '/');
+            $quoted = preg_quote($this->canonicalName($name), '/');
+            // Case-sensitive whole-word match only (never rewrite "then" from "Then").
             $rewritten = preg_replace(
-                '/\b'.$quoted.self::APOSTROPHE.'s\b/iu',
+                '/\b'.$quoted.self::APOSTROPHE.'s\b/u',
                 "a member's",
                 $rewritten,
             ) ?? $rewritten;
-            $rewritten = preg_replace('/\b'.$quoted.'\b/iu', 'a member', $rewritten) ?? $rewritten;
+            $rewritten = preg_replace('/\b'.$quoted.'\b/u', 'a member', $rewritten) ?? $rewritten;
         }
 
         $rewritten = preg_replace('/(^|[.!?]\s+)a member\'s/u', '$1A member\'s', $rewritten) ?? $rewritten;
@@ -115,12 +129,14 @@ class BorrowedCompetitorNameSanitizer
     public function firstBorrowedNameIn(string $text, array $borrowedNames): ?string
     {
         foreach ($borrowedNames as $name) {
-            if (! is_string($name) || $name === '') {
+            if (! is_string($name) || $name === '' || ! $this->isPlausiblePersonName($name)) {
                 continue;
             }
 
-            if (preg_match('/\b'.preg_quote($name, '/').'(?:'.self::APOSTROPHE.'s)?\b/iu', $text) === 1) {
-                return $name;
+            $quoted = preg_quote($this->canonicalName($name), '/');
+
+            if (preg_match('/\b'.$quoted.'(?:'.self::APOSTROPHE.'s)?\b/u', $text) === 1) {
+                return $this->canonicalName($name);
             }
         }
 
@@ -196,6 +212,8 @@ class BorrowedCompetitorNameSanitizer
     }
 
     /**
+     * Only extract capitalised tokens that appear in a person-name pattern.
+     *
      * @return list<string>
      */
     public function extractPersonNames(string $caption): array
@@ -204,22 +222,49 @@ class BorrowedCompetitorNameSanitizer
             return [];
         }
 
-        preg_match_all('/\b([A-Z][a-z]{2,})(?:'.self::APOSTROPHE.'s)?\b/u', $caption, $matches);
-
         $names = [];
 
-        foreach ($matches[1] ?? [] as $raw) {
-            $name = $this->canonicalName((string) $raw);
-            $key = mb_strtolower($name);
-
-            if (strlen($key) < 3 || in_array($key, self::STOPWORDS, true)) {
+        foreach (self::PERSON_PATTERNS as $pattern) {
+            if (preg_match_all($pattern, $caption, $matches) < 1) {
                 continue;
             }
 
-            $names[$key] = $name;
+            foreach ($matches[1] ?? [] as $raw) {
+                $name = $this->canonicalName((string) $raw);
+
+                if (! $this->isPlausiblePersonName($name)) {
+                    continue;
+                }
+
+                $names[mb_strtolower($name)] = $name;
+            }
         }
 
         return array_values($names);
+    }
+
+    public function isPlausiblePersonName(string $name): bool
+    {
+        $canonical = $this->canonicalName($name);
+        $key = mb_strtolower($canonical);
+
+        if (strlen($key) < 3 || strlen($key) > 24) {
+            return false;
+        }
+
+        if (! preg_match('/^[A-Z][a-z]+$/u', $canonical)) {
+            return false;
+        }
+
+        if (in_array($key, self::EXTRA_STOPWORDS, true)) {
+            return false;
+        }
+
+        if ($this->isCommonEnglishWord($key)) {
+            return false;
+        }
+
+        return true;
     }
 
     private function canonicalName(string $name): string
@@ -227,6 +272,43 @@ class BorrowedCompetitorNameSanitizer
         $trimmed = trim($name);
 
         return mb_strtoupper(mb_substr($trimmed, 0, 1)).mb_strtolower(mb_substr($trimmed, 1));
+    }
+
+    private function isCommonEnglishWord(string $lower): bool
+    {
+        return isset($this->commonWords()[$lower]);
+    }
+
+    /**
+     * @return array<string, true>
+     */
+    private function commonWords(): array
+    {
+        if (self::$commonWords !== null) {
+            return self::$commonWords;
+        }
+
+        $path = database_path('data/common_english_words.txt');
+        $words = [];
+
+        if (is_readable($path)) {
+            $handle = fopen($path, 'r');
+            if ($handle !== false) {
+                while (($line = fgets($handle)) !== false) {
+                    $word = strtolower(trim($line));
+                    if ($word !== '' && strlen($word) >= 2) {
+                        $words[$word] = true;
+                    }
+                }
+                fclose($handle);
+            }
+        }
+
+        foreach (self::EXTRA_STOPWORDS as $word) {
+            $words[$word] = true;
+        }
+
+        return self::$commonWords = $words;
     }
 
     /**

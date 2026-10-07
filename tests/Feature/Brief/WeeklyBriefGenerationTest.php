@@ -167,7 +167,7 @@ class WeeklyBriefGenerationTest extends TestCase
             ->where('is_own_account', false)
             ->firstOrFail();
         Post::query()->where('social_account_id', $competitor->social_account_id)->update([
-            'caption' => 'Community spotlight: Jessie was nervous and alone, now a regular #friends',
+            'caption' => 'Community Spotlight: meet Jessie... she even brought a book #friends',
         ]);
 
         Http::fake([

@@ -34,6 +34,76 @@ class BorrowedCompetitorNameSanitizerTest extends TestCase
         );
     }
 
+    public function test_real_friendship_caption_only_replaces_jessie(): void
+    {
+        $sanitizer = app(BorrowedCompetitorNameSanitizer::class);
+        $caption = 'Community Spotlight: meet Jessie... she even brought a book';
+
+        $names = $sanitizer->borrowedNames(
+            ['Come hike with us then grab a pint'],
+            [$caption],
+        );
+
+        $this->assertSame(['Jessie'], $names);
+
+        $hook = 'We hiked 10 miles and then got a pint';
+        $angle = "Show how Let's Go Social makes it easy to meet new people with zero pressure.";
+        $headline = 'Post a first-timer testimonial Reel to break a 6-day gap and catch up with competitors posting 5-7 times a week.';
+
+        $this->assertSame($hook, $sanitizer->rewriteText($hook, $names));
+        $this->assertSame($angle, $sanitizer->rewriteText($angle, $names));
+        $this->assertSame($headline, $sanitizer->rewriteText($headline, $names));
+        $this->assertSame(
+            "A member's story: nervous, alone, now a regular",
+            $sanitizer->rewriteText("Jessie's story: nervous, alone, now a regular", $names),
+        );
+        $this->assertSame(
+            'Film or compile a 15-30 second clip of a member - they were nervous and felt welcome',
+            $sanitizer->rewriteText(
+                'Film or compile a 15-30 second clip of Jessie - they were nervous and felt welcome',
+                $names,
+            ),
+        );
+    }
+
+    public function test_it_does_not_harvest_ordinary_capitalised_words(): void
+    {
+        $sanitizer = app(BorrowedCompetitorNameSanitizer::class);
+
+        $names = $sanitizer->borrowedNames(
+            [],
+            [
+                'Then we hiked. How could we forget? Why would first-timers worry?',
+                'Living Room Listens Reel from Day One',
+                'What a great Meet and greet',
+            ],
+        );
+
+        $this->assertSame([], $names);
+        $this->assertSame(
+            'We hiked 10 miles and then got a pint',
+            $sanitizer->rewriteText('We hiked 10 miles and then got a pint', ['Then', 'How', 'Could', 'First', 'Living', 'Room', 'Listens', 'Day', 'What', 'Meet']),
+        );
+    }
+
+    public function test_rewrite_is_case_sensitive_on_whole_words(): void
+    {
+        $sanitizer = app(BorrowedCompetitorNameSanitizer::class);
+
+        $this->assertSame(
+            'We hiked 10 miles and then got a pint',
+            $sanitizer->rewriteText('We hiked 10 miles and then got a pint', ['Then']),
+        );
+        $this->assertSame(
+            'A member joined tonight',
+            $sanitizer->rewriteText('Jessie joined tonight', ['Jessie']),
+        );
+        $this->assertSame(
+            'Reply under jessie tonight',
+            $sanitizer->rewriteText('Reply under jessie tonight', ['Jessie']),
+        );
+    }
+
     public function test_it_allows_names_that_also_appear_in_own_captions(): void
     {
         $sanitizer = app(BorrowedCompetitorNameSanitizer::class);
@@ -67,7 +137,7 @@ class BorrowedCompetitorNameSanitizerTest extends TestCase
             'posted_at' => now()->subDay(),
         ]);
         Post::factory()->forAccount($friendship)->create([
-            'caption' => 'Community spotlight: Jessie was nervous and alone, now a regular',
+            'caption' => 'Community Spotlight: meet Jessie... she even brought a book',
             'posted_at' => now()->subDay(),
         ]);
 
