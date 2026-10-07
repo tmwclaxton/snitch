@@ -17,6 +17,7 @@ class DailyBriefGenerator
     public function __construct(
         private DailyBriefFactsBuilder $facts,
         private DailyBriefValidator $validator,
+        private DailyBriefCopySanitizer $copySanitizer,
         private NanoGptClient $client,
     ) {}
 
@@ -60,6 +61,9 @@ class DailyBriefGenerator
         $existing = $this->briefForDate($user, $date);
 
         if ($existing !== null && ! $force && $existing->status === 'ready') {
+            $this->copySanitizer->sanitizeStored($existing);
+            $existing->refresh();
+
             return $existing;
         }
 
@@ -120,6 +124,7 @@ class DailyBriefGenerator
                 'user_id' => $user->id,
                 'brief_id' => $brief->id,
                 'brief_date' => $date->toDateString(),
+                'diagnostics' => $diagnostics,
             ]);
 
             $brief->fill([
@@ -134,6 +139,8 @@ class DailyBriefGenerator
                 'generated_at' => $kept['generated_at'],
             ]);
             $brief->save();
+            $this->copySanitizer->sanitizeStored($brief);
+            $brief->refresh();
 
             return $brief;
         }
@@ -569,7 +576,10 @@ PROMPT;
             'actions' => $actions,
             'own_last_7_days' => is_array($own) ? ($own['posts_last_7d'] ?? []) : [],
             'own_yesterday' => is_array($own) ? ($own['posts_yesterday'] ?? []) : [],
-            'unused_weekly_ideas' => $facts['unused_weekly_ideas'] ?? [],
+            'unused_weekly_ideas' => $this->copySanitizer->sanitizeUnusedWeeklyIdeas(
+                is_array($facts['unused_weekly_ideas'] ?? null) ? $facts['unused_weekly_ideas'] : [],
+                $facts,
+            ),
             'competitor_moves' => $competitorMoves,
             'trends' => $this->trendLines($facts, (string) ($llm['competitor_summary'] ?? '')),
             'ads' => [

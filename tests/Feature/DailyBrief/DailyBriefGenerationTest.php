@@ -16,6 +16,8 @@ use App\Services\Brief\DailyBriefGenerator;
 use App\Services\Brief\DailyBriefValidator;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Log\Events\MessageLogged;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Sleep;
@@ -135,6 +137,218 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertSame($first->headline, $second->headline);
         $this->assertFalse($second->payload['validation']['used_fallback'] ?? true);
         $this->assertSame($generatedAt, $second->generated_at?->toIso8601String());
+    }
+
+    public function test_keep_existing_sanitizes_stored_post_ids_and_logs_diagnostics(): void
+    {
+        Sleep::fake();
+        Event::fake([MessageLogged::class]);
+
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        $this->seedAccounts($user);
+
+        $brief = DailyBrief::factory()->for($user)->create([
+            'status' => 'ready',
+            'headline' => 'Post a Reel today at 20:00.',
+            'brief_date' => now('Europe/London')->toDateString(),
+            'model' => 'test-model',
+            'llm_attempts' => 1,
+            'facts' => [
+                'allowed_handles' => ['goodgym', 'letsgosocialuk', 'onehousesocialclub'],
+                'allowed_post_ids' => [218],
+                'borrowed_competitor_names' => ['Jessie'],
+                'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
+                'top_competitor_hit_24h' => [
+                    'post_id' => 218,
+                    'handle' => 'goodgym',
+                    'format' => 'Reel',
+                    'hook' => 'Living Room Listens',
+                    'times_usual' => 1.0,
+                ],
+                'competitors' => [],
+            ],
+            'payload' => [
+                'headline' => 'Post a Reel today at 20:00.',
+                'own_summary' => 'ok',
+                'competitor_summary' => 'ok',
+                'actions' => [
+                    [
+                        'title' => 'Comment',
+                        'why' => 'why',
+                        'how' => 'Leave a comment under (post_id 218)',
+                        'related_handles' => ['goodgym'],
+                        'related_post_ids' => [218],
+                    ],
+                    ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                    ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ],
+                'unused_weekly_ideas' => [
+                    ['position' => 1, 'format' => 'Reel', 'hook' => "Jessie\u{2019}s story: nervous, alone, now a regular"],
+                ],
+                'watch' => [],
+                'validation' => ['used_fallback' => false, 'diagnostics' => []],
+            ],
+            'generated_at' => now()->subHour(),
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response('rate limited', 429, ['Retry-After' => '0']),
+        ]);
+
+        $second = app(DailyBriefGenerator::class)->generate($user, force: true);
+
+        $this->assertSame($brief->id, $second->id);
+        $how = (string) ($second->payload['actions'][0]['how'] ?? '');
+        $this->assertStringNotContainsString('post_id', $how);
+        $this->assertStringContainsString('Living Room Listens', $how);
+        $this->assertStringNotContainsString('Jessie', (string) ($second->payload['unused_weekly_ideas'][0]['hook'] ?? ''));
+        $this->assertStringContainsString("member's story", (string) ($second->payload['unused_weekly_ideas'][0]['hook'] ?? ''));
+        Event::assertDispatched(MessageLogged::class, function (MessageLogged $event): bool {
+            return $event->level === 'warning'
+                && str_contains($event->message, 'fallback skipped')
+                && isset($event->context['diagnostics'])
+                && is_array($event->context['diagnostics'])
+                && $event->context['diagnostics'] !== [];
+        });
+    }
+
+    public function test_validation_fallback_skip_logs_per_attempt_errors(): void
+    {
+        Sleep::fake();
+        Event::fake([MessageLogged::class]);
+
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        $this->seedAccounts($user);
+
+        DailyBrief::factory()->for($user)->create([
+            'status' => 'ready',
+            'headline' => 'Keep this brief',
+            'brief_date' => now('Europe/London')->toDateString(),
+            'model' => 'test-model',
+            'llm_attempts' => 1,
+            'facts' => [
+                'allowed_handles' => ['letsgosocialuk', 'goodgym', 'onehousesocialclub'],
+                'allowed_post_ids' => [],
+                'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
+                'competitors' => [],
+            ],
+            'payload' => [
+                'headline' => 'Keep this brief',
+                'own_summary' => 'ok',
+                'competitor_summary' => 'ok',
+                'actions' => [
+                    ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                    ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                    ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ],
+                'unused_weekly_ideas' => [],
+                'watch' => [],
+                'validation' => ['used_fallback' => false, 'diagnostics' => []],
+            ],
+            'generated_at' => now()->subHour(),
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::sequence()
+                ->push($this->llmResponse([
+                    'headline' => 'Bad @ghostclub 99.9x',
+                    'actions' => [
+                        ['title' => 'Bad', 'why' => '99.9x', 'how' => 'No', 'related_handles' => ['ghostclub'], 'related_post_ids' => []],
+                        ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                        ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                    ],
+                    'own_summary' => 'ok',
+                    'competitor_summary' => 'ok',
+                    'watch' => [],
+                ]))
+                ->push($this->llmResponse([
+                    'headline' => 'Still bad @ghostclub 88.8x',
+                    'actions' => [
+                        ['title' => 'Still bad', 'why' => '88.8x', 'how' => 'No', 'related_handles' => ['ghostclub'], 'related_post_ids' => []],
+                        ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                        ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                    ],
+                    'own_summary' => 'ok',
+                    'competitor_summary' => 'ok',
+                    'watch' => [],
+                ])),
+        ]);
+
+        $brief = app(DailyBriefGenerator::class)->generate($user, force: true);
+
+        $this->assertSame('Keep this brief', $brief->headline);
+        Event::assertDispatched(MessageLogged::class, function (MessageLogged $event): bool {
+            if ($event->level !== 'warning' || ! str_contains($event->message, 'fallback skipped')) {
+                return false;
+            }
+
+            $diagnostics = $event->context['diagnostics'] ?? null;
+
+            return is_array($diagnostics)
+                && count($diagnostics) >= 2
+                && ($diagnostics[0]['errors'] ?? []) !== []
+                && ($diagnostics[1]['errors'] ?? []) !== [];
+        });
+    }
+
+    public function test_sanitize_flag_rewrites_stored_brief_in_place(): void
+    {
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        $this->seedAccounts($user);
+
+        $brief = DailyBrief::factory()->for($user)->create([
+            'status' => 'ready',
+            'headline' => 'Plan for today',
+            'brief_date' => now('Europe/London')->toDateString(),
+            'facts' => [
+                'allowed_handles' => ['goodgym', 'letsgosocialuk'],
+                'allowed_post_ids' => [218],
+                'borrowed_competitor_names' => ['Jessie'],
+                'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
+                'top_competitor_hit_24h' => [
+                    'post_id' => 218,
+                    'handle' => 'goodgym',
+                    'format' => 'Reel',
+                    'hook' => 'Living Room Listens',
+                    'times_usual' => 1.0,
+                ],
+                'competitors' => [],
+            ],
+            'payload' => [
+                'headline' => 'Plan for today',
+                'own_summary' => 'ok',
+                'competitor_summary' => 'ok',
+                'actions' => [
+                    [
+                        'title' => 'Comment',
+                        'why' => 'why',
+                        'how' => 'Reply under (post_id 218)',
+                        'related_handles' => ['goodgym'],
+                        'related_post_ids' => [218],
+                    ],
+                ],
+                'unused_weekly_ideas' => [
+                    ['position' => 1, 'format' => 'Reel', 'hook' => "Jessie\u{2019}s story: nervous, alone, now a regular"],
+                ],
+                'watch' => [],
+                'validation' => ['used_fallback' => false, 'diagnostics' => []],
+            ],
+        ]);
+
+        $this->artisan('snitch:generate-daily-briefs', [
+            '--user' => $user->id,
+            '--sanitize' => true,
+            '--date' => $brief->brief_date?->toDateString(),
+        ])->assertSuccessful();
+
+        $brief->refresh();
+        $this->assertStringNotContainsString('post_id', (string) ($brief->payload['actions'][0]['how'] ?? ''));
+        $this->assertStringContainsString('Living Room Listens', (string) ($brief->payload['actions'][0]['how'] ?? ''));
+        $this->assertStringNotContainsString('Jessie', (string) ($brief->payload['unused_weekly_ideas'][0]['hook'] ?? ''));
+        $this->assertStringContainsString("member's story", (string) ($brief->payload['unused_weekly_ideas'][0]['hook'] ?? ''));
     }
 
     public function test_first_brief_still_uses_fallback_when_llm_fails(): void
@@ -925,10 +1139,10 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertStringNotContainsString('Jessie', json_encode($result['output']['actions']) ?: '');
     }
 
-    public function test_validator_rejects_standout_wording_for_about_usual_posts(): void
+    public function test_validator_rewrites_standout_wording_for_about_usual_posts(): void
     {
         $facts = [
-            'allowed_handles' => ['sobersocial_'],
+            'allowed_handles' => ['sobersocial_', 'onehousesocialclub'],
             'allowed_post_ids' => [50],
             'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
             'competitors' => [[
@@ -955,11 +1169,23 @@ class DailyBriefGenerationTest extends TestCase
             ],
         ];
 
-        $rejected = app(DailyBriefValidator::class)->validate([
+        $softened = app(DailyBriefValidator::class)->validate([
             'headline' => 'Plan for today',
             'actions' => [
-                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                [
+                    'title' => 'Comment on onehousesocialclub',
+                    'why' => 'why',
+                    'how' => "Reply under onehousesocialclub's top hit Reel",
+                    'related_handles' => ['onehousesocialclub'],
+                    'related_post_ids' => [],
+                ],
+                [
+                    'title' => 'Check sobersocial_',
+                    'why' => 'why',
+                    'how' => "Look at sobersocial_'s top post from yesterday",
+                    'related_handles' => ['sobersocial_'],
+                    'related_post_ids' => [],
+                ],
                 ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
             ],
             'own_summary' => 'ok',
@@ -967,10 +1193,19 @@ class DailyBriefGenerationTest extends TestCase
             'watch' => [],
         ], $facts);
 
-        $this->assertFalse($rejected['ok']);
-        $this->assertTrue(collect($rejected['errors'])->contains(
-            fn (string $error): bool => str_contains($error, 'standout claim needs times-usual above'),
-        ));
+        $this->assertTrue($softened['ok'], implode('; ', $softened['errors']));
+        $this->assertSame(
+            "@sobersocial_'s Traitors Dinner Reel.",
+            $softened['output']['competitor_summary'] ?? null,
+        );
+        $this->assertSame(
+            "Reply under onehousesocialclub's Reel",
+            $softened['output']['actions'][0]['how'] ?? null,
+        );
+        $this->assertSame(
+            "Look at sobersocial_'s post from yesterday",
+            $softened['output']['actions'][1]['how'] ?? null,
+        );
 
         $facts['competitors'][0]['posts_last_7d'][0]['times_usual'] = 1.5;
         $facts['competitors'][0]['best_post_7d']['times_usual'] = 1.5;
@@ -989,6 +1224,41 @@ class DailyBriefGenerationTest extends TestCase
         ], $facts);
 
         $this->assertTrue($allowed['ok'], implode('; ', $allowed['errors']));
+        $this->assertStringContainsString('standout', (string) ($allowed['output']['competitor_summary'] ?? ''));
+    }
+
+    public function test_validator_rewrites_curly_apostrophe_borrowed_names(): void
+    {
+        $result = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                [
+                    'title' => 'Film today',
+                    'why' => 'why',
+                    'how' => "Jessie\u{2019}s story: nervous, alone, now a regular",
+                    'related_handles' => [],
+                    'related_post_ids' => [],
+                ],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => 'ok',
+            'watch' => [],
+        ], [
+            'allowed_handles' => ['letsgosocialuk'],
+            'allowed_post_ids' => [],
+            'borrowed_competitor_names' => ['Jessie'],
+            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
+            'competitors' => [],
+        ]);
+
+        $this->assertTrue($result['ok'], implode('; ', $result['errors']));
+        $this->assertSame(
+            "A member's story: nervous, alone, now a regular",
+            $result['output']['actions'][0]['how'] ?? null,
+        );
+        $this->assertStringNotContainsString('Jessie', (string) ($result['output']['actions'][0]['how'] ?? ''));
     }
 
     public function test_validator_rejects_an_unknown_internal_post_id_in_copy(): void

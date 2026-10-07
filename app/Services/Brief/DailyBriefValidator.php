@@ -27,6 +27,7 @@ class DailyBriefValidator
         $output = $this->replaceDashes($output);
         $output = $this->rewriteInternalPostIds($output, $facts);
         $output = $this->rewriteBorrowedCompetitorNames($output, $facts);
+        $output = $this->rewriteUnsupportedStandoutClaims($output, $facts);
         $errors = [];
 
         $headline = trim((string) ($output['headline'] ?? ''));
@@ -1086,6 +1087,77 @@ class DailyBriefValidator
         }
 
         return $output;
+    }
+
+    /**
+     * Soften standout / hit / top praise when engagement is at or below the threshold.
+     * Reject only if praise wording still remains after rewrite.
+     *
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function rewriteUnsupportedStandoutClaims(array $output, array $facts): array
+    {
+        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+            if (isset($output[$field]) && is_string($output[$field])) {
+                $output[$field] = $this->rewriteUnsupportedStandoutClaimsInText($output[$field], $facts);
+            }
+        }
+
+        if (isset($output['watch']) && is_array($output['watch'])) {
+            $output['watch'] = array_map(
+                fn (mixed $item): mixed => is_string($item)
+                    ? $this->rewriteUnsupportedStandoutClaimsInText($item, $facts)
+                    : $item,
+                $output['watch'],
+            );
+        }
+
+        if (isset($output['actions']) && is_array($output['actions'])) {
+            foreach ($output['actions'] as $index => $action) {
+                if (! is_array($action)) {
+                    continue;
+                }
+
+                foreach (['title', 'why', 'how', 'hook'] as $field) {
+                    if (isset($action[$field]) && is_string($action[$field])) {
+                        $action[$field] = $this->rewriteUnsupportedStandoutClaimsInText($action[$field], $facts);
+                    }
+                }
+
+                $output['actions'][$index] = $action;
+            }
+        }
+
+        return $output;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    public function rewriteUnsupportedStandoutClaimsInText(string $text, array $facts): string
+    {
+        if ($text === '' || $this->unsupportedStandoutClaim($text, $facts) === null) {
+            return $text;
+        }
+
+        $rewritten = $text;
+        $rewritten = preg_replace('/\btop\s+hit\b/iu', '', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\btop\s+(post|reel|carousel|performer)\b/iu', '$1', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\b(?:biggest\s+)?hit\b/iu', '', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\bwas a standout\b/iu', '', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\ba standout\b/iu', '', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\bstandout\b/iu', '', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\boutperformed\b/iu', 'posted', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\bbest\s+(post|reel|carousel|performer)\b/iu', 'recent $1', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\btheir best\b/iu', 'their recent', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\bbest recent\b/iu', 'recent', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\s{2,}/u', ' ', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\s+([,.;:!?])/u', '$1', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/([.!?]){2,}/u', '$1', $rewritten) ?? $rewritten;
+
+        return trim($rewritten);
     }
 
     /**

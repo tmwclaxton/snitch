@@ -15,6 +15,11 @@ use Carbon\CarbonImmutable;
 class BorrowedCompetitorNameSanitizer
 {
     /**
+     * Straight or curly apostrophe used in possessives (Jessie's / Jessie’s).
+     */
+    private const APOSTROPHE = '[\'\x{2019}\x{2018}]';
+
+    /**
      * Common capitalized words that are not people.
      *
      * @var list<string>
@@ -90,7 +95,11 @@ class BorrowedCompetitorNameSanitizer
             }
 
             $quoted = preg_quote($name, '/');
-            $rewritten = preg_replace('/\b'.$quoted.'\'s\b/iu', "a member's", $rewritten) ?? $rewritten;
+            $rewritten = preg_replace(
+                '/\b'.$quoted.self::APOSTROPHE.'s\b/iu',
+                "a member's",
+                $rewritten,
+            ) ?? $rewritten;
             $rewritten = preg_replace('/\b'.$quoted.'\b/iu', 'a member', $rewritten) ?? $rewritten;
         }
 
@@ -110,7 +119,7 @@ class BorrowedCompetitorNameSanitizer
                 continue;
             }
 
-            if (preg_match('/\b'.preg_quote($name, '/').'(?:\'s)?\b/iu', $text) === 1) {
+            if (preg_match('/\b'.preg_quote($name, '/').'(?:'.self::APOSTROPHE.'s)?\b/iu', $text) === 1) {
                 return $name;
             }
         }
@@ -120,56 +129,67 @@ class BorrowedCompetitorNameSanitizer
 
     /**
      * Edit stored weekly ideas for a user in place. Returns how many rows changed.
+     *
+     * @param  bool  $allWeeks  When true, clean every weekly brief for the user (not only the current week).
      */
-    public function sanitizeStoredWeeklyIdeas(User $user, ?CarbonImmutable $weekStart = null): int
+    public function sanitizeStoredWeeklyIdeas(User $user, ?CarbonImmutable $weekStart = null, bool $allWeeks = false): int
     {
-        $weekStart ??= CarbonImmutable::now(DashboardMath::TIMEZONE)->startOfWeek(CarbonImmutable::MONDAY);
         $names = $this->borrowedNamesForUser($user);
 
         if ($names === []) {
             return 0;
         }
 
-        $brief = WeeklyBrief::query()
-            ->where('user_id', $user->id)
-            ->whereDate('week_start', $weekStart->toDateString())
-            ->first();
+        if (! $allWeeks) {
+            $weekStart ??= CarbonImmutable::now(DashboardMath::TIMEZONE)->startOfWeek(CarbonImmutable::MONDAY);
+        }
 
-        if ($brief === null) {
+        $briefs = WeeklyBrief::query()
+            ->where('user_id', $user->id)
+            ->when(
+                ! $allWeeks && $weekStart !== null,
+                fn ($query) => $query->whereDate('week_start', $weekStart->toDateString()),
+            )
+            ->orderBy('id')
+            ->get();
+
+        if ($briefs->isEmpty()) {
             return 0;
         }
 
         $updated = 0;
 
-        foreach (WeeklyBriefIdea::query()->where('weekly_brief_id', $brief->id)->orderBy('id')->get() as $idea) {
-            $dirty = false;
-            $fields = [
-                'hook' => $idea->hook,
-                'visual' => $idea->visual,
-                'caption_angle' => $idea->caption_angle,
-                'cta' => $idea->cta,
-                'why' => $idea->why,
-            ];
+        foreach ($briefs as $brief) {
+            foreach (WeeklyBriefIdea::query()->where('weekly_brief_id', $brief->id)->orderBy('id')->get() as $idea) {
+                $dirty = false;
+                $fields = [
+                    'hook' => $idea->hook,
+                    'visual' => $idea->visual,
+                    'caption_angle' => $idea->caption_angle,
+                    'cta' => $idea->cta,
+                    'why' => $idea->why,
+                ];
 
-            foreach ($fields as $key => $value) {
-                if (! is_string($value) || $value === '') {
+                foreach ($fields as $key => $value) {
+                    if (! is_string($value) || $value === '') {
+                        continue;
+                    }
+
+                    $rewritten = $this->rewriteText($value, $names);
+                    if ($rewritten !== $value) {
+                        $fields[$key] = $rewritten;
+                        $dirty = true;
+                    }
+                }
+
+                if (! $dirty) {
                     continue;
                 }
 
-                $rewritten = $this->rewriteText($value, $names);
-                if ($rewritten !== $value) {
-                    $fields[$key] = $rewritten;
-                    $dirty = true;
-                }
+                $idea->fill($fields);
+                $idea->save();
+                $updated++;
             }
-
-            if (! $dirty) {
-                continue;
-            }
-
-            $idea->fill($fields);
-            $idea->save();
-            $updated++;
         }
 
         return $updated;
@@ -184,7 +204,7 @@ class BorrowedCompetitorNameSanitizer
             return [];
         }
 
-        preg_match_all('/\b([A-Z][a-z]{2,})(?:\'s)?\b/u', $caption, $matches);
+        preg_match_all('/\b([A-Z][a-z]{2,})(?:'.self::APOSTROPHE.'s)?\b/u', $caption, $matches);
 
         $names = [];
 

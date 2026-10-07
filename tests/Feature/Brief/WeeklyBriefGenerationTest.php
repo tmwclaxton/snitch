@@ -11,6 +11,7 @@ use App\Models\PostAnalysis;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Models\WeeklyBrief;
+use App\Services\Brief\BorrowedCompetitorNameSanitizer;
 use App\Services\Brief\WeeklyBriefGenerator;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -215,6 +216,18 @@ class WeeklyBriefGenerationTest extends TestCase
         $this->assertNotNull($first);
         $this->assertSame("A member's story: nervous, alone, now a regular", $first->hook);
         $this->assertStringNotContainsString('Jessie', (string) $first->hook.(string) $first->caption_angle.(string) $first->why);
+    }
+
+    public function test_borrowed_name_sanitizer_rewrites_curly_apostrophe_possessives(): void
+    {
+        $sanitizer = app(BorrowedCompetitorNameSanitizer::class);
+        $hook = "Jessie\u{2019}s story: nervous, alone, now a regular";
+
+        $this->assertSame(
+            "A member's story: nervous, alone, now a regular",
+            $sanitizer->rewriteText($hook, ['Jessie']),
+        );
+        $this->assertSame('Jessie', $sanitizer->firstBorrowedNameIn($hook, ['Jessie']));
     }
 
     public function test_admin_sees_can_regenerate_non_admin_does_not(): void

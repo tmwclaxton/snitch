@@ -4,16 +4,24 @@ namespace App\Support;
 
 use App\Mcp\Support\McpAppUrls;
 use App\Models\DailyBrief;
+use App\Services\Brief\DailyBriefCopySanitizer;
 use App\Services\Dashboard\DashboardMath;
 use Carbon\CarbonImmutable;
 
 class DailyBriefPresenter
 {
+    public function __construct(
+        private DailyBriefCopySanitizer $copySanitizer,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
     public function payload(DailyBrief $brief): array
     {
+        $this->copySanitizer->sanitizeStored($brief);
+        $brief->refresh();
+
         $payload = is_array($brief->payload) ? $brief->payload : [];
         $payload = $this->normalizeChangeSinceYesterday($payload, $brief);
 
