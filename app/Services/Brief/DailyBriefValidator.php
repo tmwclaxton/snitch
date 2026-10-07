@@ -331,25 +331,99 @@ class DailyBriefValidator
         $posts = $this->postsById($facts);
         $allowed = $this->allowedPostIds($facts);
 
-        $rewritten = preg_replace_callback(
-            self::INTERNAL_POST_ID_PATTERN,
-            function (array $match) use ($posts, $allowed): string {
-                $id = $this->internalPostIdFromMatch($match);
+        preg_match_all(self::INTERNAL_POST_ID_PATTERN, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
 
-                if (! $this->isInternalPostIdReference($id, $allowed)) {
-                    return $match[0];
-                }
+        if ($matches === []) {
+            return $this->stripEmptyBrackets($text);
+        }
 
-                $post = $posts[$id] ?? null;
+        $out = '';
+        $cursor = 0;
 
-                return is_array($post) ? $this->shortPostLabel($post) : $match[0];
-            },
-            $text,
-        );
+        foreach ($matches as $match) {
+            $full = (string) ($match[0][0] ?? '');
+            $offset = (int) ($match[0][1] ?? 0);
+            $id = $this->internalPostIdFromOffsetMatch($match);
 
-        $rewritten = is_string($rewritten) ? $rewritten : $text;
+            $out .= substr($text, $cursor, max(0, $offset - $cursor));
 
-        return $this->stripEmptyBrackets($rewritten);
+            if (! $this->isInternalPostIdReference($id, $allowed)) {
+                $out .= $full;
+                $cursor = $offset + strlen($full);
+
+                continue;
+            }
+
+            $post = $posts[$id] ?? null;
+
+            if (is_array($post) && $this->isParentheticalPostId($full) && $this->precedingTextAlreadyNamesPost($out, $post)) {
+                $replacement = '';
+            } elseif (is_array($post)) {
+                $replacement = $this->shortPostLabel($post);
+            } else {
+                $replacement = $full;
+            }
+
+            $out .= $replacement;
+            $cursor = $offset + strlen($full);
+        }
+
+        $out .= substr($text, $cursor);
+        $out = $this->collapseStackedPostLabels($out);
+
+        return $this->stripEmptyBrackets($out);
+    }
+
+    /**
+     * @param  array<int, array{0: string, 1: int}>  $match
+     */
+    private function internalPostIdFromOffsetMatch(array $match): int
+    {
+        $first = $match[1][0] ?? '';
+        $second = $match[2][0] ?? '';
+
+        return (int) ($first !== '' ? $first : $second);
+    }
+
+    private function isParentheticalPostId(string $match): bool
+    {
+        return str_starts_with(ltrim($match), '(');
+    }
+
+    /**
+     * @param  array<string, mixed>  $post
+     */
+    private function precedingTextAlreadyNamesPost(string $prefix, array $post): bool
+    {
+        $prefix = rtrim($prefix, " \t\n\r\0\x0B,;:.");
+
+        if ($prefix === '') {
+            return false;
+        }
+
+        $format = preg_quote($this->postFormat($post), '/');
+
+        return preg_match(
+            '/(?:\b(?:their|this|that|the|a|an)\s+|\S+(?:\'|\x{2019})s\s+)?(?:'.$format.'|reel|carousel|image|story|post)s?$/iu',
+            $prefix,
+        ) === 1;
+    }
+
+    public function collapseStackedPostLabels(string $text): string
+    {
+        $cleaned = preg_replace('/\btheir\s+their\b/iu', 'their', $text) ?? $text;
+        $cleaned = preg_replace(
+            '/\b(reel|carousel|image|story|post)s?\s+their\s+\'[^\']+\'\s+\1s?\b/iu',
+            '$1',
+            $cleaned,
+        ) ?? $cleaned;
+        $cleaned = preg_replace(
+            '/\btheir\s+(reel|carousel|image|story|post)s?\s+their\s+\'/iu',
+            'their \'',
+            $cleaned,
+        ) ?? $cleaned;
+
+        return $cleaned;
     }
 
     /**
@@ -433,20 +507,11 @@ class DailyBriefValidator
      */
     public function shortPostLabel(array $post): string
     {
-        $format = trim((string) ($post['format'] ?? ''));
-        if ($format === '') {
-            $format = 'post';
-        }
-
-        $hook = trim((string) ($post['hook'] ?? ''));
-        $caption = trim((string) ($post['caption'] ?? ''));
-        $title = $hook !== '' ? $hook : $caption;
+        $format = $this->postFormat($post);
+        $title = $this->shortHookTitle($post);
 
         if ($title !== '') {
-            $words = preg_split('/\s+/u', $title, -1, PREG_SPLIT_NO_EMPTY) ?: [];
-            $short = implode(' ', array_slice($words, 0, 6));
-
-            return 'their '.$short.' '.$format;
+            return "their '".$title."' ".$format;
         }
 
         $handle = $this->normaliseHandle((string) ($post['handle'] ?? ''));
@@ -455,6 +520,44 @@ class DailyBriefValidator
         }
 
         return 'their '.$format;
+    }
+
+    /**
+     * @param  array<string, mixed>  $post
+     */
+    public function postFormat(array $post): string
+    {
+        $format = trim((string) ($post['format'] ?? ''));
+
+        return $format !== '' ? $format : 'post';
+    }
+
+    /**
+     * First ~5 words of the hook or caption, without a trailing format word.
+     *
+     * @param  array<string, mixed>  $post
+     */
+    public function shortHookTitle(array $post): string
+    {
+        $hook = trim((string) ($post['hook'] ?? ''));
+        $caption = trim((string) ($post['caption'] ?? ''));
+        $title = $hook !== '' ? $hook : $caption;
+
+        if ($title === '') {
+            return '';
+        }
+
+        $title = trim(str_replace(['"', "\u{201C}", "\u{201D}"], '', $title));
+        $title = str_replace(["'", "\u{2019}"], '', $title);
+        $words = preg_split('/\s+/u', $title, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $words = array_slice($words, 0, 5);
+        $format = mb_strtolower($this->postFormat($post));
+
+        if ($words !== [] && mb_strtolower((string) end($words)) === $format) {
+            array_pop($words);
+        }
+
+        return trim(implode(' ', $words));
     }
 
     /**

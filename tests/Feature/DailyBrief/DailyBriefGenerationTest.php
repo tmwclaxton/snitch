@@ -1076,19 +1076,19 @@ class DailyBriefGenerationTest extends TestCase
 
         $this->assertTrue($result['ok'], implode('; ', $result['errors']));
         $this->assertSame(
-            'Leave genuine, non-spammy comments on their Living Room Listens Reel',
+            "Leave genuine, non-spammy comments on their 'Living Room Listens' Reel",
             $result['output']['actions'][0]['how'] ?? null,
         );
         $this->assertSame(
-            'Reply under their Living Room Listens Reel tonight',
+            "Reply under their 'Living Room Listens' Reel tonight",
             $result['output']['actions'][1]['how'] ?? null,
         );
         $this->assertSame(
-            'Comment on their Living Room Listens Reel tonight.',
+            "Comment on their 'Living Room Listens' Reel tonight.",
             $result['output']['actions'][2]['how'] ?? null,
         );
         $this->assertSame(
-            'Engage with their Living Room Listens Reel and their Living Room Listens Reel then their Living Room Listens Reel.',
+            "Engage with their 'Living Room Listens' Reel and their 'Living Room Listens' Reel then their 'Living Room Listens' Reel.",
             $result['output']['actions'][3]['how'] ?? null,
         );
         $this->assertSame([218], $result['output']['actions'][0]['related_post_ids'] ?? null);
@@ -1105,6 +1105,77 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertStringNotContainsString('post_id', $copy);
         $this->assertStringNotContainsString('(id 218)', $copy);
         $this->assertStringNotContainsString('()', $copy);
+    }
+
+    public function test_validator_drops_parenthetical_post_ids_after_a_named_reel(): void
+    {
+        $facts = [
+            'allowed_handles' => ['goodgym', 'onehousesocialclub'],
+            'allowed_post_ids' => [218, 245],
+            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
+            'top_competitor_hit_24h' => [
+                'post_id' => 218,
+                'handle' => 'goodgym',
+                'format' => 'Reel',
+                'hook' => 'POV: you found a social club tonight',
+            ],
+            'top_competitor_hit_7d' => [
+                'post_id' => 245,
+                'handle' => 'onehousesocialclub',
+                'format' => 'Reel',
+                'hook' => 'One of the best things about London',
+            ],
+        ];
+
+        $result = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                [
+                    'title' => 'Comment on goodgym',
+                    'why' => 'why',
+                    'how' => 'Leave a genuine comment on their Reel (post_id 218) about joining a first meetup.',
+                    'related_handles' => ['goodgym'],
+                    'related_post_ids' => [218],
+                ],
+                [
+                    'title' => 'Comment on onehousesocialclub',
+                    'why' => 'why',
+                    'how' => 'Leave a comment on their Reel (post_id 245) praising the welcome.',
+                    'related_handles' => ['onehousesocialclub'],
+                    'related_post_ids' => [245],
+                ],
+                [
+                    'title' => 'Reply on the other Reel',
+                    'why' => 'why',
+                    'how' => 'Reply under post 218 tonight.',
+                    'related_handles' => ['goodgym'],
+                    'related_post_ids' => [218],
+                ],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => 'ok',
+            'watch' => [],
+        ], $facts);
+
+        $this->assertTrue($result['ok'], implode('; ', $result['errors']));
+        $this->assertSame(
+            'Leave a genuine comment on their Reel about joining a first meetup.',
+            $result['output']['actions'][0]['how'] ?? null,
+        );
+        $this->assertSame(
+            'Leave a comment on their Reel praising the welcome.',
+            $result['output']['actions'][1]['how'] ?? null,
+        );
+        $this->assertSame(
+            "Reply under their 'POV: you found a social' Reel tonight.",
+            $result['output']['actions'][2]['how'] ?? null,
+        );
+        foreach ($result['output']['actions'] as $action) {
+            $how = (string) ($action['how'] ?? '');
+            $this->assertStringNotContainsString('their their', $how);
+            $this->assertDoesNotMatchRegularExpression('/\bReel\b.+\bReel\b/', $how);
+            $this->assertStringNotContainsString('post_id', $how);
+        }
     }
 
     public function test_validator_rewrites_borrowed_competitor_person_names(): void
