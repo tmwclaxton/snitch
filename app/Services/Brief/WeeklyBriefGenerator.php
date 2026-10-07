@@ -30,6 +30,7 @@ class WeeklyBriefGenerator
         private DashboardMath $math,
         private VendorUsageCharger $charger,
         private UsageBillingService $billing,
+        private BorrowedCompetitorNameSanitizer $borrowedNames,
     ) {}
 
     public function currentWeekStart(?CarbonImmutable $now = null): CarbonImmutable
@@ -472,7 +473,7 @@ class WeeklyBriefGenerator
                 messages: [
                     [
                         'role' => 'system',
-                        'content' => 'You write short Instagram post ideas for a brand. Return JSON only: {"ideas":[{"format":"Reel|Carousel|Image","hook":"...","visual":"optional shot direction","caption_angle":"...","cta":"...","hashtags":["#a","#b"],"inspired_by_post_ids":[123],"why":"..."}]}. Exactly 3 ideas. Rules: (1) hook is the literal first on-screen line the viewer reads, max 12 words, never a scene direction; (2) put camera/layout direction in visual only; (3) every idea must cite 1-2 inspired_by_post_ids from the winners list post_id values, and use different winners when possible (at most 2 ideas may share one post_id); (4) Instagram CTAs only: comment, save, share, DM, or link in bio - never swipe up; (5) hashtags 3-5 from winners when possible; (6) no em dashes.',
+                        'content' => 'You write short Instagram post ideas for a brand. Return JSON only: {"ideas":[{"format":"Reel|Carousel|Image","hook":"...","visual":"optional shot direction","caption_angle":"...","cta":"...","hashtags":["#a","#b"],"inspired_by_post_ids":[123],"why":"..."}]}. Exactly 3 ideas. Rules: (1) hook is the literal first on-screen line the viewer reads, max 12 words, never a scene direction; (2) put camera/layout direction in visual only; (3) every idea must cite 1-2 inspired_by_post_ids from the winners list post_id values, and use different winners when possible (at most 2 ideas may share one post_id); (4) Instagram CTAs only: comment, save, share, DM, or link in bio - never swipe up; (5) hashtags 3-5 from winners when possible; (6) no em dashes; (7) never borrow named people from competitor captions - if a competitor names a member (for example Jessie), rewrite as "a member\'s story" or a generic first-person line for the brand\'s own community. Do not invent competitor members as the brand\'s people.',
                     ],
                     [
                         'role' => 'user',
@@ -554,17 +555,21 @@ class WeeklyBriefGenerator
                 $brand,
             );
 
+            $names = $this->borrowedNamesFromWinners($winners);
+            $captionAngle = trim((string) ($row['caption_angle'] ?? 'Show the before/after and invite a reply'));
+            $why = trim((string) ($row['why'] ?? $this->defaultWhy($winners, $index)));
+
             $out[] = [
                 'format' => $format,
-                'hook' => $hook,
-                'visual' => $visual,
-                'caption_angle' => trim((string) ($row['caption_angle'] ?? 'Show the before/after and invite a reply')),
+                'hook' => $this->borrowedNames->rewriteText($hook, $names),
+                'visual' => $visual !== null ? $this->borrowedNames->rewriteText($visual, $names) : null,
+                'caption_angle' => $this->borrowedNames->rewriteText($captionAngle, $names),
                 'cta' => $this->sanitizeCta((string) ($row['cta'] ?? 'Comment your take')),
                 'hashtags' => array_slice($hashtags, 0, 5),
                 'recommended_day' => (string) $slot['day'],
                 'recommended_hour' => (int) $slot['hour'],
                 'inspired_by_post_ids' => $sourceIds,
-                'why' => trim((string) ($row['why'] ?? $this->defaultWhy($winners, $index))),
+                'why' => $this->borrowedNames->rewriteText($why, $names),
             ];
         }
 
@@ -762,23 +767,52 @@ class WeeklyBriefGenerator
             $pi = $winner['pi'] ?? null;
             $handle = $winner['handle'] ?? 'rivals';
 
+            $names = $this->borrowedNamesFromWinners($winners);
+            $captionAngle = "Translate @{$handle}'s angle into {$brandName}'s voice, then close with a clear next step.";
+            $why = $pi !== null
+                ? sprintf('@%s hit %.1f× usual - remix that proof pattern this week.', $handle, $pi)
+                : 'Grounded in recent competitor winners and your brand profile.';
+
             $ideas[] = [
                 'format' => $formats[$i],
-                'hook' => $hook,
-                'visual' => $visual,
-                'caption_angle' => "Translate @{$handle}'s angle into {$brandName}'s voice, then close with a clear next step.",
+                'hook' => $this->borrowedNames->rewriteText($hook, $names),
+                'visual' => $visual !== null ? $this->borrowedNames->rewriteText($visual, $names) : null,
+                'caption_angle' => $this->borrowedNames->rewriteText($captionAngle, $names),
                 'cta' => 'Comment your take',
                 'hashtags' => $hashtags,
                 'recommended_day' => (string) $slot['day'],
                 'recommended_hour' => (int) $slot['hour'],
                 'inspired_by_post_ids' => $sourceIds !== [] ? $sourceIds : ($winner ? [(int) $winner['post_id']] : []),
-                'why' => $pi !== null
-                    ? sprintf('@%s hit %.1f× usual - remix that proof pattern this week.', $handle, $pi)
-                    : 'Grounded in recent competitor winners and your brand profile.',
+                'why' => $this->borrowedNames->rewriteText($why, $names),
             ];
         }
 
         return $ideas;
+    }
+
+    /**
+     * @param  list<array{post_id: int, handle: string, pi: float, hook: ?string, hashtags: list<string>, format: string, caption: ?string, is_own_account?: bool}>  $winners
+     * @return list<string>
+     */
+    private function borrowedNamesFromWinners(array $winners): array
+    {
+        $own = [];
+        $competitors = [];
+
+        foreach ($winners as $row) {
+            $caption = is_string($row['caption'] ?? null) ? (string) $row['caption'] : '';
+            if ($caption === '') {
+                continue;
+            }
+
+            if ($row['is_own_account'] ?? false) {
+                $own[] = $caption;
+            } else {
+                $competitors[] = $caption;
+            }
+        }
+
+        return $this->borrowedNames->borrowedNames($own, $competitors);
     }
 
     /**

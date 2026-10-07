@@ -6,6 +6,17 @@ use Carbon\CarbonImmutable;
 
 class DailyBriefValidator
 {
+    public const STANDOUT_THRESHOLD = 1.2;
+
+    /**
+     * Match internal post id phrasing, including underscore/hyphen/colon and brackets.
+     */
+    private const INTERNAL_POST_ID_PATTERN = '/\(\s*(?:post[\s_\-]*id|post|id)\s*[:#]?\s*(\d+)\s*\)|\b(?:post[\s_\-]*id|post)\s*[:#]?\s*(\d+)\b/i';
+
+    public function __construct(
+        private BorrowedCompetitorNameSanitizer $borrowedNames,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $output
      * @param  array<string, mixed>  $facts
@@ -15,6 +26,7 @@ class DailyBriefValidator
     {
         $output = $this->replaceDashes($output);
         $output = $this->rewriteInternalPostIds($output, $facts);
+        $output = $this->rewriteBorrowedCompetitorNames($output, $facts);
         $errors = [];
 
         $headline = trim((string) ($output['headline'] ?? ''));
@@ -144,6 +156,17 @@ class DailyBriefValidator
             $gapError = $this->unsupportedLongestGapClaim($text, $facts);
             if ($gapError !== null) {
                 $errors[] = $gapError;
+            }
+
+            $standoutError = $this->unsupportedStandoutClaim($text, $facts);
+            if ($standoutError !== null) {
+                $errors[] = $standoutError;
+            }
+
+            $borrowed = $this->borrowedCompetitorNames($facts);
+            $borrowedName = $this->borrowedNames->firstBorrowedNameIn($text, $borrowed);
+            if ($borrowedName !== null) {
+                $errors[] = 'borrowed competitor person name ('.$borrowedName.')';
             }
 
             foreach ($this->internalPostIdMentions($text, $facts) as $mention) {
@@ -308,9 +331,9 @@ class DailyBriefValidator
         $allowed = $this->allowedPostIds($facts);
 
         $rewritten = preg_replace_callback(
-            '/\bpost(?:\s+id)?\s*#?\s*(\d+)\b/i',
+            self::INTERNAL_POST_ID_PATTERN,
             function (array $match) use ($posts, $allowed): string {
-                $id = (int) $match[1];
+                $id = $this->internalPostIdFromMatch($match);
 
                 if (! $this->isInternalPostIdReference($id, $allowed)) {
                     return $match[0];
@@ -323,7 +346,9 @@ class DailyBriefValidator
             $text,
         );
 
-        return is_string($rewritten) ? $rewritten : $text;
+        $rewritten = is_string($rewritten) ? $rewritten : $text;
+
+        return $this->stripEmptyBrackets($rewritten);
     }
 
     /**
@@ -333,12 +358,12 @@ class DailyBriefValidator
     public function internalPostIdMentions(string $text, array $facts): array
     {
         $allowed = $this->allowedPostIds($facts);
-        preg_match_all('/\bpost(?:\s+id)?\s*#?\s*(\d+)\b/i', $text, $matches, PREG_SET_ORDER);
+        preg_match_all(self::INTERNAL_POST_ID_PATTERN, $text, $matches, PREG_SET_ORDER);
 
         $hits = [];
 
         foreach ($matches as $match) {
-            $id = (int) ($match[1] ?? 0);
+            $id = $this->internalPostIdFromMatch($match);
 
             if ($this->isInternalPostIdReference($id, $allowed)) {
                 $hits[] = $match[0];
@@ -346,6 +371,26 @@ class DailyBriefValidator
         }
 
         return array_values(array_unique($hits));
+    }
+
+    /**
+     * @param  array<int, string>  $match
+     */
+    private function internalPostIdFromMatch(array $match): int
+    {
+        $first = $match[1] ?? '';
+        $second = $match[2] ?? '';
+
+        return (int) ($first !== '' ? $first : $second);
+    }
+
+    public function stripEmptyBrackets(string $text): string
+    {
+        $cleaned = preg_replace('/\(\s*\)|\[\s*\]/', '', $text) ?? $text;
+        $cleaned = preg_replace('/\s{2,}/u', ' ', $cleaned) ?? $cleaned;
+        $cleaned = preg_replace('/\s+([,.;:!?])/u', '$1', $cleaned) ?? $cleaned;
+
+        return trim($cleaned);
     }
 
     /**
@@ -994,5 +1039,237 @@ class DailyBriefValidator
         }
 
         return $found;
+    }
+
+    /**
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function rewriteBorrowedCompetitorNames(array $output, array $facts): array
+    {
+        $names = $this->borrowedCompetitorNames($facts);
+
+        if ($names === []) {
+            return $output;
+        }
+
+        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+            if (isset($output[$field]) && is_string($output[$field])) {
+                $output[$field] = $this->borrowedNames->rewriteText($output[$field], $names);
+            }
+        }
+
+        if (isset($output['watch']) && is_array($output['watch'])) {
+            $output['watch'] = array_map(
+                fn (mixed $item): mixed => is_string($item)
+                    ? $this->borrowedNames->rewriteText($item, $names)
+                    : $item,
+                $output['watch'],
+            );
+        }
+
+        if (isset($output['actions']) && is_array($output['actions'])) {
+            foreach ($output['actions'] as $index => $action) {
+                if (! is_array($action)) {
+                    continue;
+                }
+
+                foreach (['title', 'why', 'how', 'hook'] as $field) {
+                    if (isset($action[$field]) && is_string($action[$field])) {
+                        $action[$field] = $this->borrowedNames->rewriteText($action[$field], $names);
+                    }
+                }
+
+                $output['actions'][$index] = $action;
+            }
+        }
+
+        return $output;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return list<string>
+     */
+    public function borrowedCompetitorNames(array $facts): array
+    {
+        if (is_array($facts['borrowed_competitor_names'] ?? null)) {
+            return array_values(array_filter(
+                $facts['borrowed_competitor_names'],
+                fn (mixed $name): bool => is_string($name) && $name !== '',
+            ));
+        }
+
+        $ownCaptions = [];
+        $competitorCaptions = [];
+
+        foreach ($this->captionStrings($facts['own'] ?? null) as $caption) {
+            $ownCaptions[] = $caption;
+        }
+
+        foreach ($facts['competitors'] ?? [] as $row) {
+            foreach ($this->captionStrings($row) as $caption) {
+                $competitorCaptions[] = $caption;
+            }
+        }
+
+        return $this->borrowedNames->borrowedNames($ownCaptions, $competitorCaptions);
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    public function unsupportedStandoutClaim(string $text, array $facts): ?string
+    {
+        if (preg_match('/\bbest times?\b|\btop tip\b|\bhit reply\b/i', $text) === 1) {
+            return null;
+        }
+
+        $wantsStrongPraise = preg_match('/\b(standout|outperformed|(?:biggest\s+)?hit)\b|\btop\s+(?:post|reel|carousel|performer)\b/i', $text) === 1;
+        $wantsBest = preg_match('/\bbest\s+(?:post|reel|carousel|performer)\b|\btheir best\b|\bbest recent\b/i', $text) === 1;
+
+        if (! $wantsStrongPraise && ! $wantsBest) {
+            return null;
+        }
+
+        $handles = $this->handlesMentionedIn($text, $this->allowedHandles($facts));
+        $posts = $this->sevenDayPosts($facts, $handles);
+
+        foreach ($facts['competitors'] ?? [] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $handle = $this->normaliseHandle((string) ($row['handle'] ?? ''));
+            if ($handles !== [] && $handle !== '' && ! in_array($handle, $handles, true)) {
+                continue;
+            }
+
+            if (is_array($row['best_post_7d'] ?? null)) {
+                $posts[] = $row['best_post_7d'];
+            }
+
+            foreach ($row['standout_winners'] ?? [] as $winner) {
+                if (is_array($winner)) {
+                    $posts[] = $winner;
+                }
+            }
+        }
+
+        foreach ([$facts['top_competitor_hit_24h'] ?? null, $facts['top_competitor_hit_7d'] ?? null, $facts['top_competitor_hit'] ?? null] as $top) {
+            if (is_array($top)) {
+                $posts[] = $top;
+            }
+        }
+
+        $bestScore = null;
+        $hasInWindowBest = false;
+
+        foreach ($posts as $post) {
+            if (! is_array($post)) {
+                continue;
+            }
+
+            $score = $this->postEngagementScore($post);
+            if ($score === null) {
+                continue;
+            }
+
+            $bestScore = $bestScore === null ? $score : max($bestScore, $score);
+
+            if ($this->isInWindowBestForHandle($post, $facts)) {
+                $hasInWindowBest = true;
+            }
+        }
+
+        if ($wantsStrongPraise) {
+            if ($bestScore !== null && $bestScore > self::STANDOUT_THRESHOLD) {
+                return null;
+            }
+
+            return 'standout claim needs times-usual above '.self::STANDOUT_THRESHOLD;
+        }
+
+        if ($bestScore !== null && ($bestScore > self::STANDOUT_THRESHOLD || $hasInWindowBest)) {
+            return null;
+        }
+
+        return 'best-post claim is not supported by in-window engagement';
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $row
+     * @return list<string>
+     */
+    private function captionStrings(mixed $row): array
+    {
+        if (! is_array($row)) {
+            return [];
+        }
+
+        $captions = [];
+
+        foreach (['posts_last_7d', 'posts_last_24h', 'posts_yesterday', 'standout_winners'] as $key) {
+            foreach ($row[$key] ?? [] as $post) {
+                if (is_array($post) && is_string($post['caption'] ?? null) && $post['caption'] !== '') {
+                    $captions[] = $post['caption'];
+                }
+            }
+        }
+
+        foreach (['best_post_7d', 'best_post_30d'] as $key) {
+            $post = $row[$key] ?? null;
+            if (is_array($post) && is_string($post['caption'] ?? null) && $post['caption'] !== '') {
+                $captions[] = $post['caption'];
+            }
+        }
+
+        return $captions;
+    }
+
+    /**
+     * @param  array<string, mixed>  $post
+     */
+    private function postEngagementScore(array $post): ?float
+    {
+        $score = $post['times_usual'] ?? $post['views_vs_usual'] ?? null;
+
+        return is_numeric($score) ? (float) $score : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $post
+     * @param  array<string, mixed>  $facts
+     */
+    private function isInWindowBestForHandle(array $post, array $facts): bool
+    {
+        $postId = isset($post['post_id']) ? (int) $post['post_id'] : 0;
+        $handle = $this->normaliseHandle((string) ($post['handle'] ?? ''));
+
+        foreach ([$facts['own'] ?? null, ...($facts['competitors'] ?? [])] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $rowHandle = $this->normaliseHandle((string) ($row['handle'] ?? ''));
+            if ($handle !== '' && $rowHandle !== '' && $handle !== $rowHandle) {
+                continue;
+            }
+
+            $best = $row['best_post_7d'] ?? null;
+            if (is_array($best) && $postId > 0 && (int) ($best['post_id'] ?? 0) === $postId) {
+                return true;
+            }
+        }
+
+        foreach (['top_competitor_hit_24h', 'top_competitor_hit_7d'] as $key) {
+            $top = $facts[$key] ?? null;
+            if (is_array($top) && $postId > 0 && (int) ($top['post_id'] ?? 0) === $postId) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

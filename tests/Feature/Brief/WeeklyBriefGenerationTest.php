@@ -156,6 +156,67 @@ class WeeklyBriefGenerationTest extends TestCase
         $this->assertNotContains($shared, $third->inspired_by_post_ids);
     }
 
+    public function test_ideas_rewrite_borrowed_competitor_person_names(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create(['name' => 'Let\'s Go Social']);
+        $winnerIds = $this->seedEnoughCompetitorData($user);
+        $competitor = TrackedAccount::query()
+            ->where('user_id', $user->id)
+            ->where('is_own_account', false)
+            ->firstOrFail();
+        Post::query()->where('social_account_id', $competitor->social_account_id)->update([
+            'caption' => 'Community spotlight: Jessie was nervous and alone, now a regular #friends',
+        ]);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'content' => json_encode([
+                            'ideas' => [
+                                [
+                                    'format' => 'Reel',
+                                    'hook' => "Jessie's story: nervous, alone, now a regular",
+                                    'caption_angle' => 'Tell Jessie\'s arc in 20 seconds',
+                                    'cta' => 'Comment your take',
+                                    'hashtags' => ['#community', '#london', '#social'],
+                                    'inspired_by_post_ids' => [$winnerIds[0]],
+                                    'why' => 'Inspired by Jessie',
+                                ],
+                                [
+                                    'format' => 'Carousel',
+                                    'hook' => 'Three meetup mistakes',
+                                    'caption_angle' => 'List the traps',
+                                    'cta' => 'Save this',
+                                    'hashtags' => ['#tips', '#growth', '#brand'],
+                                    'inspired_by_post_ids' => [$winnerIds[1]],
+                                    'why' => 'Second idea',
+                                ],
+                                [
+                                    'format' => 'Image',
+                                    'hook' => 'One bold claim',
+                                    'caption_angle' => 'Single visual',
+                                    'cta' => 'Link in bio',
+                                    'hashtags' => ['#brand', '#content', '#social'],
+                                    'inspired_by_post_ids' => [$winnerIds[2] ?? $winnerIds[0]],
+                                    'why' => 'Third idea',
+                                ],
+                            ],
+                        ]),
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $brief = app(WeeklyBriefGenerator::class)->generate($user, force: false, billable: false);
+        $first = $brief->ideas->firstWhere('position', 1);
+
+        $this->assertNotNull($first);
+        $this->assertSame("A member's story: nervous, alone, now a regular", $first->hook);
+        $this->assertStringNotContainsString('Jessie', (string) $first->hook.(string) $first->caption_angle.(string) $first->why);
+    }
+
     public function test_admin_sees_can_regenerate_non_admin_does_not(): void
     {
         $admin = User::factory()->create(['email' => 'admin@snitch.test']);

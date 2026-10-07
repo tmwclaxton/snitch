@@ -21,6 +21,7 @@ class DailyBriefFactsBuilder
     public function __construct(
         private DashboardMath $math,
         private WeeklyBriefGenerator $weekly,
+        private BorrowedCompetitorNameSanitizer $borrowedNames,
     ) {}
 
     /**
@@ -118,6 +119,7 @@ class DailyBriefFactsBuilder
         $facts['top_competitor_hit_24h'] = $this->topCompetitorHitLast24h($competitorFacts);
         $facts['cadence'] = $this->cadenceIndex($ownFacts, $competitorFacts);
         $facts['cadence_gaps'] = $this->cadenceGaps($ownFacts, $competitorFacts);
+        $facts['borrowed_competitor_names'] = $this->borrowedCompetitorNames($ownFacts, $competitorFacts, $postsBySocial, $own, $competitors);
 
         return $facts;
     }
@@ -646,6 +648,80 @@ class DailyBriefFactsBuilder
             ->filter(fn (array $row): bool => is_numeric($row['times_usual'] ?? null) || is_numeric($row['views_vs_usual'] ?? null))
             ->sortByDesc(fn (array $row): float => (float) ($row['times_usual'] ?? $row['views_vs_usual'] ?? 0))
             ->first();
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $ownFacts
+     * @param  list<array<string, mixed>>  $competitorFacts
+     * @param  Collection<int, Collection<int, Post>>  $postsBySocial
+     * @param  Collection<int, TrackedAccount>  $competitors
+     * @return list<string>
+     */
+    private function borrowedCompetitorNames(
+        ?array $ownFacts,
+        array $competitorFacts,
+        Collection $postsBySocial,
+        ?TrackedAccount $own,
+        Collection $competitors,
+    ): array {
+        $ownCaptions = [];
+        $competitorCaptions = [];
+
+        if ($own !== null && $own->social_account_id !== null) {
+            foreach ($postsBySocial->get((int) $own->social_account_id, collect()) as $post) {
+                $caption = trim((string) $post->caption);
+                if ($caption !== '') {
+                    $ownCaptions[] = $caption;
+                }
+            }
+        }
+
+        foreach ($competitors as $account) {
+            if ($account->social_account_id === null) {
+                continue;
+            }
+
+            foreach ($postsBySocial->get((int) $account->social_account_id, collect()) as $post) {
+                $caption = trim((string) $post->caption);
+                if ($caption !== '') {
+                    $competitorCaptions[] = $caption;
+                }
+            }
+        }
+
+        if ($ownCaptions === [] && $competitorCaptions === []) {
+            $ownCaptions = $this->captionsFromAccountFacts($ownFacts);
+            foreach ($competitorFacts as $row) {
+                foreach ($this->captionsFromAccountFacts($row) as $caption) {
+                    $competitorCaptions[] = $caption;
+                }
+            }
+        }
+
+        return $this->borrowedNames->borrowedNames($ownCaptions, $competitorCaptions);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $row
+     * @return list<string>
+     */
+    private function captionsFromAccountFacts(?array $row): array
+    {
+        if ($row === null) {
+            return [];
+        }
+
+        $captions = [];
+
+        foreach (['posts_last_7d', 'posts_last_24h', 'posts_yesterday', 'standout_winners'] as $key) {
+            foreach ($row[$key] ?? [] as $post) {
+                if (is_array($post) && is_string($post['caption'] ?? null) && $post['caption'] !== '') {
+                    $captions[] = $post['caption'];
+                }
+            }
+        }
+
+        return $captions;
     }
 
     /**

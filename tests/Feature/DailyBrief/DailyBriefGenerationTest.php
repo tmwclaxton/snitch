@@ -835,8 +835,15 @@ class DailyBriefGenerationTest extends TestCase
                     'related_handles' => ['goodgym'],
                     'related_post_ids' => [218],
                 ],
-                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'Reply under (post_id 218) tonight', 'related_handles' => [], 'related_post_ids' => [218]],
                 ['title' => 'Three', 'why' => 'why', 'how' => 'Comment on post #218 tonight.', 'related_handles' => [], 'related_post_ids' => [218]],
+                [
+                    'title' => 'Four',
+                    'why' => 'why',
+                    'how' => 'Engage with post_id 218 and post-id 218 then (id 218).',
+                    'related_handles' => [],
+                    'related_post_ids' => [218],
+                ],
             ],
             'own_summary' => 'ok',
             'competitor_summary' => 'ok',
@@ -859,12 +866,129 @@ class DailyBriefGenerationTest extends TestCase
             $result['output']['actions'][0]['how'] ?? null,
         );
         $this->assertSame(
+            'Reply under their Living Room Listens Reel tonight',
+            $result['output']['actions'][1]['how'] ?? null,
+        );
+        $this->assertSame(
             'Comment on their Living Room Listens Reel tonight.',
             $result['output']['actions'][2]['how'] ?? null,
         );
+        $this->assertSame(
+            'Engage with their Living Room Listens Reel and their Living Room Listens Reel then their Living Room Listens Reel.',
+            $result['output']['actions'][3]['how'] ?? null,
+        );
         $this->assertSame([218], $result['output']['actions'][0]['related_post_ids'] ?? null);
-        $this->assertStringNotContainsString('post 218', strtolower(json_encode($result['output']['actions']) ?: ''));
-        $this->assertStringNotContainsString('post #218', strtolower(json_encode($result['output']['actions']) ?: ''));
+        $copy = strtolower(collect($result['output']['actions'])->map(
+            fn (array $action): string => implode(' ', [
+                (string) ($action['title'] ?? ''),
+                (string) ($action['why'] ?? ''),
+                (string) ($action['how'] ?? ''),
+                (string) ($action['hook'] ?? ''),
+            ]),
+        )->implode(' '));
+        $this->assertStringNotContainsString('post 218', $copy);
+        $this->assertStringNotContainsString('post #218', $copy);
+        $this->assertStringNotContainsString('post_id', $copy);
+        $this->assertStringNotContainsString('(id 218)', $copy);
+        $this->assertStringNotContainsString('()', $copy);
+    }
+
+    public function test_validator_rewrites_borrowed_competitor_person_names(): void
+    {
+        $result = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                [
+                    'title' => "Film Jessie's story today",
+                    'why' => 'why',
+                    'how' => 'Open on Jessie looking nervous, then cut to the meetup',
+                    'related_handles' => [],
+                    'related_post_ids' => [],
+                ],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => 'ok',
+            'watch' => [],
+        ], [
+            'allowed_handles' => ['letsgosocialuk', 'great.friendship'],
+            'allowed_post_ids' => [],
+            'borrowed_competitor_names' => ['Jessie'],
+            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
+            'competitors' => [],
+        ]);
+
+        $this->assertTrue($result['ok'], implode('; ', $result['errors']));
+        $this->assertSame("Film a member's story today", $result['output']['actions'][0]['title'] ?? null);
+        $this->assertStringContainsString('a member looking nervous', $result['output']['actions'][0]['how'] ?? '');
+        $this->assertStringNotContainsString('Jessie', json_encode($result['output']['actions']) ?: '');
+    }
+
+    public function test_validator_rejects_standout_wording_for_about_usual_posts(): void
+    {
+        $facts = [
+            'allowed_handles' => ['sobersocial_'],
+            'allowed_post_ids' => [50],
+            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
+            'competitors' => [[
+                'handle' => 'sobersocial_',
+                'posts_last_7d' => [[
+                    'post_id' => 50,
+                    'handle' => 'sobersocial_',
+                    'times_usual' => 1.0,
+                    'format' => 'Reel',
+                    'hook' => 'Traitors Dinner',
+                ]],
+                'best_post_7d' => [
+                    'post_id' => 50,
+                    'handle' => 'sobersocial_',
+                    'times_usual' => 1.0,
+                    'format' => 'Reel',
+                    'hook' => 'Traitors Dinner',
+                ],
+            ]],
+            'top_competitor_hit_7d' => [
+                'post_id' => 50,
+                'handle' => 'sobersocial_',
+                'times_usual' => 1.0,
+            ],
+        ];
+
+        $rejected = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => "@sobersocial_'s Traitors Dinner Reel was a standout.",
+            'watch' => [],
+        ], $facts);
+
+        $this->assertFalse($rejected['ok']);
+        $this->assertTrue(collect($rejected['errors'])->contains(
+            fn (string $error): bool => str_contains($error, 'standout claim needs times-usual above'),
+        ));
+
+        $facts['competitors'][0]['posts_last_7d'][0]['times_usual'] = 1.5;
+        $facts['competitors'][0]['best_post_7d']['times_usual'] = 1.5;
+        $facts['top_competitor_hit_7d']['times_usual'] = 1.5;
+
+        $allowed = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => "@sobersocial_'s Traitors Dinner Reel was a standout at 1.5 times their usual.",
+            'watch' => [],
+        ], $facts);
+
+        $this->assertTrue($allowed['ok'], implode('; ', $allowed['errors']));
     }
 
     public function test_validator_rejects_an_unknown_internal_post_id_in_copy(): void
