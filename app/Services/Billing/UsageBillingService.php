@@ -1213,7 +1213,9 @@ class UsageBillingService
 
             $this->syncExpiredLots($user, $balance);
 
-            if ($requirePlatform && ! $this->hasPlatformSubscription($user)) {
+            $operator = $this->hasOperatorBypass($user);
+
+            if ($requirePlatform && ! $operator && ! $this->hasPlatformSubscription($user)) {
                 throw new PlatformSubscriptionRequiredException;
             }
 
@@ -1222,14 +1224,16 @@ class UsageBillingService
             if ($requireCredits && $amountPence < 0) {
                 $needed = abs($amountPence);
                 if ($current < $needed) {
-                    throw new InsufficientCreditsException(
-                        requiredPence: $needed,
-                        balancePence: $current,
-                        message: 'Not enough credits for this charge. Subscribe to the platform plan for monthly credit value, or top up on the Billing page.',
-                    );
+                    if (! $operator) {
+                        throw new InsufficientCreditsException(
+                            requiredPence: $needed,
+                            balancePence: $current,
+                            message: 'Not enough credits for this charge. Subscribe to the platform plan for monthly credit value, or top up on the Billing page.',
+                        );
+                    }
+                } else {
+                    $this->consumeCreditLots($user, $needed);
                 }
-
-                $this->consumeCreditLots($user, $needed);
             }
 
             $remainingPence = $amountPence > 0 ? $amountPence : null;

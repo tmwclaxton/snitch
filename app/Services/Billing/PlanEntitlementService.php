@@ -147,12 +147,13 @@ class PlanEntitlementService
     public function summary(User $user): array
     {
         $subscribed = $this->hasPlatformSubscription($user);
+        $operator = $this->usage->hasOperatorBypass($user);
         $usage = $this->usage->summary($user);
         $paywall = $this->usage->paywallState($user);
         $type = (string) config('billing.subscription_type', 'default');
         $subscription = $user->subscription($type);
         $onStripeTrial = $subscription !== null && $subscription->onTrial();
-        $onTrial = $onStripeTrial || $this->onTrial($user);
+        $onTrial = ! $operator && ($onStripeTrial || $this->onTrial($user));
         $competitorLimit = $this->competitorLimitFor($user);
         $competitorsUsed = $paywall['blocked']
             ? 0
@@ -165,8 +166,8 @@ class PlanEntitlementService
             : max(0, $competitorLimit - $competitorsUsed);
 
         return [
-            'plan' => $subscribed ? 'platform' : 'none',
-            'plan_name' => $subscribed ? 'Platform' : 'No plan',
+            'plan' => $operator ? 'admin' : ($subscribed ? 'platform' : 'none'),
+            'plan_name' => $operator ? 'Admin' : ($subscribed ? 'Platform' : 'No plan'),
             'competitor_limit' => $competitorLimit,
             'competitors_used' => $competitorsUsed,
             'competitors_remaining' => $competitorsRemaining,
@@ -178,10 +179,12 @@ class PlanEntitlementService
             'influencers_remaining' => null,
             'over_quota_influencers' => 0,
             'on_trial' => $onTrial,
-            'trial_ends_at' => $onTrial ? $user->trial_ends_at?->toIso8601String() : null,
+            'trial_ends_at' => $onTrial
+                ? ($onStripeTrial ? $subscription?->trial_ends_at?->toIso8601String() : $user->trial_ends_at?->toIso8601String())
+                : null,
             'subscribed' => $subscribed,
             'billing_interval' => $subscribed ? 'month' : null,
-            'can_upgrade' => ! $subscribed,
+            'can_upgrade' => ! $operator && ! $subscribed,
             'balance_pence' => $usage['balance_pence'],
             'min_run_balance_pence' => $this->usage->minRunBalancePence(),
             'can_run_billable' => ! $paywall['blocked'],
@@ -226,11 +229,12 @@ class PlanEntitlementService
         }
 
         $subscribed = $this->hasPlatformSubscription($user);
+        $operator = $this->usage->hasOperatorBypass($user);
         $paywall = $this->usage->paywallState($user);
         $type = (string) config('billing.subscription_type', 'default');
         $subscription = $user->subscription($type);
         $onStripeTrial = $subscription !== null && $subscription->onTrial();
-        $onTrial = $onStripeTrial || $this->onTrial($user);
+        $onTrial = ! $operator && ($onStripeTrial || $this->onTrial($user));
         $competitorLimit = $this->competitorLimitFor($user);
         $balancePence = $this->usage->balancePence($user);
         $minRunBalancePence = $this->usage->minRunBalancePence();
@@ -243,13 +247,15 @@ class PlanEntitlementService
         $competitorsRemaining = $competitorLimit === null
             ? null
             : max(0, $competitorLimit - $competitorsUsed);
-        $trialEndsAt = $onStripeTrial
-            ? $subscription?->trial_ends_at?->toIso8601String()
-            : ($onTrial ? $user->trial_ends_at?->toIso8601String() : null);
+        $trialEndsAt = $onTrial
+            ? ($onStripeTrial
+                ? $subscription?->trial_ends_at?->toIso8601String()
+                : $user->trial_ends_at?->toIso8601String())
+            : null;
 
         return $this->sharedSummaryCache[$user->id] = [
-            'plan' => $subscribed ? 'platform' : 'none',
-            'plan_name' => $subscribed ? 'Platform' : 'No plan',
+            'plan' => $operator ? 'admin' : ($subscribed ? 'platform' : 'none'),
+            'plan_name' => $operator ? 'Admin' : ($subscribed ? 'Platform' : 'No plan'),
             'competitor_limit' => $competitorLimit,
             'competitors_used' => $competitorsUsed,
             'competitors_remaining' => $competitorsRemaining,
@@ -264,7 +270,7 @@ class PlanEntitlementService
             'trial_ends_at' => $trialEndsAt,
             'subscribed' => $subscribed,
             'billing_interval' => $subscribed ? 'month' : null,
-            'can_upgrade' => ! $subscribed,
+            'can_upgrade' => ! $operator && ! $subscribed,
             'balance_pence' => $balancePence,
             'min_run_balance_pence' => $minRunBalancePence,
             'can_run_billable' => ! $paywall['blocked'],

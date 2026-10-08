@@ -16,7 +16,7 @@ paths:
 # Admin
 
 ## Allowlist
-`ADMIN_EMAILS` (comma-separated) → `config('snitch.admin_emails')`. `User::isAdmin()` is case-insensitive email match. Empty list means nobody is admin. Shared Inertia `auth.user.is_admin` drives the sidebar Admin link.
+`ADMIN_EMAILS` (comma-separated) → `config('snitch.admin_emails')`. `User::isAdmin()` is true when `users.is_admin` is set **or** the email is in that env list (case-insensitive). Empty env list alone does not revoke column admins. Shared Inertia `auth.user.is_admin` drives the sidebar Admin link. Admins get `hasOperatorBypass` (indefinite product access without a Stripe plan); do not paywall, trial-nag, or block `writeEntry(requireCredits: true)` when their balance is low.
 
 ## Routes
 `GET /admin` (`admin.overview`) is behind `auth` + WorkOS + `EnsureAdmin`, outside brand/product paywall (same idea as billing). Do not expose COGS / markup / profit on customer billing - admin only. **`AdminOverviewService::creditExpirySeries`** (12-month default) charts platform-wide unused `remaining_pence` scheduled to expire by calendar month (stipple bars on Overview); `never_pence` is starter credit with null `expires_at` (excluded from bars, shown in subtitle).

@@ -188,13 +188,13 @@ function vendorAccent(key: SpendVendorKey): string {
                     </p>
                     <p class="text-sm text-snitch-ink/70">
                         Platform plan:
-                        <strong>{{ subscription.subscribed ? 'Active' : 'Not subscribed' }}</strong>
+                        <strong>{{ isAdmin ? 'Admin' : (subscription.subscribed ? 'Active' : 'Not subscribed') }}</strong>
                         · {{ formatCatalogMoney(platform.fee_pence) }}/mo includes
                         {{ formatCatalogMoney(platform.bonus_pence) }} usage each billing period
                     </p>
                     <div class="flex flex-wrap gap-3">
                         <Form
-                            v-if="!subscription.subscribed && platform.has_checkout"
+                            v-if="!isAdmin && !subscription.subscribed && platform.has_checkout"
                             v-bind="BillingController.checkout.form()"
                             class="inline"
                         >

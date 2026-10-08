@@ -29,6 +29,7 @@ use Stripe\Exception\InvalidRequestException;
     'referral_code_id',
     'daily_brief_enabled',
     'daily_brief_email',
+    'is_admin',
 ])]
 #[Hidden(['workos_id', 'remember_token', 'claim_token'])]
 class User extends Authenticatable implements OAuthenticatable
@@ -48,6 +49,7 @@ class User extends Authenticatable implements OAuthenticatable
             'claimed_at' => 'datetime',
             'daily_brief_enabled' => 'boolean',
             'daily_brief_email' => 'boolean',
+            'is_admin' => 'boolean',
         ];
     }
 
@@ -58,6 +60,10 @@ class User extends Authenticatable implements OAuthenticatable
 
     public function isAdmin(): bool
     {
+        if ((bool) $this->is_admin) {
+            return true;
+        }
+
         $email = strtolower(trim((string) $this->email));
 
         if ($email === '') {
