@@ -25,6 +25,7 @@ class DailyBriefValidator
     public function validate(array $output, array $facts): array
     {
         $output = $this->replaceDashes($output);
+        $output = $this->rewriteLinkInBioSticker($output);
         $output = $this->rewriteInternalPostIds($output, $facts);
         $output = $this->rewriteBorrowedCompetitorNames($output, $facts);
         $output = $this->rewriteUnsupportedStandoutClaims($output, $facts);
@@ -278,6 +279,28 @@ class DailyBriefValidator
         });
 
         return $value;
+    }
+
+    /**
+     * Instagram Stories use a "link sticker"; "link in bio" is for posts/Reels only.
+     *
+     * @param  array<string, mixed>  $value
+     * @return array<string, mixed>
+     */
+    public function rewriteLinkInBioSticker(array $value): array
+    {
+        array_walk_recursive($value, function (mixed &$item): void {
+            if (is_string($item)) {
+                $item = $this->rewriteLinkInBioStickerInText($item);
+            }
+        });
+
+        return $value;
+    }
+
+    public function rewriteLinkInBioStickerInText(string $text): string
+    {
+        return preg_replace('/\blink\s+in\s+bio\s+sticker\b/iu', 'link sticker', $text) ?? $text;
     }
 
     /**

@@ -204,6 +204,7 @@ Rules:
 - 3 to 5 actions, each doable today in under 30 minutes.
 - Be concrete: what to post, format, hook, time, which accounts to engage with and how.
 - Instagram CTAs only: comment, save, share, DM, or link in bio.
+- On Stories, call Instagram's sticker the "link sticker" (never "link in bio sticker"). "Link in bio" is only for posts and Reels.
 - Never invent numbers. Only use numbers present in the facts.
 - Only use handles present in facts.allowed_handles. Strip or keep @, but the handle must match.
 - Only use related_post_ids from facts.allowed_post_ids.

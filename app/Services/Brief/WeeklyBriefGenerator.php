@@ -473,7 +473,7 @@ class WeeklyBriefGenerator
                 messages: [
                     [
                         'role' => 'system',
-                        'content' => 'You write short Instagram post ideas for a brand. Return JSON only: {"ideas":[{"format":"Reel|Carousel|Image","hook":"...","visual":"optional shot direction","caption_angle":"...","cta":"...","hashtags":["#a","#b"],"inspired_by_post_ids":[123],"why":"..."}]}. Exactly 3 ideas. Rules: (1) hook is the literal first on-screen line the viewer reads, max 12 words, never a scene direction; (2) put camera/layout direction in visual only; (3) every idea must cite 1-2 inspired_by_post_ids from the winners list post_id values, and use different winners when possible (at most 2 ideas may share one post_id); (4) Instagram CTAs only: comment, save, share, DM, or link in bio - never swipe up; (5) hashtags 3-5 from winners when possible; (6) no em dashes; (7) never borrow named people from competitor captions - if a competitor names a member (for example Jessie), rewrite as "a member\'s story" or a generic first-person line for the brand\'s own community. Do not invent competitor members as the brand\'s people.',
+                        'content' => 'You write short Instagram post ideas for a brand. Return JSON only: {"ideas":[{"format":"Reel|Carousel|Image","hook":"...","visual":"optional shot direction","caption_angle":"...","cta":"...","hashtags":["#a","#b"],"inspired_by_post_ids":[123],"why":"..."}]}. Exactly 3 ideas. Rules: (1) hook is the literal first on-screen line the viewer reads, max 12 words, never a scene direction; (2) put camera/layout direction in visual only; (3) every idea must cite 1-2 inspired_by_post_ids from the winners list post_id values, and use different winners when possible (at most 2 ideas may share one post_id); (4) Instagram CTAs only: comment, save, share, DM, or link in bio - never swipe up; (5) on Stories call Instagram\'s sticker the "link sticker" (never "link in bio sticker") - "link in bio" is only for posts and Reels; (6) hashtags 3-5 from winners when possible; (7) no em dashes; (8) never borrow named people from competitor captions - if a competitor names a member (for example Jessie), rewrite as "a member\'s story" or a generic first-person line for the brand\'s own community. Do not invent competitor members as the brand\'s people.',
                     ],
                     [
                         'role' => 'user',
@@ -561,19 +561,26 @@ class WeeklyBriefGenerator
 
             $out[] = [
                 'format' => $format,
-                'hook' => $this->borrowedNames->rewriteText($hook, $names),
-                'visual' => $visual !== null ? $this->borrowedNames->rewriteText($visual, $names) : null,
-                'caption_angle' => $this->borrowedNames->rewriteText($captionAngle, $names),
+                'hook' => $this->rewriteLinkInBioSticker($this->borrowedNames->rewriteText($hook, $names)),
+                'visual' => $visual !== null
+                    ? $this->rewriteLinkInBioSticker($this->borrowedNames->rewriteText($visual, $names))
+                    : null,
+                'caption_angle' => $this->rewriteLinkInBioSticker($this->borrowedNames->rewriteText($captionAngle, $names)),
                 'cta' => $this->sanitizeCta((string) ($row['cta'] ?? 'Comment your take')),
                 'hashtags' => array_slice($hashtags, 0, 5),
                 'recommended_day' => (string) $slot['day'],
                 'recommended_hour' => (int) $slot['hour'],
                 'inspired_by_post_ids' => $sourceIds,
-                'why' => $this->borrowedNames->rewriteText($why, $names),
+                'why' => $this->rewriteLinkInBioSticker($this->borrowedNames->rewriteText($why, $names)),
             ];
         }
 
         return $out;
+    }
+
+    private function rewriteLinkInBioSticker(string $text): string
+    {
+        return preg_replace('/\blink\s+in\s+bio\s+sticker\b/iu', 'link sticker', $text) ?? $text;
     }
 
     /**
@@ -701,7 +708,7 @@ class WeeklyBriefGenerator
 
     private function sanitizeCta(string $cta): string
     {
-        $cta = trim($cta);
+        $cta = $this->rewriteLinkInBioSticker(trim($cta));
         $lower = mb_strtolower($cta);
 
         $banned = ['swipe up', 'swipe-up', 'link in story', 'tap the sticker', 'add to cart'];
@@ -712,7 +719,7 @@ class WeeklyBriefGenerator
             }
         }
 
-        $allowed = ['comment', 'save', 'share', 'dm', 'link in bio', 'reply'];
+        $allowed = ['comment', 'save', 'share', 'dm', 'link in bio', 'link sticker', 'reply'];
         $ok = false;
 
         foreach ($allowed as $phrase) {

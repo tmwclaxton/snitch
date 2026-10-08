@@ -1178,6 +1178,40 @@ class DailyBriefGenerationTest extends TestCase
         }
     }
 
+    public function test_validator_rewrites_link_in_bio_sticker_to_link_sticker(): void
+    {
+        $result = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Add a Link In Bio Sticker today',
+            'actions' => [
+                [
+                    'title' => 'Post a Story with a CTA',
+                    'why' => 'why',
+                    'how' => 'Add a link in bio sticker pointing to the ticket page',
+                    'related_handles' => [],
+                    'related_post_ids' => [],
+                ],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => 'ok',
+            'watch' => ['Try a LINK IN BIO STICKER on Stories'],
+        ], [
+            'allowed_handles' => ['letsgosocialuk'],
+            'allowed_post_ids' => [],
+            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
+        ]);
+
+        $this->assertTrue($result['ok'], implode('; ', $result['errors']));
+        $this->assertSame('Add a link sticker today', $result['output']['headline'] ?? null);
+        $this->assertSame(
+            'Add a link sticker pointing to the ticket page',
+            $result['output']['actions'][0]['how'] ?? null,
+        );
+        $this->assertSame('Try a link sticker on Stories', $result['output']['watch'][0] ?? null);
+        $this->assertStringNotContainsString('link in bio sticker', mb_strtolower(json_encode($result['output']) ?: ''));
+    }
+
     public function test_validator_rewrites_borrowed_competitor_person_names(): void
     {
         $result = app(DailyBriefValidator::class)->validate([
