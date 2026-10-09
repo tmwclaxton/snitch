@@ -307,6 +307,8 @@ class SyncTrackedAccountJob implements ShouldQueue
                 ])->save();
             }
 
+            $this->propagateSyncStateToSiblings($account);
+
             if ($account->followers !== null && $account->social_account_id !== null) {
                 app(FollowerCountRefresher::class)->propagate(
                     (int) $account->social_account_id,
@@ -489,6 +491,26 @@ class SyncTrackedAccountJob implements ShouldQueue
         }
 
         return max(0, (int) $profile['followers']);
+    }
+
+    /**
+     * Shared social accounts sync once for the corpus; copy freshness onto every
+     * sibling tracker so each user sees an up-to-date "last updated" time.
+     */
+    private function propagateSyncStateToSiblings(TrackedAccount $account): void
+    {
+        if ($account->social_account_id === null) {
+            return;
+        }
+
+        TrackedAccount::query()
+            ->where('social_account_id', $account->social_account_id)
+            ->whereKeyNot($account->id)
+            ->update([
+                'last_synced_at' => $account->last_synced_at,
+                'last_sync_status' => $account->last_sync_status,
+                'updated_at' => now(),
+            ]);
     }
 
     private function syncSince(TrackedAccount $account, int $recencyDays): CarbonImmutable

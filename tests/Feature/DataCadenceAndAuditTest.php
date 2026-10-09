@@ -10,8 +10,10 @@ use App\Models\MonthlyReport;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Models\WinnerInsight;
 use App\Services\Billing\PlanEntitlementService;
 use App\Services\Billing\UsageBillingService;
+use App\Services\Dashboard\DashboardMath;
 use App\Services\Growth\MonthlyReportBuilder;
 use App\Services\Tracking\FollowerCountRefresher;
 use App\Support\ScheduleHeartbeat;
@@ -399,5 +401,84 @@ class DataCadenceAndAuditTest extends TestCase
         $report = MonthlyReport::query()->where('user_id', $user->id)->first();
         $this->assertNotNull($report);
         $this->assertSame('2026-10', $report->payload['month'] ?? null);
+    }
+
+    public function test_audit_multiplier_consistency_tolerates_small_median_drift(): void
+    {
+        [$user, $post, $recomputed] = $this->seedMultiplierAuditFixture();
+
+        WinnerInsight::factory()->forPost($post, $user)->create([
+            'performance_multiplier' => round($recomputed - 0.07, 2),
+            'score' => 50,
+        ]);
+
+        \Artisan::call('snitch:audit', ['--json' => true, '--user' => [$user->id]]);
+        $payload = json_decode(\Artisan::output(), true);
+        $check = collect($payload['checks'])->firstWhere('key', 'multiplier_consistency');
+
+        $this->assertSame('pass', $check['status'] ?? null, json_encode($check));
+    }
+
+    public function test_audit_multiplier_consistency_flags_large_errors(): void
+    {
+        [$user, $post, $recomputed] = $this->seedMultiplierAuditFixture();
+        $this->assertGreaterThan(2.0, $recomputed);
+
+        WinnerInsight::factory()->forPost($post, $user)->create([
+            'performance_multiplier' => 1.0,
+            'score' => 50,
+        ]);
+
+        \Artisan::call('snitch:audit', ['--json' => true, '--user' => [$user->id]]);
+        $payload = json_decode(\Artisan::output(), true);
+        $check = collect($payload['checks'])->firstWhere('key', 'multiplier_consistency');
+
+        $this->assertSame('fail', $check['status'] ?? null, json_encode($check));
+        $this->assertNotEmpty($check['details'] ?? []);
+        $this->assertEqualsWithDelta(1.0, (float) ($check['details'][0]['stored'] ?? 0), 0.001);
+    }
+
+    /**
+     * @return array{0: User, 1: Post, 2: float}
+     */
+    private function seedMultiplierAuditFixture(): array
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        $tracker = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'followers' => 1000,
+            'last_synced_at' => now()->subHour(),
+            'last_sync_status' => 'success',
+        ]);
+        FollowerSnapshot::factory()->create([
+            'social_account_id' => $tracker->social_account_id,
+            'followers' => 1000,
+            'captured_on' => now()->toDateString(),
+        ]);
+        ScheduleHeartbeat::mark(ScheduleHeartbeat::TICK);
+
+        $base = CarbonImmutable::now()->subDays(40);
+        $history = collect();
+
+        for ($i = 0; $i < 12; $i++) {
+            $history->push(Post::factory()->forAccount($tracker)->create([
+                'posted_at' => $base->addDays($i),
+                'metrics' => ['views' => 0, 'likes' => 40, 'comments' => 4, 'shares' => 0],
+            ]));
+        }
+
+        $post = Post::factory()->forAccount($tracker)->create([
+            'posted_at' => $base->addDays(20),
+            'metrics' => ['views' => 0, 'likes' => 230, 'comments' => 20, 'shares' => 0],
+        ]);
+        $history->push($post);
+
+        $pi = app(DashboardMath::class)->performanceIndex($post, $history->sortByDesc(
+            fn (Post $row) => $row->posted_at?->getTimestampMs() ?? 0,
+        )->values())['pi'];
+        $this->assertNotNull($pi);
+
+        return [$user, $post, round((float) $pi, 2)];
     }
 }

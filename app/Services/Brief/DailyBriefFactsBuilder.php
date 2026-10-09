@@ -771,11 +771,7 @@ class DailyBriefFactsBuilder
             return max(0, (int) $days);
         }
 
-        if (($row['sync_empty'] ?? false)
-            || (($row['last_posted_at'] ?? null) === null && (int) ($row['posts_last_7d_count'] ?? 0) === 0)) {
-            return 999;
-        }
-
+        // No posts / empty sync: exclude from longest-gap (do not invent a 999-day sentinel).
         return null;
     }
 
@@ -1009,7 +1005,7 @@ class DailyBriefFactsBuilder
         }
 
         if ($hidden && $viewsIndex !== null) {
-            return number_format($viewsIndex, 1).' views vs their usual';
+            return number_format($viewsIndex, 1).' times usual';
         }
 
         if ($hidden) {

@@ -214,8 +214,10 @@ Rules:
 - No em dashes or en dashes. Use a comma or hyphen.
 - Do not truncate with ...
 - hook is the literal first line, max 12 words. Never quote a scene description.
-- When likes are hidden, say "likes hidden" or use views vs their usual. Never print null or 0x.
-- Prefer "times their usual" over jargon.
+- When likes are hidden, say "likes hidden" or "N times usual" from views_vs_usual. Never print null, 0x, or "N views vs usual".
+- Prefer "times their usual" / "times usual" over jargon.
+- Zero and one are valid counts when they appear in the facts (for example "0 posts in the last 7 days").
+- Do not use accounts with no posts (sync_empty, or null last_posted_at) for longest-gap claims. facts.cadence_gaps already excludes them.
 - Cadence is in facts.cadence: posts_last_7d, days_since_last_post, distinct_days_posted_last_7, posted_every_day_last_7, posted_almost_daily_last_7.
 - Brand and own-account handles in facts.brand.own_handles and facts.own.handle are always allowed, even if they also appear in facts.allowed_handles.
 - Do not say an account posts daily or every day unless that handle has posted_every_day_last_7 true.
@@ -308,8 +310,15 @@ PROMPT;
             ? (string) ($hit['format'] ?? 'Reel')
             : (is_array($inWindow) ? (string) ($inWindow['format'] ?? 'Reel') : 'Reel');
         $hitFormat = $hitFormat !== '' ? $hitFormat : 'Reel';
-        $hitPi = is_array($hit) ? ($hit['times_usual'] ?? $hit['views_vs_usual'] ?? null) : null;
-        $hitLabel = is_numeric($hitPi) ? number_format((float) $hitPi, 1).' times their usual' : 'their best recent post';
+        $hitLabel = 'their best recent post';
+        if (is_array($hit) && filled($hit['times_usual_label'] ?? null)) {
+            $hitLabel = (string) $hit['times_usual_label'];
+        } else {
+            $hitPi = is_array($hit) ? ($hit['times_usual'] ?? $hit['views_vs_usual'] ?? null) : null;
+            if (is_numeric($hitPi)) {
+                $hitLabel = number_format((float) $hitPi, 1).' times their usual';
+            }
+        }
 
         $actions[] = [
             'title' => 'Post a '.$hitFormat.' today at '.$when.'.',
@@ -507,20 +516,24 @@ PROMPT;
 
         $competitorMoves = [];
         foreach ($facts['competitors'] ?? [] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
             $competitorMoves[] = [
-                'handle' => $row['handle'],
-                'followers_now' => $row['followers_now'],
-                'followers_change_7d' => $row['followers_change_7d'],
-                'posts_last_24h' => $row['posts_last_24h'],
-                'posts_last_7d_count' => $row['posts_last_7d_count'],
-                'posts_last_7d_by_format' => $row['posts_last_7d_by_format'],
-                'posts_last_7d' => $row['posts_last_7d'],
-                'standout_winners' => $row['standout_winners'],
+                'handle' => $row['handle'] ?? null,
+                'followers_now' => $row['followers_now'] ?? null,
+                'followers_change_7d' => $row['followers_change_7d'] ?? null,
+                'posts_last_24h' => $row['posts_last_24h'] ?? [],
+                'posts_last_7d_count' => $row['posts_last_7d_count'] ?? 0,
+                'posts_last_7d_by_format' => $row['posts_last_7d_by_format'] ?? [],
+                'posts_last_7d' => $row['posts_last_7d'] ?? [],
+                'standout_winners' => $row['standout_winners'] ?? [],
                 'quiet' => $row['quiet'] ?? false,
                 'sync_empty' => $row['sync_empty'] ?? false,
                 'sync_failed' => $row['sync_failed'] ?? false,
-                'sync_status' => $row['sync_status'],
-                'days_since_last_post' => $row['days_since_last_post'],
+                'sync_status' => $row['sync_status'] ?? null,
+                'days_since_last_post' => $row['days_since_last_post'] ?? null,
             ];
         }
 
@@ -681,15 +694,52 @@ PROMPT;
     {
         $count = (int) ($facts['format_mix']['competitor_posts_24h'] ?? 0);
 
-        if ($count < 1 || $hit24 === null) {
+        if ($count < 1) {
             return 'none in the last day';
+        }
+
+        $parts = [];
+
+        foreach ($facts['competitors'] ?? [] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $handle = trim((string) ($row['handle'] ?? ''), '@');
+
+            if ($handle === '') {
+                continue;
+            }
+
+            foreach ($row['posts_last_24h'] ?? [] as $post) {
+                if (! is_array($post)) {
+                    continue;
+                }
+
+                $format = trim((string) ($post['format'] ?? 'post'));
+                $format = $format !== '' ? $format : 'post';
+                $timesUsual = $post['times_usual'] ?? null;
+                $viewsVsUsual = $post['views_vs_usual'] ?? null;
+
+                if (is_numeric($timesUsual)) {
+                    $parts[] = '@'.$handle.' '.$format.' '.number_format((float) $timesUsual, 1).'x';
+                } elseif (is_numeric($viewsVsUsual)) {
+                    $parts[] = '@'.$handle.' '.$format.' '.number_format((float) $viewsVsUsual, 1).'x views vs usual';
+                } else {
+                    $parts[] = '@'.$handle.' '.$format;
+                }
+            }
+        }
+
+        if ($parts !== []) {
+            return implode(', ', $parts);
         }
 
         $handle = trim((string) ($hit24['handle'] ?? ''), '@');
         $label = trim((string) ($hit24['times_usual_label'] ?? ''));
 
         if ($handle === '') {
-            return 'none in the last day';
+            return $count.' in the last day';
         }
 
         return '@'.$handle.($label !== '' ? ', '.$label : '');

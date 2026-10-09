@@ -41,5 +41,8 @@ If `driverFor` is tikhub and resolveProfile / listRecentPosts throws or returns 
 ## Sync is resolve-sparing and new-posts-only
 Skip resolveProfile unless force or profile fields are incomplete. Import only new external_ids; soft-retry Failed analysis for known posts without re-scraping. TikTok hydrateMediaUrls (paid download) runs only for new candidates. When a known post's cover is still a signed CDN URL (or empty), archive a still from the list payload already in hand. That does not re-import the post.
 
+## Shared social accounts copy sync freshness to sibling trackers
+When `SyncTrackedAccountJob` finishes success or empty for a tracker, copy `last_synced_at` and `last_sync_status` onto every other `tracked_accounts` row with the same `social_account_id`. The corpus syncs once; each user's membership must show a fresh "last updated" time. Do not copy failure status onto siblings.
+
 ## Sync status running while queued or in flight
 Mark TrackedAccount last_sync_status=running (and clear last_sync_error) only after the billing gate passes (balance above `billing.min_run_balance_pence`) when enqueueing SyncTrackedAccountJob from UI, confirm, store, MCP sync, or ops snitch:sync-accounts. Never mark running then fail the gate later - that makes Sync look in progress when blocked. The job also marks running after the due check, then success/failed when finished. Competitors Index/Show should treat running as an active sync (disable Sync, show Syncing, poll until terminal) and disable Sync when `subscription.can_run_billable` is false. Running accounts are not due for another ops sync.

@@ -1635,6 +1635,186 @@ class DailyBriefGenerationTest extends TestCase
         ])->assertFailed();
     }
 
+    public function test_validator_allows_zero_and_one_as_counts(): void
+    {
+        $facts = [
+            'allowed_handles' => ['letsgosocialuk', 'fuss.london'],
+            'allowed_post_ids' => [],
+            'own' => [
+                'handle' => 'letsgosocialuk',
+                'followers_now' => 97,
+                'posts_last_7d_count' => 0,
+                'posts_yesterday_count' => 0,
+            ],
+            'competitors' => [[
+                'handle' => 'fuss.london',
+                'posts_last_7d_count' => 1,
+            ]],
+        ];
+
+        $result = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Post today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => '@letsgosocialuk posted 0 times in the last 7 days and 0 since yesterday.',
+            'competitor_summary' => '@fuss.london posted 1 time.',
+            'watch' => [],
+        ], $facts);
+
+        $this->assertTrue($result['ok'], implode('; ', $result['errors']));
+        $this->assertTrue(app(DailyBriefValidator::class)->isAllowedSmallInt('0'));
+        $this->assertContains('0', app(DailyBriefValidator::class)->allowedNumbers($facts));
+    }
+
+    public function test_empty_accounts_are_excluded_from_longest_gap(): void
+    {
+        $facts = app(DailyBriefFactsBuilder::class);
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        $own = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'letsgosocialuk',
+            'is_own_account' => true,
+        ]);
+        $empty = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'fuss.london',
+            'is_own_account' => false,
+            'kind' => TrackedAccountKind::Competitor,
+            'last_sync_status' => 'empty',
+        ]);
+        $quiet = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'goodgym',
+            'is_own_account' => false,
+            'kind' => TrackedAccountKind::Competitor,
+        ]);
+
+        Post::factory()->forAccount($own)->create([
+            'posted_at' => CarbonImmutable::parse('2026-10-04 12:00:00', 'Europe/London'),
+            'metrics' => ['likes' => 10, 'comments' => 0, 'views' => 0],
+        ]);
+        Post::factory()->forAccount($quiet)->create([
+            'posted_at' => CarbonImmutable::parse('2026-09-20 12:00:00', 'Europe/London'),
+            'metrics' => ['likes' => 10, 'comments' => 0, 'views' => 0],
+        ]);
+
+        $this->travelTo(CarbonImmutable::parse('2026-10-08 08:00:00', 'Europe/London'));
+        $built = $facts->build($user, CarbonImmutable::parse('2026-10-08', 'Europe/London'));
+
+        $this->assertSame('goodgym', $built['cadence_gaps']['longest_handle'] ?? null);
+        $this->assertNotSame(999, $built['cadence_gaps']['longest_days'] ?? null);
+        $this->assertNotSame('fuss.london', $built['cadence_gaps']['longest_handle'] ?? null);
+
+        $allowed = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => '@goodgym has the longest posting gap among competitors.',
+            'competitor_summary' => 'ok',
+            'watch' => [],
+        ], $built);
+
+        $this->assertTrue($allowed['ok'], implode('; ', $allowed['errors']));
+        $this->assertNotNull($empty->id);
+    }
+
+    public function test_last_day_note_lists_all_competitor_posts_and_views_label_is_tidy(): void
+    {
+        $facts = [
+            'own' => null,
+            'format_mix' => ['competitor_posts_24h' => 3, 'competitors_7d' => []],
+            'top_competitor_hit_24h' => [
+                'handle' => 'great.friendship',
+                'times_usual' => 2.2,
+                'times_usual_label' => '2.2 times their usual',
+                'format' => 'Reel',
+            ],
+            'competitors' => [
+                [
+                    'handle' => 'great.friendship',
+                    'posts_last_24h' => [[
+                        'format' => 'Reel',
+                        'times_usual' => 2.2,
+                        'times_usual_label' => '2.2 times their usual',
+                    ]],
+                ],
+                [
+                    'handle' => 'onehousesocialclub',
+                    'posts_last_24h' => [[
+                        'format' => 'Reel',
+                        'times_usual' => 0.5,
+                        'times_usual_label' => '0.5 times their usual',
+                    ]],
+                ],
+                [
+                    'handle' => 'goodgym',
+                    'posts_last_24h' => [[
+                        'format' => 'Reel',
+                        'times_usual' => null,
+                        'views_vs_usual' => 1.3,
+                        'times_usual_label' => '1.3 times usual',
+                    ]],
+                ],
+            ],
+            'unused_weekly_ideas' => [],
+            'best_times' => ['thin' => true, 'weekday_evening_block' => 'weekday evenings'],
+            'ads_empty' => true,
+            'brief_date' => '2026-10-08',
+        ];
+
+        $generator = app(DailyBriefGenerator::class);
+        $payload = $generator->assemblePayload($facts, [
+            'headline' => 'Plan',
+            'actions' => [],
+            'own_summary' => '',
+            'competitor_summary' => '',
+            'watch' => [],
+        ], [], true);
+
+        $tile = collect($payload['big_numbers'] ?? [])->firstWhere('label', 'Competitor posts in the last day');
+        $note = (string) ($tile['note'] ?? '');
+
+        $this->assertSame('3', $tile['value'] ?? null);
+        $this->assertStringContainsString('@great.friendship Reel 2.2x', $note);
+        $this->assertStringContainsString('@onehousesocialclub Reel 0.5x', $note);
+        $this->assertStringContainsString('@goodgym Reel 1.3x views vs usual', $note);
+
+        $narrative = $generator->deterministicNarrative([
+            'own' => [
+                'handle' => 'letsgosocialuk',
+                'followers_now' => 97,
+                'posts_last_7d_count' => 0,
+                'days_since_last_post' => 2,
+            ],
+            'competitors' => $facts['competitors'],
+            'format_mix' => [
+                'competitor_posts_24h' => 3,
+                'competitor_posts_7d' => 3,
+                'competitors_7d' => ['Reel' => 3],
+            ],
+            'top_competitor_hit_24h' => [
+                'handle' => 'goodgym',
+                'post_id' => 99,
+                'times_usual' => null,
+                'views_vs_usual' => 1.3,
+                'times_usual_label' => '1.3 times usual',
+                'format' => 'Reel',
+                'hook' => 'Parkrun Saturday',
+            ],
+            'best_times' => ['today_slot' => null, 'weekday_evening_block' => 'weekday evenings 19:00-21:00'],
+        ]);
+
+        $this->assertStringContainsString('1.3 times usual', $narrative['competitor_summary']);
+        $this->assertStringNotContainsString('1.3 views vs', $narrative['competitor_summary']);
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>

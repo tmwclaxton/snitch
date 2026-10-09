@@ -41,6 +41,12 @@ class AuditDataCommand extends Command
 {
     private const EPS = 0.05;
 
+    /** Absolute floor for winner multiplier drift (median moves over time). */
+    private const MULTIPLIER_ABS_TOLERANCE = 0.25;
+
+    /** Relative tolerance for winner multiplier drift (5% of recomputed). */
+    private const MULTIPLIER_REL_TOLERANCE = 0.05;
+
     /** @var list<array{key: string, status: string, summary: string, details: list<mixed>}> */
     private array $results = [];
 
@@ -617,6 +623,9 @@ class AuditDataCommand extends Command
      * Winner insight multipliers ("X× usual" shown on cards) vs an independent recompute
      * over the account's full post history with current metrics.
      *
+     * Allow small drift as the prior-post median moves after the insight was stored.
+     * Fail only when recomputed is null or the gap exceeds max(0.25, 5% of recomputed).
+     *
      * @param  Collection<int, User>  $users
      * @param  Collection<int, TrackedAccount>  $trackers
      */
@@ -639,20 +648,41 @@ class AuditDataCommand extends Command
                 $history = $this->history((int) $post->social_account_id);
                 $pi = $math->performanceIndex($post, $history)['pi'];
                 $checked++;
+                $stored = (float) $insight->performance_multiplier;
+                $recomputed = $pi === null ? null : round((float) $pi, 2);
 
-                if ($pi === null || abs(round($pi, 2) - (float) $insight->performance_multiplier) > self::EPS) {
+                if ($this->multiplierDriftedBeyondTolerance($stored, $recomputed)) {
                     $mismatches[] = [
                         'user_id' => $user->id,
                         'winner_insight_id' => $insight->id,
                         'post_id' => $post->id,
-                        'stored' => (float) $insight->performance_multiplier,
-                        'recomputed' => $pi === null ? null : round($pi, 2),
+                        'stored' => $stored,
+                        'recomputed' => $recomputed,
                     ];
                 }
             }
         }
 
-        $this->record('multiplier_consistency', $mismatches === [] ? 'pass' : 'fail', count($mismatches)." of {$checked} stored winner multipliers differ from an independent recompute by > ".self::EPS.'.', $mismatches);
+        $toleranceNote = 'max('.self::MULTIPLIER_ABS_TOLERANCE.', '.
+            (self::MULTIPLIER_REL_TOLERANCE * 100).'% of recomputed)';
+        $this->record(
+            'multiplier_consistency',
+            $mismatches === [] ? 'pass' : 'fail',
+            count($mismatches)." of {$checked} stored winner multipliers differ from an independent recompute by > {$toleranceNote}.",
+            $mismatches,
+        );
+    }
+
+    private function multiplierDriftedBeyondTolerance(float $stored, ?float $recomputed): bool
+    {
+        if ($recomputed === null) {
+            return true;
+        }
+
+        $diff = abs($recomputed - $stored);
+        $tolerance = max(self::MULTIPLIER_ABS_TOLERANCE, abs($recomputed) * self::MULTIPLIER_REL_TOLERANCE);
+
+        return $diff > $tolerance + self::EPS;
     }
 
     /**

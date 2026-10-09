@@ -10,6 +10,7 @@ use App\Jobs\ScoreWinnersJob;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Models\Post;
 use App\Models\PostAnalysis;
+use App\Models\SocialAccount;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Apify\ApifyClient;
@@ -1093,5 +1094,80 @@ class SyncTrackedAccountJobTest extends TestCase
         $this->assertSame('day_60', Post::query()->value('external_id'));
         $account->refresh();
         $this->assertSame('success', $account->last_sync_status);
+    }
+
+    public function test_sync_copies_last_synced_at_to_sibling_trackers_on_shared_social_account(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        $owner = User::factory()->create();
+        $siblingOwner = User::factory()->create();
+        $this->enablePlatformBilling($owner);
+        $this->enablePlatformBilling($siblingOwner);
+
+        $social = SocialAccount::factory()->create([
+            'platform' => Platform::Facebook,
+            'handle' => 'yellowzest',
+            'external_id' => 'page_yellowzest',
+            'url' => 'https://facebook.com/yellowzest',
+            'display_name' => 'Yellow Zest',
+        ]);
+
+        $primary = TrackedAccount::factory()->for($owner)->forSocialAccount($social)->create([
+            'last_synced_at' => now()->subDays(3),
+            'last_sync_status' => 'success',
+            'external_id' => 'page_yellowzest',
+            'url' => 'https://facebook.com/yellowzest',
+            'display_name' => 'Yellow Zest',
+        ]);
+        $sibling = TrackedAccount::factory()->for($siblingOwner)->forSocialAccount($social)->create([
+            'last_synced_at' => now()->subDays(4),
+            'last_sync_status' => 'success',
+            'external_id' => 'page_yellowzest',
+            'url' => 'https://facebook.com/yellowzest',
+            'display_name' => 'Yellow Zest',
+        ]);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
+        $client->shouldReceive('runActor')->andReturn([
+            [
+                'pageName' => 'Yellow Zest',
+                'pageId' => 'page_yellowzest',
+                'postId' => 'fresh_reel',
+                'url' => 'https://facebook.com/yellowzest/videos/9',
+                'text' => 'Fresh',
+                'time' => now()->subHours(2)->toIso8601String(),
+                'type' => 'video',
+                'videoUrl' => 'https://cdn.example.com/fresh.mp4',
+                'likes' => 12,
+                'comments' => 1,
+                'shares' => 0,
+                'viewsCount' => 100,
+            ],
+        ]);
+        $this->app->instance(ApifyClient::class, $client);
+
+        config([
+            'snitch.sync.recency_days' => 30,
+            'snitch.sync.posts_limit' => 12,
+            'snitch.sync.min_interval_days' => 7,
+        ]);
+
+        (new SyncTrackedAccountJob($primary->id, force: true))->handle(
+            app(PlatformAdapterManager::class),
+            app(SnitchAnalyticsService::class),
+            app(VendorUsageCharger::class),
+        );
+
+        $primary->refresh();
+        $sibling->refresh();
+
+        $this->assertSame('success', $primary->last_sync_status);
+        $this->assertSame('success', $sibling->last_sync_status);
+        $this->assertNotNull($primary->last_synced_at);
+        $this->assertNotNull($sibling->last_synced_at);
+        $this->assertTrue($sibling->last_synced_at->equalTo($primary->last_synced_at));
+        $this->assertTrue($sibling->last_synced_at->greaterThan(now()->subMinute()));
     }
 }

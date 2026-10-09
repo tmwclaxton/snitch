@@ -629,11 +629,12 @@ class DailyBriefValidator
             }
         }
 
-        for ($i = 1; $i <= 5; $i++) {
+        // Small counts (including zero posts / one post) are always allowed in prose.
+        for ($i = 0; $i <= 5; $i++) {
             $tokens[] = (string) $i;
         }
 
-        return array_values(array_unique(array_filter($tokens)));
+        return array_values(array_unique(array_filter($tokens, fn (string $token): bool => $token !== '')));
     }
 
     /**
@@ -680,7 +681,7 @@ class DailyBriefValidator
 
     public function isAllowedSmallInt(string $number): bool
     {
-        return preg_match('/^[1-5]$/', $this->normaliseNumber($number)) === 1;
+        return preg_match('/^[0-5]$/', $this->normaliseNumber($number)) === 1;
     }
 
     public function isClock(string $number): bool
@@ -984,11 +985,13 @@ class DailyBriefValidator
                 continue;
             }
 
-            $days = is_numeric($row['days_since_last_post'] ?? null) ? (int) $row['days_since_last_post'] : null;
-
-            if ($days === null && (($row['sync_empty'] ?? false) || ($row['last_posted_at'] ?? null) === null)) {
-                $days = 999;
+            // Accounts with no posts (or empty sync) are not in the longest-gap race.
+            if (($row['sync_empty'] ?? false)
+                || (($row['last_posted_at'] ?? null) === null && ! is_numeric($row['days_since_last_post'] ?? null))) {
+                continue;
             }
+
+            $days = is_numeric($row['days_since_last_post'] ?? null) ? (int) $row['days_since_last_post'] : null;
 
             if ($days === null) {
                 continue;
