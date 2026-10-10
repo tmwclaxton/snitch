@@ -531,66 +531,51 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertFalse($facts['cadence_gaps']['own_is_longest'] ?? true);
     }
 
-    public function test_validator_rejects_a_thirty_day_winner_used_as_this_weeks_best(): void
+    public function test_validator_rewrites_a_thirty_day_winner_used_as_this_weeks_best(): void
     {
+        $facts = [
+            'allowed_handles' => ['great.friendship'],
+            'allowed_post_ids' => [10],
+            'brief_date' => '2026-10-06',
+            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
+            'competitors' => [[
+                'handle' => 'great.friendship',
+                'posts_last_7d' => [[
+                    'post_id' => 10,
+                    'times_usual' => 0.9,
+                    'format' => 'Reel',
+                ]],
+                'best_post_7d' => ['post_id' => 10, 'times_usual' => 0.9],
+            ]],
+            'top_competitor_hit' => ['post_id' => 99, 'times_usual' => 3.0, 'handle' => 'great.friendship'],
+            'top_competitor_hit_7d' => ['post_id' => 10, 'times_usual' => 0.9, 'handle' => 'great.friendship'],
+        ];
+
+        $actions = [
+            ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+        ];
+
         $result = app(DailyBriefValidator::class)->validate([
             'headline' => 'Plan for today',
-            'actions' => [
-                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-            ],
+            'actions' => $actions,
             'own_summary' => 'ok',
             'competitor_summary' => 'In the last 7 days @great.friendship\'s best post got 3.0 times usual engagement.',
             'watch' => [],
-        ], [
-            'allowed_handles' => ['great.friendship'],
-            'allowed_post_ids' => [10],
-            'brief_date' => '2026-10-06',
-            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
-            'competitors' => [[
-                'handle' => 'great.friendship',
-                'posts_last_7d' => [[
-                    'post_id' => 10,
-                    'times_usual' => 0.9,
-                    'format' => 'Reel',
-                ]],
-                'best_post_7d' => ['post_id' => 10, 'times_usual' => 0.9],
-            ]],
-            'top_competitor_hit' => ['post_id' => 99, 'times_usual' => 3.0, 'handle' => 'great.friendship'],
-            'top_competitor_hit_7d' => ['post_id' => 10, 'times_usual' => 0.9, 'handle' => 'great.friendship'],
-        ]);
+        ], $facts);
 
-        $this->assertFalse($result['ok']);
-        $this->assertContains('week best-post figure is not from the last 7 days', $result['errors']);
+        $this->assertTrue($result['ok'], implode('; ', $result['errors']));
+        $this->assertStringContainsString('0.9', $result['output']['competitor_summary']);
+        $this->assertStringNotContainsString('3.0', $result['output']['competitor_summary']);
 
         $allowed = app(DailyBriefValidator::class)->validate([
             'headline' => 'Plan for today',
-            'actions' => [
-                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-            ],
+            'actions' => $actions,
             'own_summary' => 'ok',
             'competitor_summary' => 'In the last 7 days @great.friendship\'s best post got 0.9 times usual engagement.',
             'watch' => [],
-        ], [
-            'allowed_handles' => ['great.friendship'],
-            'allowed_post_ids' => [10],
-            'brief_date' => '2026-10-06',
-            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
-            'competitors' => [[
-                'handle' => 'great.friendship',
-                'posts_last_7d' => [[
-                    'post_id' => 10,
-                    'times_usual' => 0.9,
-                    'format' => 'Reel',
-                ]],
-                'best_post_7d' => ['post_id' => 10, 'times_usual' => 0.9],
-            ]],
-            'top_competitor_hit' => ['post_id' => 99, 'times_usual' => 3.0, 'handle' => 'great.friendship'],
-            'top_competitor_hit_7d' => ['post_id' => 10, 'times_usual' => 0.9, 'handle' => 'great.friendship'],
-        ]);
+        ], $facts);
 
         $this->assertTrue($allowed['ok'], implode('; ', $allowed['errors']));
     }
@@ -1784,7 +1769,8 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertSame('3', $tile['value'] ?? null);
         $this->assertStringContainsString('@great.friendship Reel 2.2x', $note);
         $this->assertStringContainsString('@onehousesocialclub Reel 0.5x', $note);
-        $this->assertStringContainsString('@goodgym Reel 1.3x views vs usual', $note);
+        $this->assertStringContainsString('@goodgym Reel 1.3x', $note);
+        $this->assertStringNotContainsString('views vs', $note);
 
         $narrative = $generator->deterministicNarrative([
             'own' => [
@@ -1804,15 +1790,116 @@ class DailyBriefGenerationTest extends TestCase
                 'post_id' => 99,
                 'times_usual' => null,
                 'views_vs_usual' => 1.3,
-                'times_usual_label' => '1.3 times usual',
+                'times_usual_label' => '1.3 times their usual',
                 'format' => 'Reel',
                 'hook' => 'Parkrun Saturday',
             ],
             'best_times' => ['today_slot' => null, 'weekday_evening_block' => 'weekday evenings 19:00-21:00'],
         ]);
 
-        $this->assertStringContainsString('1.3 times usual', $narrative['competitor_summary']);
-        $this->assertStringNotContainsString('1.3 views vs', $narrative['competitor_summary']);
+        $this->assertStringContainsString('1.3 times their usual', $narrative['competitor_summary']);
+        $this->assertStringNotContainsString('views vs', $narrative['competitor_summary']);
+    }
+
+    public function test_validator_accepts_in_window_times_usual_with_rounding_and_rewrites_out_of_window(): void
+    {
+        $facts = [
+            'allowed_handles' => ['great.friendship', 'goodgym'],
+            'allowed_post_ids' => [10, 11, 12],
+            'brief_date' => '2026-10-10',
+            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
+            'competitors' => [
+                [
+                    'handle' => 'great.friendship',
+                    'posts_last_7d' => [[
+                        'post_id' => 10,
+                        'times_usual' => 2.25,
+                        'format' => 'Reel',
+                        'times_usual_label' => '2.3 times their usual',
+                    ]],
+                    'posts_last_24h' => [[
+                        'post_id' => 10,
+                        'times_usual' => 2.25,
+                        'format' => 'Reel',
+                    ]],
+                    'best_post_7d' => ['post_id' => 10, 'times_usual' => 2.25],
+                ],
+                [
+                    'handle' => 'goodgym',
+                    'posts_last_7d' => [
+                        [
+                            'post_id' => 11,
+                            'times_usual' => null,
+                            'views_vs_usual' => 1.48,
+                            'format' => 'Reel',
+                            'times_usual_label' => '1.5 times their usual',
+                        ],
+                        [
+                            'post_id' => 12,
+                            'times_usual' => null,
+                            'views_vs_usual' => 1.12,
+                            'format' => 'Reel',
+                            'times_usual_label' => '1.1 times their usual',
+                        ],
+                    ],
+                    'best_post_7d' => ['post_id' => 11, 'views_vs_usual' => 1.48],
+                ],
+            ],
+            'top_competitor_hit_7d' => [
+                'handle' => 'great.friendship',
+                'post_id' => 10,
+                'times_usual' => 2.25,
+            ],
+            'top_competitor_hit' => [
+                'handle' => 'great.friendship',
+                'post_id' => 99,
+                'times_usual' => 5.9,
+            ],
+        ];
+
+        $actions = [
+            ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+        ];
+
+        $allowed = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => $actions,
+            'own_summary' => 'ok',
+            'competitor_summary' => 'In the last 7 days @great.friendship hit 2.3x and @goodgym got 1.5 times their usual.',
+            'watch' => [],
+        ], $facts);
+
+        $this->assertTrue($allowed['ok'], implode('; ', $allowed['errors']));
+
+        // Rival figure attributed to the wrong handle still passes when it is in-window.
+        $misattributed = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => $actions,
+            'own_summary' => 'ok',
+            'competitor_summary' => 'In the last 7 days @great.friendship best post was in the 1.1-1.5x range.',
+            'watch' => [],
+        ], $facts);
+
+        $this->assertTrue($misattributed['ok'], implode('; ', $misattributed['errors']));
+
+        $rewritten = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => $actions,
+            'own_summary' => 'ok',
+            'competitor_summary' => 'In the last 7 days @great.friendship\'s best post got 5.9 times their usual.',
+            'watch' => [],
+        ], $facts);
+
+        $this->assertTrue($rewritten['ok'], implode('; ', $rewritten['errors']));
+        $this->assertStringContainsString('2.3', $rewritten['output']['competitor_summary']);
+        $this->assertStringNotContainsString('5.9', $rewritten['output']['competitor_summary']);
+
+        $viewsWording = app(DailyBriefValidator::class)->rewriteViewsVsUsualWordingInText(
+            'goodgym posted a Reel at 1.3 views vs usual',
+        );
+        $this->assertSame('goodgym posted a Reel at 1.3 times their usual', $viewsWording);
     }
 
     /**

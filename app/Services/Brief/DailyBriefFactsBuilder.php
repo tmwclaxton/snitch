@@ -1005,7 +1005,7 @@ class DailyBriefFactsBuilder
         }
 
         if ($hidden && $viewsIndex !== null) {
-            return number_format($viewsIndex, 1).' times usual';
+            return number_format($viewsIndex, 1).' times their usual';
         }
 
         if ($hidden) {

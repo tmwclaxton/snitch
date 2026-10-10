@@ -26,9 +26,11 @@ class DailyBriefValidator
     {
         $output = $this->replaceDashes($output);
         $output = $this->rewriteLinkInBioSticker($output);
+        $output = $this->rewriteViewsVsUsualWording($output);
         $output = $this->rewriteInternalPostIds($output, $facts);
         $output = $this->rewriteBorrowedCompetitorNames($output, $facts);
         $output = $this->rewriteUnsupportedStandoutClaims($output, $facts);
+        $output = $this->rewriteUnsupportedWeekBestClaims($output, $facts);
         $errors = [];
 
         $headline = trim((string) ($output['headline'] ?? ''));
@@ -822,28 +824,259 @@ class DailyBriefValidator
      */
     public function unsupportedWeekBestClaim(string $text, array $facts): ?string
     {
-        if (preg_match('/\b(this week|last 7 days|in the last 7|past 7 days|in 7 days)\b/i', $text) !== 1) {
+        if (! $this->textClaimsWeekWindow($text) || ! $this->textClaimsTimesUsual($text)) {
             return null;
         }
 
-        if (preg_match('/\b(best post|times (?:their |the )?usual|times usual)\b/i', $text) !== 1) {
+        $figures = $this->timesUsualFiguresInText($text);
+
+        if ($figures === []) {
             return null;
         }
 
         $handles = $this->handlesMentionedIn($text, $this->allowedHandles($facts));
+        // Prefer handle-scoped figures, but accept any in-window times-usual so a
+        // correctly quoted rival figure is not rejected when attribution is messy.
         $allowed = $this->sevenDayTimesUsualNumbers($facts, $handles);
+        $allowedAny = $handles === []
+            ? $allowed
+            : $this->sevenDayTimesUsualNumbers($facts, []);
 
-        if (preg_match_all('/(\d+(?:\.\d+)?)\s*(?:x|times (?:their |the )?usual)/i', $text, $matches) === 0) {
-            return null;
-        }
-
-        foreach ($matches[1] as $raw) {
-            if (! $this->numberIsKnown((string) $raw, $allowed)) {
-                return 'week best-post figure is not from the last 7 days';
+        foreach ($figures as $raw) {
+            if ($this->numberIsKnownAsTimesUsual((string) $raw, $allowed)
+                || $this->numberIsKnownAsTimesUsual((string) $raw, $allowedAny)) {
+                continue;
             }
+
+            return 'week best-post figure is not from the last 7 days';
         }
 
         return null;
+    }
+
+    /**
+     * Rewrite out-of-window week-best figures to the handle's in-window best, or soften
+     * the week wording so a legitimate recent figure is not rejected.
+     *
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function rewriteUnsupportedWeekBestClaims(array $output, array $facts): array
+    {
+        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+            if (isset($output[$field]) && is_string($output[$field])) {
+                $output[$field] = $this->rewriteUnsupportedWeekBestClaimsInText($output[$field], $facts);
+            }
+        }
+
+        if (isset($output['watch']) && is_array($output['watch'])) {
+            $output['watch'] = array_map(
+                fn (mixed $item): mixed => is_string($item)
+                    ? $this->rewriteUnsupportedWeekBestClaimsInText($item, $facts)
+                    : $item,
+                $output['watch'],
+            );
+        }
+
+        if (isset($output['actions']) && is_array($output['actions'])) {
+            foreach ($output['actions'] as $index => $action) {
+                if (! is_array($action)) {
+                    continue;
+                }
+
+                foreach (['title', 'why', 'how', 'hook'] as $field) {
+                    if (isset($action[$field]) && is_string($action[$field])) {
+                        $action[$field] = $this->rewriteUnsupportedWeekBestClaimsInText($action[$field], $facts);
+                    }
+                }
+
+                $output['actions'][$index] = $action;
+            }
+        }
+
+        return $output;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    public function rewriteUnsupportedWeekBestClaimsInText(string $text, array $facts): string
+    {
+        if ($text === '' || $this->unsupportedWeekBestClaim($text, $facts) === null) {
+            return $text;
+        }
+
+        $handles = $this->handlesMentionedIn($text, $this->allowedHandles($facts));
+        $allowed = $this->sevenDayTimesUsualNumbers($facts, $handles);
+        $allowedAny = $handles === []
+            ? $allowed
+            : $this->sevenDayTimesUsualNumbers($facts, []);
+        $rewritten = $text;
+
+        foreach ($this->timesUsualFiguresInText($rewritten) as $raw) {
+            if ($this->numberIsKnownAsTimesUsual($raw, $allowed)
+                || $this->numberIsKnownAsTimesUsual($raw, $allowedAny)) {
+                continue;
+            }
+
+            $replacement = $this->sevenDayReplacementFigure($facts, $handles, $raw)
+                ?? $this->sevenDayReplacementFigure($facts, [], $raw);
+
+            if ($replacement !== null && $replacement !== $raw) {
+                $rewritten = $this->replaceTimesUsualFigure($rewritten, $raw, $replacement);
+            }
+        }
+
+        if ($this->unsupportedWeekBestClaim($rewritten, $facts) !== null) {
+            // Soften the week window so a correct recent figure is not treated as a 7-day claim.
+            $rewritten = preg_replace(
+                '/\b(this week|last 7 days|in the last 7 days|past 7 days|in 7 days)\b/iu',
+                'recently',
+                $rewritten,
+            ) ?? $rewritten;
+        }
+
+        return trim(preg_replace('/\s{2,}/u', ' ', $rewritten) ?? $rewritten);
+    }
+
+    /**
+     * @param  array<string, mixed>  $value
+     * @return array<string, mixed>
+     */
+    public function rewriteViewsVsUsualWording(array $value): array
+    {
+        array_walk_recursive($value, function (mixed &$item): void {
+            if (is_string($item)) {
+                $item = $this->rewriteViewsVsUsualWordingInText($item);
+            }
+        });
+
+        return $value;
+    }
+
+    public function rewriteViewsVsUsualWordingInText(string $text): string
+    {
+        $rewritten = preg_replace(
+            '/(\d+(?:\.\d+)?)\s*(?:x\s+)?views vs(?: their)? usual/iu',
+            '$1 times their usual',
+            $text,
+        ) ?? $text;
+
+        return preg_replace(
+            '/(\d+(?:\.\d+)?)\s*times usual\b/iu',
+            '$1 times their usual',
+            $rewritten,
+        ) ?? $rewritten;
+    }
+
+    public function textClaimsWeekWindow(string $text): bool
+    {
+        return preg_match('/\b(this week|last 7 days|in the last 7|past 7 days|in 7 days)\b/i', $text) === 1;
+    }
+
+    public function textClaimsTimesUsual(string $text): bool
+    {
+        if (preg_match('/\b(best post|times (?:their |the )?usual|times usual)\b/i', $text) === 1) {
+            return true;
+        }
+
+        // Decimal Nx (2.3x) is a times-usual shorthand. Bare "2x" often means "twice".
+        return preg_match('/\d+\.\d+\s*[x×]/iu', $text) === 1;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function timesUsualFiguresInText(string $text): array
+    {
+        $found = [];
+
+        if (preg_match_all('/(\d+(?:\.\d+)?)\s*(?:[x×]|times (?:their |the )?usual)/iu', $text, $matches) > 0) {
+            foreach ($matches[1] as $raw) {
+                $found[] = $this->normaliseNumber($raw);
+            }
+        }
+
+        // Ranges like 1.1-1.5x / 1.1x-1.5x quote both ends as times-usual claims.
+        if (preg_match_all('/(\d+(?:\.\d+)?)\s*[x×]?\s*[-–—]\s*(\d+(?:\.\d+)?)\s*[x×]/iu', $text, $ranges) > 0) {
+            foreach ($ranges[1] as $raw) {
+                $found[] = $this->normaliseNumber($raw);
+            }
+            foreach ($ranges[2] as $raw) {
+                $found[] = $this->normaliseNumber($raw);
+            }
+        }
+
+        return array_values(array_unique(array_filter(
+            $found,
+            fn (string $token): bool => $token !== '',
+        )));
+    }
+
+    /**
+     * @param  list<string>  $allowed
+     */
+    public function numberIsKnownAsTimesUsual(string $number, array $allowed): bool
+    {
+        if ($this->numberIsKnown($number, $allowed)) {
+            return true;
+        }
+
+        $value = (float) $this->normaliseNumber($number);
+
+        foreach ($allowed as $token) {
+            if (! is_numeric($token)) {
+                continue;
+            }
+
+            // Accept normal 1-decimal rounding drift (2.25 cited as 2.3, etc.).
+            if (abs($value - (float) $token) <= 0.051) {
+                return true;
+            }
+
+            if (number_format($value, 1, '.', '') === number_format((float) $token, 1, '.', '')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @param  list<string>  $handles
+     */
+    private function sevenDayReplacementFigure(array $facts, array $handles, string $claimed): ?string
+    {
+        unset($claimed);
+
+        $candidates = [];
+
+        foreach ($this->sevenDayPosts($facts, $handles) as $post) {
+            foreach (['times_usual', 'views_vs_usual'] as $key) {
+                if (! isset($post[$key]) || ! is_numeric($post[$key])) {
+                    continue;
+                }
+
+                $candidates[] = (float) $post[$key];
+            }
+        }
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        rsort($candidates);
+
+        return number_format($candidates[0], 1, '.', '');
+    }
+
+    private function replaceTimesUsualFigure(string $text, string $from, string $to): string
+    {
+        $pattern = '/(?<!\d)'.preg_quote($from, '/').'(?=\s*(?:[x×]|times (?:their |the )?usual))/iu';
+
+        return preg_replace($pattern, $to, $text, 1) ?? $text;
     }
 
     /**
@@ -909,10 +1142,19 @@ class DailyBriefValidator
 
                 $tokens[] = $this->normaliseNumber((string) $post[$key]);
                 $tokens[] = $this->normaliseNumber(number_format((float) $post[$key], 1, '.', ''));
+                $tokens[] = $this->normaliseNumber(number_format((float) $post[$key], 2, '.', ''));
+            }
+
+            $label = (string) ($post['times_usual_label'] ?? '');
+            foreach ($this->timesUsualFiguresInText($label) as $fromLabel) {
+                $tokens[] = $fromLabel;
             }
         }
 
-        return array_values(array_unique(array_filter($tokens)));
+        return array_values(array_unique(array_filter(
+            $tokens,
+            fn (string $token): bool => $token !== '',
+        )));
     }
 
     /**
@@ -938,7 +1180,7 @@ class DailyBriefValidator
                 continue;
             }
 
-            foreach (['posts_last_7d', 'best_post_7d'] as $key) {
+            foreach (['posts_last_7d', 'posts_last_24h', 'posts_yesterday', 'best_post_7d'] as $key) {
                 $value = $row[$key] ?? null;
                 if ($key === 'best_post_7d' && is_array($value) && isset($value['post_id'])) {
                     $posts[] = $value;
@@ -958,8 +1200,12 @@ class DailyBriefValidator
             }
         }
 
-        $top = $facts['top_competitor_hit_7d'] ?? null;
-        if (is_array($top)) {
+        foreach (['top_competitor_hit_7d', 'top_competitor_hit_24h'] as $topKey) {
+            $top = $facts[$topKey] ?? null;
+            if (! is_array($top)) {
+                continue;
+            }
+
             $handle = $this->normaliseHandle((string) ($top['handle'] ?? ''));
             if ($wanted === [] || $handle === '' || in_array($handle, $wanted, true)) {
                 $posts[] = $top;

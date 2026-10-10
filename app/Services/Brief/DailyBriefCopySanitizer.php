@@ -52,9 +52,11 @@ class DailyBriefCopySanitizer
             'actions' => is_array($payload['actions'] ?? null) ? $payload['actions'] : [],
         ];
 
+        $llmShape = $this->validator->rewriteViewsVsUsualWording($llmShape);
         $llmShape = $this->validator->rewriteInternalPostIds($llmShape, $facts);
         $llmShape = $this->validator->rewriteBorrowedCompetitorNames($llmShape, $facts);
         $llmShape = $this->validator->rewriteUnsupportedStandoutClaims($llmShape, $facts);
+        $llmShape = $this->validator->rewriteUnsupportedWeekBestClaims($llmShape, $facts);
 
         $payload['headline'] = (string) ($llmShape['headline'] ?? $headline);
         $payload['own_summary'] = (string) ($llmShape['own_summary'] ?? '');

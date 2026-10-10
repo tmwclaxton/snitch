@@ -214,8 +214,8 @@ Rules:
 - No em dashes or en dashes. Use a comma or hyphen.
 - Do not truncate with ...
 - hook is the literal first line, max 12 words. Never quote a scene description.
-- When likes are hidden, say "likes hidden" or "N times usual" from views_vs_usual. Never print null, 0x, or "N views vs usual".
-- Prefer "times their usual" / "times usual" over jargon.
+- When likes are hidden, say "likes hidden" or "N times their usual" from views_vs_usual. Never print null, 0x, or "N views vs usual".
+- Prefer "times their usual" over jargon. Never mix views and likes labels.
 - Zero and one are valid counts when they appear in the facts (for example "0 posts in the last 7 days").
 - Do not use accounts with no posts (sync_empty, or null last_posted_at) for longest-gap claims. facts.cadence_gaps already excludes them.
 - Cadence is in facts.cadence: posts_last_7d, days_since_last_post, distinct_days_posted_last_7, posted_every_day_last_7, posted_almost_daily_last_7.
@@ -724,7 +724,7 @@ PROMPT;
                 if (is_numeric($timesUsual)) {
                     $parts[] = '@'.$handle.' '.$format.' '.number_format((float) $timesUsual, 1).'x';
                 } elseif (is_numeric($viewsVsUsual)) {
-                    $parts[] = '@'.$handle.' '.$format.' '.number_format((float) $viewsVsUsual, 1).'x views vs usual';
+                    $parts[] = '@'.$handle.' '.$format.' '.number_format((float) $viewsVsUsual, 1).'x';
                 } else {
                     $parts[] = '@'.$handle.' '.$format;
                 }
