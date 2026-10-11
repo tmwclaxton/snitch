@@ -216,6 +216,7 @@ Rules:
 - hook is the literal first line, max 12 words. Never quote a scene description.
 - When likes are hidden, say "likes hidden" or "N times their usual" from views_vs_usual. Never print null, 0x, or "N views vs usual".
 - Prefer "times their usual" over jargon. Never mix views and likes labels.
+- Never attach one handle's times_usual / views_vs_usual / Nx figure to another handle's post. Each multiplier stays with that handle's posts only.
 - Zero and one are valid counts when they appear in the facts (for example "0 posts in the last 7 days").
 - Do not use accounts with no posts (sync_empty, or null last_posted_at) for longest-gap claims. facts.cadence_gaps already excludes them.
 - Cadence is in facts.cadence: posts_last_7d, days_since_last_post, distinct_days_posted_last_7, posted_every_day_last_7, posted_almost_daily_last_7.
@@ -224,7 +225,7 @@ Rules:
 - Do not say almost daily, nearly daily, almost every day, or posts most days unless posted_almost_daily_last_7 is true (6 or 7 distinct days with a post in the last 7).
 - Use the 7-day count and days since last post instead of a cadence adjective.
 - When describing follower change, use facts.own.followers_change_7d.label (for example +4 since 27 September). Do not say gained or lost in the last 7 days or this week unless from_date is exactly 7 days before brief_date.
-- standout_winners and top_competitor_hit may look back 30 days. For any "best post this week" or "last 7 days" claim, only use posts_last_7d, best_post_7d, or top_competitor_hit_7d.
+- standout_winners and top_competitor_hit may look back 30 days. For any "best post this week" or "last 7 days" claim, only use posts_last_7d, best_post_7d, or top_competitor_hit_7d. Never call a 14/30-day standout_winners post a "this week" standout or hit.
 - Do not say the brand has the longest posting gap unless facts.cadence_gaps.own_is_longest is true. If you mention a longest gap, use cadence_gaps.longest_handle.
 - If sync_failed is true, say the refresh failed. Do not say the account is quiet or has not posted recently.
 PROMPT;

@@ -66,6 +66,12 @@ class DailyBriefValidator
             }
         }
 
+        foreach ($output['trends'] ?? [] as $item) {
+            if (is_string($item) && trim($item) !== '') {
+                $texts[] = $item;
+            }
+        }
+
         foreach ($actions as $index => $action) {
             if (! is_array($action)) {
                 $errors[] = 'action '.($index + 1).' is not an object';
@@ -155,6 +161,16 @@ class DailyBriefValidator
             $weekBestError = $this->unsupportedWeekBestClaim($text, $facts);
             if ($weekBestError !== null) {
                 $errors[] = $weekBestError;
+            }
+
+            $handleTimesUsualError = $this->unsupportedHandleTimesUsualClaim($text, $facts);
+            if ($handleTimesUsualError !== null) {
+                $errors[] = $handleTimesUsualError;
+            }
+
+            $weekStandoutError = $this->unsupportedWeekStandoutClaim($text, $facts);
+            if ($weekStandoutError !== null) {
+                $errors[] = $weekStandoutError;
             }
 
             $gapError = $this->unsupportedLongestGapClaim($text, $facts);
@@ -828,30 +844,80 @@ class DailyBriefValidator
             return null;
         }
 
-        $figures = $this->timesUsualFiguresInText($text);
+        $pairs = $this->figureHandlePairsInText($text, $this->allowedHandles($facts));
 
-        if ($figures === []) {
+        if ($pairs === []) {
+            return null;
+        }
+
+        foreach ($pairs as $pair) {
+            $handles = $pair['handle'] !== null ? [$pair['handle']] : [];
+            $allowed = $this->sevenDayTimesUsualNumbers($facts, $handles);
+
+            if (! $this->numberIsKnownAsTimesUsual($pair['figure'], $allowed)) {
+                return 'week best-post figure is not from the last 7 days';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * A named handle's times-usual / Nx claim must match that handle's multipliers in facts.
+     *
+     * @param  array<string, mixed>  $facts
+     */
+    public function unsupportedHandleTimesUsualClaim(string $text, array $facts): ?string
+    {
+        if (! $this->textClaimsTimesUsual($text)) {
+            return null;
+        }
+
+        foreach ($this->figureHandlePairsInText($text, $this->allowedHandles($facts)) as $pair) {
+            if ($pair['handle'] === null) {
+                continue;
+            }
+
+            $allowed = $this->handleTimesUsualNumbers($facts, [$pair['handle']]);
+
+            if (! $this->numberIsKnownAsTimesUsual($pair['figure'], $allowed)) {
+                return 'times-usual figure does not match @'.$pair['handle'].' posts';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Standout / hit praise tied to "this week" must use an in-window post, not a 30-day winner.
+     *
+     * @param  array<string, mixed>  $facts
+     */
+    public function unsupportedWeekStandoutClaim(string $text, array $facts): ?string
+    {
+        if (! $this->textClaimsWeekWindow($text)) {
+            return null;
+        }
+
+        if (preg_match('/\b(standout|outperformed|(?:biggest\s+)?hit)\b|\btop\s+(?:post|reel|carousel|performer)\b/i', $text) !== 1) {
             return null;
         }
 
         $handles = $this->handlesMentionedIn($text, $this->allowedHandles($facts));
-        // Prefer handle-scoped figures, but accept any in-window times-usual so a
-        // correctly quoted rival figure is not rejected when attribution is messy.
-        $allowed = $this->sevenDayTimesUsualNumbers($facts, $handles);
-        $allowedAny = $handles === []
-            ? $allowed
-            : $this->sevenDayTimesUsualNumbers($facts, []);
+        $posts = $this->sevenDayPosts($facts, $handles);
 
-        foreach ($figures as $raw) {
-            if ($this->numberIsKnownAsTimesUsual((string) $raw, $allowed)
-                || $this->numberIsKnownAsTimesUsual((string) $raw, $allowedAny)) {
+        foreach ($posts as $post) {
+            if (! is_array($post)) {
                 continue;
             }
 
-            return 'week best-post figure is not from the last 7 days';
+            $score = $this->postEngagementScore($post);
+            if ($score !== null && $score > self::STANDOUT_THRESHOLD) {
+                return null;
+            }
         }
 
-        return null;
+        return 'week standout claim is not from the last 7 days';
     }
 
     /**
@@ -903,33 +969,37 @@ class DailyBriefValidator
      */
     public function rewriteUnsupportedWeekBestClaimsInText(string $text, array $facts): string
     {
-        if ($text === '' || $this->unsupportedWeekBestClaim($text, $facts) === null) {
+        if ($text === '') {
             return $text;
         }
 
-        $handles = $this->handlesMentionedIn($text, $this->allowedHandles($facts));
-        $allowed = $this->sevenDayTimesUsualNumbers($facts, $handles);
-        $allowedAny = $handles === []
-            ? $allowed
-            : $this->sevenDayTimesUsualNumbers($facts, []);
+        $needsWeekRewrite = $this->unsupportedWeekBestClaim($text, $facts) !== null
+            || $this->unsupportedWeekStandoutClaim($text, $facts) !== null;
+
+        if (! $needsWeekRewrite) {
+            return $text;
+        }
+
         $rewritten = $text;
 
-        foreach ($this->timesUsualFiguresInText($rewritten) as $raw) {
-            if ($this->numberIsKnownAsTimesUsual($raw, $allowed)
-                || $this->numberIsKnownAsTimesUsual($raw, $allowedAny)) {
+        foreach ($this->figureHandlePairsInText($rewritten, $this->allowedHandles($facts)) as $pair) {
+            $handles = $pair['handle'] !== null ? [$pair['handle']] : [];
+            $allowed = $this->sevenDayTimesUsualNumbers($facts, $handles);
+
+            if ($this->numberIsKnownAsTimesUsual($pair['figure'], $allowed)) {
                 continue;
             }
 
-            $replacement = $this->sevenDayReplacementFigure($facts, $handles, $raw)
-                ?? $this->sevenDayReplacementFigure($facts, [], $raw);
+            $replacement = $this->sevenDayReplacementFigure($facts, $handles, $pair['figure']);
 
-            if ($replacement !== null && $replacement !== $raw) {
-                $rewritten = $this->replaceTimesUsualFigure($rewritten, $raw, $replacement);
+            if ($replacement !== null && $replacement !== $pair['figure']) {
+                $rewritten = $this->replaceTimesUsualFigure($rewritten, $pair['figure'], $replacement);
             }
         }
 
-        if ($this->unsupportedWeekBestClaim($rewritten, $facts) !== null) {
-            // Soften the week window so a correct recent figure is not treated as a 7-day claim.
+        if ($this->unsupportedWeekBestClaim($rewritten, $facts) !== null
+            || $this->unsupportedWeekStandoutClaim($rewritten, $facts) !== null) {
+            // Soften the week window so an out-of-window standout is not treated as a 7-day claim.
             $rewritten = preg_replace(
                 '/\b(this week|last 7 days|in the last 7 days|past 7 days|in 7 days)\b/iu',
                 'recently',
@@ -977,7 +1047,7 @@ class DailyBriefValidator
 
     public function textClaimsTimesUsual(string $text): bool
     {
-        if (preg_match('/\b(best post|times (?:their |the )?usual|times usual)\b/i', $text) === 1) {
+        if (preg_match('/\b(best post|times (?:their |your |the )?usual|times usual)\b/i', $text) === 1) {
             return true;
         }
 
@@ -990,28 +1060,99 @@ class DailyBriefValidator
      */
     public function timesUsualFiguresInText(string $text): array
     {
-        $found = [];
+        return array_values(array_unique(array_map(
+            fn (array $pair): string => $pair['figure'],
+            $this->figureHandlePairsInText($text, []),
+        )));
+    }
 
-        if (preg_match_all('/(\d+(?:\.\d+)?)\s*(?:[x×]|times (?:their |the )?usual)/iu', $text, $matches) > 0) {
-            foreach ($matches[1] as $raw) {
-                $found[] = $this->normaliseNumber($raw);
+    /**
+     * Pair each times-usual / Nx figure with the nearest preceding named handle.
+     *
+     * @param  list<string>  $allowedHandles
+     * @return list<array{figure: string, handle: ?string}>
+     */
+    public function figureHandlePairsInText(string $text, array $allowedHandles): array
+    {
+        $handles = [];
+
+        foreach ($allowedHandles as $handle) {
+            $normalised = $this->normaliseHandle($handle);
+            if ($normalised === '') {
+                continue;
+            }
+
+            $pattern = '/(?<![A-Za-z0-9.])@?'.preg_quote($normalised, '/').'(?![A-Za-z0-9.])/i';
+            if (preg_match_all($pattern, $text, $matches, PREG_OFFSET_CAPTURE) > 0) {
+                foreach ($matches[0] as $match) {
+                    $handles[] = [
+                        'handle' => $normalised,
+                        'offset' => (int) $match[1],
+                    ];
+                }
+            }
+        }
+
+        usort($handles, fn (array $a, array $b): int => $a['offset'] <=> $b['offset']);
+
+        $pairs = [];
+        $figurePattern = '/(\d+(?:\.\d+)?)\s*(?:[x×]|times (?:their |your |the )?usual)/iu';
+
+        if (preg_match_all($figurePattern, $text, $matches, PREG_OFFSET_CAPTURE) > 0) {
+            foreach ($matches[1] as $match) {
+                $figure = $this->normaliseNumber($match[0]);
+                $offset = (int) $match[1];
+                $handle = null;
+
+                foreach ($handles as $candidate) {
+                    if ($candidate['offset'] <= $offset) {
+                        $handle = $candidate['handle'];
+                    }
+                }
+
+                if ($handle === null && count($handles) === 1) {
+                    $handle = $handles[0]['handle'];
+                }
+
+                $pairs[] = ['figure' => $figure, 'handle' => $handle];
             }
         }
 
         // Ranges like 1.1-1.5x / 1.1x-1.5x quote both ends as times-usual claims.
-        if (preg_match_all('/(\d+(?:\.\d+)?)\s*[x×]?\s*[-–—]\s*(\d+(?:\.\d+)?)\s*[x×]/iu', $text, $ranges) > 0) {
-            foreach ($ranges[1] as $raw) {
-                $found[] = $this->normaliseNumber($raw);
-            }
-            foreach ($ranges[2] as $raw) {
-                $found[] = $this->normaliseNumber($raw);
+        if (preg_match_all('/(\d+(?:\.\d+)?)\s*[x×]?\s*[-–—]\s*(\d+(?:\.\d+)?)\s*[x×]/iu', $text, $ranges, PREG_OFFSET_CAPTURE) > 0) {
+            foreach ($ranges[0] as $index => $full) {
+                $offset = (int) $full[1];
+                $handle = null;
+
+                foreach ($handles as $candidate) {
+                    if ($candidate['offset'] <= $offset) {
+                        $handle = $candidate['handle'];
+                    }
+                }
+
+                if ($handle === null && count($handles) === 1) {
+                    $handle = $handles[0]['handle'];
+                }
+
+                foreach ([$ranges[1][$index][0], $ranges[2][$index][0]] as $raw) {
+                    $pairs[] = [
+                        'figure' => $this->normaliseNumber($raw),
+                        'handle' => $handle,
+                    ];
+                }
             }
         }
 
-        return array_values(array_unique(array_filter(
-            $found,
-            fn (string $token): bool => $token !== '',
-        )));
+        $unique = [];
+        foreach ($pairs as $pair) {
+            if ($pair['figure'] === '') {
+                continue;
+            }
+            $key = $pair['figure'].'|'.($pair['handle'] ?? '');
+            $unique[$key] = $pair;
+        }
+
+        return array_values($unique);
     }
 
     /**
@@ -1132,9 +1273,30 @@ class DailyBriefValidator
      */
     public function sevenDayTimesUsualNumbers(array $facts, array $handles = []): array
     {
+        return $this->timesUsualNumbersFromPosts($this->sevenDayPosts($facts, $handles));
+    }
+
+    /**
+     * Multipliers for a handle from every post supplied in brief facts (7d, 24h, standouts, etc.).
+     *
+     * @param  array<string, mixed>  $facts
+     * @param  list<string>  $handles
+     * @return list<string>
+     */
+    public function handleTimesUsualNumbers(array $facts, array $handles = []): array
+    {
+        return $this->timesUsualNumbersFromPosts($this->handlePosts($facts, $handles));
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $posts
+     * @return list<string>
+     */
+    public function timesUsualNumbersFromPosts(array $posts): array
+    {
         $tokens = [];
 
-        foreach ($this->sevenDayPosts($facts, $handles) as $post) {
+        foreach ($posts as $post) {
             foreach (['times_usual', 'views_vs_usual'] as $key) {
                 if (! isset($post[$key]) || ! is_numeric($post[$key])) {
                     continue;
@@ -1146,8 +1308,10 @@ class DailyBriefValidator
             }
 
             $label = (string) ($post['times_usual_label'] ?? '');
-            foreach ($this->timesUsualFiguresInText($label) as $fromLabel) {
-                $tokens[] = $fromLabel;
+            if ($label !== '' && preg_match_all('/(\d+(?:\.\d+)?)\s*(?:[x×]|times (?:their |your |the )?usual)/iu', $label, $matches) > 0) {
+                foreach ($matches[1] as $raw) {
+                    $tokens[] = $this->normaliseNumber($raw);
+                }
             }
         }
 
@@ -1155,6 +1319,64 @@ class DailyBriefValidator
             $tokens,
             fn (string $token): bool => $token !== '',
         )));
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @param  list<string>  $handles
+     * @return list<array<string, mixed>>
+     */
+    public function handlePosts(array $facts, array $handles = []): array
+    {
+        $wanted = array_values(array_filter(array_map(
+            fn (string $handle): string => $this->normaliseHandle($handle),
+            $handles,
+        )));
+        $posts = [];
+
+        foreach ([$facts['own'] ?? null, ...($facts['competitors'] ?? [])] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $handle = $this->normaliseHandle((string) ($row['handle'] ?? ''));
+            if ($wanted !== [] && $handle !== '' && ! in_array($handle, $wanted, true)) {
+                continue;
+            }
+
+            foreach (['posts_last_7d', 'posts_last_24h', 'posts_yesterday', 'standout_winners', 'best_post_7d', 'best_post_30d'] as $key) {
+                $value = $row[$key] ?? null;
+                if (in_array($key, ['best_post_7d', 'best_post_30d'], true) && is_array($value) && isset($value['post_id'])) {
+                    $posts[] = $value;
+
+                    continue;
+                }
+
+                if (! is_array($value)) {
+                    continue;
+                }
+
+                foreach ($value as $post) {
+                    if (is_array($post)) {
+                        $posts[] = $post;
+                    }
+                }
+            }
+        }
+
+        foreach (['top_competitor_hit_7d', 'top_competitor_hit_24h', 'top_competitor_hit'] as $topKey) {
+            $top = $facts[$topKey] ?? null;
+            if (! is_array($top)) {
+                continue;
+            }
+
+            $handle = $this->normaliseHandle((string) ($top['handle'] ?? ''));
+            if ($wanted === [] || $handle === '' || in_array($handle, $wanted, true)) {
+                $posts[] = $top;
+            }
+        }
+
+        return $posts;
     }
 
     /**

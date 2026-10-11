@@ -1873,7 +1873,7 @@ class DailyBriefGenerationTest extends TestCase
 
         $this->assertTrue($allowed['ok'], implode('; ', $allowed['errors']));
 
-        // Rival figure attributed to the wrong handle still passes when it is in-window.
+        // Rival figure attributed to the wrong handle is a validation error.
         $misattributed = app(DailyBriefValidator::class)->validate([
             'headline' => 'Plan for today',
             'actions' => $actions,
@@ -1882,7 +1882,11 @@ class DailyBriefGenerationTest extends TestCase
             'watch' => [],
         ], $facts);
 
-        $this->assertTrue($misattributed['ok'], implode('; ', $misattributed['errors']));
+        $this->assertFalse($misattributed['ok']);
+        $this->assertTrue(collect($misattributed['errors'])->contains(
+            fn (string $error): bool => str_contains($error, 'times-usual figure does not match @great.friendship')
+                || str_contains($error, 'week best-post figure is not from the last 7 days'),
+        ));
 
         $rewritten = app(DailyBriefValidator::class)->validate([
             'headline' => 'Plan for today',
@@ -1900,6 +1904,108 @@ class DailyBriefGenerationTest extends TestCase
             'goodgym posted a Reel at 1.3 views vs usual',
         );
         $this->assertSame('goodgym posted a Reel at 1.3 times their usual', $viewsWording);
+    }
+
+    public function test_validator_rejects_cross_handle_multiplier_and_out_of_window_week_standout(): void
+    {
+        $facts = [
+            'allowed_handles' => ['onehousesocialclub', 'great.friendship'],
+            'allowed_post_ids' => [218, 248],
+            'brief_date' => '2026-10-11',
+            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
+            'competitors' => [
+                [
+                    'handle' => 'onehousesocialclub',
+                    'posts_last_7d_count' => 0,
+                    'posts_last_7d' => [],
+                    'standout_winners' => [[
+                        'post_id' => 218,
+                        'handle' => 'onehousesocialclub',
+                        'times_usual' => 5.0,
+                        'format' => 'Reel',
+                        'hook' => 'Living Room Listens',
+                        'window_days' => 14,
+                        'times_usual_label' => '5.0 times their usual',
+                    ]],
+                ],
+                [
+                    'handle' => 'great.friendship',
+                    'posts_last_7d' => [[
+                        'post_id' => 248,
+                        'handle' => 'great.friendship',
+                        'times_usual' => 2.5,
+                        'format' => 'Reel',
+                        'times_usual_label' => '2.5 times their usual',
+                    ]],
+                    'best_post_7d' => [
+                        'post_id' => 248,
+                        'handle' => 'great.friendship',
+                        'times_usual' => 2.5,
+                    ],
+                ],
+            ],
+            'top_competitor_hit_7d' => [
+                'post_id' => 248,
+                'handle' => 'great.friendship',
+                'times_usual' => 2.5,
+            ],
+            'top_competitor_hit' => [
+                'post_id' => 218,
+                'handle' => 'onehousesocialclub',
+                'times_usual' => 5.0,
+            ],
+        ];
+
+        $actions = [
+            [
+                'title' => 'Study the Living Room Listens Reel',
+                'why' => '@onehousesocialclub hit 5.0 times their usual.',
+                'how' => 'Borrow the hook.',
+                'related_handles' => ['onehousesocialclub'],
+                'related_post_ids' => [218],
+            ],
+            ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+        ];
+
+        $wrongMultiplier = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => $actions,
+            'own_summary' => 'ok',
+            'competitor_summary' => '@onehousesocialclub\'s Living Room Listens Reel had 2.5 times their usual engagement.',
+            'watch' => [],
+            'trends' => ['@onehousesocialclub\'s Living Room Listens Reel had 2.5 times their usual engagement.'],
+        ], $facts);
+
+        $this->assertFalse($wrongMultiplier['ok']);
+        $this->assertContains(
+            'times-usual figure does not match @onehousesocialclub posts',
+            $wrongMultiplier['errors'],
+        );
+
+        $weekStandout = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => $actions,
+            'own_summary' => 'ok',
+            'competitor_summary' => '@onehousesocialclub posted 5 times this week and had a standout Living Room Listens Reel at 5.0 times their usual.',
+            'watch' => [],
+        ], $facts);
+
+        // Softens "this week" when the standout is outside the 7-day window, and keeps the correct 5.0x.
+        $this->assertTrue($weekStandout['ok'], implode('; ', $weekStandout['errors']));
+        $this->assertStringContainsString('recently', $weekStandout['output']['competitor_summary']);
+        $this->assertStringNotContainsString('this week', $weekStandout['output']['competitor_summary']);
+        $this->assertStringContainsString('5.0', $weekStandout['output']['competitor_summary']);
+
+        $correct = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => $actions,
+            'own_summary' => 'ok',
+            'competitor_summary' => '@great.friendship hit 2.5x this week. @onehousesocialclub\'s Living Room Listens Reel recently got 5.0 times their usual.',
+            'watch' => [],
+        ], $facts);
+
+        $this->assertTrue($correct['ok'], implode('; ', $correct['errors']));
     }
 
     /**
