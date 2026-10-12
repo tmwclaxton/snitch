@@ -31,6 +31,8 @@ class DailyBriefValidator
         $output = $this->rewriteBorrowedCompetitorNames($output, $facts);
         $output = $this->rewriteUnsupportedStandoutClaims($output, $facts);
         $output = $this->rewriteUnsupportedWeekBestClaims($output, $facts);
+        $output = $this->rewriteUnsupportedDailyClaims($output, $facts);
+        $output = $this->rewriteLongestGapQualification($output, $facts);
         $errors = [];
 
         $headline = trim((string) ($output['headline'] ?? ''));
@@ -808,6 +810,171 @@ class DailyBriefValidator
     }
 
     /**
+     * Soften unsupported daily / almost-daily / daily-like wording so a good brief
+     * is not discarded for a cadence adjective.
+     *
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function rewriteUnsupportedDailyClaims(array $output, array $facts): array
+    {
+        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+            if (isset($output[$field]) && is_string($output[$field])) {
+                $output[$field] = $this->rewriteUnsupportedDailyClaimsInText($output[$field], $facts);
+            }
+        }
+
+        if (isset($output['watch']) && is_array($output['watch'])) {
+            $output['watch'] = array_map(
+                fn (mixed $item): mixed => is_string($item)
+                    ? $this->rewriteUnsupportedDailyClaimsInText($item, $facts)
+                    : $item,
+                $output['watch'],
+            );
+        }
+
+        if (isset($output['trends']) && is_array($output['trends'])) {
+            $output['trends'] = array_map(
+                fn (mixed $item): mixed => is_string($item)
+                    ? $this->rewriteUnsupportedDailyClaimsInText($item, $facts)
+                    : $item,
+                $output['trends'],
+            );
+        }
+
+        if (isset($output['actions']) && is_array($output['actions'])) {
+            foreach ($output['actions'] as $index => $action) {
+                if (! is_array($action)) {
+                    continue;
+                }
+
+                foreach (['title', 'why', 'how', 'hook'] as $field) {
+                    if (isset($action[$field]) && is_string($action[$field])) {
+                        $action[$field] = $this->rewriteUnsupportedDailyClaimsInText($action[$field], $facts);
+                    }
+                }
+
+                $output['actions'][$index] = $action;
+            }
+        }
+
+        return $output;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    public function rewriteUnsupportedDailyClaimsInText(string $text, array $facts): string
+    {
+        if ($text === '' || $this->unsupportedDailyClaims($text, $facts) === []) {
+            return $text;
+        }
+
+        $rewritten = $text;
+        $rewritten = preg_replace('/\bdaily[\s\-]?like\b/iu', 'recent', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\bnear[\s\-]?daily\b/iu', 'recent', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\b(?:almost|nearly|practically|pretty\s+much)\s+(?:daily|every\s+day)\b/iu', 'regularly', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\b(?:posts?|posting|posted)\s+most\s+days\b/iu', 'posts often', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\b(?:posts?|posting|posted)\s+daily\b/iu', 'posts', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\bdaily\s+(?:posts?|posting)\b/iu', 'recent posting', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\bevery\s+day\b/iu', 'often', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\s{2,}/u', ' ', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\s+([,.;:!?])/u', '$1', $rewritten) ?? $rewritten;
+
+        return trim($rewritten);
+    }
+
+    /**
+     * Qualify "longest gap among all tracked accounts" when an empty-sync tracker exists.
+     *
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function rewriteLongestGapQualification(array $output, array $facts): array
+    {
+        if (! $this->factsHaveEmptySyncTracker($facts)) {
+            return $output;
+        }
+
+        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+            if (isset($output[$field]) && is_string($output[$field])) {
+                $output[$field] = $this->rewriteLongestGapQualificationInText($output[$field]);
+            }
+        }
+
+        if (isset($output['watch']) && is_array($output['watch'])) {
+            $output['watch'] = array_map(
+                fn (mixed $item): mixed => is_string($item)
+                    ? $this->rewriteLongestGapQualificationInText($item)
+                    : $item,
+                $output['watch'],
+            );
+        }
+
+        if (isset($output['trends']) && is_array($output['trends'])) {
+            $output['trends'] = array_map(
+                fn (mixed $item): mixed => is_string($item)
+                    ? $this->rewriteLongestGapQualificationInText($item)
+                    : $item,
+                $output['trends'],
+            );
+        }
+
+        if (isset($output['actions']) && is_array($output['actions'])) {
+            foreach ($output['actions'] as $index => $action) {
+                if (! is_array($action)) {
+                    continue;
+                }
+
+                foreach (['title', 'why', 'how', 'hook'] as $field) {
+                    if (isset($action[$field]) && is_string($action[$field])) {
+                        $action[$field] = $this->rewriteLongestGapQualificationInText($action[$field]);
+                    }
+                }
+
+                $output['actions'][$index] = $action;
+            }
+        }
+
+        return $output;
+    }
+
+    public function rewriteLongestGapQualificationInText(string $text): string
+    {
+        if ($text === '' || preg_match('/\blongest\b/i', $text) !== 1) {
+            return $text;
+        }
+
+        $rewritten = preg_replace(
+            '/\bamong all tracked accounts\b/iu',
+            'among accounts with posts',
+            $text,
+        ) ?? $text;
+
+        return preg_replace(
+            '/\bamong all (?:the )?accounts\b/iu',
+            'among accounts with posts',
+            $rewritten,
+        ) ?? $rewritten;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    public function factsHaveEmptySyncTracker(array $facts): bool
+    {
+        foreach ([$facts['own'] ?? null, ...($facts['competitors'] ?? [])] as $row) {
+            if (is_array($row) && ($row['sync_empty'] ?? false) === true) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @param  array<string, mixed>  $facts
      */
     public function unsupportedFollowerWindow(string $text, array $facts): ?string
@@ -1538,6 +1705,10 @@ class DailyBriefValidator
             }
 
             $cadence = is_array($row['cadence'] ?? null) ? $row['cadence'] : [];
+            if (! isset($cadence['posts_last_7d']) && ! isset($cadence['posts_last_7d_count'])) {
+                $cadence['posts_last_7d'] = (int) ($row['posts_last_7d_count'] ?? $row['posts_last_7d'] ?? 0);
+            }
+
             if (! $this->cadenceLooksAlmostDaily($cadence)) {
                 continue;
             }
@@ -1553,6 +1724,11 @@ class DailyBriefValidator
 
     public function claimsDailyPosting(string $text): bool
     {
+        // Soft cadence adjectives are handled by claimsAlmostDailyPosting first.
+        if ($this->claimsAlmostDailyPosting($text)) {
+            return false;
+        }
+
         if (preg_match('/\b(?:posts?|posting|posted)\s+(?:daily|every\s+day)\b/i', $text) === 1) {
             return true;
         }
@@ -1568,6 +1744,10 @@ class DailyBriefValidator
     public function claimsAlmostDailyPosting(string $text): bool
     {
         if (preg_match('/\b(?:almost|nearly|practically|pretty\s+much)\s+(?:daily|every\s+day)\b/i', $text) === 1) {
+            return true;
+        }
+
+        if (preg_match('/\b(?:daily[\s\-]?like|near[\s\-]?daily)\b/i', $text) === 1) {
             return true;
         }
 
@@ -1603,6 +1783,8 @@ class DailyBriefValidator
     }
 
     /**
+     * Almost-daily / daily-like / near-daily: 6+ distinct days, or at least 5 posts in 7 days.
+     *
      * @param  array<string, mixed>  $cadence
      */
     private function cadenceLooksAlmostDaily(array $cadence): bool
@@ -1611,7 +1793,13 @@ class DailyBriefValidator
             return true;
         }
 
-        return (int) ($cadence['distinct_days_posted_last_7'] ?? 0) >= 6;
+        if ((int) ($cadence['distinct_days_posted_last_7'] ?? 0) >= 6) {
+            return true;
+        }
+
+        $posts = (int) ($cadence['posts_last_7d'] ?? $cadence['posts_last_7d_count'] ?? 0);
+
+        return $posts >= 5;
     }
 
     /**

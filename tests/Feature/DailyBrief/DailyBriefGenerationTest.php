@@ -711,6 +711,7 @@ class DailyBriefGenerationTest extends TestCase
                     'days_since_last_post' => 3,
                     'distinct_days_posted_last_7' => 6,
                     'posted_every_day_last_7' => false,
+                    'posted_almost_daily_last_7' => true,
                 ],
                 [
                     'handle' => 'sobersocial_',
@@ -718,80 +719,75 @@ class DailyBriefGenerationTest extends TestCase
                     'days_since_last_post' => 1,
                     'distinct_days_posted_last_7' => 4,
                     'posted_every_day_last_7' => false,
+                    'posted_almost_daily_last_7' => false,
                 ],
             ],
         ];
 
+        $actions = [
+            ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+        ];
+
+        // Unsupported "posts daily" is rewritten so the brief can keep the rest of the copy.
         $result = app(DailyBriefValidator::class)->validate([
             'headline' => 'Plan for today',
-            'actions' => [
-                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-            ],
+            'actions' => $actions,
             'own_summary' => 'ok',
             'competitor_summary' => 'Goodgym posts daily but hides likes',
             'watch' => ['sobersocial_ posts daily'],
         ], $facts);
 
-        $this->assertFalse($result['ok']);
-        $this->assertContains('unsupported daily claim for @goodgym', $result['errors']);
-        $this->assertContains('unsupported daily claim for @sobersocial_', $result['errors']);
+        $this->assertTrue($result['ok'], implode('; ', $result['errors']));
+        $this->assertStringNotContainsString('posts daily', $result['output']['competitor_summary']);
+        $this->assertStringNotContainsString('posts daily', $result['output']['watch'][0] ?? '');
+
+        $rawErrors = app(DailyBriefValidator::class)->unsupportedDailyClaims(
+            'Goodgym posts daily but hides likes',
+            $facts,
+        );
+        $this->assertContains('unsupported daily claim for @goodgym', $rawErrors);
 
         $facts['cadence'][0]['posted_every_day_last_7'] = true;
         $ok = app(DailyBriefValidator::class)->validate([
             'headline' => 'Plan for today',
-            'actions' => [
-                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-            ],
+            'actions' => $actions,
             'own_summary' => 'ok',
             'competitor_summary' => 'Goodgym posts daily but hides likes',
             'watch' => ['Keep an eye on @sobersocial_'],
         ], $facts);
 
         $this->assertTrue($ok['ok'], implode('; ', $ok['errors']));
+        $this->assertStringContainsString('posts daily', $ok['output']['competitor_summary']);
     }
 
-    public function test_validator_rejects_daily_claims_then_retries_and_falls_back(): void
+    public function test_validator_rewrites_daily_claims_without_falling_back(): void
     {
         $user = User::factory()->create(['daily_brief_enabled' => true]);
         BrandProfile::factory()->for($user)->create();
         $this->seedAccounts($user);
 
         Http::fake([
-            'https://nano-gpt.test/api/v1/chat/completions' => Http::sequence()
-                ->push($this->llmResponse([
-                    'headline' => 'Plan for today',
-                    'actions' => [
-                        ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                        ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                        ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                    ],
-                    'own_summary' => 'ok',
-                    'competitor_summary' => 'Goodgym posts daily but hides likes',
-                    'watch' => ['ok'],
-                ]))
-                ->push($this->llmResponse([
-                    'headline' => 'Plan for today',
-                    'actions' => [
-                        ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                        ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                        ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                    ],
-                    'own_summary' => 'ok',
-                    'competitor_summary' => 'Goodgym still posts every day',
-                    'watch' => ['ok'],
-                ])),
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response($this->llmResponse([
+                'headline' => 'Plan for today',
+                'actions' => [
+                    ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                    ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                    ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ],
+                'own_summary' => 'ok',
+                'competitor_summary' => 'Goodgym posts daily but hides likes',
+                'watch' => ['ok'],
+            ])),
         ]);
 
         $brief = app(DailyBriefGenerator::class)->generate($user);
 
-        $this->assertSame(2, $brief->llm_attempts);
-        $this->assertTrue($brief->payload['validation']['used_fallback'] ?? false);
+        $this->assertSame(1, $brief->llm_attempts);
+        $this->assertFalse($brief->payload['validation']['used_fallback'] ?? true);
         $this->assertStringNotContainsString('posts daily', (string) ($brief->payload['competitor_summary'] ?? ''));
-        $this->assertStringNotContainsString('every day', (string) ($brief->payload['competitor_summary'] ?? ''));
+        $this->assertStringContainsString('Goodgym posts but hides likes', (string) ($brief->payload['competitor_summary'] ?? ''));
     }
 
     public function test_facts_spell_out_cadence_for_each_account(): void
@@ -841,51 +837,155 @@ class DailyBriefGenerationTest extends TestCase
             ],
         ];
 
+        $actions = [
+            ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+        ];
+
+        // Rewrite softens unsupported almost-daily wording instead of discarding the brief.
         $result = app(DailyBriefValidator::class)->validate([
             'headline' => 'Plan for today',
-            'actions' => [
-                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-            ],
+            'actions' => $actions,
             'own_summary' => 'ok',
             'competitor_summary' => 'ok',
             'watch' => ['@sobersocial_ posts almost daily'],
         ], $facts);
 
-        $this->assertFalse($result['ok']);
-        $this->assertContains('unsupported almost-daily claim for @sobersocial_', $result['errors']);
+        $this->assertTrue($result['ok'], implode('; ', $result['errors']));
+        $this->assertStringNotContainsString('almost daily', $result['output']['watch'][0] ?? '');
 
         $facts['cadence'][0]['distinct_days_posted_last_7'] = 6;
+        $facts['cadence'][0]['posts_last_7d'] = 6;
         $facts['cadence'][0]['posted_almost_daily_last_7'] = true;
         $ok = app(DailyBriefValidator::class)->validate([
             'headline' => 'Plan for today',
-            'actions' => [
-                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-            ],
+            'actions' => $actions,
             'own_summary' => 'ok',
             'competitor_summary' => 'ok',
             'watch' => ['@sobersocial_ posts almost daily'],
         ], $facts);
 
         $this->assertTrue($ok['ok'], implode('; ', $ok['errors']));
+        $this->assertStringContainsString('almost daily', $ok['output']['watch'][0] ?? '');
 
+        // Strict "posts daily" still fails even when almost-daily is true; rewrite softens it.
         $daily = app(DailyBriefValidator::class)->validate([
             'headline' => 'Plan for today',
-            'actions' => [
-                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
-            ],
+            'actions' => $actions,
             'own_summary' => 'ok',
             'competitor_summary' => 'ok',
             'watch' => ['@sobersocial_ posts daily'],
         ], $facts);
 
-        $this->assertFalse($daily['ok']);
-        $this->assertContains('unsupported daily claim for @sobersocial_', $daily['errors']);
+        $this->assertTrue($daily['ok'], implode('; ', $daily['errors']));
+        $this->assertStringNotContainsString('posts daily', $daily['output']['watch'][0] ?? '');
+    }
+
+    public function test_validator_rewrites_daily_like_watch_when_handle_has_few_posts(): void
+    {
+        $facts = [
+            'allowed_handles' => ['sobersocial_', 'onehousesocialclub', 'letsgosocialuk', 'fuss.london'],
+            'allowed_post_ids' => [],
+            'brief_date' => '2026-10-12',
+            'own' => [
+                'handle' => 'letsgosocialuk',
+                'days_since_last_post' => 11,
+                'posts_last_7d_count' => 0,
+            ],
+            'competitors' => [
+                [
+                    'handle' => 'sobersocial_',
+                    'posts_last_7d_count' => 3,
+                    'sync_empty' => false,
+                    'followers_change_7d' => [
+                        'change' => 42,
+                        'from_date' => '2026-10-05',
+                        'label' => '+42 in 7 days',
+                    ],
+                    'cadence' => [
+                        'posts_last_7d' => 3,
+                        'days_since_last_post' => 1,
+                        'distinct_days_posted_last_7' => 3,
+                        'posted_every_day_last_7' => false,
+                        'posted_almost_daily_last_7' => false,
+                    ],
+                ],
+                [
+                    'handle' => 'onehousesocialclub',
+                    'posts_last_7d_count' => 6,
+                    'sync_empty' => false,
+                    'cadence' => [
+                        'posts_last_7d' => 6,
+                        'distinct_days_posted_last_7' => 6,
+                        'posted_almost_daily_last_7' => true,
+                        'posted_every_day_last_7' => false,
+                    ],
+                ],
+                [
+                    'handle' => 'fuss.london',
+                    'posts_last_7d_count' => 0,
+                    'sync_empty' => true,
+                    'cadence' => [
+                        'posts_last_7d' => 0,
+                        'posted_every_day_last_7' => false,
+                        'posted_almost_daily_last_7' => false,
+                    ],
+                ],
+            ],
+            'cadence' => [
+                [
+                    'handle' => 'sobersocial_',
+                    'posts_last_7d' => 3,
+                    'days_since_last_post' => 1,
+                    'distinct_days_posted_last_7' => 3,
+                    'posted_every_day_last_7' => false,
+                    'posted_almost_daily_last_7' => false,
+                ],
+                [
+                    'handle' => 'onehousesocialclub',
+                    'posts_last_7d' => 6,
+                    'distinct_days_posted_last_7' => 6,
+                    'posted_almost_daily_last_7' => true,
+                    'posted_every_day_last_7' => false,
+                ],
+            ],
+            'cadence_gaps' => [
+                'own_days' => 11,
+                'longest_handle' => 'letsgosocialuk',
+                'longest_days' => 11,
+                'own_is_longest' => true,
+            ],
+        ];
+
+        $actions = [
+            [
+                'title' => 'Close the gap',
+                'why' => '@letsgosocialuk has the longest gap among all tracked accounts.',
+                'how' => 'Post a Reel today.',
+                'related_handles' => ['letsgosocialuk'],
+                'related_post_ids' => [],
+            ],
+            ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+        ];
+
+        $result = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => $actions,
+            'own_summary' => '@letsgosocialuk has the longest gap among all tracked accounts.',
+            'competitor_summary' => '@onehousesocialclub posts almost daily.',
+            'watch' => ['sobersocial_\'s consistent daily-like posting and large follower growth (+42 in 7 days)'],
+            'trends' => ['Watch sobersocial_ near-daily posting.'],
+        ], $facts);
+
+        $this->assertTrue($result['ok'], implode('; ', $result['errors']));
+        $this->assertStringNotContainsString('daily-like', $result['output']['watch'][0] ?? '');
+        $this->assertStringNotContainsString('near-daily', $result['output']['trends'][0] ?? '');
+        $this->assertStringContainsString('almost daily', $result['output']['competitor_summary']);
+        $this->assertStringContainsString('among accounts with posts', $result['output']['own_summary']);
+        $this->assertStringContainsString('among accounts with posts', $result['output']['actions'][0]['why'] ?? '');
+        $this->assertStringNotContainsString('among all tracked accounts', $result['output']['own_summary']);
     }
 
     public function test_validator_allows_brand_own_handle_even_when_missing_from_allowed_handles(): void

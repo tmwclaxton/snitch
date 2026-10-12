@@ -222,8 +222,9 @@ Rules:
 - Cadence is in facts.cadence: posts_last_7d, days_since_last_post, distinct_days_posted_last_7, posted_every_day_last_7, posted_almost_daily_last_7.
 - Brand and own-account handles in facts.brand.own_handles and facts.own.handle are always allowed, even if they also appear in facts.allowed_handles.
 - Do not say an account posts daily or every day unless that handle has posted_every_day_last_7 true.
-- Do not say almost daily, nearly daily, almost every day, or posts most days unless posted_almost_daily_last_7 is true (6 or 7 distinct days with a post in the last 7).
+- Do not say almost daily, nearly daily, near-daily, daily-like, almost every day, or posts most days unless posted_almost_daily_last_7 is true or posts_last_7d is at least 5.
 - Use the 7-day count and days since last post instead of a cadence adjective.
+- If you claim the longest gap among tracked accounts and any competitor is sync_empty, say "among accounts with posts".
 - When describing follower change, use facts.own.followers_change_7d.label (for example +4 since 27 September). Do not say gained or lost in the last 7 days or this week unless from_date is exactly 7 days before brief_date.
 - standout_winners and top_competitor_hit may look back 30 days. For any "best post this week" or "last 7 days" claim, only use posts_last_7d, best_post_7d, or top_competitor_hit_7d. Never call a 14/30-day standout_winners post a "this week" standout or hit.
 - Do not say the brand has the longest posting gap unless facts.cadence_gaps.own_is_longest is true. If you mention a longest gap, use cadence_gaps.longest_handle.
