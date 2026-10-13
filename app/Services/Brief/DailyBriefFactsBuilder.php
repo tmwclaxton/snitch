@@ -223,9 +223,12 @@ class DailyBriefFactsBuilder
                 ->first();
         }
 
+        $displayName = trim((string) ($account->display_name ?? ''));
+
         return [
             'tracked_account_id' => (int) $account->id,
             'handle' => $this->normaliseHandle((string) $account->handle),
+            'display_name' => $displayName !== '' ? $displayName : null,
             'is_own_account' => $isOwn,
             'followers_now' => $followersNow,
             'followers_change_1d' => $change1d,

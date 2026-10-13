@@ -2068,20 +2068,25 @@ class DailyBriefGenerationTest extends TestCase
             ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
         ];
 
+        $badLine = '@onehousesocialclub\'s Living Room Listens Reel had 2.5 times their usual engagement.';
+        $this->assertSame(
+            'times-usual figure does not match @onehousesocialclub posts',
+            app(DailyBriefValidator::class)->unsupportedHandleTimesUsualClaim($badLine, $facts),
+        );
+
         $wrongMultiplier = app(DailyBriefValidator::class)->validate([
             'headline' => 'Plan for today',
             'actions' => $actions,
             'own_summary' => 'ok',
-            'competitor_summary' => '@onehousesocialclub\'s Living Room Listens Reel had 2.5 times their usual engagement.',
+            'competitor_summary' => $badLine,
             'watch' => [],
-            'trends' => ['@onehousesocialclub\'s Living Room Listens Reel had 2.5 times their usual engagement.'],
+            'trends' => [$badLine],
         ], $facts);
 
-        $this->assertFalse($wrongMultiplier['ok']);
-        $this->assertContains(
-            'times-usual figure does not match @onehousesocialclub posts',
-            $wrongMultiplier['errors'],
-        );
+        // Rewrite swaps the borrowed 2.5x to this handle's 5.0x instead of discarding the brief.
+        $this->assertTrue($wrongMultiplier['ok'], implode('; ', $wrongMultiplier['errors']));
+        $this->assertStringContainsString('5.0', $wrongMultiplier['output']['competitor_summary']);
+        $this->assertStringNotContainsString('2.5', $wrongMultiplier['output']['competitor_summary']);
 
         $weekStandout = app(DailyBriefValidator::class)->validate([
             'headline' => 'Plan for today',
@@ -2106,6 +2111,110 @@ class DailyBriefGenerationTest extends TestCase
         ], $facts);
 
         $this->assertTrue($correct['ok'], implode('; ', $correct['errors']));
+    }
+
+    public function test_validator_catches_display_name_multiplier_misattribution(): void
+    {
+        $facts = [
+            'allowed_handles' => ['onehousesocialclub', 'great.friendship', 'goodgym'],
+            'allowed_post_ids' => [260, 248, 300],
+            'brief_date' => '2026-10-13',
+            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 97],
+            'competitors' => [
+                [
+                    'handle' => 'onehousesocialclub',
+                    'display_name' => 'One House Social Club',
+                    'posts_last_7d' => [
+                        [
+                            'post_id' => 260,
+                            'handle' => 'onehousesocialclub',
+                            'times_usual' => 23.5,
+                            'format' => 'Carousel',
+                            'hook' => 'presentation night',
+                            'times_usual_label' => '23.5 times their usual',
+                        ],
+                        [
+                            'post_id' => 261,
+                            'handle' => 'onehousesocialclub',
+                            'times_usual' => 0.5,
+                            'format' => 'Reel',
+                        ],
+                        [
+                            'post_id' => 262,
+                            'handle' => 'onehousesocialclub',
+                            'times_usual' => 0.7,
+                            'format' => 'Image',
+                        ],
+                    ],
+                    'best_post_7d' => [
+                        'post_id' => 260,
+                        'handle' => 'onehousesocialclub',
+                        'times_usual' => 23.5,
+                    ],
+                ],
+                [
+                    'handle' => 'great.friendship',
+                    'display_name' => 'Great Friendship',
+                    'posts_last_7d' => [[
+                        'post_id' => 248,
+                        'handle' => 'great.friendship',
+                        'times_usual' => 2.5,
+                        'format' => 'Reel',
+                        'hook' => 'UNICEF',
+                        'times_usual_label' => '2.5 times their usual',
+                    ]],
+                    'best_post_7d' => [
+                        'post_id' => 248,
+                        'handle' => 'great.friendship',
+                        'times_usual' => 2.5,
+                    ],
+                ],
+                [
+                    'handle' => 'goodgym',
+                    'display_name' => 'GoodGym',
+                    'posts_last_7d' => [[
+                        'post_id' => 300,
+                        'handle' => 'goodgym',
+                        'times_usual' => null,
+                        'views_vs_usual' => 1.7,
+                        'format' => 'Reel',
+                        'times_usual_label' => '1.7 times their usual',
+                    ]],
+                    'best_post_7d' => [
+                        'post_id' => 300,
+                        'handle' => 'goodgym',
+                        'views_vs_usual' => 1.7,
+                    ],
+                ],
+            ],
+        ];
+
+        $badSummary = 'One House Social Club hit 1.7 times their usual engagement and Great Friendship\'s UNICEF Reel got 1.7 times their usual views.';
+
+        $rawError = app(DailyBriefValidator::class)->unsupportedHandleTimesUsualClaim($badSummary, $facts);
+        $this->assertSame('times-usual figure does not match @onehousesocialclub posts', $rawError);
+
+        $actions = [
+            ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+        ];
+
+        $result = app(DailyBriefValidator::class)->validate([
+            'headline' => 'One House presentation-night Carousel at 23.5x usual',
+            'actions' => $actions,
+            'own_summary' => 'ok',
+            'competitor_summary' => $badSummary,
+            'watch' => [],
+            'trends' => [$badSummary],
+        ], $facts);
+
+        $this->assertTrue($result['ok'], implode('; ', $result['errors']));
+        $this->assertStringContainsString('23.5', $result['output']['competitor_summary']);
+        $this->assertStringContainsString('2.5', $result['output']['competitor_summary']);
+        $this->assertStringNotContainsString('1.7', $result['output']['competitor_summary']);
+        $this->assertStringNotContainsString('1.7', $result['output']['trends'][0] ?? '');
+        $this->assertStringContainsString('23.5x', $result['output']['headline']);
     }
 
     /**

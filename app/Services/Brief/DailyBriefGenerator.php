@@ -216,7 +216,7 @@ Rules:
 - hook is the literal first line, max 12 words. Never quote a scene description.
 - When likes are hidden, say "likes hidden" or "N times their usual" from views_vs_usual. Never print null, 0x, or "N views vs usual".
 - Prefer "times their usual" over jargon. Never mix views and likes labels.
-- Never attach one handle's times_usual / views_vs_usual / Nx figure to another handle's post. Each multiplier stays with that handle's posts only.
+- Never attach one handle's times_usual / views_vs_usual / Nx figure to another handle's post. Each multiplier stays with that handle's posts only, including when you use a display name (for example "One House Social Club" for @onehousesocialclub).
 - Zero and one are valid counts when they appear in the facts (for example "0 posts in the last 7 days").
 - Do not use accounts with no posts (sync_empty, or null last_posted_at) for longest-gap claims. facts.cadence_gaps already excludes them.
 - Cadence is in facts.cadence: posts_last_7d, days_since_last_post, distinct_days_posted_last_7, posted_every_day_last_7, posted_almost_daily_last_7.

@@ -33,6 +33,7 @@ class DailyBriefValidator
         $output = $this->rewriteUnsupportedWeekBestClaims($output, $facts);
         $output = $this->rewriteUnsupportedDailyClaims($output, $facts);
         $output = $this->rewriteLongestGapQualification($output, $facts);
+        $output = $this->rewriteUnsupportedHandleTimesUsualClaims($output, $facts);
         $errors = [];
 
         $headline = trim((string) ($output['headline'] ?? ''));
@@ -766,7 +767,7 @@ class DailyBriefValidator
 
         foreach ($sentences as $sentence) {
             if ($this->claimsAlmostDailyPosting($sentence)) {
-                $mentioned = $this->handlesMentionedIn($sentence, $handles);
+                $mentioned = $this->handlesMentionedIn($sentence, $handles, $facts);
 
                 if ($mentioned === []) {
                     if ($almostDailyPosters === []) {
@@ -789,7 +790,7 @@ class DailyBriefValidator
                 continue;
             }
 
-            $mentioned = $this->handlesMentionedIn($sentence, $handles);
+            $mentioned = $this->handlesMentionedIn($sentence, $handles, $facts);
 
             if ($mentioned === []) {
                 if ($dailyPosters === []) {
@@ -1011,7 +1012,7 @@ class DailyBriefValidator
             return null;
         }
 
-        $pairs = $this->figureHandlePairsInText($text, $this->allowedHandles($facts));
+        $pairs = $this->figureHandlePairsInText($text, $this->allowedHandles($facts), $facts);
 
         if ($pairs === []) {
             return null;
@@ -1030,7 +1031,8 @@ class DailyBriefValidator
     }
 
     /**
-     * A named handle's times-usual / Nx claim must match that handle's multipliers in facts.
+     * A named competitor's times-usual / Nx claim must match that handle's multipliers in facts.
+     * Names may be @handles or display / brand-style names from facts.
      *
      * @param  array<string, mixed>  $facts
      */
@@ -1040,7 +1042,7 @@ class DailyBriefValidator
             return null;
         }
 
-        foreach ($this->figureHandlePairsInText($text, $this->allowedHandles($facts)) as $pair) {
+        foreach ($this->figureHandlePairsInText($text, $this->allowedHandles($facts), $facts) as $pair) {
             if ($pair['handle'] === null) {
                 continue;
             }
@@ -1053,6 +1055,116 @@ class DailyBriefValidator
         }
 
         return null;
+    }
+
+    /**
+     * Rewrite a misattributed Nx / times-usual figure to that named competitor's best known multiplier.
+     *
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function rewriteUnsupportedHandleTimesUsualClaims(array $output, array $facts): array
+    {
+        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+            if (isset($output[$field]) && is_string($output[$field])) {
+                $output[$field] = $this->rewriteUnsupportedHandleTimesUsualClaimsInText($output[$field], $facts);
+            }
+        }
+
+        if (isset($output['watch']) && is_array($output['watch'])) {
+            $output['watch'] = array_map(
+                fn (mixed $item): mixed => is_string($item)
+                    ? $this->rewriteUnsupportedHandleTimesUsualClaimsInText($item, $facts)
+                    : $item,
+                $output['watch'],
+            );
+        }
+
+        if (isset($output['trends']) && is_array($output['trends'])) {
+            $output['trends'] = array_map(
+                fn (mixed $item): mixed => is_string($item)
+                    ? $this->rewriteUnsupportedHandleTimesUsualClaimsInText($item, $facts)
+                    : $item,
+                $output['trends'],
+            );
+        }
+
+        if (isset($output['actions']) && is_array($output['actions'])) {
+            foreach ($output['actions'] as $index => $action) {
+                if (! is_array($action)) {
+                    continue;
+                }
+
+                foreach (['title', 'why', 'how', 'hook'] as $field) {
+                    if (isset($action[$field]) && is_string($action[$field])) {
+                        $action[$field] = $this->rewriteUnsupportedHandleTimesUsualClaimsInText($action[$field], $facts);
+                    }
+                }
+
+                $output['actions'][$index] = $action;
+            }
+        }
+
+        return $output;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    public function rewriteUnsupportedHandleTimesUsualClaimsInText(string $text, array $facts): string
+    {
+        if ($text === '' || $this->unsupportedHandleTimesUsualClaim($text, $facts) === null) {
+            return $text;
+        }
+
+        $rewritten = $text;
+
+        foreach ($this->figureHandlePairsInText($rewritten, $this->allowedHandles($facts), $facts) as $pair) {
+            if ($pair['handle'] === null) {
+                continue;
+            }
+
+            $allowed = $this->handleTimesUsualNumbers($facts, [$pair['handle']]);
+
+            if ($this->numberIsKnownAsTimesUsual($pair['figure'], $allowed)) {
+                continue;
+            }
+
+            $replacement = $this->handleReplacementFigure($facts, $pair['handle']);
+
+            if ($replacement !== null && $replacement !== $pair['figure']) {
+                $rewritten = $this->replaceTimesUsualFigure($rewritten, $pair['figure'], $replacement);
+            }
+        }
+
+        return trim(preg_replace('/\s{2,}/u', ' ', $rewritten) ?? $rewritten);
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    private function handleReplacementFigure(array $facts, string $handle): ?string
+    {
+        $candidates = [];
+
+        foreach ($this->handlePosts($facts, [$handle]) as $post) {
+            foreach (['times_usual', 'views_vs_usual'] as $key) {
+                if (! isset($post[$key]) || ! is_numeric($post[$key])) {
+                    continue;
+                }
+
+                $candidates[] = (float) $post[$key];
+            }
+        }
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        rsort($candidates);
+
+        return number_format($candidates[0], 1, '.', '');
     }
 
     /**
@@ -1070,7 +1182,7 @@ class DailyBriefValidator
             return null;
         }
 
-        $handles = $this->handlesMentionedIn($text, $this->allowedHandles($facts));
+        $handles = $this->handlesMentionedIn($text, $this->allowedHandles($facts), $facts);
         $posts = $this->sevenDayPosts($facts, $handles);
 
         foreach ($posts as $post) {
@@ -1149,7 +1261,7 @@ class DailyBriefValidator
 
         $rewritten = $text;
 
-        foreach ($this->figureHandlePairsInText($rewritten, $this->allowedHandles($facts)) as $pair) {
+        foreach ($this->figureHandlePairsInText($rewritten, $this->allowedHandles($facts), $facts) as $pair) {
             $handles = $pair['handle'] !== null ? [$pair['handle']] : [];
             $allowed = $this->sevenDayTimesUsualNumbers($facts, $handles);
 
@@ -1234,33 +1346,16 @@ class DailyBriefValidator
     }
 
     /**
-     * Pair each times-usual / Nx figure with the nearest preceding named handle.
+     * Pair each times-usual / Nx figure with the nearest preceding named competitor
+     * (@handle, handle token, display_name, or handle-derived brand phrase).
      *
      * @param  list<string>  $allowedHandles
+     * @param  array<string, mixed>  $facts
      * @return list<array{figure: string, handle: ?string}>
      */
-    public function figureHandlePairsInText(string $text, array $allowedHandles): array
+    public function figureHandlePairsInText(string $text, array $allowedHandles, array $facts = []): array
     {
-        $handles = [];
-
-        foreach ($allowedHandles as $handle) {
-            $normalised = $this->normaliseHandle($handle);
-            if ($normalised === '') {
-                continue;
-            }
-
-            $pattern = '/(?<![A-Za-z0-9.])@?'.preg_quote($normalised, '/').'(?![A-Za-z0-9.])/i';
-            if (preg_match_all($pattern, $text, $matches, PREG_OFFSET_CAPTURE) > 0) {
-                foreach ($matches[0] as $match) {
-                    $handles[] = [
-                        'handle' => $normalised,
-                        'offset' => (int) $match[1],
-                    ];
-                }
-            }
-        }
-
-        usort($handles, fn (array $a, array $b): int => $a['offset'] <=> $b['offset']);
+        $mentions = $this->competitorMentionsInText($text, $allowedHandles, $facts);
 
         $pairs = [];
         $figurePattern = '/(\d+(?:\.\d+)?)\s*(?:[x×]|times (?:their |your |the )?usual)/iu';
@@ -1271,14 +1366,14 @@ class DailyBriefValidator
                 $offset = (int) $match[1];
                 $handle = null;
 
-                foreach ($handles as $candidate) {
+                foreach ($mentions as $candidate) {
                     if ($candidate['offset'] <= $offset) {
                         $handle = $candidate['handle'];
                     }
                 }
 
-                if ($handle === null && count($handles) === 1) {
-                    $handle = $handles[0]['handle'];
+                if ($handle === null && count($mentions) === 1) {
+                    $handle = $mentions[0]['handle'];
                 }
 
                 $pairs[] = ['figure' => $figure, 'handle' => $handle];
@@ -1291,14 +1386,14 @@ class DailyBriefValidator
                 $offset = (int) $full[1];
                 $handle = null;
 
-                foreach ($handles as $candidate) {
+                foreach ($mentions as $candidate) {
                     if ($candidate['offset'] <= $offset) {
                         $handle = $candidate['handle'];
                     }
                 }
 
-                if ($handle === null && count($handles) === 1) {
-                    $handle = $handles[0]['handle'];
+                if ($handle === null && count($mentions) === 1) {
+                    $handle = $mentions[0]['handle'];
                 }
 
                 foreach ([$ranges[1][$index][0], $ranges[2][$index][0]] as $raw) {
@@ -1320,6 +1415,159 @@ class DailyBriefValidator
         }
 
         return array_values($unique);
+    }
+
+    /**
+     * @param  list<string>  $allowedHandles
+     * @param  array<string, mixed>  $facts
+     * @return list<array{handle: string, offset: int}>
+     */
+    public function competitorMentionsInText(string $text, array $allowedHandles, array $facts = []): array
+    {
+        $wanted = array_values(array_unique(array_filter(array_map(
+            fn (string $handle): string => $this->normaliseHandle($handle),
+            $allowedHandles,
+        ))));
+
+        /** @var list<array{handle: string, alias: string}> $aliasRows */
+        $aliasRows = [];
+
+        foreach ($this->accountRowsFromFacts($facts) as $row) {
+            $handle = $this->normaliseHandle((string) ($row['handle'] ?? ''));
+            if ($handle === '' || ($wanted !== [] && ! in_array($handle, $wanted, true))) {
+                continue;
+            }
+
+            foreach ($this->aliasesForAccount($row) as $alias) {
+                $aliasRows[] = ['handle' => $handle, 'alias' => $alias];
+            }
+        }
+
+        foreach ($wanted as $handle) {
+            $aliasRows[] = ['handle' => $handle, 'alias' => $handle];
+            $aliasRows[] = ['handle' => $handle, 'alias' => '@'.$handle];
+
+            $spaced = trim(preg_replace('/[._\-]+/u', ' ', $handle) ?? $handle);
+            if ($spaced !== '' && $spaced !== $handle) {
+                $aliasRows[] = ['handle' => $handle, 'alias' => $spaced];
+            }
+        }
+
+        usort(
+            $aliasRows,
+            fn (array $a, array $b): int => mb_strlen($b['alias']) <=> mb_strlen($a['alias']),
+        );
+
+        $mentions = [];
+        $seen = [];
+
+        foreach ($aliasRows as $row) {
+            $alias = trim($row['alias']);
+            if ($alias === '') {
+                continue;
+            }
+
+            $pattern = $this->aliasMatchPattern($alias);
+            if (preg_match_all($pattern, $text, $matches, PREG_OFFSET_CAPTURE) === 0) {
+                continue;
+            }
+
+            foreach ($matches[0] as $match) {
+                $offset = (int) $match[1];
+                $key = $row['handle'].'@'.$offset;
+                if (isset($seen[$key])) {
+                    continue;
+                }
+                $seen[$key] = true;
+                $mentions[] = [
+                    'handle' => $row['handle'],
+                    'offset' => $offset,
+                ];
+            }
+        }
+
+        usort($mentions, fn (array $a, array $b): int => $a['offset'] <=> $b['offset']);
+
+        return $mentions;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return list<array<string, mixed>>
+     */
+    public function accountRowsFromFacts(array $facts): array
+    {
+        $rows = [];
+
+        if (is_array($facts['own'] ?? null)) {
+            $rows[] = $facts['own'];
+        }
+
+        foreach ($facts['competitors'] ?? [] as $row) {
+            if (is_array($row)) {
+                $rows[] = $row;
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @return list<string>
+     */
+    public function aliasesForAccount(array $row): array
+    {
+        $handle = $this->normaliseHandle((string) ($row['handle'] ?? ''));
+        $aliases = [];
+
+        if ($handle !== '') {
+            $aliases[] = $handle;
+            $aliases[] = '@'.$handle;
+            $spaced = trim(preg_replace('/[._\-]+/u', ' ', $handle) ?? $handle);
+            if ($spaced !== '' && strcasecmp($spaced, $handle) !== 0) {
+                $aliases[] = $spaced;
+            }
+        }
+
+        $display = trim((string) ($row['display_name'] ?? ''));
+        if ($display !== '') {
+            $aliases[] = $display;
+
+            // "One House Social Club" also matches prose that shortens to "One House".
+            $parts = preg_split('/\s+/u', $display) ?: [];
+            if (count($parts) >= 3) {
+                $aliases[] = $parts[0].' '.$parts[1];
+            }
+        }
+
+        return array_values(array_unique(array_filter(
+            $aliases,
+            fn (string $alias): bool => trim($alias) !== '',
+        )));
+    }
+
+    private function aliasMatchPattern(string $alias): string
+    {
+        $trimmed = trim($alias);
+
+        if (str_starts_with($trimmed, '@') || ! preg_match('/\s/u', $trimmed)) {
+            $normalised = $this->normaliseHandle($trimmed);
+
+            return '/(?<![A-Za-z0-9.])@?'.preg_quote($normalised, '/').'(?![A-Za-z0-9.])/iu';
+        }
+
+        $parts = preg_split('/\s+/u', $trimmed) ?: [];
+        $escaped = array_map(
+            fn (string $part): string => preg_quote($part, '/'),
+            array_values(array_filter($parts, fn (string $part): bool => $part !== '')),
+        );
+
+        if ($escaped === []) {
+            return '/(*FAIL)/';
+        }
+
+        return '/(?<![A-Za-z0-9])'.implode('\s+', $escaped).'(?![A-Za-z0-9])/iu';
     }
 
     /**
@@ -1399,7 +1647,7 @@ class DailyBriefValidator
         $gaps = is_array($facts['cadence_gaps'] ?? null) ? $facts['cadence_gaps'] : $this->cadenceGapsFromFacts($facts);
         $longestHandle = $this->normaliseHandle((string) ($gaps['longest_handle'] ?? ''));
         $ownHandle = $this->normaliseHandle((string) data_get($facts, 'own.handle', ''));
-        $mentioned = $this->handlesMentionedIn($text, $this->allowedHandles($facts));
+        $mentioned = $this->handlesMentionedIn($text, $this->allowedHandles($facts), $facts);
         $claimsOwn = preg_match('/\b(your|you have|the brand)\b/i', $text) === 1
             || ($ownHandle !== '' && in_array($ownHandle, $mentioned, true));
 
@@ -1804,27 +2052,15 @@ class DailyBriefValidator
 
     /**
      * @param  list<string>  $handles
+     * @param  array<string, mixed>  $facts
      * @return list<string>
      */
-    public function handlesMentionedIn(string $text, array $handles): array
+    public function handlesMentionedIn(string $text, array $handles, array $facts = []): array
     {
-        $found = [];
-
-        foreach ($handles as $handle) {
-            $normalised = $this->normaliseHandle($handle);
-
-            if ($normalised === '') {
-                continue;
-            }
-
-            $pattern = '/(?<![A-Za-z0-9.])@?'.preg_quote($normalised, '/').'(?![A-Za-z0-9.])/i';
-
-            if (preg_match($pattern, $text) === 1) {
-                $found[] = $normalised;
-            }
-        }
-
-        return $found;
+        return array_values(array_unique(array_map(
+            fn (array $mention): string => $mention['handle'],
+            $this->competitorMentionsInText($text, $handles, $facts),
+        )));
     }
 
     /**
@@ -1990,7 +2226,7 @@ class DailyBriefValidator
             return null;
         }
 
-        $handles = $this->handlesMentionedIn($text, $this->allowedHandles($facts));
+        $handles = $this->handlesMentionedIn($text, $this->allowedHandles($facts), $facts);
         $posts = $this->sevenDayPosts($facts, $handles);
 
         foreach ($facts['competitors'] ?? [] as $row) {

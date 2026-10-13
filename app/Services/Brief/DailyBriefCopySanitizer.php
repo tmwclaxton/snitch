@@ -59,6 +59,7 @@ class DailyBriefCopySanitizer
         $llmShape = $this->validator->rewriteUnsupportedWeekBestClaims($llmShape, $facts);
         $llmShape = $this->validator->rewriteUnsupportedDailyClaims($llmShape, $facts);
         $llmShape = $this->validator->rewriteLongestGapQualification($llmShape, $facts);
+        $llmShape = $this->validator->rewriteUnsupportedHandleTimesUsualClaims($llmShape, $facts);
 
         $payload['headline'] = (string) ($llmShape['headline'] ?? $headline);
         $payload['own_summary'] = (string) ($llmShape['own_summary'] ?? '');
