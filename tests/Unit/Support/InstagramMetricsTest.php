@@ -72,6 +72,42 @@ class InstagramMetricsTest extends TestCase
         $this->assertTrue($metrics['like_count_hidden']);
     }
 
+    public function test_incoming_metrics_reject_impossible_engagement_rate(): void
+    {
+        $this->assertSame(
+            'impossible_engagement_rate',
+            InstagramMetrics::incomingMetricsRejectReason(
+                ['likes' => 60644, 'comments' => 1209],
+                ['likes' => 676, 'comments' => 18],
+                5307,
+                ['likesCount' => 676],
+            ),
+        );
+    }
+
+    public function test_incoming_metrics_reject_discontinuous_likes_jump_without_raw_match(): void
+    {
+        $this->assertSame(
+            'discontinuous_likes_jump',
+            InstagramMetrics::incomingMetricsRejectReason(
+                ['likes' => 12000, 'comments' => 10],
+                ['likes' => 600, 'comments' => 8],
+                50000,
+                ['likesCount' => 600],
+            ),
+        );
+    }
+
+    public function test_incoming_metrics_allow_jump_when_raw_likes_match(): void
+    {
+        $this->assertTrue(InstagramMetrics::incomingMetricsArePlausible(
+            ['likes' => 12000, 'comments' => 10],
+            ['likes' => 600, 'comments' => 8],
+            50000,
+            ['likesCount' => 12000],
+        ));
+    }
+
     public function test_analysis_recency_covers_first_sync_without_widening_weekly_scrape(): void
     {
         config([

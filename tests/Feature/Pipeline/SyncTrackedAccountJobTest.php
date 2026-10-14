@@ -423,6 +423,150 @@ class SyncTrackedAccountJobTest extends TestCase
         Queue::assertNotPushed(AnalyzePostJob::class);
     }
 
+    public function test_sync_rejects_impossible_metrics_and_updates_raw_on_valid_refresh(): void
+    {
+        Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);
+
+        $user = User::factory()->create();
+        $this->enablePlatformBilling($user);
+        $account = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'onehousesocialclub',
+            'external_id' => 'ig_onehouse',
+            'url' => 'https://instagram.com/onehousesocialclub',
+            'display_name' => 'One House',
+            'followers' => 5307,
+            'last_synced_at' => now()->subDays(8),
+        ]);
+
+        $existing = Post::factory()->forAccount($account)->create([
+            'platform' => Platform::Instagram,
+            'external_id' => 'DeZ4A2VAjxT',
+            'url' => 'https://www.instagram.com/p/DeZ4A2VAjxT/',
+            'type' => PostType::Carousel,
+            'media_url' => 'https://cdn.example.com/carousel.jpg',
+            'posted_at' => now()->subDays(1),
+            'metrics' => [
+                'views' => 0,
+                'likes' => 676,
+                'comments' => 18,
+                'shares' => 0,
+                'clicks' => 0,
+            ],
+            'raw_payload' => [
+                'likesCount' => 676,
+                'commentsCount' => 18,
+                'shortCode' => 'DeZ4A2VAjxT',
+            ],
+        ]);
+        PostAnalysis::factory()->for($existing)->create([
+            'status' => AnalysisStatus::Completed,
+        ]);
+
+        $adapter = Mockery::mock(PlatformAdapter::class);
+        $adapter->shouldReceive('platform')->andReturn(Platform::Instagram);
+        $adapter->shouldReceive('resolveProfile')->once()->andReturn([
+            'handle' => 'onehousesocialclub',
+            'url' => 'https://instagram.com/onehousesocialclub',
+            'external_id' => 'ig_onehouse',
+            'display_name' => 'One House',
+            'followers' => 5307,
+        ]);
+        $adapter->shouldReceive('listRecentPosts')->once()->andReturn([
+            [
+                'external_id' => 'DeZ4A2VAjxT',
+                'url' => 'https://www.instagram.com/p/DeZ4A2VAjxT/',
+                'posted_at' => now()->subDays(1)->toIso8601String(),
+                'type' => PostType::Carousel->value,
+                'caption' => 'Poisoned metrics payload',
+                'media_url' => 'https://cdn.example.com/carousel.jpg',
+                'metrics' => [
+                    'views' => 0,
+                    'likes' => 60644,
+                    'comments' => 1209,
+                    'shares' => 0,
+                    'clicks' => 0,
+                ],
+                'raw_payload' => [
+                    'likesCount' => 676,
+                    'commentsCount' => 18,
+                    'shortCode' => 'DeZ4A2VAjxT',
+                ],
+            ],
+        ]);
+        $adapter->shouldReceive('hydrateMediaUrls')->once()->with([])->andReturn([]);
+
+        $adapters = Mockery::mock(PlatformAdapterManager::class);
+        $adapters->shouldReceive('driverFor')->andReturn('apify');
+        $adapters->shouldReceive('for')->with(Platform::Instagram)->andReturn($adapter);
+
+        $client = Mockery::mock(ApifyClient::class);
+        $client->shouldReceive('pullRunCosts')->andReturn([]);
+        $this->app->instance(ApifyClient::class, $client);
+
+        (new SyncTrackedAccountJob($account->id, force: true))->handle(
+            $adapters,
+            app(SnitchAnalyticsService::class),
+            app(VendorUsageCharger::class),
+        );
+
+        $existing->refresh();
+        $this->assertSame(676, $existing->metrics['likes'] ?? null);
+        $this->assertSame(18, $existing->metrics['comments'] ?? null);
+        $this->assertSame(676, $existing->raw_payload['likesCount'] ?? null);
+
+        $adapterValid = Mockery::mock(PlatformAdapter::class);
+        $adapterValid->shouldReceive('platform')->andReturn(Platform::Instagram);
+        $adapterValid->shouldReceive('resolveProfile')->once()->andReturn([
+            'handle' => 'onehousesocialclub',
+            'url' => 'https://instagram.com/onehousesocialclub',
+            'external_id' => 'ig_onehouse',
+            'display_name' => 'One House',
+            'followers' => 5307,
+        ]);
+        $adapterValid->shouldReceive('listRecentPosts')->once()->andReturn([
+            [
+                'external_id' => 'DeZ4A2VAjxT',
+                'url' => 'https://www.instagram.com/p/DeZ4A2VAjxT/',
+                'posted_at' => now()->subDays(1)->toIso8601String(),
+                'type' => PostType::Carousel->value,
+                'caption' => 'Sane metrics bump',
+                'media_url' => 'https://cdn.example.com/carousel.jpg',
+                'metrics' => [
+                    'views' => 0,
+                    'likes' => 700,
+                    'comments' => 20,
+                    'shares' => 0,
+                    'clicks' => 0,
+                ],
+                'raw_payload' => [
+                    'likesCount' => 700,
+                    'commentsCount' => 20,
+                    'shortCode' => 'DeZ4A2VAjxT',
+                    'syncedAt' => 'valid-refresh',
+                ],
+            ],
+        ]);
+        $adapterValid->shouldReceive('hydrateMediaUrls')->once()->with([])->andReturn([]);
+
+        $adaptersValid = Mockery::mock(PlatformAdapterManager::class);
+        $adaptersValid->shouldReceive('driverFor')->andReturn('apify');
+        $adaptersValid->shouldReceive('for')->with(Platform::Instagram)->andReturn($adapterValid);
+
+        (new SyncTrackedAccountJob($account->id, force: true))->handle(
+            $adaptersValid,
+            app(SnitchAnalyticsService::class),
+            app(VendorUsageCharger::class),
+        );
+
+        $existing->refresh();
+        $this->assertSame(700, $existing->metrics['likes'] ?? null);
+        $this->assertSame(20, $existing->metrics['comments'] ?? null);
+        $this->assertSame(700, $existing->raw_payload['likesCount'] ?? null);
+        $this->assertSame('valid-refresh', $existing->raw_payload['syncedAt'] ?? null);
+        $this->assertSame(1, Post::query()->count());
+    }
+
     public function test_sync_dispatches_analysis_for_posts_inside_first_sync_window(): void
     {
         Queue::fake([AnalyzePostJob::class, ScoreWinnersJob::class]);

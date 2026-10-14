@@ -139,6 +139,101 @@ class InstagramMetrics
     }
 
     /**
+     * Reject provider metrics that imply >100% engagement rate or a discontinuous likes jump
+     * that the raw payload does not corroborate.
+     *
+     * @param  array<string, mixed>  $incoming
+     * @param  array<string, mixed>  $previous
+     * @param  array<string, mixed>  $rawPayload
+     */
+    public static function incomingMetricsArePlausible(
+        array $incoming,
+        array $previous,
+        ?int $accountFollowers,
+        array $rawPayload = [],
+    ): bool {
+        return self::incomingMetricsRejectReason($incoming, $previous, $accountFollowers, $rawPayload) === null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $incoming
+     * @param  array<string, mixed>  $previous
+     * @param  array<string, mixed>  $rawPayload
+     */
+    public static function incomingMetricsRejectReason(
+        array $incoming,
+        array $previous,
+        ?int $accountFollowers,
+        array $rawPayload = [],
+    ): ?string {
+        $likes = $incoming['likes'] ?? null;
+        $comments = max(0, (int) ($incoming['comments'] ?? 0));
+
+        if ($accountFollowers !== null && $accountFollowers > 0 && is_numeric($likes)) {
+            $engagement = (int) $likes + $comments;
+
+            if ($engagement / $accountFollowers > 1.0) {
+                return 'impossible_engagement_rate';
+            }
+        }
+
+        $previousLikes = $previous['likes'] ?? null;
+
+        if (! is_numeric($previousLikes) || ! is_numeric($likes)) {
+            return null;
+        }
+
+        $previousLikes = (int) $previousLikes;
+        $likes = (int) $likes;
+
+        if ($previousLikes <= 0) {
+            return null;
+        }
+
+        $jumpCeiling = max($previousLikes * 10, $previousLikes + 5000);
+
+        if ($likes <= $jumpCeiling) {
+            return null;
+        }
+
+        $rawLikes = self::rawLikesCount($rawPayload);
+
+        if ($rawLikes !== null && $rawLikes === $likes) {
+            return null;
+        }
+
+        return 'discontinuous_likes_jump';
+    }
+
+    /**
+     * Numeric likesCount / like_count from a provider raw blob (no hidden-like heuristics).
+     *
+     * @param  array<string, mixed>  $raw
+     */
+    public static function rawLikesCount(array $raw): ?int
+    {
+        foreach (['likesCount', 'like_count', 'likeCount', 'likes'] as $key) {
+            if (! array_key_exists($key, $raw) || $raw[$key] === null || $raw[$key] === '') {
+                continue;
+            }
+
+            if (! is_numeric($raw[$key])) {
+                continue;
+            }
+
+            $value = (int) $raw[$key];
+
+            if ($value < 0) {
+                return null;
+            }
+
+            return $value;
+        }
+
+        return null;
+    }
+
+    /**
      * @param  array<string, mixed>  $item
      */
     public static function followersFromItem(array $item): ?int

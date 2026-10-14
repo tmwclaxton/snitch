@@ -44,6 +44,37 @@ class RepairEngagementDataCommandTest extends TestCase
         $this->assertSame(4, (int) ($post->fresh()?->metrics['views'] ?? 0));
     }
 
+    public function test_fix_metrics_from_raw_when_stored_engagement_exceeds_followers(): void
+    {
+        $account = TrackedAccount::factory()->create([
+            'platform' => Platform::Instagram,
+            'followers' => 5307,
+        ]);
+        $post = Post::factory()->forAccount($account)->create([
+            'platform' => Platform::Instagram,
+            'type' => PostType::Carousel,
+            'metrics' => [
+                'views' => 0,
+                'likes' => 60644,
+                'comments' => 1209,
+                'shares' => 0,
+                'clicks' => 0,
+            ],
+            'raw_payload' => [
+                'likesCount' => 676,
+                'commentsCount' => 18,
+            ],
+        ]);
+
+        $this->artisan('snitch:repair-engagement-data', [
+            '--fix-metrics-from-raw' => true,
+        ])->assertSuccessful();
+
+        $post->refresh();
+        $this->assertSame(676, (int) ($post->metrics['likes'] ?? 0));
+        $this->assertSame(18, (int) ($post->metrics['comments'] ?? 0));
+    }
+
     public function test_fix_views_and_merge_duplicates_and_backfill_followers(): void
     {
         $social = SocialAccount::factory()->forPlatform(Platform::Instagram)->create([

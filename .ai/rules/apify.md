@@ -34,7 +34,7 @@ TikHub Instagram sync always calls `user_posts` and `user_reels`, merges, and de
 `SyncOptions::analysisRecencyDays()` is `max(recency_days, first_sync_recency_days)` (capped by `recency_days_max`). `AnalyzePostJob`, `Post::withinAnalysisRecency`, and sync analysis dispatch use that window so a 90-day first backfill can still be analysed. Weekly / incremental scrape windows stay on `recency_days` (30) unless the job passes an explicit override.
 
 ## Known posts refresh engagement metrics on re-sync
-When sync sees a known external_id again, update `metrics` (likes/comments/views/`like_count_hidden`) from the fresh payload. Soft-retry Failed analysis for existing posts with media in-process (no extra Apify run beyond the list scrape). Do not rewrite caption/media_url solely to chase churn.
+When sync sees a known external_id again, update `metrics` (likes/comments/views/`like_count_hidden`) and `raw_payload` from the fresh payload. Reject refreshes that imply ER > 100% when followers are known, or a discontinuous likes jump (`> max(prev*10, prev+5000)`) unless incoming raw `likesCount`/`like_count` matches. Soft-retry Failed analysis for existing posts with media in-process (no extra Apify run beyond the list scrape). Do not rewrite caption/media_url solely to chase churn. Repair poisoned rows with `snitch:repair-engagement-data --fix-metrics-from-raw` (dry-run first).
 
 ## posts.media_url is text, not varchar(255)
 Facebook/TikTok CDN video URLs regularly exceed 255 chars. Keep `posts.media_url` as `text` (same reason `tracked_accounts.avatar` is text).

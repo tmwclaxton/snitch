@@ -9,6 +9,7 @@ use App\Models\Post;
 use App\Models\SocialAccount;
 use App\Models\TrackedAccount;
 use App\Services\Tracking\FollowerCountRefresher;
+use App\Support\InstagramMetrics;
 use App\Support\InstagramPostId;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Attributes\Description;
@@ -21,6 +22,7 @@ use Throwable;
 #[Signature('snitch:repair-engagement-data
     {--dry-run : Report planned writes without changing rows}
     {--fix-views : Rewrite Instagram metrics.views from raw play counts when higher}
+    {--fix-metrics-from-raw : Rewrite metrics from raw_payload when stored ER exceeds 100%}
     {--merge-duplicates : Merge Instagram posts that share a shortcode but differ by external_id}
     {--backfill-followers : Copy latest known follower counts onto trackers with null followers}
     {--remove-fabricated-baselines : Delete flat week/month follower snapshot anchors}
@@ -33,12 +35,13 @@ class RepairEngagementDataCommand extends Command
         $dryRun = (bool) $this->option('dry-run');
         $all = (bool) $this->option('all');
         $fixViews = $all || (bool) $this->option('fix-views');
+        $fixMetricsFromRaw = $all || (bool) $this->option('fix-metrics-from-raw');
         $mergeDuplicates = $all || (bool) $this->option('merge-duplicates');
         $backfillFollowers = $all || (bool) $this->option('backfill-followers');
         $removeBaselines = $all || (bool) $this->option('remove-fabricated-baselines');
 
-        if (! $fixViews && ! $mergeDuplicates && ! $backfillFollowers && ! $removeBaselines) {
-            $this->error('Pass --all or one of --fix-views / --merge-duplicates / --backfill-followers / --remove-fabricated-baselines.');
+        if (! $fixViews && ! $fixMetricsFromRaw && ! $mergeDuplicates && ! $backfillFollowers && ! $removeBaselines) {
+            $this->error('Pass --all or one of --fix-views / --fix-metrics-from-raw / --merge-duplicates / --backfill-followers / --remove-fabricated-baselines.');
             $this->line('Always dry-run first: php artisan snitch:repair-engagement-data --all --dry-run');
 
             return self::FAILURE;
@@ -49,15 +52,17 @@ class RepairEngagementDataCommand extends Command
         }
 
         $viewsFixed = $fixViews ? $this->fixViews($dryRun) : 0;
+        $metricsFixed = $fixMetricsFromRaw ? $this->fixMetricsFromRaw($dryRun) : 0;
         $duplicatesMerged = $mergeDuplicates ? $this->mergeDuplicates($dryRun) : 0;
         $followersBackfilled = $backfillFollowers ? $this->backfillFollowers($followers, $dryRun) : 0;
         $baselinesRemoved = $removeBaselines ? $this->removeFabricatedBaselines($dryRun) : 0;
 
         $this->newLine();
         $this->info(sprintf(
-            'Done%s. views_fixed=%d duplicates_merged=%d followers_backfilled=%d baselines_removed=%d',
+            'Done%s. views_fixed=%d metrics_from_raw=%d duplicates_merged=%d followers_backfilled=%d baselines_removed=%d',
             $dryRun ? ' (dry-run)' : '',
             $viewsFixed,
+            $metricsFixed,
             $duplicatesMerged,
             $followersBackfilled,
             $baselinesRemoved,
@@ -102,6 +107,85 @@ class RepairEngagementDataCommand extends Command
 
                     $metrics['views'] = $playCount;
                     $post->forceFill(['metrics' => $metrics])->save();
+                }
+            });
+
+        return $fixed;
+    }
+
+    private function fixMetricsFromRaw(bool $dryRun): int
+    {
+        $fixed = 0;
+
+        Post::query()
+            ->where('platform', Platform::Instagram)
+            ->orderBy('id')
+            ->chunkById(100, function (Collection $posts) use ($dryRun, &$fixed): void {
+                foreach ($posts as $post) {
+                    if (! $post instanceof Post) {
+                        continue;
+                    }
+
+                    $raw = is_array($post->raw_payload) ? $post->raw_payload : [];
+                    $rawLikes = InstagramMetrics::rawLikesCount($raw);
+
+                    if ($rawLikes === null) {
+                        continue;
+                    }
+
+                    $metrics = is_array($post->metrics) ? $post->metrics : [];
+                    $likes = $metrics['likes'] ?? null;
+
+                    if (! is_numeric($likes)) {
+                        continue;
+                    }
+
+                    $followers = TrackedAccount::query()
+                        ->where('social_account_id', $post->social_account_id)
+                        ->whereNotNull('followers')
+                        ->orderByDesc('followers')
+                        ->value('followers');
+
+                    if (! is_numeric($followers) || (int) $followers <= 0) {
+                        continue;
+                    }
+
+                    $followers = (int) $followers;
+                    $comments = max(0, (int) ($metrics['comments'] ?? 0));
+                    $engagement = (int) $likes + $comments;
+
+                    if ($engagement / $followers <= 1.0) {
+                        continue;
+                    }
+
+                    $repaired = InstagramMetrics::metricsFromPayload($raw, accountFollowers: $followers);
+                    $repairedLikes = $repaired['likes'] ?? null;
+                    $repairedComments = max(0, (int) ($repaired['comments'] ?? 0));
+
+                    if (! is_numeric($repairedLikes)) {
+                        continue;
+                    }
+
+                    if (((int) $repairedLikes + $repairedComments) / $followers > 1.0) {
+                        continue;
+                    }
+
+                    $fixed++;
+                    $this->line(sprintf(
+                        'post #%d: metrics likes/comments %s/%d -> %s/%d (followers=%d)',
+                        $post->id,
+                        (string) $likes,
+                        $comments,
+                        (string) $repairedLikes,
+                        $repairedComments,
+                        $followers,
+                    ));
+
+                    if ($dryRun) {
+                        continue;
+                    }
+
+                    $post->forceFill(['metrics' => $repaired])->save();
                 }
             });
 

@@ -41,6 +41,9 @@ If `driverFor` is tikhub and resolveProfile / listRecentPosts throws or returns 
 ## Sync is resolve-sparing and new-posts-only
 Skip resolveProfile unless force or profile fields are incomplete. Import only new external_ids; soft-retry Failed analysis for known posts without re-scraping. TikTok hydrateMediaUrls (paid download) runs only for new candidates. When a known post's cover is still a signed CDN URL (or empty), archive a still from the list payload already in hand. That does not re-import the post.
 
+## Known-post metric refresh rejects impossible provider values
+`refreshExistingPostMetrics` updates metrics and `raw_payload` together. Drop refreshes with ER > 100% when followers are known, or likes jumps above `max(prev*10, prev+5000)` unless incoming raw `likesCount`/`like_count` matches. Keep previous metrics (or rebuild from stored raw) and log a warning - do not poison the row.
+
 ## Shared social accounts copy sync freshness to sibling trackers
 When `SyncTrackedAccountJob` finishes success or empty for a tracker, copy `last_synced_at` and `last_sync_status` onto every other `tracked_accounts` row with the same `social_account_id`. The corpus syncs once; each user's membership must show a fresh "last updated" time. Do not copy failure status onto siblings.
 

@@ -537,18 +537,63 @@ class SyncTrackedAccountJob implements ShouldQueue
             return;
         }
 
-        $metrics = InstagramMetrics::normalizeMappedMetrics(
-            $incoming,
-            is_numeric($account->followers) ? (int) $account->followers : null,
+        $followers = is_numeric($account->followers) ? (int) $account->followers : null;
+        $metrics = InstagramMetrics::normalizeMappedMetrics($incoming, $followers);
+        $current = is_array($post->metrics) ? $post->metrics : [];
+        $incomingRaw = is_array($payload['raw_payload'] ?? null) ? $payload['raw_payload'] : [];
+
+        $rejectReason = InstagramMetrics::incomingMetricsRejectReason(
+            $metrics,
+            $current,
+            $followers,
+            $incomingRaw,
         );
 
-        $current = is_array($post->metrics) ? $post->metrics : [];
+        if ($rejectReason !== null) {
+            Log::warning('SyncTrackedAccountJob rejected impossible post metrics refresh', [
+                'post_id' => $post->id,
+                'tracked_account_id' => $account->id,
+                'reason' => $rejectReason,
+                'followers' => $followers,
+                'previous_likes' => $current['likes'] ?? null,
+                'incoming_likes' => $metrics['likes'] ?? null,
+                'incoming_comments' => $metrics['comments'] ?? null,
+            ]);
 
-        if ($current == $metrics) {
+            // Prefer keeping previous metrics. If those are missing, fall back to the
+            // stored raw_payload so a poisoned refresh cannot leave the row empty.
+            if ($current !== []) {
+                return;
+            }
+
+            $storedRaw = is_array($post->raw_payload) ? $post->raw_payload : [];
+
+            if ($storedRaw === []) {
+                return;
+            }
+
+            $fromRaw = InstagramMetrics::metricsFromPayload($storedRaw, accountFollowers: $followers);
+
+            if ($fromRaw == $current) {
+                return;
+            }
+
+            $post->forceFill(['metrics' => $fromRaw])->save();
+
             return;
         }
 
-        $post->forceFill(['metrics' => $metrics])->save();
+        $updates = ['metrics' => $metrics];
+
+        if ($incomingRaw !== []) {
+            $updates['raw_payload'] = $incomingRaw;
+        }
+
+        if ($current == $metrics && (! array_key_exists('raw_payload', $updates) || $post->raw_payload == $incomingRaw)) {
+            return;
+        }
+
+        $post->forceFill($updates)->save();
     }
 
     private function dispatchAnalysisIfNeeded(Post $post, int $billingUserId): void
