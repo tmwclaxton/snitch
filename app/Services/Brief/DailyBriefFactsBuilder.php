@@ -52,12 +52,14 @@ class DailyBriefFactsBuilder
         $competitors = $accounts->filter(fn (TrackedAccount $account): bool => ! $account->is_own_account)->values();
 
         $socialIds = $accounts->pluck('social_account_id')->filter()->map(fn ($id): int => (int) $id)->unique()->values()->all();
+        // Load full history (same baseline as the dashboard): performanceIndex
+        // takes up to PI_PRIOR_WINDOW earlier posts with no short calendar cutoff.
         $posts = $socialIds === []
             ? collect()
             : Post::query()
                 ->with('analysis')
                 ->whereIn('social_account_id', $socialIds)
-                ->where('posted_at', '>=', $last30->subDays(14))
+                ->whereNotNull('posted_at')
                 ->orderByDesc('posted_at')
                 ->get();
 
@@ -271,12 +273,24 @@ class DailyBriefFactsBuilder
         $hidden = $this->math->isHiddenLikes($post);
         $views = $this->math->views($post);
         $format = $this->math->formatLabel($post);
-        $viewsIndex = $hidden && $format === 'Reel' && $views > 0
-            ? $this->viewsIndex($post, $accountPosts)
-            : null;
+        $viewsMeta = $hidden && $format === 'Reel' && $views > 0
+            ? $this->viewsIndexMeta($post, $accountPosts)
+            : ['index' => null, 'prior_n' => 0, 'early' => true];
 
-        $timesUsual = $pi['pi'] !== null ? $this->math->round1((float) $pi['pi']) : null;
-        $timesUsualLabel = $this->timesUsualLabel($timesUsual, $hidden, $viewsIndex);
+        $piEarly = (bool) ($pi['early'] ?? true);
+        $priorN = (int) ($pi['prior_n'] ?? 0);
+        $viewsIndex = $viewsMeta['index'];
+
+        // Same PI maths as the dashboard (up to PI_PRIOR_WINDOW earlier posts).
+        // When prior_n is below PI_MIN_PRIORS, omit the citable multiplier so the
+        // brief cannot confidently claim "Nx their usual" on a thin baseline.
+        $rawTimesUsual = $pi['pi'] !== null ? $this->math->round1((float) $pi['pi']) : null;
+        $viewsEarly = (bool) ($viewsMeta['early'] ?? true);
+        $timesUsual = ($rawTimesUsual !== null && $priorN >= DashboardMath::PI_MIN_PRIORS)
+            ? $rawTimesUsual
+            : null;
+        $citeViewsIndex = ($viewsIndex !== null && ! $viewsEarly) ? $viewsIndex : null;
+        $timesUsualLabel = $this->timesUsualLabel($timesUsual, $hidden, $citeViewsIndex);
 
         $hook = $this->usableHook($post);
         $caption = trim((string) $post->caption);
@@ -299,7 +313,9 @@ class DailyBriefFactsBuilder
             'views' => $views > 0 ? $views : null,
             'times_usual' => $timesUsual,
             'times_usual_label' => $timesUsualLabel,
-            'views_vs_usual' => $viewsIndex,
+            'views_vs_usual' => $citeViewsIndex,
+            'prior_n' => $priorN,
+            'times_usual_early' => $piEarly || $priorN < DashboardMath::PI_MIN_PRIORS,
         ];
     }
 
@@ -308,10 +324,21 @@ class DailyBriefFactsBuilder
      */
     public function viewsIndex(Post $post, Collection $accountPosts): ?float
     {
+        $meta = $this->viewsIndexMeta($post, $accountPosts);
+
+        return $meta['index'];
+    }
+
+    /**
+     * @param  Collection<int, Post>  $accountPosts
+     * @return array{index: float|null, prior_n: int, early: bool}
+     */
+    public function viewsIndexMeta(Post $post, Collection $accountPosts): array
+    {
         $views = $this->math->views($post);
 
         if ($views <= 0 || $post->posted_at === null) {
-            return null;
+            return ['index' => null, 'prior_n' => 0, 'early' => true];
         }
 
         $priors = $accountPosts
@@ -339,13 +366,18 @@ class DailyBriefFactsBuilder
             ->values();
 
         $priorViews = $priors->map(fn (Post $prior): int => $this->math->views($prior))->filter(fn (int $value): bool => $value > 0);
+        $priorN = $priorViews->count();
         $median = $this->math->median($priorViews);
 
-        if ($median === null || $median <= 0 || $priorViews->count() < 3) {
-            return null;
+        if ($median === null || $median <= 0 || $priorN < 3) {
+            return ['index' => null, 'prior_n' => $priorN, 'early' => true];
         }
 
-        return $this->math->round1($views / $median);
+        return [
+            'index' => $this->math->round1($views / $median),
+            'prior_n' => $priorN,
+            'early' => $priorN < DashboardMath::PI_MIN_PRIORS,
+        ];
     }
 
     /**
@@ -1008,7 +1040,7 @@ class DailyBriefFactsBuilder
         }
 
         if ($hidden && $viewsIndex !== null) {
-            return number_format($viewsIndex, 1).' times their usual';
+            return number_format($viewsIndex, 1).' times their usual views';
         }
 
         if ($hidden) {

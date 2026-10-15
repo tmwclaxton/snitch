@@ -1308,15 +1308,18 @@ class DailyBriefValidator
     {
         $rewritten = preg_replace(
             '/(\d+(?:\.\d+)?)\s*(?:x\s+)?views vs(?: their)? usual/iu',
-            '$1 times their usual',
+            '$1 times their usual views',
             $text,
         ) ?? $text;
 
-        return preg_replace(
-            '/(\d+(?:\.\d+)?)\s*times usual\b/iu',
+        // Bare "times usual" (no "views") is engagement wording.
+        $rewritten = preg_replace(
+            '/(\d+(?:\.\d+)?)\s*times usual(?!\s+views)\b/iu',
             '$1 times their usual',
             $rewritten,
         ) ?? $rewritten;
+
+        return $rewritten;
     }
 
     public function textClaimsWeekWindow(string $text): bool

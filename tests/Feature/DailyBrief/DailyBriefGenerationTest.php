@@ -3,6 +3,7 @@
 namespace Tests\Feature\DailyBrief;
 
 use App\Enums\Platform;
+use App\Enums\PostType;
 use App\Enums\TrackedAccountKind;
 use App\Mail\DailyBriefMail;
 use App\Models\BrandProfile;
@@ -469,9 +470,10 @@ class DailyBriefGenerationTest extends TestCase
             'kind' => TrackedAccountKind::Competitor,
         ]);
 
-        foreach (['2026-09-01', '2026-09-05', '2026-09-10', '2026-09-14'] as $day) {
+        // 10 baseline posts so times_usual clears PI_MIN_PRIORS.
+        for ($i = 0; $i < 10; $i++) {
             Post::factory()->forAccount($friendship)->create([
-                'posted_at' => CarbonImmutable::parse($day.' 12:00:00', 'Europe/London'),
+                'posted_at' => CarbonImmutable::parse('2026-09-01', 'Europe/London')->addDays($i)->setTime(12, 0),
                 'metrics' => ['likes' => 10, 'comments' => 0, 'views' => 0],
             ]);
         }
@@ -493,6 +495,61 @@ class DailyBriefGenerationTest extends TestCase
             $facts['top_competitor_hit']['post_id'] ?? null,
             $facts['top_competitor_hit_7d']['post_id'] ?? null,
         );
+    }
+
+    public function test_times_usual_uses_full_history_baseline_not_forty_four_day_cutoff(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-15 08:00:00', 'Europe/London'));
+
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        $own = TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'letsgosocialuk',
+            'display_name' => 'Toby',
+            'is_own_account' => true,
+            'kind' => TrackedAccountKind::Competitor,
+        ]);
+
+        // Older posts outside the old 44-day load window (brief_date - 44 ≈ 1 Sep).
+        // Median of these (likes 16) is what the dashboard uses for ~1.4x.
+        for ($i = 0; $i < 12; $i++) {
+            Post::factory()->forAccount($own)->create([
+                'posted_at' => CarbonImmutable::parse('2026-07-01', 'Europe/London')->addDays($i * 3)->setTime(12, 0),
+                'type' => PostType::Carousel,
+                'metrics' => ['likes' => 16, 'comments' => 0, 'views' => 0],
+            ]);
+        }
+
+        // Only three posts inside the truncated window before the subject post.
+        // Old brief maths: median 8 → 22/8 = 2.75 ≈ 2.8x.
+        foreach (['2026-09-05', '2026-09-12', '2026-09-19'] as $day) {
+            Post::factory()->forAccount($own)->create([
+                'posted_at' => CarbonImmutable::parse($day.' 12:00:00', 'Europe/London'),
+                'type' => PostType::Carousel,
+                'metrics' => ['likes' => 8, 'comments' => 0, 'views' => 0],
+            ]);
+        }
+
+        $escapeRoom = Post::factory()->forAccount($own)->create([
+            'posted_at' => CarbonImmutable::parse('2026-09-27 12:00:00', 'Europe/London'),
+            'type' => PostType::Carousel,
+            'caption' => 'Escape room night',
+            'metrics' => ['likes' => 22, 'comments' => 0, 'views' => 0],
+        ]);
+
+        $facts = app(DailyBriefFactsBuilder::class)->build(
+            $user,
+            CarbonImmutable::parse('2026-10-15', 'Europe/London')->startOfDay(),
+        );
+
+        $best30 = is_array($facts['own']['best_post_30d'] ?? null) ? $facts['own']['best_post_30d'] : null;
+        $this->assertNotNull($best30);
+        $this->assertSame((int) $escapeRoom->id, (int) ($best30['post_id'] ?? 0));
+        $this->assertSame(1.4, (float) ($best30['times_usual'] ?? 0));
+        $this->assertSame('1.4 times their usual', (string) ($best30['times_usual_label'] ?? ''));
+        $this->assertGreaterThanOrEqual(10, (int) ($best30['prior_n'] ?? 0));
+        $this->assertFalse((bool) ($best30['times_usual_early'] ?? true));
     }
 
     public function test_cadence_gaps_mark_a_quieter_competitor_as_longest(): void
@@ -1890,14 +1947,14 @@ class DailyBriefGenerationTest extends TestCase
                 'post_id' => 99,
                 'times_usual' => null,
                 'views_vs_usual' => 1.3,
-                'times_usual_label' => '1.3 times their usual',
+                'times_usual_label' => '1.3 times their usual views',
                 'format' => 'Reel',
                 'hook' => 'Parkrun Saturday',
             ],
             'best_times' => ['today_slot' => null, 'weekday_evening_block' => 'weekday evenings 19:00-21:00'],
         ]);
 
-        $this->assertStringContainsString('1.3 times their usual', $narrative['competitor_summary']);
+        $this->assertStringContainsString('1.3 times their usual views', $narrative['competitor_summary']);
         $this->assertStringNotContainsString('views vs', $narrative['competitor_summary']);
     }
 
@@ -2003,7 +2060,7 @@ class DailyBriefGenerationTest extends TestCase
         $viewsWording = app(DailyBriefValidator::class)->rewriteViewsVsUsualWordingInText(
             'goodgym posted a Reel at 1.3 views vs usual',
         );
-        $this->assertSame('goodgym posted a Reel at 1.3 times their usual', $viewsWording);
+        $this->assertSame('goodgym posted a Reel at 1.3 times their usual views', $viewsWording);
     }
 
     public function test_validator_rejects_cross_handle_multiplier_and_out_of_window_week_standout(): void

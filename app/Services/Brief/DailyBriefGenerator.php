@@ -214,8 +214,9 @@ Rules:
 - No em dashes or en dashes. Use a comma or hyphen.
 - Do not truncate with ...
 - hook is the literal first line, max 12 words. Never quote a scene description.
-- When likes are hidden, say "likes hidden" or "N times their usual" from views_vs_usual. Never print null, 0x, or "N views vs usual".
-- Prefer "times their usual" over jargon. Never mix views and likes labels.
+- When likes are hidden, say "likes hidden" or "N times their usual views" from views_vs_usual / times_usual_label. Never print null, 0x, or "N views vs usual".
+- Prefer "times their usual" for engagement multipliers and "times their usual views" when the figure is views-based. Never mix views and likes labels.
+- Only quote a multiplier when times_usual_label contains "times their usual". If the label is "not enough history" or times_usual_early is true, do not invent an Nx claim.
 - Never attach one handle's times_usual / views_vs_usual / Nx figure to another handle's post. Each multiplier stays with that handle's posts only, including when you use a display name (for example "One House Social Club" for @onehousesocialclub).
 - Zero and one are valid counts when they appear in the facts (for example "0 posts in the last 7 days").
 - Do not use accounts with no posts (sync_empty, or null last_posted_at) for longest-gap claims. facts.cadence_gaps already excludes them.
@@ -316,9 +317,12 @@ PROMPT;
         if (is_array($hit) && filled($hit['times_usual_label'] ?? null)) {
             $hitLabel = (string) $hit['times_usual_label'];
         } else {
-            $hitPi = is_array($hit) ? ($hit['times_usual'] ?? $hit['views_vs_usual'] ?? null) : null;
+            $hitPi = is_array($hit) ? ($hit['times_usual'] ?? null) : null;
+            $hitViews = is_array($hit) ? ($hit['views_vs_usual'] ?? null) : null;
             if (is_numeric($hitPi)) {
                 $hitLabel = number_format((float) $hitPi, 1).' times their usual';
+            } elseif (is_numeric($hitViews)) {
+                $hitLabel = number_format((float) $hitViews, 1).' times their usual views';
             }
         }
 
