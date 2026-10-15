@@ -296,6 +296,113 @@ jobs:
           docker exec "$APP" php artisan snitch:audit --json || true
           REMOTE
 
+      # One-shot ops hook: commit message containing [regen-brief-user-1] regenerates
+      # today's brief for user 1 after deploy and prints the escape-room multiplier check.
+      - name: Regenerate user 1 daily brief when tagged
+        if: contains(github.event.head_commit.message, '[regen-brief-user-1]')
+        run: |
+          set -euo pipefail
+          ssh ${{ env.DEPLOY_HOST }} bash -s <<'REMOTE'
+          set -euo pipefail
+          SLOT="$(cat /opt/snitch/.deploy-slot)"
+          APP="snitch-app-${SLOT}"
+          echo "LIVE_SLOT=${SLOT}"
+          docker exec "$APP" php artisan snitch:generate-daily-briefs --user=1 --force --sync
+          cat > /tmp/snitch-check-daily-brief.php <<'PHP'
+          <?php
+
+          use App\Models\DailyBrief;
+          use App\Models\Post;
+          use App\Services\Dashboard\DashboardMath;
+          use Illuminate\Contracts\Console\Kernel;
+
+          require __DIR__.'/vendor/autoload.php';
+          $app = require __DIR__.'/bootstrap/app.php';
+          $app->make(Kernel::class)->bootstrap();
+
+          $brief = DailyBrief::query()
+              ->where('user_id', 1)
+              ->orderByDesc('brief_date')
+              ->orderByDesc('id')
+              ->first();
+
+          if ($brief === null) {
+              fwrite(STDERR, "no_brief\n");
+              exit(1);
+          }
+
+          $facts = is_array($brief->facts) ? $brief->facts : [];
+          $own = is_array($facts['own'] ?? null) ? $facts['own'] : [];
+          $payload = is_array($brief->payload) ? $brief->payload : [];
+
+          echo 'brief_id='.$brief->id."\n";
+          echo 'brief_date='.($brief->brief_date?->toDateString() ?? '')."\n";
+          echo 'status='.$brief->status."\n";
+          echo 'own_handle='.($own['handle'] ?? '')."\n";
+
+          $best30 = is_array($own['best_post_30d'] ?? null) ? $own['best_post_30d'] : null;
+          $candidates = [];
+          foreach (['best_post_30d', 'best_post_7d'] as $key) {
+              if (is_array($own[$key] ?? null)) {
+                  $candidates[] = $own[$key];
+              }
+          }
+          foreach (['posts_last_7d', 'posts_last_24h', 'posts_yesterday', 'standout_winners'] as $key) {
+              foreach ($own[$key] ?? [] as $row) {
+                  if (is_array($row)) {
+                      $candidates[] = $row;
+                  }
+              }
+          }
+
+          $escape = null;
+          foreach ($candidates as $row) {
+              $blob = strtolower((string) json_encode($row));
+              if (str_contains($blob, 'escape')) {
+                  $escape = $row;
+                  break;
+              }
+          }
+          if ($escape === null) {
+              $escape = $best30;
+          }
+
+          echo 'escape_or_best30='.json_encode($escape, JSON_UNESCAPED_SLASHES)."\n";
+          echo 'escape_or_best30_times_usual='.json_encode($escape['times_usual'] ?? null)."\n";
+          echo 'escape_or_best30_label='.($escape['times_usual_label'] ?? '')."\n";
+          echo 'escape_or_best30_prior_n='.json_encode($escape['prior_n'] ?? null)."\n";
+          echo 'escape_or_best30_likes='.json_encode($escape['likes'] ?? null)."\n";
+
+          $postId = (int) ($escape['post_id'] ?? 0);
+          if ($postId > 0) {
+              $post = Post::query()->find($postId);
+              $socialId = $post?->social_account_id;
+              $history = $socialId
+                  ? Post::query()->where('social_account_id', $socialId)->whereNotNull('posted_at')->orderByDesc('posted_at')->get()
+                  : collect();
+              $pi = $post ? app(DashboardMath::class)->performanceIndex($post, $history) : null;
+              echo 'dashboard_pi='.json_encode($pi)."\n";
+              if (is_array($pi) && isset($pi['pi']) && is_numeric($pi['pi']) && is_numeric($escape['times_usual'] ?? null)) {
+                  $dash = round((float) $pi['pi'], 1);
+                  $briefPi = round((float) $escape['times_usual'], 1);
+                  echo 'dashboard_times_usual='.$dash."\n";
+                  echo 'match_dashboard='.($dash === $briefPi ? 'yes' : 'no')."\n";
+              }
+          }
+
+          foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+              $val = (string) ($payload[$field] ?? '');
+              if ($val !== '' && str_contains(strtolower($val), 'usual')) {
+                  echo $field.'='.$val."\n";
+              }
+          }
+          PHP
+          docker cp /tmp/snitch-check-daily-brief.php "$APP":/var/www/html/snitch-check-daily-brief.php
+          docker exec "$APP" php /var/www/html/snitch-check-daily-brief.php
+          docker exec "$APP" rm -f /var/www/html/snitch-check-daily-brief.php
+          rm -f /tmp/snitch-check-daily-brief.php
+          REMOTE
+
       - name: Close SSH master connection
         if: always()
         run: ssh -O exit ${{ env.DEPLOY_HOST }} || true
