@@ -341,6 +341,7 @@ jobs:
           echo 'own_handle='.($own['handle'] ?? '')."\n";
 
           $best30 = is_array($own['best_post_30d'] ?? null) ? $own['best_post_30d'] : null;
+          echo 'best30='.json_encode($best30, JSON_UNESCAPED_SLASHES)."\n";
           $candidates = [];
           foreach (['best_post_30d', 'best_post_7d'] as $key) {
               if (is_array($own[$key] ?? null)) {
@@ -363,6 +364,37 @@ jobs:
                   break;
               }
           }
+
+          $trackerId = (int) ($own['tracked_account_id'] ?? 0);
+          $tracker = $trackerId > 0 ? App\Models\TrackedAccount::query()->find($trackerId) : null;
+          $socialId = $tracker?->social_account_id;
+          if ($escape === null && $socialId) {
+              $post = Post::query()
+                  ->where('social_account_id', $socialId)
+                  ->where(function ($query): void {
+                      $query->where('caption', 'ilike', '%escape%')
+                          ->orWhere('caption', 'ilike', '%escape room%');
+                  })
+                  ->orderByDesc('posted_at')
+                  ->first();
+              if ($post) {
+                  $history = Post::query()
+                      ->where('social_account_id', $socialId)
+                      ->whereNotNull('posted_at')
+                      ->orderByDesc('posted_at')
+                      ->get();
+                  $pi = app(DashboardMath::class)->performanceIndex($post, $history);
+                  $escape = [
+                      'post_id' => (int) $post->id,
+                      'likes' => app(DashboardMath::class)->likes($post),
+                      'posted_at' => $post->posted_at?->toIso8601String(),
+                      'caption' => mb_substr((string) $post->caption, 0, 120),
+                      'times_usual' => $pi['pi'] !== null ? app(DashboardMath::class)->round1((float) $pi['pi']) : null,
+                      'prior_n' => $pi['prior_n'] ?? null,
+                      'source' => 'db_caption_lookup',
+                  ];
+              }
+          }
           if ($escape === null) {
               $escape = $best30;
           }
@@ -376,9 +408,9 @@ jobs:
           $postId = (int) ($escape['post_id'] ?? 0);
           if ($postId > 0) {
               $post = Post::query()->find($postId);
-              $socialId = $post?->social_account_id;
-              $history = $socialId
-                  ? Post::query()->where('social_account_id', $socialId)->whereNotNull('posted_at')->orderByDesc('posted_at')->get()
+              $postSocialId = $post?->social_account_id;
+              $history = $postSocialId
+                  ? Post::query()->where('social_account_id', $postSocialId)->whereNotNull('posted_at')->orderByDesc('posted_at')->get()
                   : collect();
               $pi = $post ? app(DashboardMath::class)->performanceIndex($post, $history) : null;
               echo 'dashboard_pi='.json_encode($pi)."\n";

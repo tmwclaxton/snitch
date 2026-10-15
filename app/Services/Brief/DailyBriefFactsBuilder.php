@@ -282,15 +282,11 @@ class DailyBriefFactsBuilder
         $viewsIndex = $viewsMeta['index'];
 
         // Same PI maths as the dashboard (up to PI_PRIOR_WINDOW earlier posts).
-        // When prior_n is below PI_MIN_PRIORS, omit the citable multiplier so the
-        // brief cannot confidently claim "Nx their usual" on a thin baseline.
-        $rawTimesUsual = $pi['pi'] !== null ? $this->math->round1((float) $pi['pi']) : null;
-        $viewsEarly = (bool) ($viewsMeta['early'] ?? true);
-        $timesUsual = ($rawTimesUsual !== null && $priorN >= DashboardMath::PI_MIN_PRIORS)
-            ? $rawTimesUsual
-            : null;
-        $citeViewsIndex = ($viewsIndex !== null && ! $viewsEarly) ? $viewsIndex : null;
-        $timesUsualLabel = $this->timesUsualLabel($timesUsual, $hidden, $citeViewsIndex);
+        // performanceIndex already returns null below 3 priors; publish the rounded
+        // figure whenever it is computable so brief Nx matches the dashboard.
+        // times_usual_early flags thin baselines (prior_n < PI_MIN_PRIORS) for copy.
+        $timesUsual = $pi['pi'] !== null ? $this->math->round1((float) $pi['pi']) : null;
+        $timesUsualLabel = $this->timesUsualLabel($timesUsual, $hidden, $viewsIndex);
 
         $hook = $this->usableHook($post);
         $caption = trim((string) $post->caption);
@@ -313,7 +309,7 @@ class DailyBriefFactsBuilder
             'views' => $views > 0 ? $views : null,
             'times_usual' => $timesUsual,
             'times_usual_label' => $timesUsualLabel,
-            'views_vs_usual' => $citeViewsIndex,
+            'views_vs_usual' => $viewsIndex,
             'prior_n' => $priorN,
             'times_usual_early' => $piEarly || $priorN < DashboardMath::PI_MIN_PRIORS,
         ];
