@@ -2274,6 +2274,152 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertStringContainsString('23.5x', $result['output']['headline']);
     }
 
+    public function test_validator_repairs_oct20_misbound_claims(): void
+    {
+        $facts = [
+            'allowed_handles' => ['onehousesocialclub', 'goodgym'],
+            'allowed_post_ids' => [401, 402, 501, 502],
+            'brief_date' => '2026-10-20',
+            'own' => ['handle' => 'letsgosocialuk', 'followers_now' => 103],
+            'competitors' => [
+                [
+                    'handle' => 'onehousesocialclub',
+                    'display_name' => 'One House Social Club',
+                    'posts_last_7d_count' => 4,
+                    'posts_last_7d' => [
+                        [
+                            'post_id' => 401,
+                            'handle' => 'onehousesocialclub',
+                            'format' => 'Reel',
+                            'times_usual' => 1.7,
+                            'times_usual_label' => '1.7 times their usual',
+                            'hook' => 'Mansion party',
+                            'caption' => 'Mansion party on 1 Nov - tickets open',
+                            'posted_at' => '2026-10-18T12:00:00+01:00',
+                            'posted_label' => 'Sat 18 Oct, 12:00',
+                        ],
+                        [
+                            'post_id' => 402,
+                            'handle' => 'onehousesocialclub',
+                            'format' => 'Carousel',
+                            'times_usual' => 0.9,
+                            'times_usual_label' => '0.9 times their usual',
+                            'hook' => 'Weekend faces',
+                            'posted_at' => '2026-10-19T12:00:00+01:00',
+                            'posted_label' => 'Sun 19 Oct, 12:00',
+                        ],
+                    ],
+                    'best_post_7d' => [
+                        'post_id' => 401,
+                        'handle' => 'onehousesocialclub',
+                        'format' => 'Reel',
+                        'times_usual' => 1.7,
+                    ],
+                ],
+                [
+                    'handle' => 'goodgym',
+                    'display_name' => 'GoodGym',
+                    'posts_last_7d_count' => 6,
+                    'posts_last_7d' => [
+                        [
+                            'post_id' => 501,
+                            'handle' => 'goodgym',
+                            'format' => 'Reel',
+                            'times_usual' => 2.3,
+                            'times_usual_label' => '2.3 times their usual',
+                            'hook' => 'Tuesday session',
+                            'posted_at' => '2026-10-17T09:00:00+01:00',
+                            'posted_label' => 'Fri 17 Oct, 09:00',
+                        ],
+                        [
+                            'post_id' => 502,
+                            'handle' => 'goodgym',
+                            'format' => 'Carousel',
+                            'times_usual' => 0.8,
+                            'times_usual_label' => '0.8 times their usual',
+                            'hook' => 'Sunlight Society collab',
+                            'caption' => 'Sunlight Society collab day',
+                            'posted_at' => '2026-10-08T12:00:00+01:00',
+                            'posted_label' => 'Wed 8 Oct, 12:00',
+                        ],
+                    ],
+                    'best_post_7d' => [
+                        'post_id' => 501,
+                        'handle' => 'goodgym',
+                        'format' => 'Reel',
+                        'times_usual' => 2.3,
+                    ],
+                ],
+            ],
+        ];
+
+        $actions = [
+            [
+                'title' => 'Engage with One House',
+                'why' => 'They are active this week.',
+                'how' => 'Reply to someone else\'s comment on their mansion Reel.',
+                'related_handles' => ['onehousesocialclub'],
+                'related_post_ids' => [401],
+            ],
+            ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+        ];
+
+        $result = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => $actions,
+            'own_summary' => 'ok',
+            'competitor_summary' => 'One House Social Club leads with 4 posts this week and a standout Carousel at 1.7 times their usual. Their mansion Reel posted on 1 Nov. GoodGym\'s Sunlight Society collab hit 2.3 times their usual as a Reel.',
+            'watch' => [],
+        ], $facts);
+
+        $this->assertTrue($result['ok'], implode('; ', $result['errors']));
+        $summary = (string) ($result['output']['competitor_summary'] ?? '');
+        $this->assertStringContainsString('GoodGym leads with 6 posts', $summary);
+        $this->assertStringNotContainsString('leads with 4 posts', $summary);
+        $this->assertStringContainsString('Reel', $summary);
+        $this->assertStringNotContainsString('Carousel at 1.7', $summary);
+        $this->assertStringNotContainsString('posted on 1 Nov', $summary);
+        $this->assertStringNotContainsString('Sunlight Society collab hit 2.3', $summary);
+        $how = (string) ($result['output']['actions'][0]['how'] ?? '');
+        $this->assertMatchesRegularExpression('/\bcomment on\b/i', $how);
+        $this->assertStringNotContainsString('someone else\'s comment', $how);
+        $this->assertDoesNotMatchRegularExpression('/\breply\b/i', $how);
+
+        $noBaseline = app(DailyBriefValidator::class)->validate([
+            'headline' => 'Plan for today',
+            'actions' => [
+                ['title' => 'One', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => '@quietclub hit 3.0 times their usual this week.',
+            'watch' => [],
+        ], [
+            'allowed_handles' => ['quietclub'],
+            'allowed_post_ids' => [900],
+            'brief_date' => '2026-10-20',
+            'own' => ['handle' => 'letsgosocialuk'],
+            'competitors' => [[
+                'handle' => 'quietclub',
+                'posts_last_7d_count' => 1,
+                'posts_last_7d' => [[
+                    'post_id' => 900,
+                    'handle' => 'quietclub',
+                    'format' => 'Reel',
+                    'times_usual' => null,
+                    'views_vs_usual' => null,
+                    'times_usual_label' => 'not enough history',
+                    'likes_hidden' => true,
+                ]],
+            ]],
+        ]);
+
+        $this->assertTrue($noBaseline['ok'], implode('; ', $noBaseline['errors']));
+        $this->assertStringNotContainsString('3.0 times their usual', (string) ($noBaseline['output']['competitor_summary'] ?? ''));
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>

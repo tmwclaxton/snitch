@@ -27,13 +27,20 @@ class DailyBriefValidator
         $output = $this->replaceDashes($output);
         $output = $this->rewriteLinkInBioSticker($output);
         $output = $this->rewriteViewsVsUsualWording($output);
+        $output = $this->rewriteReplyToCommentActions($output);
         $output = $this->rewriteInternalPostIds($output, $facts);
         $output = $this->rewriteBorrowedCompetitorNames($output, $facts);
         $output = $this->rewriteUnsupportedStandoutClaims($output, $facts);
-        $output = $this->rewriteUnsupportedWeekBestClaims($output, $facts);
         $output = $this->rewriteUnsupportedDailyClaims($output, $facts);
         $output = $this->rewriteLongestGapQualification($output, $facts);
+        $output = $this->rewriteUnsupportedLeadsWithPostsClaims($output, $facts);
         $output = $this->rewriteUnsupportedHandleTimesUsualClaims($output, $facts);
+        $output = $this->rewriteUnsupportedFormatTimesUsualClaims($output, $facts);
+        $output = $this->rewriteUnsupportedHookTimesUsualClaims($output, $facts);
+        $output = $this->rewriteUnsupportedPostedDateClaims($output, $facts);
+        $output = $this->rewriteTimesUsualWithoutBaseline($output, $facts);
+        // Week-window softening after format/hook rewrites, so corrected out-of-window Nx claims are caught.
+        $output = $this->rewriteUnsupportedWeekBestClaims($output, $facts);
         $errors = [];
 
         $headline = trim((string) ($output['headline'] ?? ''));
@@ -169,6 +176,31 @@ class DailyBriefValidator
             $handleTimesUsualError = $this->unsupportedHandleTimesUsualClaim($text, $facts);
             if ($handleTimesUsualError !== null) {
                 $errors[] = $handleTimesUsualError;
+            }
+
+            $formatTimesUsualError = $this->unsupportedFormatTimesUsualClaim($text, $facts);
+            if ($formatTimesUsualError !== null) {
+                $errors[] = $formatTimesUsualError;
+            }
+
+            $hookTimesUsualError = $this->unsupportedHookTimesUsualClaim($text, $facts);
+            if ($hookTimesUsualError !== null) {
+                $errors[] = $hookTimesUsualError;
+            }
+
+            $leadsError = $this->unsupportedLeadsWithPostsClaim($text, $facts);
+            if ($leadsError !== null) {
+                $errors[] = $leadsError;
+            }
+
+            $postedDateError = $this->unsupportedPostedDateClaim($text, $facts);
+            if ($postedDateError !== null) {
+                $errors[] = $postedDateError;
+            }
+
+            $baselineError = $this->unsupportedTimesUsualWithoutBaseline($text, $facts);
+            if ($baselineError !== null) {
+                $errors[] = $baselineError;
             }
 
             $weekStandoutError = $this->unsupportedWeekStandoutClaim($text, $facts);
@@ -1168,6 +1200,832 @@ class DailyBriefValidator
     }
 
     /**
+     * A cited Nx figure next to Reel/Carousel/Image must match a post of that format.
+     *
+     * @param  array<string, mixed>  $facts
+     */
+    public function unsupportedFormatTimesUsualClaim(string $text, array $facts): ?string
+    {
+        foreach ($this->figureHandlePairsInText($text, $this->allowedHandles($facts), $facts) as $pair) {
+            if ($pair['handle'] === null || $pair['format'] === null) {
+                continue;
+            }
+
+            if ($this->handleHasFigureInFormat($facts, $pair['handle'], $pair['figure'], $pair['format'])) {
+                continue;
+            }
+
+            return 'times-usual figure does not match @'.$pair['handle'].' '.$pair['format'].' posts';
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function rewriteUnsupportedFormatTimesUsualClaims(array $output, array $facts): array
+    {
+        return $this->mapNarrativeText($output, fn (string $text): string => $this->rewriteUnsupportedFormatTimesUsualClaimsInText($text, $facts));
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    public function rewriteUnsupportedFormatTimesUsualClaimsInText(string $text, array $facts): string
+    {
+        if ($text === '' || $this->unsupportedFormatTimesUsualClaim($text, $facts) === null) {
+            return $text;
+        }
+
+        $rewritten = $text;
+
+        foreach ($this->figureHandlePairsInText($rewritten, $this->allowedHandles($facts), $facts) as $pair) {
+            if ($pair['handle'] === null || $pair['format'] === null) {
+                continue;
+            }
+
+            if ($this->handleHasFigureInFormat($facts, $pair['handle'], $pair['figure'], $pair['format'])) {
+                continue;
+            }
+
+            $trueFormat = $this->formatForHandleFigure($facts, $pair['handle'], $pair['figure']);
+            if ($trueFormat !== null && strcasecmp($trueFormat, $pair['format']) !== 0) {
+                $rewritten = $this->replaceFormatWordNearOffset($rewritten, (int) $pair['offset'], $pair['format'], $trueFormat);
+
+                continue;
+            }
+
+            $replacement = $this->figureForHandleFormat($facts, $pair['handle'], $pair['format']);
+            if ($replacement !== null && $replacement !== $pair['figure']) {
+                $rewritten = $this->replaceTimesUsualFigure($rewritten, $pair['figure'], $replacement);
+            }
+        }
+
+        return trim(preg_replace('/\s{2,}/u', ' ', $rewritten) ?? $rewritten);
+    }
+
+    /**
+     * A distinctive hook/caption phrase must not be paired with another post's multiplier.
+     *
+     * @param  array<string, mixed>  $facts
+     */
+    public function unsupportedHookTimesUsualClaim(string $text, array $facts): ?string
+    {
+        foreach ($this->hookFigureMismatches($text, $facts) as $mismatch) {
+            return 'times-usual figure does not match @'.$mismatch['handle'].' post "'.$mismatch['phrase'].'"';
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function rewriteUnsupportedHookTimesUsualClaims(array $output, array $facts): array
+    {
+        return $this->mapNarrativeText($output, fn (string $text): string => $this->rewriteUnsupportedHookTimesUsualClaimsInText($text, $facts));
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    public function rewriteUnsupportedHookTimesUsualClaimsInText(string $text, array $facts): string
+    {
+        if ($text === '' || $this->unsupportedHookTimesUsualClaim($text, $facts) === null) {
+            return $text;
+        }
+
+        $rewritten = $text;
+        $seen = [];
+
+        foreach ($this->hookFigureMismatches($rewritten, $facts) as $mismatch) {
+            $key = $mismatch['figure'].'@'.$mismatch['offset'];
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+
+            $figure = $mismatch['figure'];
+            $expected = $mismatch['expected_figure'];
+            $format = $mismatch['format'];
+            $expectedFormat = $mismatch['expected_format'];
+
+            if ($expected !== null && $expected !== $figure) {
+                $rewritten = $this->replaceTimesUsualFigure($rewritten, $figure, $expected);
+            }
+
+            if ($format !== null && $expectedFormat !== null && strcasecmp($format, $expectedFormat) !== 0) {
+                $rewritten = $this->replaceFormatWordNearOffset($rewritten, (int) $mismatch['offset'], $format, $expectedFormat);
+            }
+        }
+
+        return trim(preg_replace('/\s{2,}/u', ' ', $rewritten) ?? $rewritten);
+    }
+
+    /**
+     * "X leads with N posts this week" must match the true weekly count and ranking.
+     *
+     * @param  array<string, mixed>  $facts
+     */
+    public function unsupportedLeadsWithPostsClaim(string $text, array $facts): ?string
+    {
+        foreach ($this->leadsWithPostsClaimsInText($text, $facts) as $claim) {
+            if ($claim['count'] !== $claim['actual'] || ! $claim['is_leader']) {
+                return '@'.$claim['handle'].' does not lead with '.$claim['count'].' posts this week';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function rewriteUnsupportedLeadsWithPostsClaims(array $output, array $facts): array
+    {
+        return $this->mapNarrativeText($output, fn (string $text): string => $this->rewriteUnsupportedLeadsWithPostsClaimsInText($text, $facts));
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    public function rewriteUnsupportedLeadsWithPostsClaimsInText(string $text, array $facts): string
+    {
+        if ($text === '' || $this->unsupportedLeadsWithPostsClaim($text, $facts) === null) {
+            return $text;
+        }
+
+        $rewritten = $text;
+        $leader = $this->weeklyPostLeader($facts);
+
+        foreach ($this->leadsWithPostsClaimsInText($rewritten, $facts) as $claim) {
+            if ($claim['count'] === $claim['actual'] && $claim['is_leader']) {
+                continue;
+            }
+
+            if ($leader !== null && $leader['handle'] !== $claim['handle']) {
+                $pattern = '/'.preg_quote($claim['matched'], '/').'/iu';
+                // Keep the original account on the clause so a following standout Nx stays bound to them.
+                $replacement = $claim['alias'].' posted '.$claim['actual'].' times';
+                if ($leader['count'] > $claim['actual']) {
+                    $replacement = $leader['alias'].' leads with '.$leader['count'].' posts; '.$claim['alias'].' posted '.$claim['actual'].' times';
+                }
+                $rewritten = preg_replace($pattern, $replacement, $rewritten, 1) ?? $rewritten;
+
+                continue;
+            }
+
+            $pattern = '/'.preg_quote($claim['matched'], '/').'/iu';
+            $replacement = $claim['alias'].' posted '.$claim['actual'].' times';
+            $rewritten = preg_replace($pattern, $replacement, $rewritten, 1) ?? $rewritten;
+        }
+
+        return trim(preg_replace('/\s{2,}/u', ' ', $rewritten) ?? $rewritten);
+    }
+
+    /**
+     * Dates next to "posted" must be post dates from facts, not event dates from captions.
+     *
+     * @param  array<string, mixed>  $facts
+     */
+    public function unsupportedPostedDateClaim(string $text, array $facts): ?string
+    {
+        foreach ($this->postedDateClaimsInText($text, $facts) as $claim) {
+            if (! $claim['matched_post']) {
+                return 'posted-date claim is not a post date in facts';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function rewriteUnsupportedPostedDateClaims(array $output, array $facts): array
+    {
+        return $this->mapNarrativeText($output, fn (string $text): string => $this->rewriteUnsupportedPostedDateClaimsInText($text, $facts));
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    public function rewriteUnsupportedPostedDateClaimsInText(string $text, array $facts): string
+    {
+        if ($text === '' || $this->unsupportedPostedDateClaim($text, $facts) === null) {
+            return $text;
+        }
+
+        $rewritten = $text;
+
+        foreach ($this->postedDateClaimsInText($rewritten, $facts) as $claim) {
+            if ($claim['matched_post']) {
+                continue;
+            }
+
+            $rewritten = preg_replace('/\bposted(?:\s+on)?\s+'.$claim['date_pattern'].'\b/iu', 'posted', $rewritten) ?? $rewritten;
+            $rewritten = preg_replace('/\b'.$claim['date_pattern'].'\b(?:\s+posted(?:\s+that day)?)/iu', 'posted', $rewritten) ?? $rewritten;
+            $rewritten = preg_replace('/\bposted that day\b/iu', 'posted', $rewritten) ?? $rewritten;
+        }
+
+        return trim(preg_replace('/\s{2,}/u', ' ', $rewritten) ?? $rewritten);
+    }
+
+    /**
+     * Drop Nx claims for a named account that has no usable times_usual / views_vs_usual.
+     *
+     * @param  array<string, mixed>  $facts
+     */
+    public function unsupportedTimesUsualWithoutBaseline(string $text, array $facts): ?string
+    {
+        foreach ($this->figureHandlePairsInText($text, $this->allowedHandles($facts), $facts) as $pair) {
+            if ($pair['handle'] === null) {
+                continue;
+            }
+
+            if ($this->handleTimesUsualNumbers($facts, [$pair['handle']]) === []) {
+                return 'times-usual claim has no usable baseline for @'.$pair['handle'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function rewriteTimesUsualWithoutBaseline(array $output, array $facts): array
+    {
+        return $this->mapNarrativeText($output, fn (string $text): string => $this->rewriteTimesUsualWithoutBaselineInText($text, $facts));
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    public function rewriteTimesUsualWithoutBaselineInText(string $text, array $facts): string
+    {
+        if ($text === '' || $this->unsupportedTimesUsualWithoutBaseline($text, $facts) === null) {
+            return $text;
+        }
+
+        $rewritten = $text;
+
+        foreach ($this->figureHandlePairsInText($rewritten, $this->allowedHandles($facts), $facts) as $pair) {
+            if ($pair['handle'] === null) {
+                continue;
+            }
+
+            if ($this->handleTimesUsualNumbers($facts, [$pair['handle']]) !== []) {
+                continue;
+            }
+
+            $rewritten = preg_replace(
+                '/(?:,\s*)?(?:at\s+|got\s+|hit\s+)?'.preg_quote($pair['figure'], '/').'\s*(?:[x×]|times (?:their |your |the )?usual(?:\s+views)?)/iu',
+                '',
+                $rewritten,
+            ) ?? $rewritten;
+        }
+
+        $rewritten = preg_replace('/\s{2,}/u', ' ', $rewritten) ?? $rewritten;
+        $rewritten = preg_replace('/\s+([,.;:!?])/u', '$1', $rewritten) ?? $rewritten;
+
+        return trim($rewritten);
+    }
+
+    /**
+     * Prefer "comment on the post" over replying to someone else's comment on a competitor post.
+     *
+     * @param  array<string, mixed>  $output
+     * @return array<string, mixed>
+     */
+    public function rewriteReplyToCommentActions(array $output): array
+    {
+        return $this->mapNarrativeText($output, fn (string $text): string => $this->rewriteReplyToCommentActionsInText($text));
+    }
+
+    public function rewriteReplyToCommentActionsInText(string $text): string
+    {
+        if ($text === '') {
+            return $text;
+        }
+
+        // Prefer "comment on their mansion Reel" over "comment on the post on their mansion Reel".
+        $rewritten = preg_replace(
+            '/\breply(?:ing)?\s+to\s+(?:someone else\'s|somebody else\'s|another (?:user|person|member)\'s|a stranger\'s)\s+comments?\s+on\b/iu',
+            'comment on',
+            $text,
+        ) ?? $text;
+        $rewritten = preg_replace(
+            '/\breply(?:ing)?\s+to\s+(?:someone else\'s|somebody else\'s|another (?:user|person|member)\'s|a stranger\'s)\s+comments?\b/iu',
+            'comment on the post',
+            $rewritten,
+        ) ?? $rewritten;
+        $rewritten = preg_replace(
+            '/\breply(?:ing)?\s+under\s+(?:someone else\'s|somebody else\'s|another)\s+comments?\b/iu',
+            'comment on the post',
+            $rewritten,
+        ) ?? $rewritten;
+        $rewritten = preg_replace(
+            '/\breply(?:ing)?\s+to\s+(?:a\s+)?comments?\s+on\s+(?:their|@\w[\w.]*)\s+(?:post|reel|carousel|image)\b/iu',
+            'comment on the post',
+            $rewritten,
+        ) ?? $rewritten;
+
+        return trim(preg_replace('/\s{2,}/u', ' ', $rewritten) ?? $rewritten);
+    }
+
+    /**
+     * @param  array<string, mixed>  $output
+     * @param  callable(string): string  $mapper
+     * @return array<string, mixed>
+     */
+    private function mapNarrativeText(array $output, callable $mapper): array
+    {
+        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+            if (isset($output[$field]) && is_string($output[$field])) {
+                $output[$field] = $mapper($output[$field]);
+            }
+        }
+
+        if (isset($output['watch']) && is_array($output['watch'])) {
+            $output['watch'] = array_map(
+                fn (mixed $item): mixed => is_string($item) ? $mapper($item) : $item,
+                $output['watch'],
+            );
+        }
+
+        if (isset($output['trends']) && is_array($output['trends'])) {
+            $output['trends'] = array_map(
+                fn (mixed $item): mixed => is_string($item) ? $mapper($item) : $item,
+                $output['trends'],
+            );
+        }
+
+        if (isset($output['actions']) && is_array($output['actions'])) {
+            foreach ($output['actions'] as $index => $action) {
+                if (! is_array($action)) {
+                    continue;
+                }
+
+                foreach (['title', 'why', 'how', 'hook'] as $field) {
+                    if (isset($action[$field]) && is_string($action[$field])) {
+                        $action[$field] = $mapper($action[$field]);
+                    }
+                }
+
+                $output['actions'][$index] = $action;
+            }
+        }
+
+        return $output;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    private function handleHasFigureInFormat(array $facts, string $handle, string $figure, string $format): bool
+    {
+        foreach ($this->handlePosts($facts, [$handle]) as $post) {
+            if (! is_array($post)) {
+                continue;
+            }
+
+            if (strcasecmp((string) ($post['format'] ?? ''), $format) !== 0) {
+                continue;
+            }
+
+            foreach (['times_usual', 'views_vs_usual'] as $key) {
+                if (! isset($post[$key]) || ! is_numeric($post[$key])) {
+                    continue;
+                }
+
+                if ($this->numberIsKnownAsTimesUsual($figure, [
+                    $this->normaliseNumber((string) $post[$key]),
+                    $this->normaliseNumber(number_format((float) $post[$key], 1, '.', '')),
+                ])) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    private function formatForHandleFigure(array $facts, string $handle, string $figure): ?string
+    {
+        foreach ($this->handlePosts($facts, [$handle]) as $post) {
+            if (! is_array($post)) {
+                continue;
+            }
+
+            foreach (['times_usual', 'views_vs_usual'] as $key) {
+                if (! isset($post[$key]) || ! is_numeric($post[$key])) {
+                    continue;
+                }
+
+                if ($this->numberIsKnownAsTimesUsual($figure, [
+                    $this->normaliseNumber((string) $post[$key]),
+                    $this->normaliseNumber(number_format((float) $post[$key], 1, '.', '')),
+                ])) {
+                    $format = trim((string) ($post['format'] ?? ''));
+
+                    return $format !== '' ? $format : null;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    private function figureForHandleFormat(array $facts, string $handle, string $format): ?string
+    {
+        $candidates = [];
+
+        foreach ($this->handlePosts($facts, [$handle]) as $post) {
+            if (! is_array($post) || strcasecmp((string) ($post['format'] ?? ''), $format) !== 0) {
+                continue;
+            }
+
+            foreach (['times_usual', 'views_vs_usual'] as $key) {
+                if (isset($post[$key]) && is_numeric($post[$key])) {
+                    $candidates[] = (float) $post[$key];
+                }
+            }
+        }
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        rsort($candidates);
+
+        return number_format($candidates[0], 1, '.', '');
+    }
+
+    private function replaceFormatWordNearOffset(string $text, int $offset, string $from, string $to): string
+    {
+        // PREG_OFFSET_CAPTURE is byte-based; keep substr in the same space.
+        $radius = 48;
+        $start = max(0, $offset - $radius);
+        $length = min(strlen($text) - $start, ($offset - $start) + $radius);
+        $window = substr($text, $start, $length);
+
+        if (preg_match_all('/\b'.preg_quote($from, '/').'\b/iu', $window, $matches, PREG_OFFSET_CAPTURE) < 1) {
+            return $text;
+        }
+
+        $bestLocal = null;
+        $bestDistance = PHP_INT_MAX;
+        $relativeOffset = $offset - $start;
+
+        foreach ($matches[0] as $match) {
+            $local = (int) $match[1];
+            $distance = abs($local - $relativeOffset);
+            if ($distance < $bestDistance) {
+                $bestDistance = $distance;
+                $bestLocal = ['offset' => $local, 'length' => strlen($match[0])];
+            }
+        }
+
+        if ($bestLocal === null) {
+            return $text;
+        }
+
+        $absolute = $start + $bestLocal['offset'];
+
+        return substr($text, 0, $absolute).$to.substr($text, $absolute + $bestLocal['length']);
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return list<array{handle: string, phrase: string, figure: string, expected_figure: ?string, format: ?string, expected_format: ?string, offset: int}>
+     */
+    private function hookFigureMismatches(string $text, array $facts): array
+    {
+        $mismatches = [];
+        $lower = mb_strtolower($text);
+
+        foreach ($this->accountRowsFromFacts($facts) as $row) {
+            $handle = $this->normaliseHandle((string) ($row['handle'] ?? ''));
+            if ($handle === '') {
+                continue;
+            }
+
+            $posts = $this->handlePosts($facts, [$handle]);
+            foreach ($posts as $post) {
+                if (! is_array($post)) {
+                    continue;
+                }
+
+                foreach ($this->distinctivePostPhrases($post) as $phrase) {
+                    $pos = mb_stripos($lower, mb_strtolower($phrase));
+                    if ($pos === false) {
+                        continue;
+                    }
+
+                    foreach ($this->figureHandlePairsInText($text, [$handle], $facts) as $pair) {
+                        if ($pair['handle'] !== $handle) {
+                            continue;
+                        }
+
+                        // Only bind when the figure is near the phrase.
+                        if (abs((int) $pair['offset'] - $pos) > 120) {
+                            continue;
+                        }
+
+                        $expected = $this->postEngagementScore($post);
+                        if ($expected === null) {
+                            continue;
+                        }
+
+                        $expectedFigure = number_format($expected, 1, '.', '');
+                        if ($this->numberIsKnownAsTimesUsual($pair['figure'], [$expectedFigure, $this->normaliseNumber((string) $expected)])) {
+                            continue;
+                        }
+
+                        // Figure matches another of this handle's posts - phrase/post mismatch.
+                        if (! $this->numberIsKnownAsTimesUsual($pair['figure'], $this->handleTimesUsualNumbers($facts, [$handle]))) {
+                            continue;
+                        }
+
+                        $mismatches[] = [
+                            'handle' => $handle,
+                            'phrase' => $phrase,
+                            'figure' => $pair['figure'],
+                            'expected_figure' => $expectedFigure,
+                            'format' => $pair['format'],
+                            'expected_format' => trim((string) ($post['format'] ?? '')) ?: null,
+                            'offset' => (int) $pair['offset'],
+                        ];
+                    }
+                }
+            }
+        }
+
+        return $mismatches;
+    }
+
+    /**
+     * @param  array<string, mixed>  $post
+     * @return list<string>
+     */
+    private function distinctivePostPhrases(array $post): array
+    {
+        $phrases = [];
+
+        foreach (['hook', 'caption'] as $key) {
+            $value = trim((string) ($post[$key] ?? ''));
+            if ($value === '') {
+                continue;
+            }
+
+            $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
+            $words = preg_split('/\s+/u', $value) ?: [];
+            $words = array_values(array_filter($words, fn (string $word): bool => mb_strlen(trim($word, " \t\n\r\0\x0B#@.,!?")) >= 3));
+
+            if (count($words) >= 2) {
+                $phrases[] = trim($words[0].' '.$words[1], " \t\n\r\0\x0B#@.,!?");
+            }
+
+            if (count($words) >= 3) {
+                $phrases[] = trim($words[0].' '.$words[1].' '.$words[2], " \t\n\r\0\x0B#@.,!?");
+            }
+
+            foreach ($words as $word) {
+                $clean = trim($word, " \t\n\r\0\x0B#@.,!?");
+                if (mb_strlen($clean) >= 6) {
+                    $phrases[] = $clean;
+                }
+            }
+        }
+
+        return array_values(array_unique(array_filter(
+            $phrases,
+            fn (string $phrase): bool => mb_strlen($phrase) >= 6,
+        )));
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return list<array{handle: string, alias: string, matched: string, count: int, actual: int, is_leader: bool}>
+     */
+    private function leadsWithPostsClaimsInText(string $text, array $facts): array
+    {
+        $counts = $this->weeklyPostCounts($facts);
+        if ($counts === []) {
+            return [];
+        }
+
+        $max = max(array_column($counts, 'count'));
+        $claims = [];
+
+        foreach ($counts as $row) {
+            foreach ($row['aliases'] as $alias) {
+                $pattern = '/('.preg_quote($alias, '/').')\s+leads?\s+with\s+(\d+)\s+posts?\b/iu';
+                if (preg_match_all($pattern, $text, $matches, PREG_SET_ORDER) < 1) {
+                    continue;
+                }
+
+                foreach ($matches as $match) {
+                    $claimed = (int) $match[2];
+                    $claims[] = [
+                        'handle' => $row['handle'],
+                        'alias' => $match[1],
+                        'matched' => $match[0],
+                        'count' => $claimed,
+                        'actual' => $row['count'],
+                        'is_leader' => $row['count'] === $max && $row['count'] > 0,
+                    ];
+                }
+            }
+        }
+
+        return $claims;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return list<array{handle: string, alias: string, count: int, aliases: list<string>}>
+     */
+    private function weeklyPostCounts(array $facts): array
+    {
+        $rows = [];
+
+        foreach ($this->accountRowsFromFacts($facts) as $row) {
+            $handle = $this->normaliseHandle((string) ($row['handle'] ?? ''));
+            if ($handle === '') {
+                continue;
+            }
+
+            $count = $row['posts_last_7d_count'] ?? null;
+            if (! is_numeric($count)) {
+                $count = is_array($row['posts_last_7d'] ?? null) ? count($row['posts_last_7d']) : 0;
+            }
+
+            $rows[] = [
+                'handle' => $handle,
+                'alias' => $this->preferredAliasForAccount($row),
+                'count' => (int) $count,
+                'aliases' => $this->aliasesForAccount($row),
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return array{handle: string, alias: string, count: int}|null
+     */
+    private function weeklyPostLeader(array $facts): ?array
+    {
+        $rows = $this->weeklyPostCounts($facts);
+        if ($rows === []) {
+            return null;
+        }
+
+        usort($rows, fn (array $a, array $b): int => $b['count'] <=> $a['count']);
+        $leader = $rows[0];
+
+        if ($leader['count'] <= 0) {
+            return null;
+        }
+
+        return [
+            'handle' => $leader['handle'],
+            'alias' => $leader['alias'],
+            'count' => $leader['count'],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function preferredAliasForAccount(array $row): string
+    {
+        $display = trim((string) ($row['display_name'] ?? ''));
+        if ($display !== '') {
+            return $display;
+        }
+
+        $handle = $this->normaliseHandle((string) ($row['handle'] ?? ''));
+
+        return $handle !== '' ? '@'.$handle : 'they';
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return list<array{date_pattern: string, matched_post: bool}>
+     */
+    private function postedDateClaimsInText(string $text, array $facts): array
+    {
+        $claims = [];
+        $datePattern = '(\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)|(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2})';
+
+        if (preg_match_all('/\bposted(?:\s+on)?\s+'.$datePattern.'\b|\b'.$datePattern.'\b.{0,30}\bposted(?:\s+that day)?\b/iu', $text, $matches, PREG_SET_ORDER) < 1) {
+            return [];
+        }
+
+        $postDates = $this->postDateTokens($facts);
+
+        foreach ($matches as $match) {
+            $raw = $match[1] !== '' ? $match[1] : ($match[2] ?? '');
+            $raw = trim((string) $raw);
+            if ($raw === '') {
+                continue;
+            }
+
+            $claims[] = [
+                'date_pattern' => preg_quote($raw, '/'),
+                'matched_post' => $this->dateMatchesPostTokens($raw, $postDates),
+            ];
+        }
+
+        return $claims;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return list<string>
+     */
+    private function postDateTokens(array $facts): array
+    {
+        $tokens = [];
+
+        foreach ($this->handlePosts($facts, []) as $post) {
+            if (! is_array($post)) {
+                continue;
+            }
+
+            $label = (string) ($post['posted_label'] ?? '');
+            if ($label !== '') {
+                $tokens[] = mb_strtolower($label);
+            }
+
+            $postedAt = (string) ($post['posted_at'] ?? '');
+            if ($postedAt !== '') {
+                try {
+                    $london = CarbonImmutable::parse($postedAt)->timezone('Europe/London');
+                    $tokens[] = mb_strtolower($london->format('j M'));
+                    $tokens[] = mb_strtolower($london->format('j F'));
+                    $tokens[] = mb_strtolower($london->format('d M'));
+                    $tokens[] = mb_strtolower($london->isoFormat('D MMM'));
+                    $tokens[] = mb_strtolower($london->isoFormat('D MMMM'));
+                } catch (\Throwable) {
+                    // Ignore unparseable dates.
+                }
+            }
+        }
+
+        return array_values(array_unique(array_filter($tokens)));
+    }
+
+    /**
+     * @param  list<string>  $tokens
+     */
+    private function dateMatchesPostTokens(string $raw, array $tokens): bool
+    {
+        $needle = mb_strtolower(trim($raw));
+        $needle = preg_replace('/\s+/u', ' ', $needle) ?? $needle;
+
+        foreach ($tokens as $token) {
+            if (str_contains($token, $needle) || str_contains($needle, $token)) {
+                return true;
+            }
+
+            // "1 Nov" vs "1 November" / "01 Nov".
+            $compactNeedle = preg_replace('/\bsept\b/i', 'sep', $needle) ?? $needle;
+            $compactToken = preg_replace('/\bsept\b/i', 'sep', $token) ?? $token;
+            if (preg_match('/\b(\d{1,2})\s+([a-z]+)/i', $compactNeedle, $n) === 1
+                && preg_match('/\b(\d{1,2})\s+([a-z]+)/i', $compactToken, $t) === 1
+            ) {
+                if ((int) $n[1] === (int) $t[1] && str_starts_with($t[2], mb_substr($n[2], 0, 3))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Standout / hit praise tied to "this week" must use an in-window post, not a 30-day winner.
      *
      * @param  array<string, mixed>  $facts
@@ -1350,11 +2208,12 @@ class DailyBriefValidator
 
     /**
      * Pair each times-usual / Nx figure with the nearest preceding named competitor
-     * (@handle, handle token, display_name, or handle-derived brand phrase).
+     * (@handle, handle token, display_name, or handle-derived brand phrase) and any
+     * nearby format word (Reel / Carousel / Image).
      *
      * @param  list<string>  $allowedHandles
      * @param  array<string, mixed>  $facts
-     * @return list<array{figure: string, handle: ?string}>
+     * @return list<array{figure: string, handle: ?string, format: ?string, offset: int}>
      */
     public function figureHandlePairsInText(string $text, array $allowedHandles, array $facts = []): array
     {
@@ -1364,9 +2223,10 @@ class DailyBriefValidator
         $figurePattern = '/(\d+(?:\.\d+)?)\s*(?:[x×]|times (?:their |your |the )?usual)/iu';
 
         if (preg_match_all($figurePattern, $text, $matches, PREG_OFFSET_CAPTURE) > 0) {
-            foreach ($matches[1] as $match) {
+            foreach ($matches[1] as $index => $match) {
                 $figure = $this->normaliseNumber($match[0]);
                 $offset = (int) $match[1];
+                $fullOffset = (int) ($matches[0][$index][1] ?? $offset);
                 $handle = null;
 
                 foreach ($mentions as $candidate) {
@@ -1379,7 +2239,12 @@ class DailyBriefValidator
                     $handle = $mentions[0]['handle'];
                 }
 
-                $pairs[] = ['figure' => $figure, 'handle' => $handle];
+                $pairs[] = [
+                    'figure' => $figure,
+                    'handle' => $handle,
+                    'format' => $this->formatNearOffset($text, $fullOffset),
+                    'offset' => $fullOffset,
+                ];
             }
         }
 
@@ -1399,10 +2264,14 @@ class DailyBriefValidator
                     $handle = $mentions[0]['handle'];
                 }
 
+                $format = $this->formatNearOffset($text, $offset);
+
                 foreach ([$ranges[1][$index][0], $ranges[2][$index][0]] as $raw) {
                     $pairs[] = [
                         'figure' => $this->normaliseNumber($raw),
                         'handle' => $handle,
+                        'format' => $format,
+                        'offset' => $offset,
                     ];
                 }
             }
@@ -1413,11 +2282,51 @@ class DailyBriefValidator
             if ($pair['figure'] === '') {
                 continue;
             }
-            $key = $pair['figure'].'|'.($pair['handle'] ?? '');
+            $key = $pair['figure'].'|'.($pair['handle'] ?? '').'|'.($pair['format'] ?? '');
             $unique[$key] = $pair;
         }
 
         return array_values($unique);
+    }
+
+    private function formatNearOffset(string $text, int $offset): ?string
+    {
+        // PREG_OFFSET_CAPTURE is byte-based; keep substr in the same space.
+        $radius = 48;
+        $start = max(0, $offset - $radius);
+        $length = min(strlen($text) - $start, ($offset - $start) + $radius);
+        $window = substr($text, $start, $length);
+
+        if (preg_match_all('/\b(reels?|carousels?|images?|stories?)\b/iu', $window, $matches, PREG_OFFSET_CAPTURE) < 1) {
+            return null;
+        }
+
+        $best = null;
+        $bestDistance = PHP_INT_MAX;
+        $relativeOffset = $offset - $start;
+
+        foreach ($matches[1] as $match) {
+            $local = (int) $match[1];
+            $distance = abs($local - $relativeOffset);
+            if ($distance > $radius || $distance >= $bestDistance) {
+                continue;
+            }
+
+            $bestDistance = $distance;
+            $best = strtolower((string) $match[0]);
+        }
+
+        if ($best === null) {
+            return null;
+        }
+
+        return match (true) {
+            str_starts_with($best, 'reel') => 'Reel',
+            str_starts_with($best, 'carousel') => 'Carousel',
+            str_starts_with($best, 'image') => 'Image',
+            str_starts_with($best, 'stor') => 'Story',
+            default => null,
+        };
     }
 
     /**

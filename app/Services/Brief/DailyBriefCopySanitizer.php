@@ -53,13 +53,19 @@ class DailyBriefCopySanitizer
         ];
 
         $llmShape = $this->validator->rewriteViewsVsUsualWording($llmShape);
+        $llmShape = $this->validator->rewriteReplyToCommentActions($llmShape);
         $llmShape = $this->validator->rewriteInternalPostIds($llmShape, $facts);
         $llmShape = $this->validator->rewriteBorrowedCompetitorNames($llmShape, $facts);
         $llmShape = $this->validator->rewriteUnsupportedStandoutClaims($llmShape, $facts);
-        $llmShape = $this->validator->rewriteUnsupportedWeekBestClaims($llmShape, $facts);
         $llmShape = $this->validator->rewriteUnsupportedDailyClaims($llmShape, $facts);
         $llmShape = $this->validator->rewriteLongestGapQualification($llmShape, $facts);
+        $llmShape = $this->validator->rewriteUnsupportedLeadsWithPostsClaims($llmShape, $facts);
         $llmShape = $this->validator->rewriteUnsupportedHandleTimesUsualClaims($llmShape, $facts);
+        $llmShape = $this->validator->rewriteUnsupportedFormatTimesUsualClaims($llmShape, $facts);
+        $llmShape = $this->validator->rewriteUnsupportedHookTimesUsualClaims($llmShape, $facts);
+        $llmShape = $this->validator->rewriteUnsupportedPostedDateClaims($llmShape, $facts);
+        $llmShape = $this->validator->rewriteTimesUsualWithoutBaseline($llmShape, $facts);
+        $llmShape = $this->validator->rewriteUnsupportedWeekBestClaims($llmShape, $facts);
 
         $payload['headline'] = (string) ($llmShape['headline'] ?? $headline);
         $payload['own_summary'] = (string) ($llmShape['own_summary'] ?? '');

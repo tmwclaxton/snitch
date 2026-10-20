@@ -218,6 +218,10 @@ Rules:
 - Prefer "times their usual" for engagement multipliers and "times their usual views" when the figure is views-based. Never mix views and likes labels.
 - Only quote a multiplier when times_usual_label contains "times their usual". If the label is "not enough history", do not invent an Nx claim. When times_usual_early is true, prefer softer wording and do not call the post a standout or viral hit from that figure alone.
 - Never attach one handle's times_usual / views_vs_usual / Nx figure to another handle's post. Each multiplier stays with that handle's posts only, including when you use a display name (for example "One House Social Club" for @onehousesocialclub).
+- Keep format, hook, and figure on the same post: do not call a Reel a Carousel or attach one post's caption (for example Sunlight Society) to another post's Nx.
+- "Leads with N posts this week" must use that handle's posts_last_7d_count, and only when they truly have the most posts.
+- Dates next to "posted" must be the post's posted_at / posted_label, not an event date from the caption.
+- For competitor engagement actions, say "comment on the post". Do not suggest replying to someone else's comment.
 - Zero and one are valid counts when they appear in the facts (for example "0 posts in the last 7 days").
 - Do not use accounts with no posts (sync_empty, or null last_posted_at) for longest-gap claims. facts.cadence_gaps already excludes them.
 - Cadence is in facts.cadence: posts_last_7d, days_since_last_post, distinct_days_posted_last_7, posted_every_day_last_7, posted_almost_daily_last_7.
