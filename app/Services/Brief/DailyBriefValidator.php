@@ -41,6 +41,8 @@ class DailyBriefValidator
         $output = $this->rewriteTimesUsualWithoutBaseline($output, $facts);
         // Week-window softening after format/hook rewrites, so corrected out-of-window Nx claims are caught.
         $output = $this->rewriteUnsupportedWeekBestClaims($output, $facts);
+        // Figure/format rewrites can leave "standout" next to a sub-threshold Nx - soften again.
+        $output = $this->rewriteUnsupportedStandoutClaims($output, $facts);
         $errors = [];
 
         $headline = trim((string) ($output['headline'] ?? ''));
@@ -3080,7 +3082,8 @@ class DailyBriefValidator
         $rewritten = preg_replace('/\btop\s+(post|reel|carousel|performer)\b/iu', '$1', $rewritten) ?? $rewritten;
         $rewritten = preg_replace('/\b(?:biggest\s+)?hit\b/iu', '', $rewritten) ?? $rewritten;
         $rewritten = preg_replace('/\bwas a standout\b/iu', '', $rewritten) ?? $rewritten;
-        $rewritten = preg_replace('/\ba standout\b/iu', '', $rewritten) ?? $rewritten;
+        // Keep the article so "a standout Reel" becomes "a Reel", not "Reel".
+        $rewritten = preg_replace('/\ba standout\b/iu', 'a', $rewritten) ?? $rewritten;
         $rewritten = preg_replace('/\bstandout\b/iu', '', $rewritten) ?? $rewritten;
         $rewritten = preg_replace('/\boutperformed\b/iu', 'posted', $rewritten) ?? $rewritten;
         $rewritten = preg_replace('/\bbest\s+(post|reel|carousel|performer)\b/iu', 'recent $1', $rewritten) ?? $rewritten;
@@ -3189,6 +3192,22 @@ class DailyBriefValidator
         }
 
         if ($wantsStrongPraise) {
+            // A cited Nx next to standout/hit wording must itself clear the threshold,
+            // even when another mentioned account has a stronger post elsewhere in the text.
+            foreach ($this->figureHandlePairsInText($text, $this->allowedHandles($facts), $facts) as $pair) {
+                if (! is_numeric($pair['figure'])) {
+                    continue;
+                }
+
+                if ((float) $pair['figure'] > self::STANDOUT_THRESHOLD) {
+                    continue;
+                }
+
+                if ($this->standoutWordNearOffset($text, (int) $pair['offset'])) {
+                    return 'standout claim needs times-usual above '.self::STANDOUT_THRESHOLD;
+                }
+            }
+
             if ($bestScore !== null && $bestScore > self::STANDOUT_THRESHOLD) {
                 return null;
             }
@@ -3201,6 +3220,16 @@ class DailyBriefValidator
         }
 
         return 'best-post claim is not supported by in-window engagement';
+    }
+
+    private function standoutWordNearOffset(string $text, int $offset): bool
+    {
+        $radius = 60;
+        $start = max(0, $offset - $radius);
+        $length = min(strlen($text) - $start, ($offset - $start) + $radius);
+        $window = substr($text, $start, $length);
+
+        return preg_match('/\b(standout|outperformed|(?:biggest\s+)?hit)\b|\btop\s+(?:post|reel|carousel|performer)\b/iu', $window) === 1;
     }
 
     /**

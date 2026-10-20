@@ -66,6 +66,7 @@ class DailyBriefCopySanitizer
         $llmShape = $this->validator->rewriteUnsupportedPostedDateClaims($llmShape, $facts);
         $llmShape = $this->validator->rewriteTimesUsualWithoutBaseline($llmShape, $facts);
         $llmShape = $this->validator->rewriteUnsupportedWeekBestClaims($llmShape, $facts);
+        $llmShape = $this->validator->rewriteUnsupportedStandoutClaims($llmShape, $facts);
 
         $payload['headline'] = (string) ($llmShape['headline'] ?? $headline);
         $payload['own_summary'] = (string) ($llmShape['own_summary'] ?? '');
