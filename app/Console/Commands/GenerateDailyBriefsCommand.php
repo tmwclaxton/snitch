@@ -21,6 +21,7 @@ class GenerateDailyBriefsCommand extends Command
         {--date= : Brief date Y-m-d in Europe/London}
         {--sync : Run inline instead of queueing}
         {--force : Regenerate even when a brief already exists}
+        {--fallback : Skip the LLM and write the checked deterministic template (implies force)}
         {--sanitize : Re-run deterministic copy sanitizers on the stored brief without regenerating}';
 
     protected $description = 'Generate the daily executive summary for opted-in users';
@@ -31,7 +32,8 @@ class GenerateDailyBriefsCommand extends Command
         DailyBriefCopySanitizer $copySanitizer,
         BorrowedCompetitorNameSanitizer $borrowedNames,
     ): int {
-        $force = (bool) $this->option('force');
+        $templateOnly = (bool) $this->option('fallback');
+        $force = (bool) $this->option('force') || $templateOnly;
         $userFilter = $this->option('user');
         $dateOption = $this->option('date');
         $date = is_string($dateOption) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateOption) === 1
@@ -60,9 +62,9 @@ class GenerateDailyBriefsCommand extends Command
                 continue;
             }
 
-            if ($this->option('sync')) {
+            if ($this->option('sync') || $templateOnly) {
                 try {
-                    $brief = $generator->generate($user, $date, $force);
+                    $brief = $generator->generate($user, $date, $force, $templateOnly);
                     $this->info("User {$user->id}: daily brief #{$brief->id} for {$date->toDateString()}.");
                     $count++;
                 } catch (Throwable $exception) {

@@ -2422,6 +2422,34 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertStringNotContainsString('3.0 times their usual', (string) ($noBaseline['output']['competitor_summary'] ?? ''));
     }
 
+    public function test_template_only_ops_flag_overwrites_ready_llm_brief(): void
+    {
+        Sleep::fake();
+        $this->fakeValidLlm();
+
+        $user = User::factory()->create(['daily_brief_enabled' => true]);
+        BrandProfile::factory()->for($user)->create();
+        $this->seedAccounts($user);
+
+        $generator = app(DailyBriefGenerator::class);
+        $llmBrief = $generator->generate($user);
+        $this->assertFalse($llmBrief->payload['validation']['used_fallback'] ?? true);
+
+        Http::fake([
+            'https://nano-gpt.test/api/v1/chat/completions' => Http::response('should not be called', 500),
+        ]);
+
+        $this->artisan('snitch:generate-daily-briefs', [
+            '--user' => $user->id,
+            '--fallback' => true,
+        ])->assertSuccessful();
+
+        $llmBrief->refresh();
+        $this->assertTrue($llmBrief->payload['validation']['used_fallback'] ?? false);
+        $this->assertSame(0, (int) $llmBrief->llm_attempts);
+        Http::assertNothingSent();
+    }
+
     public function test_fallback_template_binds_format_date_and_multiplier_from_one_post(): void
     {
         $reel = [

@@ -55,16 +55,17 @@ class DailyBriefGenerator
             ->all();
     }
 
-    public function generate(User $user, ?CarbonImmutable $date = null, bool $force = false): DailyBrief
+    public function generate(User $user, ?CarbonImmutable $date = null, bool $force = false, bool $templateOnly = false): DailyBrief
     {
         $date ??= $this->briefDate();
         $existing = $this->briefForDate($user, $date);
 
-        if ($existing !== null && ! $force && $existing->status === 'ready') {
+        if ($existing !== null && ! $force && ! $templateOnly && $existing->status === 'ready') {
             return $existing;
         }
 
-        $kept = $this->snapshotExistingLlmBrief($existing);
+        // Ops --fallback must overwrite a ready LLM brief; normal force still prefers keep.
+        $kept = $templateOnly ? null : $this->snapshotExistingLlmBrief($existing);
 
         $brief = $existing ?? new DailyBrief([
             'user_id' => $user->id,
@@ -85,35 +86,41 @@ class DailyBriefGenerator
         $attempts = 0;
         $usedFallback = false;
 
-        try {
-            $first = $this->askModel($facts, $model, null);
-            $attempts++;
-            $diagnostics[] = ['attempt' => 1, 'errors' => $first['errors']];
-
-            if ($first['ok']) {
-                $llmOutput = $first['output'];
-            } else {
-                $second = $this->askModel($facts, $model, $first['errors']);
-                $attempts++;
-                $diagnostics[] = ['attempt' => 2, 'errors' => $second['errors']];
-
-                if ($second['ok']) {
-                    $llmOutput = $second['output'];
-                } else {
-                    $usedFallback = true;
-                    $partial = $this->validator->dropInvalidActions($second['output'] ?? $first['output'] ?? [], $facts);
-                    $partial = $this->validator->clearInvalidProse($partial, $facts);
-                    $llmOutput = $this->mergeFallback($partial, $facts);
-                }
-            }
-        } catch (Throwable $exception) {
-            Log::warning('Daily brief LLM failed', [
-                'user_id' => $user->id,
-                'error' => $exception->getMessage(),
-            ]);
+        if ($templateOnly) {
             $usedFallback = true;
             $llmOutput = $this->mergeFallback([], $facts);
-            $diagnostics[] = ['attempt' => $attempts, 'errors' => [$exception->getMessage()]];
+            $diagnostics[] = ['attempt' => 0, 'errors' => ['template-only ops regenerate']];
+        } else {
+            try {
+                $first = $this->askModel($facts, $model, null);
+                $attempts++;
+                $diagnostics[] = ['attempt' => 1, 'errors' => $first['errors']];
+
+                if ($first['ok']) {
+                    $llmOutput = $first['output'];
+                } else {
+                    $second = $this->askModel($facts, $model, $first['errors']);
+                    $attempts++;
+                    $diagnostics[] = ['attempt' => 2, 'errors' => $second['errors']];
+
+                    if ($second['ok']) {
+                        $llmOutput = $second['output'];
+                    } else {
+                        $usedFallback = true;
+                        $partial = $this->validator->dropInvalidActions($second['output'] ?? $first['output'] ?? [], $facts);
+                        $partial = $this->validator->clearInvalidProse($partial, $facts);
+                        $llmOutput = $this->mergeFallback($partial, $facts);
+                    }
+                }
+            } catch (Throwable $exception) {
+                Log::warning('Daily brief LLM failed', [
+                    'user_id' => $user->id,
+                    'error' => $exception->getMessage(),
+                ]);
+                $usedFallback = true;
+                $llmOutput = $this->mergeFallback([], $facts);
+                $diagnostics[] = ['attempt' => $attempts, 'errors' => [$exception->getMessage()]];
+            }
         }
 
         if ($usedFallback && $kept !== null) {

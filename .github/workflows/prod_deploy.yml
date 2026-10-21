@@ -307,7 +307,8 @@ jobs:
           SLOT="$(cat /opt/snitch/.deploy-slot)"
           APP="snitch-app-${SLOT}"
           echo "LIVE_SLOT=${SLOT}"
-          docker exec "$APP" php artisan snitch:generate-daily-briefs --user=1 --force --sync
+          # Template-only so the cite fix is visible even when the LLM path would succeed.
+          docker exec "$APP" php artisan snitch:generate-daily-briefs --user=1 --force --sync --fallback
           cat > /tmp/snitch-check-daily-brief.php <<'PHP'
           <?php
 
@@ -422,11 +423,36 @@ jobs:
               }
           }
 
-          foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
-              $val = (string) ($payload[$field] ?? '');
-              if ($val !== '' && str_contains(strtolower($val), 'usual')) {
-                  echo $field.'='.$val."\n";
-              }
+          echo 'used_fallback='.json_encode(($payload['validation']['used_fallback'] ?? null))."\n";
+          echo 'headline='.((string) ($payload['headline'] ?? $brief->headline ?? ''))."\n";
+          echo 'own_summary='.((string) ($payload['own_summary'] ?? ''))."\n";
+          echo 'competitor_summary='.((string) ($payload['competitor_summary'] ?? ''))."\n";
+
+          $hit24 = is_array($facts['top_competitor_hit_24h'] ?? null) ? $facts['top_competitor_hit_24h'] : null;
+          echo 'top_competitor_hit_24h='.json_encode([
+              'handle' => $hit24['handle'] ?? null,
+              'format' => $hit24['format'] ?? null,
+              'posted_at' => $hit24['posted_at'] ?? null,
+              'posted_label' => $hit24['posted_label'] ?? null,
+              'times_usual' => $hit24['times_usual'] ?? null,
+              'times_usual_label' => $hit24['times_usual_label'] ?? null,
+              'url' => $hit24['url'] ?? null,
+          ], JSON_UNESCAPED_SLASHES)."\n";
+
+          $blob = strtolower(
+              (string) ($payload['headline'] ?? $brief->headline ?? '')
+              .' '.
+              (string) ($payload['competitor_summary'] ?? '')
+          );
+          $hasReel = str_contains($blob, 'reel');
+          $has20Oct = str_contains($blob, '20 oct');
+          $has12x = str_contains($blob, '1.2');
+          echo 'confirm_reel='.($hasReel ? 'yes' : 'no')."\n";
+          echo 'confirm_20_oct='.($has20Oct ? 'yes' : 'no')."\n";
+          echo 'confirm_1_2x='.($has12x ? 'yes' : 'no')."\n";
+          if (! $hasReel || ! $has20Oct || ! $has12x) {
+              fwrite(STDERR, "brief_cite_mismatch: expected Reel, 20 Oct, 1.2x in headline/competitor_summary\n");
+              exit(1);
           }
           PHP
           docker cp /tmp/snitch-check-daily-brief.php "$APP":/var/www/html/snitch-check-daily-brief.php
