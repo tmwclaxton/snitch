@@ -54,7 +54,7 @@ class WarmWorkOsJwkCommandTest extends TestCase
         $dockerfile = file_get_contents(base_path('Dockerfile'));
 
         $this->assertNotFalse($dockerfile);
-        $this->assertStringContainsString('php:8.5-fpm-bookworm', $dockerfile);
+        $this->assertStringContainsString('php:8.5.12-fpm-bookworm', $dockerfile);
         $this->assertStringContainsString('precedence :ffff:0:0/96', $dockerfile);
         $this->assertStringContainsString('nginx', $dockerfile);
         $this->assertStringNotContainsString('artisan serve', $dockerfile);
