@@ -105,7 +105,7 @@ RUN apt-get update && apt-get upgrade -y \
     && docker-php-ext-install pdo_mysql \
     && docker-php-ext-install pdo_sqlite \
     && docker-php-ext-install zip \
-    && pecl install redis \
+    && (for i in 1 2 3 4 5; do pecl install redis && break; echo "pecl redis attempt $i failed; retrying..."; sleep $((i * 5)); done) \
     && docker-php-ext-enable redis \
     && rm -rf /tmp/pear \
     && apt-get purge -y \
