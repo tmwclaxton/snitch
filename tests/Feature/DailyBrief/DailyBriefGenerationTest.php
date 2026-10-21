@@ -2584,6 +2584,20 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertStringNotContainsString('from 12 October at 0.8', $fixedSummary);
         $this->assertDoesNotMatchRegularExpression('/reply(?:ing)?\\s+to\\s+(?:the\\s+|their\\s+)?comments?/i', $fixedHow);
         $this->assertMatchesRegularExpression('/comment on the post/i', $fixedHow);
+
+        // Claim rewrites must not leave a mixed cite; rebind restores the inspiration post.
+        $corrupted = $generator->rebindTemplateCitation([
+            'headline' => '@onehousesocialclub Reel from 17 Oct at 0.8x. Post a Reel today at 20:00.',
+            'actions' => $narrative['actions'] ?? [],
+            'own_summary' => (string) ($narrative['own_summary'] ?? ''),
+            'competitor_summary' => 'Competitors published 5 posts in the last 7 days. Strongest recent post: @onehousesocialclub Reel from 17 Oct at 0.8 times their usual.',
+            'watch' => [],
+        ], $facts);
+
+        $this->assertStringContainsString('Reel from 20 Oct at 1.2x', (string) ($corrupted['headline'] ?? ''));
+        $this->assertStringContainsString('Reel from 20 Oct at 1.2 times their usual', (string) ($corrupted['competitor_summary'] ?? ''));
+        $this->assertStringNotContainsString('17 Oct', (string) ($corrupted['headline'] ?? ''));
+        $this->assertStringNotContainsString('0.8', (string) ($corrupted['headline'] ?? ''));
     }
 
     /**

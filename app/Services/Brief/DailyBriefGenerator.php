@@ -299,14 +299,75 @@ PROMPT;
         $result = $this->validator->validate($output, $facts);
         $checked = $result['output'];
 
-        if ($result['ok']) {
-            return $checked;
+        if (! $result['ok']) {
+            // If mixed actions still fail, fall back to a fully deterministic narrative.
+            $fresh = $this->validator->validate($this->deterministicNarrative($facts), $facts);
+            $checked = $fresh['output'];
         }
 
-        // If mixed actions still fail, fall back to a fully deterministic narrative.
-        $fresh = $this->validator->validate($this->deterministicNarrative($facts), $facts);
+        // Claim rewrites can retarget format/date/Nx independently. Re-bind the
+        // template inspiration cite so those three always come from one post.
+        return $this->rebindTemplateCitation($checked, $facts);
+    }
 
-        return $fresh['output'];
+    /**
+     * Force headline / competitor summary / lead action cite onto one inspiration post.
+     *
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function rebindTemplateCitation(array $output, array $facts): array
+    {
+        $cite = $this->citationFromPost($this->fallbackInspirationPost($facts));
+        if ($cite === null) {
+            return $output;
+        }
+
+        $when = '20:00';
+        $headline = (string) ($output['headline'] ?? '');
+        if (preg_match('/\btoday at (\d{2}:\d{2})\b/u', $headline, $match) === 1) {
+            $when = $match[1];
+        } else {
+            $slot = $facts['best_times']['today_slot'] ?? null;
+            if (is_array($slot) && isset($slot['hour'])) {
+                $when = sprintf('%02d:00', (int) $slot['hour']);
+            }
+        }
+
+        $dateBit = $cite['date_short'] !== null ? ' from '.$cite['date_short'] : '';
+        $output['headline'] = '@'.$cite['handle'].' '.$cite['format']
+            .$dateBit
+            .' at '.$cite['multiplier_short']
+            .'. Post a '.$cite['format'].' today at '.$when.'.';
+
+        $clause = 'Strongest recent post: @'.$cite['handle'].' '.$cite['format']
+            .$dateBit
+            .' at '.$cite['multiplier_label'].'.';
+        $summary = trim((string) ($output['competitor_summary'] ?? ''));
+        if (preg_match('/\bStrongest recent post:.+$/u', $summary) === 1) {
+            $summary = trim((string) preg_replace('/\bStrongest recent post:.+$/u', $clause, $summary));
+        } elseif ($summary === '') {
+            $summary = $clause;
+        } else {
+            $summary = rtrim($summary, '.').'. '.$clause;
+        }
+        $output['competitor_summary'] = $summary;
+
+        if (isset($output['actions'][0]) && is_array($output['actions'][0])) {
+            $action = $output['actions'][0];
+            $action['format'] = $cite['format'];
+            $action['hook'] = $cite['hook'];
+            $action['related_handles'] = [$cite['handle']];
+            $action['related_post_ids'] = [$cite['post_id']];
+            $action['title'] = 'Post a '.$cite['format'].' today at '.$when.'.';
+            $action['why'] = '@'.$cite['handle'].'\'s '.$cite['format']
+                .$dateBit
+                .' got '.$cite['multiplier_label'].'.';
+            $output['actions'][0] = $action;
+        }
+
+        return $output;
     }
 
     /**
@@ -885,12 +946,35 @@ PROMPT;
             $facts['top_competitor_hit_7d'] ?? null,
             $facts['top_competitor_hit'] ?? null,
         ] as $row) {
-            if ($this->beatUsual(is_array($row) ? $row : null)) {
-                return $row;
+            if (! is_array($row)) {
+                continue;
+            }
+
+            // Copy so later claim rewrites cannot mutate the shared facts post.
+            if ($this->isInspirationPost($row)) {
+                return [...$row];
             }
         }
 
         return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function isInspirationPost(array $row): bool
+    {
+        if ($this->beatUsual($row)) {
+            return true;
+        }
+
+        // Some fact rows keep the Nx only on the label; still treat as inspiration when > 1.0.
+        $label = (string) ($row['times_usual_label'] ?? '');
+        if (preg_match('/(\d+(?:\.\d+)?)\s*times their usual/i', $label, $match) === 1) {
+            return (float) $match[1] > 1.0;
+        }
+
+        return false;
     }
 
     /**
@@ -1010,9 +1094,14 @@ PROMPT;
             return false;
         }
 
-        $score = $row['times_usual'] ?? $row['views_vs_usual'] ?? null;
+        foreach (['times_usual', 'views_vs_usual'] as $key) {
+            $score = $row[$key] ?? null;
+            if (is_numeric($score) && (float) $score > 1.0) {
+                return true;
+            }
+        }
 
-        return is_numeric($score) && (float) $score > 1.0;
+        return false;
     }
 
     private function pluralise(int $count, string $singular, ?string $plural = null): string
