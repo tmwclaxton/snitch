@@ -54,6 +54,7 @@ class DailyBriefCopySanitizer
 
         $llmShape = $this->validator->rewriteViewsVsUsualWording($llmShape);
         $llmShape = $this->validator->rewriteReplyToCommentActions($llmShape);
+        $llmShape = $this->validator->rewriteZeroCommentReplyActions($llmShape, $facts);
         $llmShape = $this->validator->rewriteInternalPostIds($llmShape, $facts);
         $llmShape = $this->validator->rewriteBorrowedCompetitorNames($llmShape, $facts);
         $llmShape = $this->validator->rewriteUnsupportedStandoutClaims($llmShape, $facts);
@@ -64,6 +65,7 @@ class DailyBriefCopySanitizer
         $llmShape = $this->validator->rewriteUnsupportedFormatTimesUsualClaims($llmShape, $facts);
         $llmShape = $this->validator->rewriteUnsupportedHookTimesUsualClaims($llmShape, $facts);
         $llmShape = $this->validator->rewriteUnsupportedPostedDateClaims($llmShape, $facts);
+        $llmShape = $this->validator->rewriteMismatchedDateFigureClaims($llmShape, $facts);
         $llmShape = $this->validator->rewriteTimesUsualWithoutBaseline($llmShape, $facts);
         $llmShape = $this->validator->rewriteUnsupportedWeekBestClaims($llmShape, $facts);
         $llmShape = $this->validator->rewriteUnsupportedStandoutClaims($llmShape, $facts);

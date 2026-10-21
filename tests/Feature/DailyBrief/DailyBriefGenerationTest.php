@@ -1670,7 +1670,7 @@ class DailyBriefGenerationTest extends TestCase
         $narrative = $generator->deterministicNarrative($facts);
         $payload = $generator->assemblePayload($facts, $narrative, [], true);
 
-        $this->assertStringNotContainsString('Biggest recent hit', $narrative['competitor_summary']);
+        $this->assertStringNotContainsString('Strongest recent post', $narrative['competitor_summary']);
         $this->assertStringNotContainsString('0.5', $narrative['actions'][0]['why']);
         $this->assertStringNotContainsString('goodgym', $narrative['actions'][0]['why']);
         $this->assertSame([], $narrative['actions'][0]['related_post_ids']);
@@ -1704,7 +1704,7 @@ class DailyBriefGenerationTest extends TestCase
         $narrative = $generator->deterministicNarrative($facts);
         $payload = $generator->assemblePayload($facts, $narrative, [], true);
 
-        $this->assertStringContainsString('Biggest recent hit: @goodgym', $narrative['competitor_summary']);
+        $this->assertStringContainsString('Strongest recent post: @goodgym', $narrative['competitor_summary']);
         $this->assertSame([99], $narrative['actions'][0]['related_post_ids']);
         $this->assertSame('Parkrun Saturday', $narrative['actions'][0]['hook']);
         $this->assertSame(99, $payload['actions'][0]['inspiration'][0]['post_id'] ?? null);
@@ -2420,6 +2420,142 @@ class DailyBriefGenerationTest extends TestCase
 
         $this->assertTrue($noBaseline['ok'], implode('; ', $noBaseline['errors']));
         $this->assertStringNotContainsString('3.0 times their usual', (string) ($noBaseline['output']['competitor_summary'] ?? ''));
+    }
+
+    public function test_fallback_template_binds_format_date_and_multiplier_from_one_post(): void
+    {
+        $reel = [
+            'post_id' => 701,
+            'url' => 'https://www.instagram.com/reel/DeukSzHikVM/',
+            'handle' => 'onehousesocialclub',
+            'format' => 'Reel',
+            'times_usual' => 1.2,
+            'times_usual_label' => '1.2 times their usual',
+            'comments' => 0,
+            'hook' => 'Tuesday night',
+            'posted_at' => '2026-10-20T20:19:00+01:00',
+            'posted_label' => 'Tue 20 Oct, 20:19',
+        ];
+        $carousel = [
+            'post_id' => 702,
+            'url' => 'https://www.instagram.com/p/carousel12oct/',
+            'handle' => 'onehousesocialclub',
+            'format' => 'Carousel',
+            'times_usual' => 28.9,
+            'times_usual_label' => '28.9 times their usual',
+            'comments' => 12,
+            'hook' => 'Presentation night',
+            'posted_at' => '2026-10-12T18:00:00+01:00',
+            'posted_label' => 'Sun 12 Oct, 18:00',
+        ];
+        $oldReel = [
+            'post_id' => 703,
+            'handle' => 'onehousesocialclub',
+            'format' => 'Reel',
+            'times_usual' => 0.8,
+            'times_usual_label' => '0.8 times their usual',
+            'comments' => 0,
+            'hook' => 'Quiet midweek',
+            'posted_at' => '2026-10-15T12:00:00+01:00',
+            'posted_label' => 'Wed 15 Oct, 12:00',
+        ];
+        $goodgym = [
+            'post_id' => 801,
+            'handle' => 'goodgym',
+            'format' => 'Reel',
+            'times_usual' => 1.1,
+            'times_usual_label' => '1.1 times their usual',
+            'comments' => 0,
+            'hook' => 'Tuesday session',
+            'posted_at' => '2026-10-20T09:00:00+01:00',
+            'posted_label' => 'Tue 20 Oct, 09:00',
+        ];
+
+        $facts = [
+            'allowed_handles' => ['onehousesocialclub', 'goodgym', 'letsgosocialuk'],
+            'allowed_post_ids' => [701, 702, 703, 801],
+            'brief_date' => '2026-10-21',
+            'own' => [
+                'handle' => 'letsgosocialuk',
+                'followers_now' => 104,
+                'posts_last_7d_count' => 1,
+                'days_since_last_post' => 2,
+            ],
+            'format_mix' => [
+                'competitor_posts_24h' => 2,
+                'competitor_posts_7d' => 5,
+                'competitors_7d' => ['Reel' => 4, 'Carousel' => 1],
+            ],
+            'best_times' => [
+                'today_slot' => ['hour' => 20, 'label' => '20:00'],
+                'weekday_evening_block' => 'weekday evenings 19:00-21:00',
+            ],
+            'competitors' => [
+                [
+                    'handle' => 'onehousesocialclub',
+                    'display_name' => 'One House Social Club',
+                    'posts_last_7d_count' => 3,
+                    'posts_last_7d' => [$reel, $carousel, $oldReel],
+                    'posts_last_24h' => [$reel],
+                    'best_post_7d' => $carousel,
+                ],
+                [
+                    'handle' => 'goodgym',
+                    'display_name' => 'GoodGym',
+                    'posts_last_7d_count' => 2,
+                    'posts_last_7d' => [$goodgym],
+                    'posts_last_24h' => [$goodgym],
+                    'best_post_7d' => $goodgym,
+                ],
+            ],
+            'top_competitor_hit_24h' => $reel,
+            'top_competitor_hit_7d' => $carousel,
+        ];
+
+        $generator = app(DailyBriefGenerator::class);
+        $narrative = $generator->checkedNarrative($generator->deterministicNarrative($facts), $facts);
+
+        $headline = (string) ($narrative['headline'] ?? '');
+        $summary = (string) ($narrative['competitor_summary'] ?? '');
+        $blob = strtolower($headline.' '.$summary.' '.json_encode($narrative['actions'] ?? []));
+
+        $this->assertStringContainsString('Reel', $headline);
+        $this->assertStringContainsString('20 Oct', $headline);
+        $this->assertStringContainsString('1.2', $headline);
+        $this->assertStringNotContainsString('Carousel', $headline);
+        $this->assertStringContainsString('Reel from 20 Oct', $summary);
+        $this->assertStringContainsString('1.2 times their usual', $summary);
+        $this->assertStringNotContainsString('from 12 Oct', $summary);
+        $this->assertStringNotContainsString('from 12 October', $summary);
+        $this->assertDoesNotMatchRegularExpression('/from 12 oct(?:ober)?[^.]{0,40}0\\.8/i', $summary);
+        $this->assertDoesNotMatchRegularExpression('/reply(?:ing)?\\s+to\\s+(?:the\\s+|their\\s+)?comments?/i', $blob);
+
+        $misbound = app(DailyBriefValidator::class)->validate([
+            'headline' => 'One House Carousel at 1.2x usual',
+            'actions' => [
+                [
+                    'title' => 'Engage GoodGym',
+                    'why' => 'Their Reel is active.',
+                    'how' => 'Reply to comments on their Reel.',
+                    'related_handles' => ['goodgym'],
+                    'related_post_ids' => [801],
+                ],
+                ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Three', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
+            ],
+            'own_summary' => 'ok',
+            'competitor_summary' => 'One House Reel from 12 October at 0.8 times their usual.',
+            'watch' => [],
+        ], $facts);
+
+        $fixedSummary = (string) ($misbound['output']['competitor_summary'] ?? '');
+        $fixedHeadline = (string) ($misbound['output']['headline'] ?? '');
+        $fixedHow = (string) ($misbound['output']['actions'][0]['how'] ?? '');
+
+        $this->assertStringNotContainsString('Carousel at 1.2', $fixedHeadline);
+        $this->assertStringNotContainsString('from 12 October at 0.8', $fixedSummary);
+        $this->assertDoesNotMatchRegularExpression('/reply(?:ing)?\\s+to\\s+(?:the\\s+|their\\s+)?comments?/i', $fixedHow);
+        $this->assertMatchesRegularExpression('/comment on the post/i', $fixedHow);
     }
 
     /**

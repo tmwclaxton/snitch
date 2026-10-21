@@ -267,13 +267,39 @@ PROMPT;
         $max = max(3, min(5, (int) config('snitch.daily_brief.max_actions', 5)));
         $actions = array_slice(array_values($actions), 0, $max);
 
-        return [
-            'headline' => filled($partial['headline'] ?? null) ? (string) $partial['headline'] : $fallback['headline'],
+        // Prefer template prose for headline/summaries on full fallback. Surviving LLM
+        // fragments can pass a probe after rewrite while leaving unrepaired wording.
+        $merged = [
+            'headline' => $fallback['headline'],
             'actions' => $actions,
-            'own_summary' => filled($partial['own_summary'] ?? null) ? (string) $partial['own_summary'] : $fallback['own_summary'],
-            'competitor_summary' => filled($partial['competitor_summary'] ?? null) ? (string) $partial['competitor_summary'] : $fallback['competitor_summary'],
-            'watch' => ($partial['watch'] ?? []) !== [] ? $partial['watch'] : $fallback['watch'],
+            'own_summary' => $fallback['own_summary'],
+            'competitor_summary' => $fallback['competitor_summary'],
+            'watch' => $fallback['watch'],
         ];
+
+        return $this->checkedNarrative($merged, $facts);
+    }
+
+    /**
+     * Run narrative copy through the same claim checker as LLM output.
+     *
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function checkedNarrative(array $output, array $facts): array
+    {
+        $result = $this->validator->validate($output, $facts);
+        $checked = $result['output'];
+
+        if ($result['ok']) {
+            return $checked;
+        }
+
+        // If mixed actions still fail, fall back to a fully deterministic narrative.
+        $fresh = $this->validator->validate($this->deterministicNarrative($facts), $facts);
+
+        return $fresh['output'];
     }
 
     /**
@@ -293,16 +319,22 @@ PROMPT;
         $whenNote = is_array($slot) && ($slot['early_signal'] ?? false)
             ? $block.' (early signal)'
             : (is_array($slot) ? (string) $slot['label'] : $block);
+        // One post object owns format, date, and multiplier for every template citation.
         $hit = $this->fallbackInspirationPost($facts);
-        $inWindow = $facts['top_competitor_hit_24h'] ?? $facts['top_competitor_hit_7d'] ?? null;
+        $cite = $this->citationFromPost($hit);
         $comp24 = (int) ($facts['format_mix']['competitor_posts_24h'] ?? 0);
         $comp7 = (int) ($facts['format_mix']['competitor_posts_7d'] ?? 0);
         $reels7 = (int) (($facts['format_mix']['competitors_7d']['Reel'] ?? 0));
         $change7 = is_array($own) ? ($own['followers_change_7d']['change'] ?? null) : null;
         $changeLabel = is_array($own) ? (string) ($own['followers_change_7d']['label'] ?? '') : '';
 
-        $headline = 'Your next move is a Reel today.';
-        if (is_numeric($change7) && (int) $change7 !== 0 && $reels7 > 0) {
+        $postFormat = $cite['format'] ?? 'Reel';
+        $headline = 'Your next move is a '.$postFormat.' today.';
+        if ($cite !== null) {
+            $headline = '@'.$cite['handle'].' '.$cite['format']
+                .($cite['date_short'] !== null ? ' from '.$cite['date_short'] : '')
+                .' at '.$cite['multiplier_short'].'. Post a '.$cite['format'].' today at '.$when.'.';
+        } elseif (is_numeric($change7) && (int) $change7 !== 0 && $reels7 > 0) {
             $changeNote = $changeLabel !== ''
                 ? $changeLabel
                 : ((int) $change7 > 0 ? 'up '.(int) $change7 : (string) (int) $change7).' followers';
@@ -312,35 +344,32 @@ PROMPT;
         }
 
         $actions = [];
-        $hitHandle = is_array($hit) ? (string) ($hit['handle'] ?? '') : '';
-        $hitFormat = is_array($hit)
-            ? (string) ($hit['format'] ?? 'Reel')
-            : (is_array($inWindow) ? (string) ($inWindow['format'] ?? 'Reel') : 'Reel');
-        $hitFormat = $hitFormat !== '' ? $hitFormat : 'Reel';
-        $hitLabel = 'their best recent post';
-        if (is_array($hit) && filled($hit['times_usual_label'] ?? null)) {
-            $hitLabel = (string) $hit['times_usual_label'];
-        } else {
-            $hitPi = is_array($hit) ? ($hit['times_usual'] ?? null) : null;
-            $hitViews = is_array($hit) ? ($hit['views_vs_usual'] ?? null) : null;
-            if (is_numeric($hitPi)) {
-                $hitLabel = number_format((float) $hitPi, 1).' times their usual';
-            } elseif (is_numeric($hitViews)) {
-                $hitLabel = number_format((float) $hitViews, 1).' times their usual views';
-            }
+        $hitHandle = $cite['handle'] ?? '';
+        $hitFormat = $cite['format'] ?? 'Reel';
+        $hitLabel = $cite['multiplier_label'] ?? 'their best recent post';
+        $hitDate = $cite['date_short'] ?? null;
+        $hitComments = (int) ($cite['comments'] ?? 0);
+        $hitPostId = $cite['post_id'] ?? null;
+
+        $why = $hitHandle !== ''
+            ? '@'.$hitHandle.'\'s '.$hitFormat
+                .($hitDate !== null ? ' from '.$hitDate : '')
+                .' got '.$hitLabel.'.'
+            : 'Competitors posted '.$this->pluralise($reels7, 'Reel').' in the last 7 days.';
+        $how = 'Keep it under 30 seconds. Open with a first-person line. Ask people to comment or DM.';
+        if ($hitHandle !== '' && $hitPostId !== null) {
+            $how = 'Comment on their '.$hitFormat.'.';
         }
 
         $actions[] = [
             'title' => 'Post a '.$hitFormat.' today at '.$when.'.',
-            'why' => $hitHandle !== ''
-                ? '@'.$hitHandle.' is getting '.$hitLabel.' with '.$hitFormat.'s.'
-                : 'Competitors posted '.$this->pluralise($reels7, 'Reel').' in the last 7 days.',
-            'how' => 'Keep it under 30 seconds. Open with a first-person line. Ask people to comment or DM.',
+            'why' => $why,
+            'how' => $how,
             'when' => $when,
             'format' => $hitFormat,
-            'hook' => is_array($hit) ? ($hit['hook'] ?? null) : null,
+            'hook' => $cite['hook'] ?? null,
             'related_handles' => $hitHandle !== '' ? [$hitHandle] : [],
-            'related_post_ids' => is_array($hit) && isset($hit['post_id']) ? [(int) $hit['post_id']] : [],
+            'related_post_ids' => $hitPostId !== null ? [$hitPostId] : [],
         ];
 
         $failed = [];
@@ -401,29 +430,61 @@ PROMPT;
         }
 
         if (count($actions) < 3) {
-            $actions[] = [
-                'title' => 'Spend 10 minutes commenting on two competitor posts from the last day.',
-                'why' => 'Competitors published '.$comp24.' posts in the last 24 hours.',
-                'how' => 'Leave a genuine comment, then share one useful post to your Story.',
-                'when' => null,
-                'format' => 'Engage',
-                'hook' => null,
-                'related_handles' => [],
-                'related_post_ids' => [],
-            ];
+            $engagePost = $this->fallbackEngagePost($facts, $hitPostId);
+            $engageCite = $this->citationFromPost($engagePost);
+            if ($engageCite !== null && (int) $engageCite['comments'] > 0) {
+                $dateBit = $engageCite['date_short'] !== null ? ' from '.$engageCite['date_short'] : '';
+                $actions[] = [
+                    'title' => 'Comment on @'.$engageCite['handle'].'\'s '.$engageCite['format'].$dateBit.'.',
+                    'why' => '@'.$engageCite['handle'].'\'s '.$engageCite['format'].$dateBit.' is at '.$engageCite['multiplier_label'].'.',
+                    'how' => 'Leave a genuine comment on the post.',
+                    'when' => null,
+                    'format' => 'Engage',
+                    'hook' => $engageCite['hook'],
+                    'related_handles' => [$engageCite['handle']],
+                    'related_post_ids' => [$engageCite['post_id']],
+                ];
+            } else {
+                $actions[] = [
+                    'title' => 'Spend 10 minutes commenting on two competitor posts from the last day.',
+                    'why' => 'Competitors published '.$comp24.' posts in the last 24 hours.',
+                    'how' => 'Leave a genuine comment on the post, then share one useful post to your Story.',
+                    'when' => null,
+                    'format' => 'Engage',
+                    'hook' => null,
+                    'related_handles' => [],
+                    'related_post_ids' => [],
+                ];
+            }
         }
 
         if (count($actions) < 3) {
-            $actions[] = [
-                'title' => 'Reply to two comments on your last post.',
-                'why' => '@'.$handle.' posted '.$this->pluralise($posts7, 'time').' in the last 7 days.',
-                'how' => 'Reply in the comments, then share the post to your Story.',
-                'when' => null,
-                'format' => 'Engage',
-                'hook' => null,
-                'related_handles' => $handle !== 'your account' ? [$handle] : [],
-                'related_post_ids' => [],
-            ];
+            $ownLast = is_array($own) ? ($own['posts_last_7d'][0] ?? null) : null;
+            $ownComments = is_array($ownLast) ? (int) ($ownLast['comments'] ?? 0) : 0;
+            $ownPostId = is_array($ownLast) && isset($ownLast['post_id']) ? (int) $ownLast['post_id'] : null;
+            if ($ownComments > 0 && $ownPostId !== null) {
+                $actions[] = [
+                    'title' => 'Reply to two comments on your last post.',
+                    'why' => '@'.$handle.' posted '.$this->pluralise($posts7, 'time').' in the last 7 days.',
+                    'how' => 'Reply in the comments, then share the post to your Story.',
+                    'when' => null,
+                    'format' => 'Engage',
+                    'hook' => null,
+                    'related_handles' => $handle !== 'your account' ? [$handle] : [],
+                    'related_post_ids' => [$ownPostId],
+                ];
+            } else {
+                $actions[] = [
+                    'title' => 'Share your last post to Stories with a prompt.',
+                    'why' => '@'.$handle.' posted '.$this->pluralise($posts7, 'time').' in the last 7 days.',
+                    'how' => 'Ask people to comment or DM on the post.',
+                    'when' => null,
+                    'format' => 'Engage',
+                    'hook' => null,
+                    'related_handles' => $handle !== 'your account' ? [$handle] : [],
+                    'related_post_ids' => $ownPostId !== null ? [$ownPostId] : [],
+                ];
+            }
         }
 
         $ownSummary = $followers === null
@@ -437,8 +498,11 @@ PROMPT;
         }
 
         $competitorSummary = 'Competitors published '.$this->pluralise($comp7, 'post').' in the last 7 days, including '.$this->pluralise($comp24, 'post').' in the last 24 hours.';
-        if (is_array($hit) && $hitHandle !== '') {
-            $competitorSummary .= ' Biggest recent hit: @'.$hitHandle.', '.$hitLabel.'.';
+        if ($cite !== null) {
+            // Avoid the word "hit" so standout softening does not strip the clause.
+            $competitorSummary .= ' Strongest recent post: @'.$cite['handle'].' '.$cite['format']
+                .($cite['date_short'] !== null ? ' from '.$cite['date_short'] : '')
+                .' at '.$cite['multiplier_label'].'.';
         }
 
         return [
@@ -820,6 +884,114 @@ PROMPT;
         }
 
         return null;
+    }
+
+    /**
+     * Pick a competitor post with comments for an engage action, excluding the inspiration post.
+     *
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>|null
+     */
+    private function fallbackEngagePost(array $facts, ?int $excludePostId = null): ?array
+    {
+        foreach ($facts['competitors'] ?? [] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            foreach (['posts_last_24h', 'posts_last_7d'] as $key) {
+                foreach ($row[$key] ?? [] as $post) {
+                    if (! is_array($post)) {
+                        continue;
+                    }
+
+                    $postId = (int) ($post['post_id'] ?? 0);
+                    if ($excludePostId !== null && $postId === $excludePostId) {
+                        continue;
+                    }
+
+                    if ((int) ($post['comments'] ?? 0) > 0) {
+                        return $post;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Bind format, date, and multiplier from one post object for template copy.
+     *
+     * @param  array<string, mixed>|null  $post
+     * @return array{handle: string, format: string, date_short: ?string, multiplier_label: string, multiplier_short: string, comments: int, post_id: int, hook: ?string}|null
+     */
+    private function citationFromPost(?array $post): ?array
+    {
+        if ($post === null) {
+            return null;
+        }
+
+        $handle = strtolower(ltrim(trim((string) ($post['handle'] ?? '')), '@'));
+        if ($handle === '') {
+            return null;
+        }
+
+        $format = trim((string) ($post['format'] ?? 'Reel'));
+        $format = $format !== '' ? $format : 'Reel';
+
+        $multiplierLabel = 'their best recent post';
+        $multiplierShort = $multiplierLabel;
+        if (filled($post['times_usual_label'] ?? null)
+            && str_contains(strtolower((string) $post['times_usual_label']), 'times their usual')
+        ) {
+            $multiplierLabel = (string) $post['times_usual_label'];
+            if (preg_match('/(\d+(?:\.\d+)?)\s*times their usual/i', $multiplierLabel, $match) === 1) {
+                $multiplierShort = $match[1].'x';
+            } else {
+                $multiplierShort = $multiplierLabel;
+            }
+        } elseif (is_numeric($post['times_usual'] ?? null)) {
+            $n = number_format((float) $post['times_usual'], 1, '.', '');
+            $multiplierLabel = $n.' times their usual';
+            $multiplierShort = $n.'x';
+        } elseif (is_numeric($post['views_vs_usual'] ?? null)) {
+            $n = number_format((float) $post['views_vs_usual'], 1, '.', '');
+            $multiplierLabel = $n.' times their usual views';
+            $multiplierShort = $n.'x';
+        }
+
+        $dateShort = null;
+        $postedAt = (string) ($post['posted_at'] ?? '');
+        if ($postedAt !== '') {
+            try {
+                $dateShort = CarbonImmutable::parse($postedAt)->timezone('Europe/London')->format('j M');
+            } catch (Throwable) {
+                $dateShort = null;
+            }
+        }
+        if ($dateShort === null) {
+            $label = (string) ($post['posted_label'] ?? '');
+            if (preg_match('/\b(\d{1,2}\s+[A-Za-z]{3,9})\b/', $label, $match) === 1) {
+                $dateShort = $match[1];
+            }
+        }
+
+        $postId = (int) ($post['post_id'] ?? 0);
+        if ($postId < 1) {
+            return null;
+        }
+
+        return [
+            'handle' => $handle,
+            'format' => $format,
+            'date_short' => $dateShort,
+            'multiplier_label' => $multiplierLabel,
+            'multiplier_short' => $multiplierShort,
+            'comments' => (int) ($post['comments'] ?? 0),
+            'post_id' => $postId,
+            'hook' => filled($post['hook'] ?? null) ? (string) $post['hook'] : null,
+        ];
     }
 
     /**

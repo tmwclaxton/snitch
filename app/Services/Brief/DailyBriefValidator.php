@@ -28,6 +28,7 @@ class DailyBriefValidator
         $output = $this->rewriteLinkInBioSticker($output);
         $output = $this->rewriteViewsVsUsualWording($output);
         $output = $this->rewriteReplyToCommentActions($output);
+        $output = $this->rewriteZeroCommentReplyActions($output, $facts);
         $output = $this->rewriteInternalPostIds($output, $facts);
         $output = $this->rewriteBorrowedCompetitorNames($output, $facts);
         $output = $this->rewriteUnsupportedStandoutClaims($output, $facts);
@@ -38,6 +39,7 @@ class DailyBriefValidator
         $output = $this->rewriteUnsupportedFormatTimesUsualClaims($output, $facts);
         $output = $this->rewriteUnsupportedHookTimesUsualClaims($output, $facts);
         $output = $this->rewriteUnsupportedPostedDateClaims($output, $facts);
+        $output = $this->rewriteMismatchedDateFigureClaims($output, $facts);
         $output = $this->rewriteTimesUsualWithoutBaseline($output, $facts);
         // Week-window softening after format/hook rewrites, so corrected out-of-window Nx claims are caught.
         $output = $this->rewriteUnsupportedWeekBestClaims($output, $facts);
@@ -200,6 +202,11 @@ class DailyBriefValidator
                 $errors[] = $postedDateError;
             }
 
+            $dateFigureError = $this->unsupportedDateFigureClaim($text, $facts);
+            if ($dateFigureError !== null) {
+                $errors[] = $dateFigureError;
+            }
+
             $baselineError = $this->unsupportedTimesUsualWithoutBaseline($text, $facts);
             if ($baselineError !== null) {
                 $errors[] = $baselineError;
@@ -297,9 +304,16 @@ class DailyBriefValidator
     {
         foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
             $probe = $this->proseProbe($field, $output[$field] ?? '', []);
-            if (! $this->validate($probe, $facts)['ok']) {
+            $result = $this->validate($probe, $facts);
+            if (! $result['ok']) {
                 $output[$field] = '';
+
+                continue;
             }
+
+            // Keep claim-checker rewrites; do not leave unrepaired LLM wording that only
+            // passes because validate() softened it in a throwaway probe.
+            $output[$field] = (string) ($result['output'][$field] ?? $output[$field] ?? '');
         }
 
         $watch = [];
@@ -310,8 +324,10 @@ class DailyBriefValidator
             }
 
             $probe = $this->proseProbe('watch', '', [$item]);
-            if ($this->validate($probe, $facts)['ok']) {
-                $watch[] = $item;
+            $result = $this->validate($probe, $facts);
+            if ($result['ok']) {
+                $rewritten = $result['output']['watch'][0] ?? $item;
+                $watch[] = is_string($rewritten) ? $rewritten : $item;
             }
         }
 
@@ -1435,6 +1451,7 @@ class DailyBriefValidator
             }
 
             $rewritten = preg_replace('/\bposted(?:\s+on)?\s+'.$claim['date_pattern'].'\b/iu', 'posted', $rewritten) ?? $rewritten;
+            $rewritten = preg_replace('/\bfrom\s+'.$claim['date_pattern'].'\b/iu', '', $rewritten) ?? $rewritten;
             $rewritten = preg_replace('/\b'.$claim['date_pattern'].'\b(?:\s+posted(?:\s+that day)?)/iu', 'posted', $rewritten) ?? $rewritten;
             $rewritten = preg_replace('/\bposted that day\b/iu', 'posted', $rewritten) ?? $rewritten;
         }
@@ -1545,6 +1562,91 @@ class DailyBriefValidator
         ) ?? $rewritten;
 
         return trim(preg_replace('/\s{2,}/u', ' ', $rewritten) ?? $rewritten);
+    }
+
+    /**
+     * Never suggest replying to comments on a post that has zero comments.
+     *
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function rewriteZeroCommentReplyActions(array $output, array $facts): array
+    {
+        if (! isset($output['actions']) || ! is_array($output['actions'])) {
+            return $output;
+        }
+
+        foreach ($output['actions'] as $index => $action) {
+            if (! is_array($action)) {
+                continue;
+            }
+
+            $related = $action['related_post_ids'] ?? [];
+            if (! is_array($related) || $related === []) {
+                continue;
+            }
+
+            $ids = array_values(array_filter(array_map('intval', $related)));
+            if ($ids === [] || ! $this->postsHaveZeroComments($facts, $ids)) {
+                continue;
+            }
+
+            foreach (['title', 'why', 'how', 'hook'] as $field) {
+                if (! isset($action[$field]) || ! is_string($action[$field])) {
+                    continue;
+                }
+
+                $action[$field] = $this->rewriteZeroCommentReplyInText($action[$field]);
+            }
+
+            $output['actions'][$index] = $action;
+        }
+
+        return $output;
+    }
+
+    public function rewriteZeroCommentReplyInText(string $text): string
+    {
+        if ($text === '' || preg_match('/\breply(?:ing)?\s+to\s+(?:the\s+|their\s+|its\s+)?comments?\b/iu', $text) !== 1) {
+            return $text;
+        }
+
+        $rewritten = preg_replace(
+            '/\breply(?:ing)?\s+to\s+(?:the\s+|their\s+|its\s+)?comments?\b/iu',
+            'comment on the post',
+            $text,
+        ) ?? $text;
+
+        return trim(preg_replace('/\s{2,}/u', ' ', $rewritten) ?? $rewritten);
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @param  list<int>  $postIds
+     */
+    private function postsHaveZeroComments(array $facts, array $postIds): bool
+    {
+        $wanted = array_fill_keys($postIds, true);
+        $saw = false;
+
+        foreach ($this->handlePosts($facts, []) as $post) {
+            if (! is_array($post)) {
+                continue;
+            }
+
+            $id = (int) ($post['post_id'] ?? 0);
+            if ($id < 1 || ! isset($wanted[$id])) {
+                continue;
+            }
+
+            $saw = true;
+            if ((int) ($post['comments'] ?? 0) > 0) {
+                return false;
+            }
+        }
+
+        return $saw;
     }
 
     /**
@@ -1941,15 +2043,25 @@ class DailyBriefValidator
         $claims = [];
         $datePattern = '(\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)|(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2})';
 
-        if (preg_match_all('/\bposted(?:\s+on)?\s+'.$datePattern.'\b|\b'.$datePattern.'\b.{0,30}\bposted(?:\s+that day)?\b/iu', $text, $matches, PREG_SET_ORDER) < 1) {
+        if (preg_match_all(
+            '/\bposted(?:\s+on)?\s+'.$datePattern.'\b|\bfrom\s+'.$datePattern.'\b|\b'.$datePattern.'\b.{0,30}\bposted(?:\s+that day)?\b/iu',
+            $text,
+            $matches,
+            PREG_SET_ORDER,
+        ) < 1) {
             return [];
         }
 
         $postDates = $this->postDateTokens($facts);
 
         foreach ($matches as $match) {
-            $raw = $match[1] !== '' ? $match[1] : ($match[2] ?? '');
-            $raw = trim((string) $raw);
+            $raw = '';
+            foreach (array_slice($match, 1) as $group) {
+                if (is_string($group) && trim($group) !== '') {
+                    $raw = trim($group);
+                    break;
+                }
+            }
             if ($raw === '') {
                 continue;
             }
@@ -1961,6 +2073,224 @@ class DailyBriefValidator
         }
 
         return $claims;
+    }
+
+    /**
+     * A date next to an Nx figure must belong to the same post as that figure (and format).
+     *
+     * @param  array<string, mixed>  $facts
+     */
+    public function unsupportedDateFigureClaim(string $text, array $facts): ?string
+    {
+        foreach ($this->dateFigureClaimsInText($text, $facts) as $claim) {
+            if (! $claim['matched_post']) {
+                return 'date and times-usual figure are not from the same post';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function rewriteMismatchedDateFigureClaims(array $output, array $facts): array
+    {
+        return $this->mapNarrativeText($output, fn (string $text): string => $this->rewriteMismatchedDateFigureClaimsInText($text, $facts));
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     */
+    public function rewriteMismatchedDateFigureClaimsInText(string $text, array $facts): string
+    {
+        if ($text === '' || $this->unsupportedDateFigureClaim($text, $facts) === null) {
+            return $text;
+        }
+
+        $rewritten = $text;
+
+        foreach ($this->dateFigureClaimsInText($rewritten, $facts) as $claim) {
+            if ($claim['matched_post']) {
+                continue;
+            }
+
+            $replacementDate = $claim['expected_date'];
+            if (is_string($replacementDate) && $replacementDate !== '') {
+                $rewritten = preg_replace(
+                    '/\b(?:from|posted(?:\s+on)?)\s+'.$claim['date_pattern'].'\b/iu',
+                    'from '.$replacementDate,
+                    $rewritten,
+                    1,
+                ) ?? $rewritten;
+
+                continue;
+            }
+
+            $rewritten = preg_replace(
+                '/\s*\b(?:from|posted(?:\s+on)?)\s+'.$claim['date_pattern'].'\b/iu',
+                '',
+                $rewritten,
+                1,
+            ) ?? $rewritten;
+        }
+
+        return trim(preg_replace('/\s{2,}/u', ' ', $rewritten) ?? $rewritten);
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return list<array{date_pattern: string, matched_post: bool, expected_date: ?string, figure: string, handle: ?string, format: ?string}>
+     */
+    private function dateFigureClaimsInText(string $text, array $facts): array
+    {
+        $datePattern = '(\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)|(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2})';
+        $claims = [];
+
+        if (preg_match_all(
+            '/\b(?:from|posted(?:\s+on)?)\s+'.$datePattern.'\b/iu',
+            $text,
+            $matches,
+            PREG_OFFSET_CAPTURE,
+        ) < 1) {
+            return [];
+        }
+
+        $pairs = $this->figureHandlePairsInText($text, $this->allowedHandles($facts), $facts);
+
+        foreach ($matches[1] as $index => $dateMatch) {
+            $rawDate = trim((string) $dateMatch[0]);
+            $dateOffset = (int) $dateMatch[1];
+            if ($rawDate === '') {
+                continue;
+            }
+
+            $nearest = null;
+            $nearestDistance = PHP_INT_MAX;
+            foreach ($pairs as $pair) {
+                $distance = abs((int) $pair['offset'] - $dateOffset);
+                if ($distance > 80 || $distance >= $nearestDistance) {
+                    continue;
+                }
+                $nearestDistance = $distance;
+                $nearest = $pair;
+            }
+
+            if ($nearest === null) {
+                continue;
+            }
+
+            $post = $this->postMatchingHandleFigureFormat(
+                $facts,
+                $nearest['handle'],
+                $nearest['figure'],
+                $nearest['format'],
+            );
+            $matched = $post !== null && $this->postMatchesDateToken($post, $rawDate);
+            $expectedDate = null;
+            if ($post !== null && ! $matched) {
+                $expectedDate = $this->shortDateForPost($post);
+            }
+
+            $claims[] = [
+                'date_pattern' => preg_quote($rawDate, '/'),
+                'matched_post' => $matched,
+                'expected_date' => $expectedDate,
+                'figure' => $nearest['figure'],
+                'handle' => $nearest['handle'],
+                'format' => $nearest['format'],
+            ];
+        }
+
+        return $claims;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>|null
+     */
+    private function postMatchingHandleFigureFormat(array $facts, ?string $handle, string $figure, ?string $format): ?array
+    {
+        $handles = $handle !== null && $handle !== '' ? [$handle] : [];
+
+        foreach ($this->handlePosts($facts, $handles) as $post) {
+            if (! is_array($post)) {
+                continue;
+            }
+
+            $score = $this->postEngagementScore($post);
+            if ($score === null) {
+                continue;
+            }
+
+            $candidates = [
+                number_format($score, 1, '.', ''),
+                $this->normaliseNumber((string) $score),
+            ];
+            if (! $this->numberIsKnownAsTimesUsual($figure, $candidates)) {
+                continue;
+            }
+
+            if ($format !== null && $format !== '') {
+                $postFormat = trim((string) ($post['format'] ?? ''));
+                if ($postFormat !== '' && strcasecmp($postFormat, $format) !== 0) {
+                    continue;
+                }
+            }
+
+            return $post;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $post
+     */
+    private function postMatchesDateToken(array $post, string $rawDate): bool
+    {
+        $tokens = [];
+        $label = (string) ($post['posted_label'] ?? '');
+        if ($label !== '') {
+            $tokens[] = mb_strtolower($label);
+        }
+        $postedAt = (string) ($post['posted_at'] ?? '');
+        if ($postedAt !== '') {
+            try {
+                $london = CarbonImmutable::parse($postedAt)->timezone('Europe/London');
+                $tokens[] = mb_strtolower($london->format('j M'));
+                $tokens[] = mb_strtolower($london->format('j F'));
+                $tokens[] = mb_strtolower($london->format('d M'));
+            } catch (\Throwable) {
+                // Ignore.
+            }
+        }
+
+        return $this->dateMatchesPostTokens($rawDate, $tokens);
+    }
+
+    /**
+     * @param  array<string, mixed>  $post
+     */
+    private function shortDateForPost(array $post): ?string
+    {
+        $postedAt = (string) ($post['posted_at'] ?? '');
+        if ($postedAt !== '') {
+            try {
+                return CarbonImmutable::parse($postedAt)->timezone('Europe/London')->format('j M');
+            } catch (\Throwable) {
+                // Fall through to label.
+            }
+        }
+
+        $label = (string) ($post['posted_label'] ?? '');
+        if (preg_match('/\b(\d{1,2}\s+[A-Za-z]{3,9})\b/', $label, $match) === 1) {
+            return $match[1];
+        }
+
+        return null;
     }
 
     /**
