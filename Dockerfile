@@ -105,8 +105,12 @@ RUN apt-get update && apt-get upgrade -y \
     && docker-php-ext-install pdo_mysql \
     && docker-php-ext-install pdo_sqlite \
     && docker-php-ext-install zip \
-    && (for i in 1 2 3 4 5; do pecl install redis && break; echo "pecl redis attempt $i failed; retrying..."; sleep $((i * 5)); done) \
+    && curl -fsSL https://github.com/phpredis/phpredis/archive/refs/tags/6.2.0.tar.gz -o /tmp/phpredis.tar.gz \
+    && mkdir -p /tmp/phpredis \
+    && tar -xzf /tmp/phpredis.tar.gz -C /tmp/phpredis --strip-components=1 \
+    && (cd /tmp/phpredis && phpize && ./configure && make -j"$(nproc)" && make install) \
     && docker-php-ext-enable redis \
+    && rm -rf /tmp/phpredis /tmp/phpredis.tar.gz \
     && rm -rf /tmp/pear \
     && apt-get purge -y \
         default-libmysqlclient-dev \
