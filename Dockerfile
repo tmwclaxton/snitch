@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM php:8.5-cli-bookworm AS php_build
+FROM php:8.5.12-cli-bookworm AS php_build
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -66,7 +66,7 @@ RUN php artisan wayfinder:generate --with-form --no-interaction
 RUN npm run build \
     && npm prune --omit=dev
 
-FROM php:8.5-fpm-bookworm AS production
+FROM php:8.5.12-fpm-bookworm AS production
 
 LABEL maintainer="Snitch"
 

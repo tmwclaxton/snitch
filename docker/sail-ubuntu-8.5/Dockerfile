@@ -1,5 +1,5 @@
 # Local Sail-compatible image: official PHP image (no Ubuntu/onjrej PPA).
-FROM php:8.5-cli-bookworm
+FROM php:8.5.12-cli-bookworm
 
 LABEL maintainer="baseProject"
 
