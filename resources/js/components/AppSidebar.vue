@@ -64,29 +64,31 @@ const trackedBy = computed(() => {
 });
 
 /*
- * Dashboard is organised as four questions (+ vote). Hash links jump to
- * sections; Winners lives inside How are they performing?
- * Ad Library content is the Are they running ads? section.
+ * Canvas dashboard is panel-based. Question shortcuts open the dedicated
+ * product pages (Today, Growth, Competitors) so old section content stays reachable.
  */
 const questionNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
         {
+            title: 'Canvas',
+            href: dashboard.url(),
+            icon: Target,
+            exact: true,
+        },
+        {
             title: 'What should we post?',
-            href: `${dashboard.url()}#what-to-post`,
+            href: today(),
             icon: HelpCircle,
-            section: 'what-to-post',
         },
         {
             title: 'How are they performing?',
-            href: `${dashboard.url()}#performance`,
-            icon: Target,
-            section: 'performance',
+            href: growth(),
+            icon: TrendingUp,
         },
         {
             title: 'Are they running ads?',
-            href: `${dashboard.url()}#ads`,
+            href: competitors(),
             icon: Megaphone,
-            section: 'ads',
         },
     ];
 

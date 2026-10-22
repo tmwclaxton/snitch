@@ -172,4 +172,12 @@ class User extends Authenticatable implements OAuthenticatable
     {
         return $this->hasMany(DailyBrief::class);
     }
+
+    /**
+     * @return HasMany<DashboardPanel, $this>
+     */
+    public function dashboardPanels(): HasMany
+    {
+        return $this->hasMany(DashboardPanel::class);
+    }
 }

@@ -8,6 +8,7 @@ use App\Models\BrandProfile;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Services\Dashboard\DashboardMetrics;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -16,7 +17,7 @@ class LovableDashboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_dashboard_returns_metrics_card_shape(): void
+    public function test_dashboard_canvas_returns_panels_for_selected_rival(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -52,18 +53,16 @@ class LovableDashboardTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
-                ->where('own_account.handle', 'mybrand')
-                ->has('rivals', 1)
-                ->where('selected.0', 'rivalbrand')
-                ->has('kpis')
-                ->missing('insights')
-                ->missing('top_posts')
-                ->loadDeferredProps('panel', fn (Assert $panel) => $panel
-                    ->has('insights')
-                    ->has('leaderboard')
-                    ->has('winners')
-                    ->missing('heatmap.0')
-                )
+                ->has('panels')
+                ->where('panels_source', 'default')
+                ->missing('own_account')
+                ->missing('rivals')
             );
+
+        $metrics = app(DashboardMetrics::class)->forUser($user, ['rivalbrand'], 30);
+        $this->assertSame('mybrand', $metrics['own_account']['handle'] ?? null);
+        $this->assertSame('rivalbrand', $metrics['selected'][0] ?? null);
+        $this->assertArrayHasKey('status', $metrics['kpis'] ?? []);
+        $this->assertArrayHasKey('status', $metrics['leaderboard'] ?? []);
     }
 }

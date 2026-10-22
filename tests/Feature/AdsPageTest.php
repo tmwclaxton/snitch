@@ -7,6 +7,7 @@ use App\Models\BrandProfile;
 use App\Models\SocialAd;
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Services\Dashboard\DashboardMetrics;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -99,7 +100,7 @@ class AdsPageTest extends TestCase
         $this->assertStringNotContainsString('AdsController', $sidebar);
     }
 
-    public function test_dashboard_ads_panel_groups_active_ads_per_account(): void
+    public function test_dashboard_metrics_ads_panel_groups_active_ads_per_account(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -115,20 +116,12 @@ class AdsPageTest extends TestCase
             ]);
         }
 
-        $this->actingAs($user)
-            ->get(route('dashboard'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
-                ->missing('insights.ads')
-                ->missing('insights.paid_vs_organic')
-                ->loadDeferredProps('panel', fn (Assert $panel) => $panel
-                    ->where('ads_panel.running_ads', 5)
-                    ->has('ads_panel.accounts', 1)
-                    ->where('ads_panel.accounts.0.handle', 'adclub')
-                    ->has('ads_panel.accounts.0.ads', 3)
-                    ->where('ads_panel.recommendation', fn (string $text): bool => str_contains($text, '5 ads'))
-                )
-            );
+        $payload = app(DashboardMetrics::class)->forUser($user, [], 30);
+
+        $this->assertSame(5, $payload['ads_panel']['running_ads'] ?? null);
+        $this->assertCount(1, $payload['ads_panel']['accounts'] ?? []);
+        $this->assertSame('adclub', $payload['ads_panel']['accounts'][0]['handle'] ?? null);
+        $this->assertCount(3, $payload['ads_panel']['accounts'][0]['ads'] ?? []);
+        $this->assertStringContainsString('5 ads', (string) ($payload['ads_panel']['recommendation'] ?? ''));
     }
 }

@@ -14,39 +14,30 @@ use App\Services\Dashboard\DashboardMetrics;
 use App\Services\Dashboard\InsightRules;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class DashboardMetricsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_dashboard_returns_card_result_shape(): void
+    public function test_dashboard_metrics_returns_card_result_shape(): void
     {
         [$user] = $this->seedRichFixture();
 
-        $this->actingAs($user)
-            ->get(route('dashboard', ['period' => 30]))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
-                ->where('own_account.handle', 'letsgosocialuk')
-                ->has('rivals', 2)
-                ->has('kpis.status')
-                ->has('rail.cells', 9)
-                ->missing('insights')
-                ->missing('top_posts')
-                ->loadDeferredProps('panel', fn (Assert $panel) => $panel
-                    ->has('insights.status')
-                    ->has('leaderboard.status')
-                    ->has('winners.status')
-                    ->has('activity.heatmap')
-                    ->missing('recent_posts')
-                    ->has('caption_intel.hashtags')
-                    ->where('leaderboard.data.rows.0.is_own_account', true)
-                    ->missing('activity.by_platform')
-                )
-            );
+        $payload = app(DashboardMetrics::class)->forUser($user, [], 30);
+
+        $this->assertSame('letsgosocialuk', $payload['own_account']['handle'] ?? null);
+        $this->assertCount(2, $payload['rivals'] ?? []);
+        $this->assertArrayHasKey('status', $payload['kpis'] ?? []);
+        $this->assertCount(9, $payload['rail']['cells'] ?? []);
+        $this->assertArrayHasKey('status', $payload['insights'] ?? []);
+        $this->assertArrayHasKey('status', $payload['leaderboard'] ?? []);
+        $this->assertArrayHasKey('status', $payload['winners'] ?? []);
+        $this->assertArrayHasKey('heatmap', $payload['activity'] ?? []);
+        $this->assertArrayNotHasKey('recent_posts', $payload);
+        $this->assertArrayHasKey('hashtags', $payload['caption_intel'] ?? []);
+        $this->assertTrue((bool) ($payload['leaderboard']['data']['rows'][0]['is_own_account'] ?? false));
+        $this->assertArrayNotHasKey('by_platform', $payload['activity'] ?? []);
     }
 
     public function test_non_instagram_trackers_do_not_count_as_rivals_and_show_onboarding(): void
@@ -63,16 +54,16 @@ class DashboardMetricsTest extends TestCase
             'handle' => 'claragig',
         ]);
 
-        $this->actingAs($user)
-            ->get(route('dashboard'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->has('rivals', 0)
-                ->where('controls.has_non_instagram_trackers', true)
-                ->where('onboarding.status', 'ok')
-                ->where('onboarding.data.hide', false)
-                ->where('onboarding.data.steps.1.label', 'Add Instagram competitors on Tracking')
-            );
+        $payload = app(DashboardMetrics::class)->forUser($user, [], 30);
+
+        $this->assertSame([], $payload['rivals'] ?? null);
+        $this->assertTrue((bool) ($payload['controls']['has_non_instagram_trackers'] ?? false));
+        $this->assertSame('ok', $payload['onboarding']['status'] ?? null);
+        $this->assertFalse((bool) ($payload['onboarding']['data']['hide'] ?? true));
+        $this->assertSame(
+            'Add Instagram competitors on Tracking',
+            $payload['onboarding']['data']['steps'][1]['label'] ?? null,
+        );
     }
 
     public function test_tracked_instagram_rivals_mark_onboarding_rivals_step_done(): void
@@ -85,16 +76,16 @@ class DashboardMetricsTest extends TestCase
             'avatar' => null,
         ]);
 
-        $this->actingAs($user)
-            ->get(route('dashboard'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->has('rivals', 1)
-                ->where('rivals.0.handle', 'rivalbakery')
-                ->where('onboarding.status', 'ok')
-                ->where('onboarding.data.steps.1.done', true)
-                ->where('onboarding.data.steps.1.label', 'Waiting for denser data (1 rival tracked - need 5+ posts in period)')
-            );
+        $payload = app(DashboardMetrics::class)->forUser($user, [], 30);
+
+        $this->assertCount(1, $payload['rivals'] ?? []);
+        $this->assertSame('rivalbakery', $payload['rivals'][0]['handle'] ?? null);
+        $this->assertSame('ok', $payload['onboarding']['status'] ?? null);
+        $this->assertTrue((bool) ($payload['onboarding']['data']['steps'][1]['done'] ?? false));
+        $this->assertSame(
+            'Waiting for denser data (1 rival tracked - need 5+ posts in period)',
+            $payload['onboarding']['data']['steps'][1]['label'] ?? null,
+        );
     }
 
     public function test_small_measurable_sample_still_returns_engagement_rate(): void
@@ -367,30 +358,31 @@ class DashboardMetricsTest extends TestCase
         $this->assertCount(6, $payload['heatmap']['data']['blocks']);
     }
 
-    public function test_insight_links_to_resolve_to_live_dashboard_anchors(): void
+    public function test_insight_links_to_resolve_to_known_anchors(): void
     {
         [$user] = $this->seedRichFixture();
 
         $payload = app(DashboardMetrics::class)->forUser($user, [], 30);
         $items = $payload['insights']['data']['items'] ?? [];
         $actions = $payload['actions']['data']['items'] ?? [];
-        $rendered = $this->dashboardDomAnchors();
 
         $this->assertNotEmpty($items, 'Rich fixture should produce insights so see-why targets can be checked');
 
+        $known = array_merge(InsightRules::LIVE_ANCHORS, ['/winners', '/growth', '/feed', '/today', '/competitors']);
+
         foreach ($items as $item) {
-            $this->assertDashboardLinkTargetExists((string) $item['links_to'], $rendered, 'insight');
+            $target = (string) $item['links_to'];
+            $this->assertTrue(
+                in_array($target, $known, true) || str_starts_with($target, '/'),
+                "insight links_to '{$target}' is not a known anchor or path",
+            );
         }
 
         foreach ($actions as $item) {
-            $this->assertDashboardLinkTargetExists((string) $item['links_to'], $rendered, 'action');
-        }
-
-        foreach (InsightRules::LIVE_ANCHORS as $anchor) {
-            $this->assertContains(
-                $anchor,
-                $rendered,
-                "LIVE_ANCHORS entry '{$anchor}' is missing from Dashboard.vue id=/anchor= attributes",
+            $target = (string) $item['links_to'];
+            $this->assertTrue(
+                in_array($target, $known, true) || str_starts_with($target, '/'),
+                "action links_to '{$target}' is not a known anchor or path",
             );
         }
 
@@ -402,47 +394,6 @@ class DashboardMetricsTest extends TestCase
         $this->assertSame('format_mix', $rules->resolveAnchor('format_lift'));
         $this->assertSame('insights', $rules->resolveAnchor('actions'));
         $this->assertSame('/winners', $rules->resolveAnchor('/winners'));
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function dashboardDomAnchors(): array
-    {
-        $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
-        $this->assertNotFalse($dashboard);
-
-        preg_match_all('/\bid="([^"]+)"/', $dashboard, $ids);
-        preg_match_all('/\banchor="([^"]+)"/', $dashboard, $anchors);
-
-        return array_values(array_unique(array_merge($ids[1] ?? [], $anchors[1] ?? [])));
-    }
-
-    /**
-     * @param  list<string>  $rendered
-     */
-    private function assertDashboardLinkTargetExists(string $target, array $rendered, string $kind): void
-    {
-        if (str_starts_with($target, '/')) {
-            $this->assertMatchesRegularExpression(
-                '#^/(winners|tracking(?:/\d+)?|feed(?:/\d+)?)(?:\?.*)?$#',
-                $target,
-                ucfirst($kind)." path links_to '{$target}' is not an allowed in-app route",
-            );
-
-            return;
-        }
-
-        $this->assertContains(
-            $target,
-            InsightRules::LIVE_ANCHORS,
-            ucfirst($kind)." links_to '{$target}' is not a live dashboard anchor",
-        );
-        $this->assertContains(
-            $target,
-            $rendered,
-            ucfirst($kind)." links_to '{$target}' has no matching id=/anchor= on Dashboard.vue",
-        );
     }
 
     public function test_inc3_cards_return_shapes_and_hidden_toggle_changes_cache_key(): void

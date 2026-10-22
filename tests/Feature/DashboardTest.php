@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\Platform;
 use App\Models\BrandProfile;
+use App\Models\DashboardPanel;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
@@ -30,14 +31,13 @@ class DashboardTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
-                ->has('rivals', 0)
-                ->where('kpis.status', 'empty')
-                ->has('onboarding')
-                ->where('legacy_non_instagram_count', 0)
+                ->has('panels')
+                ->where('panels_source', 'default')
+                ->has('featureSuggestions')
             );
     }
 
-    public function test_dashboard_lists_instagram_rivals(): void
+    public function test_dashboard_builds_default_panels_for_rivals_with_posts(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -56,169 +56,46 @@ class DashboardTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
-                ->has('rivals', 1)
-                ->has('executive.what_to_post.headline')
-                ->where('rivals.0.handle', 'rivalbakery')
-                ->where('rivals.0.id', $account->id)
-                ->where('show_hidden_likes', false)
-                ->has('rail.cells')
-                ->loadDeferredProps('panel', fn (Assert $panel) => $panel
-                    ->where('leaderboard.status', 'ok')
-                    ->where('leaderboard.data.rows.0.tracked_account_id', $account->id)
-                    ->has('activity.heatmap')
-                    ->missing('recent_posts')
-                    ->has('winners')
-                )
+                ->where('panels_source', 'default')
+                ->has('panels')
+                ->missing('rivals')
+                ->missing('executive')
             );
     }
 
-    public function test_dashboard_vue_wires_feed_and_tracker_links(): void
+    public function test_dashboard_vue_is_panel_canvas(): void
     {
         $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
-        $winnerCard = file_get_contents(resource_path('js/components/dashboard/WinnerCard.vue'));
-        $winnerThumb = file_get_contents(resource_path('js/components/dashboard/ExecWinnerThumb.vue'));
+        $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
+        $postCard = file_get_contents(resource_path('js/components/dashboard/panels/PanelPostCard.vue'));
 
         $this->assertNotFalse($dashboard);
-        $this->assertNotFalse($winnerCard);
-        $this->assertNotFalse($winnerThumb);
-        $this->assertStringNotContainsString('Latest posts', $dashboard);
-        $this->assertStringNotContainsString('recent_posts', $dashboard);
-        $this->assertStringContainsString('competitorShow.url(rival.id)', $dashboard);
-        $this->assertStringContainsString('xl:grid-cols-4', $dashboard);
-        $this->assertStringContainsString('whatToPostHeadline', $dashboard);
-        $this->assertStringContainsString('ExecStatTile', $dashboard);
-        $this->assertStringContainsString('feedShow.url(post.id)', $winnerCard);
-        $this->assertStringContainsString('feedShow.url(post.id)', $winnerThumb);
-        $this->assertStringContainsString('competitorShow.url(props.post.tracked_account_id)', $winnerCard);
-        $this->assertStringContainsString('their usual', $winnerCard);
-        $this->assertStringContainsString('Open on Instagram', $winnerCard);
-        $this->assertStringContainsString('aspect-[4/5]', $winnerThumb);
-        $this->assertStringNotContainsString('…', $winnerThumb);
-        $this->assertStringNotContainsString('...', $winnerThumb);
-        $this->assertStringContainsString('weekly_brief.ideas', $dashboard);
-        $this->assertStringContainsString('ideaHowto', $dashboard);
-        $this->assertStringContainsString('ideaCta', $dashboard);
-        $this->assertStringContainsString('Call to action:', $dashboard);
-        $this->assertStringContainsString('caption_angle', $dashboard);
-        $this->assertStringContainsString('Post this next', $dashboard);
-        $this->assertStringContainsString('snitch-format-tag w-fit self-start text-sm', $dashboard);
-        $this->assertStringContainsString('What should we post?', $dashboard);
-        $this->assertStringContainsString('How are they performing?', $dashboard);
-        $this->assertStringContainsString('Are they running ads?', $dashboard);
-        $this->assertStringContainsString('id="what-to-post"', $dashboard);
-        $this->assertDoesNotMatchRegularExpression(
-            '/id="what-to-post"[^>]*border-t/',
-            $dashboard,
-        );
-        $this->assertStringNotContainsString('space-y-8', $dashboard);
-        $this->assertStringContainsString('id="caption_intel"', $dashboard);
-        $this->assertStringContainsString('items-stretch', $dashboard);
-        $this->assertStringContainsString('grid-cols-[auto_minmax(0,1fr)_auto]', $dashboard);
-        $this->assertStringNotContainsString('grid-cols-[7rem_1fr_auto]', $dashboard);
-        $this->assertStringContainsString('id="performance"', $dashboard);
-        $this->assertStringContainsString('id="ads"', $dashboard);
+        $this->assertNotFalse($sidebar);
+        $this->assertNotFalse($postCard);
+        $this->assertStringContainsString('PanelBigNumber', $dashboard);
+        $this->assertStringContainsString('PanelPostCard', $dashboard);
+        $this->assertStringContainsString('PanelChart', $dashboard);
         $this->assertStringContainsString('TrackedBySection', $dashboard);
         $this->assertStringContainsString('VoteSection', $dashboard);
-        $this->assertStringContainsString('See full brief', $dashboard);
-        $this->assertStringContainsString('ExecWhatWorks', $dashboard);
-        $this->assertStringContainsString('snitch-heatmap--dash', $dashboard);
-        $this->assertStringNotContainsString('mt-auto p-2', $dashboard);
-        $this->assertStringNotContainsString('overflow-y-auto', $dashboard);
-        $this->assertStringNotContainsString('fit-height', $dashboard);
-        $this->assertStringNotContainsString('mt-auto shrink-0', $dashboard);
-        $this->assertStringContainsString('id="format_mix"', $dashboard);
-        $this->assertStringContainsString('ExecTakeaways', $dashboard);
-        $this->assertStringContainsString('Best posting times', $dashboard);
-        $this->assertStringNotContainsString('Follower history', $dashboard);
-        $this->assertStringContainsString('Vote for what <span class="snitch-highlight">features</span> you want', $dashboard);
-        $this->assertStringNotContainsString('Cast your', $dashboard);
-        $this->assertStringContainsString('SnitchHighlightedText', $dashboard);
-        $this->assertStringNotContainsString('peer-checked:bg-snitch-ink', $dashboard);
-        $this->assertStringNotContainsString('Show hidden-likes posts', $dashboard);
-        $formatPos = strpos($dashboard, 'id="format_mix"');
-        $leaderPos = strpos($dashboard, 'id="leaderboard"');
-        $this->assertNotFalse($formatPos);
-        $this->assertNotFalse($leaderPos);
-        $this->assertLessThan($formatPos, $leaderPos);
-
-        $insightList = file_get_contents(resource_path('js/components/dashboard/InsightList.vue'));
-        $this->assertNotFalse($insightList);
-        $this->assertStringContainsString('data-tracker-id', $insightList);
-        $this->assertStringContainsString('competitorShow.url(id)', $insightList);
-        $this->assertStringContainsString('Show all', $insightList);
-        $this->assertStringContainsString('collapsedCount: 5', $insightList);
-        $this->assertStringNotContainsString('fitHeight', $insightList);
-        $this->assertStringNotContainsString('line-clamp-', $insightList);
-
-        $compare = file_get_contents(resource_path('js/components/dashboard/CompareTable.vue'));
-        $this->assertNotFalse($compare);
-        $this->assertStringContainsString('text-right', $compare);
-        $this->assertStringContainsString('showGrowth', $compare);
-        $this->assertStringContainsString('no posts yet', $compare);
-        $this->assertStringContainsString('toFixed(1)', $compare);
-        $this->assertStringContainsString('postTypeLabel', $compare);
-        $this->assertStringNotContainsString('postTypeShortLabel', $compare);
-        $this->assertStringNotContainsString('uppercase tracking-wide', $compare);
-
-        $statCard = file_get_contents(resource_path('js/components/dashboard/StatCard.vue'));
-        $this->assertNotFalse($statCard);
-        $this->assertStringContainsString('growth from next week', $statCard);
-        $this->assertStringNotContainsString('- growth', $statCard);
-
-        $captions = file_get_contents(resource_path('js/components/dashboard/CaptionPanels.vue'));
-        $this->assertNotFalse($captions);
-        $this->assertStringContainsString('hookNeedsToggle', $captions);
-        $this->assertStringContainsString('more', $captions);
+        $this->assertStringContainsString('Curated panels', $dashboard);
+        $this->assertStringNotContainsString('id="what-to-post"', $dashboard);
+        $this->assertStringNotContainsString('ExecStatTile', $dashboard);
+        $this->assertStringContainsString("title: 'Canvas'", $sidebar);
+        $this->assertStringContainsString('feedShow.url', $postCard);
+        $this->assertStringNotContainsString('line-clamp-', $dashboard);
+        $this->assertStringNotContainsString('—', $dashboard);
+        $this->assertStringNotContainsString('–', $dashboard);
     }
 
-    public function test_dashboard_hidden_likes_query_persists_toggle(): void
+    public function test_dashboard_uses_stored_curator_panels(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
-        TrackedAccount::factory()->for($user)->create([
-            'platform' => Platform::Instagram,
-            'handle' => 'rivalbakery',
-            'followers' => 1200,
-        ]);
-
-        $this->actingAs($user)
-            ->get(route('dashboard', ['hidden' => '1']))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
-                ->where('show_hidden_likes', true)
-            );
-
-        $this->actingAs($user)
-            ->get(route('dashboard', ['hidden' => '0']))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
-                ->where('show_hidden_likes', false)
-            );
-    }
-
-    public function test_dashboard_empty_state_copy_mentions_instagram(): void
-    {
-        $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
-
-        $this->assertNotFalse($dashboard);
-        $this->assertStringContainsString('No Instagram competitors yet', $dashboard);
-        $this->assertStringContainsString('Add Instagram competitor handles on Tracking', $dashboard);
-        $this->assertStringContainsString('No rivals to compare yet', $dashboard);
-        $this->assertStringContainsString('legacy_non_instagram_count', $dashboard);
-        $this->assertStringNotContainsString('Show hidden-likes posts', $dashboard);
-        $this->assertStringNotContainsString('ranked on comments and views', $dashboard);
-        $this->assertStringContainsString('next.hidden ?? props.show_hidden_likes ?? false', $dashboard);
-    }
-
-    public function test_dashboard_reports_legacy_non_instagram_trackers(): void
-    {
-        $user = User::factory()->create();
-        BrandProfile::factory()->for($user)->create();
-        TrackedAccount::factory()->for($user)->create([
-            'platform' => Platform::Facebook,
-            'handle' => 'oldfacebookpage',
+        DashboardPanel::factory()->for($user)->create([
+            'type' => DashboardPanel::TYPE_NOTE,
+            'title' => 'Action',
+            'payload' => ['body' => 'Review rival Reels today.'],
+            'source' => 'curator',
         ]);
 
         $this->actingAs($user)
@@ -226,8 +103,9 @@ class DashboardTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
-                ->has('rivals', 0)
-                ->where('legacy_non_instagram_count', 1)
+                ->where('panels_source', 'stored')
+                ->has('panels', 1)
+                ->where('panels.0.payload.body', 'Review rival Reels today.')
             );
     }
 

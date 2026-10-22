@@ -1,159 +1,32 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { computed, nextTick, onMounted, ref } from 'vue';
-import { index as briefIndex } from '@/actions/App/Http/Controllers/BriefController';
-import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
-import EmptyState from '@/components/dashboard/EmptyState.vue';
-import ExecRankBars from '@/components/dashboard/ExecRankBars.vue';
-import ExecStatTile from '@/components/dashboard/ExecStatTile.vue';
-import ExecTakeaways from '@/components/dashboard/ExecTakeaways.vue';
-import ExecWhatWorks from '@/components/dashboard/ExecWhatWorks.vue';
-import ExecWinnerThumb from '@/components/dashboard/ExecWinnerThumb.vue';
-import FormatMixChart from '@/components/dashboard/FormatMixChart.vue';
-import PostingHeatmap from '@/components/dashboard/PostingHeatmap.vue';
+import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
+import PanelBigNumber from '@/components/dashboard/panels/PanelBigNumber.vue';
+import PanelChart from '@/components/dashboard/panels/PanelChart.vue';
+import PanelNote from '@/components/dashboard/panels/PanelNote.vue';
+import PanelPostCard from '@/components/dashboard/panels/PanelPostCard.vue';
+import PanelRankedList from '@/components/dashboard/panels/PanelRankedList.vue';
 import TrackedBySection from '@/components/dashboard/TrackedBySection.vue';
 import VoteSection from '@/components/dashboard/VoteSection.vue';
-import SnitchAvatar from '@/components/SnitchAvatar.vue';
-import SnitchHighlightedText from '@/components/SnitchHighlightedText.vue';
-import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
-import { activateDashboardSection, useDashboardScrollSpy } from '@/composables/useDashboardScrollSpy';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { scrollToDashboardAnchor } from '@/lib/dashboardAnchors';
-import { formatAppDate } from '@/lib/dates';
-import { productPlatformLabel } from '@/lib/platforms';
-import { dashboard } from '@/routes';
 
 defineOptions({
     layout: AppLayout,
 });
 
-type Card<T> = {
-    status: 'ok' | 'insufficient' | 'empty';
-    n: number;
-    data: T | null;
-    reason: string | null;
-};
-
-type Account = {
-    id: number;
-    handle: string;
-    display_name: string | null;
-    avatar: string | null;
-    followers: number | null;
-    is_own_account: boolean;
-    posts_count: number;
-    period_posts_count?: number;
-    no_posts_in_period?: boolean;
-};
-
-type WinnerPost = {
-    id: number;
-    handle: string | null;
-    avatar?: string | null;
-    tracked_account_id?: number | null;
-    is_own_account?: boolean;
-    format: string;
-    posted_at: string | null;
-    pi: number;
-    early?: boolean;
-    likes: number | null;
-    comments: number;
-    views?: number | null;
-    hook: string | null;
-    tags?: string[];
-    thumbnail_url: string | null;
-    url: string | null;
-    likes_hidden?: boolean;
-};
-
-type AdCard = {
-    id: number;
+type DashboardPanel = {
+    id: number | null;
+    position: number;
+    type: string;
     title: string;
-    body: string | null;
-    url: string;
-    platform: string;
-    last_seen_at: string | null;
-};
-
-type AdsAccount = {
-    tracked_account_id: number;
-    handle: string;
-    count: number;
-    ads: AdCard[];
-};
-
-type Gap = {
-    type: 'pp' | 'x';
-    value: number;
-    lower?: boolean;
+    payload: Record<string, unknown>;
+    source: string;
 };
 
 const props = defineProps<{
-    period: number;
-    periods: number[];
-    timezone: string;
-    own_account: Account | null;
-    rivals: Account[];
-    selected: string[];
-    max_compare: number;
-    legacy_non_instagram_count?: number;
-    show_hidden_likes?: boolean;
-    controls: {
-        last_refreshed_at: string | null;
-        next_refresh_at: string | null;
-        has_non_instagram_trackers: boolean;
-        ready?: boolean;
-        hidden_likes_count?: number;
-    };
-    onboarding: Card<{
-        hide?: boolean;
-        steps: { key: string; label: string; done: boolean; suggestions?: string[] }[];
-        note?: string | null;
-    }>;
-    rail?: { cells: { key: string; label: string; value: string; hint: string }[]; ready: boolean } | null;
-    kpis?: Card<{ cards: Record<string, unknown>[] }> | null;
-    insights?: Card<{ items: { category: string; text: string; score: number; n: number; links_to: string }[] }> | null;
-    leaderboard?: Card<{ rows: Record<string, unknown>[] }> | null;
-    winners?: Card<{
-        winners: WinnerPost[];
-        flops: WinnerPost[];
-        hidden_likes_count?: number;
-        hidden_included?: number;
-        hidden_spotlight?: WinnerPost[];
-    }> | null;
-    format_lift?: Card<{ rows: Record<string, unknown>[]; peer_median_lift: Record<string, number | null> }> | null;
-    captions?: Card<Record<string, unknown>> | null;
-    themes?: Card<Record<string, unknown>> | null;
-    data_notes?: Card<Record<string, unknown>> | null;
-    activity?: {
-        heatmap: { date: string; count: number }[];
-        weekly: { week_start: string; label: string; count: number }[];
-        by_time_of_day: { hour: number; label: string; count: number }[];
-        window_start?: string | null;
-        window_end?: string | null;
-    } | null;
-    follower_series?: { captured_on: string; label: string; followers: number }[] | null;
-    growth_delta?: { followers: number; week_delta: number | null; week_pct: number | null } | null;
-    weekly_brief?: {
-        id: number;
-        week_start: string | null;
-        idea_count: number;
-        hook: string | null;
-        ideas?: {
-            format: string;
-            hook: string;
-            slot: string;
-            visual?: string | null;
-            caption_angle?: string | null;
-            cta?: string | null;
-        }[];
-        best_times?: { label: string; score: number }[];
-    } | null;
-    executive?: {
-        what_to_post?: { headline: string; takeaways?: Array<{ metric: string; text: string }> };
-        performance?: { headline: string };
-        ads?: { headline: string };
-    } | null;
+    panels: DashboardPanel[];
+    panels_source?: string;
     trackedBy?: { count: number; since: string } | null;
     featureSuggestions?: Array<{
         id: number;
@@ -163,774 +36,112 @@ const props = defineProps<{
         votes_count: number;
         voted: boolean;
     }>;
-    caption_intel?: {
-        hashtags: { term: string; count: number }[];
-        keywords: { term: string; count: number }[];
-        ctas: { term: string; count: number; lines?: { text: string; count: number; post_id?: number | null }[] }[];
-        cta_clicks: { posts_with_cta: number; posts: number };
-        format_mix: { type: string; count: number }[];
-    } | null;
-    ads_panel?: {
-        running_ads: number;
-        accounts: AdsAccount[];
-        recommendation: string;
-    } | null;
 }>();
-
-const winnerTab = ref<'winners' | 'flops'>('winners');
-
-const showOnboarding = computed(
-    () => props.onboarding.status === 'ok' && !(props.onboarding.data?.hide ?? false),
-);
-
-const hasInstagramSet = computed(() => props.rivals.length > 0 || props.own_account != null);
 
 const showTrackedBy = computed(
     () => props.trackedBy != null && props.trackedBy.count > 0,
 );
 
-const sectionIds = computed(() => {
-    const ids = ['what-to-post', 'performance', 'ads'];
+const hasPanels = computed(() => props.panels.length > 0);
 
-    if (showTrackedBy.value) {
-        ids.push('tracked-by');
-    }
-
-    ids.push('vote');
-
-    return ids;
-});
-
-useDashboardScrollSpy(sectionIds);
-
-onMounted(() => {
-    const hash = window.location.hash.replace(/^#/, '');
-
-    if (hash && sectionIds.value.includes(hash)) {
-        activateDashboardSection(hash);
-        void nextTick(() => {
-            void scrollToDashboardAnchor(hash);
-        });
-    }
-});
-
-function refreshQuery(next: { accounts?: string[]; period?: number; hidden?: boolean }): void {
-    const accounts = next.accounts ?? props.selected;
-    const period = next.period ?? props.period;
-    const hidden = next.hidden ?? props.show_hidden_likes ?? false;
-
-    router.get(
-        dashboard.url({
-            query: {
-                accounts: accounts.join(','),
-                period: String(period),
-                hidden: hidden ? '1' : '0',
-            },
-        }),
-        {},
-        { preserveState: true, replace: true },
-    );
+function widePanel(type: string): boolean {
+    return type === 'line_chart' || type === 'bar_chart' || type === 'ranked_list';
 }
-
-function ideaHowto(idea: {
-    visual?: string | null;
-    caption_angle?: string | null;
-}): string {
-    return [idea.visual, idea.caption_angle]
-        .map((value) => (value ?? '').replace(/\s+/g, ' ').trim())
-        .filter((value) => value !== '')
-        .map((value) => /[.!?]$/.test(value) ? value : `${value}.`)
-        .slice(0, 2)
-        .join(' ');
-}
-
-function ideaCta(idea: { cta?: string | null }): string {
-    const value = (idea.cta ?? '').replace(/\s+/g, ' ').trim().replace(/[.]+$/, '');
-
-    if (value === '') {
-        return '';
-    }
-
-    return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function toggleAccount(handle: string): void {
-    const key = handle.toLowerCase();
-    const current = [...props.selected];
-    const exists = current.includes(key);
-
-    if (exists && current.length === 1) {
-        return;
-    }
-
-    const next = exists
-        ? current.filter((value) => value !== key)
-        : current.length >= props.max_compare
-            ? current
-            : [...current, key];
-
-    refreshQuery({ accounts: next });
-}
-
-function seenLabel(iso: string | null): string | null {
-    return formatAppDate(iso, {
-        month: 'short',
-        day: 'numeric',
-    });
-}
-
-function formatKpiValue(card: Record<string, unknown>): string {
-    const you = card.you as number | null | undefined;
-    const display = card.you_display as number | string | null | undefined;
-    const unit = String(card.unit ?? '');
-
-    if (display != null && String(card.label ?? '').startsWith('Followers')) {
-        return typeof display === 'number'
-            ? new Intl.NumberFormat('en-GB').format(display)
-            : String(display);
-    }
-
-    if (you == null) {
-        return 'n/a';
-    }
-
-    if (unit === 'pct') {
-        return `${new Intl.NumberFormat('en-GB', { maximumFractionDigits: 1 }).format(you)}%`;
-    }
-
-    return new Intl.NumberFormat('en-GB', { maximumFractionDigits: 1 }).format(you);
-}
-
-const winnerList = computed(() => {
-    const data = props.winners?.data;
-
-    if (! data) {
-        return [] as WinnerPost[];
-    }
-
-    return winnerTab.value === 'flops' ? (data.flops ?? []) : (data.winners ?? []);
-});
-
-const winnerItems = computed(() => winnerList.value.slice(0, 6));
-
-const formatLifts = computed(() => props.format_lift?.data?.peer_median_lift ?? {});
-
-const visibleKpiCards = computed(() => {
-    const cards = (props.kpis?.data?.cards ?? []) as Array<Record<string, unknown>>;
-
-    return cards
-        .filter((card) => {
-            if (card.key === 'reel_reach' && card.you == null && card.you_display == null) {
-                return false;
-            }
-
-            return true;
-        })
-        .slice(0, 4);
-});
-
-const peakHours = computed(() => {
-    const hours = props.activity?.by_time_of_day ?? [];
-
-    // Prefer daytime/evening slots for the board-slide chart - overnight
-    // noise (e.g. 4am) reads as a bad recommendation.
-    const daytime = hours.filter((row) => {
-        const hour = typeof row.hour === 'number' ? row.hour : Number.parseInt(String(row.label), 10);
-
-        if (Number.isFinite(hour)) {
-            return hour >= 7 && hour <= 22 && row.count > 0;
-        }
-
-        return row.count > 0;
-    });
-
-    const pool = daytime.length ? daytime : hours.filter((row) => row.count > 0);
-
-    return [...pool]
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 3);
-});
-
-const postingTimeBars = computed(() => {
-    const fromBrief = (props.weekly_brief?.best_times ?? []).map((slot) => ({
-        label: slot.label,
-        value: slot.score,
-        suffix: `${slot.score.toFixed(1)}×`,
-    }));
-
-    if (fromBrief.length) {
-        const rows = fromBrief.slice(0, 3);
-        const max = Math.max(...rows.map((row) => row.value), 0.01);
-
-        return rows.map((row) => ({
-            ...row,
-            width: `${Math.max(10, (row.value / max) * 100)}%`,
-        }));
-    }
-
-    const rows = peakHours.value.slice(0, 3);
-    const max = Math.max(...rows.map((row) => row.count), 1);
-
-    return rows.map((row) => ({
-        label: row.label,
-        value: row.count,
-        suffix: `${row.count} posts`,
-        width: `${Math.max(10, (row.count / max) * 100)}%`,
-    }));
-});
-
-const whatToPostHeadline = computed(
-    () => props.executive?.what_to_post?.headline
-        ?? 'Sync more posts to get a clear posting plan.',
-);
-
-const performanceHeadline = computed(
-    () => props.executive?.performance?.headline
-        ?? 'Add rivals to see how you compare.',
-);
-
-const adsHeadline = computed(
-    () => props.executive?.ads?.headline
-        ?? props.ads_panel?.recommendation
-        ?? 'None of your rivals run ads.',
-);
-
-const takeaways = computed(
-    () => (props.executive?.what_to_post?.takeaways ?? []).slice(0, 3),
-);
-
-const themeGaps = computed(
-    () => ((props.themes?.data?.gaps as Array<{ theme: string; peer_pi: number; n: number }>) ?? []),
-);
-
-const leaderboardRows = computed(
-    () => ((props.leaderboard?.data?.rows as Array<Record<string, unknown>>) ?? []) as Array<{
-        handle: string;
-        is_own_account?: boolean;
-        er?: number | null;
-        er_reason?: string | null;
-        row_note?: string | null;
-        followers?: number | null;
-        posts_per_week?: number | null;
-    }>,
-);
-
-const detailsOpen = ref(false);
 </script>
 
 <template>
-    <div class="snitch-app-canvas min-h-full bg-snitch-paper px-2 py-2 sm:px-3">
+    <div>
         <Head title="Dashboard" />
 
-        <div class="mx-auto max-w-none">
-            <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 border-b border-snitch-ink/10 pb-2">
-                <h1 class="hidden shrink-0 text-sm font-semibold tracking-tight text-snitch-ink sm:block">
+        <div class="flex flex-1 flex-col gap-4 p-4 md:p-6">
+            <header class="space-y-1">
+                <p class="font-mono text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
+                    Canvas
+                </p>
+                <h1 class="snitch-hero-display text-3xl text-snitch-ink sm:text-4xl">
                     Dashboard
                 </h1>
-
-                <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-                    <div
-                        v-if="own_account"
-                        class="snitch-choice snitch-choice-active h-7 rounded-full px-2 text-sm font-medium"
-                    >
-                        <SnitchAvatar
-                            :src="own_account.avatar"
-                            :name="own_account.display_name"
-                            :handle="own_account.handle"
-                            size="sm"
-                            class="!size-4 shrink-0"
-                        />
-                        <Link
-                            :href="competitorShow.url(own_account.id)"
-                            class="hover:underline"
-                        >
-                            You
-                        </Link>
-                    </div>
-                    <div
-                        v-for="rival in rivals"
-                        :key="rival.id"
-                        class="snitch-choice h-7 rounded-full px-2 text-sm font-medium"
-                        :class="
-                            selected.includes(rival.handle.toLowerCase())
-                                ? 'snitch-choice-active'
-                                : rival.no_posts_in_period
-                                    ? 'opacity-50'
-                                    : ''
-                        "
-                        :title="rival.no_posts_in_period ? 'No posts imported yet' : `@${rival.handle}`"
-                    >
-                        <button
-                            type="button"
-                            class="inline-flex items-center"
-                            :aria-label="`Toggle ${rival.handle} in compare`"
-                            @click="toggleAccount(rival.handle)"
-                        >
-                            <SnitchAvatar
-                                :src="rival.avatar"
-                                :name="rival.display_name"
-                                :handle="rival.handle"
-                                size="sm"
-                                class="!size-4 shrink-0"
-                            />
-                        </button>
-                        <Link
-                            :href="competitorShow.url(rival.id)"
-                            class="whitespace-nowrap hover:underline"
-                        >
-                            @{{ rival.handle }}
-                        </Link>
-                    </div>
-                </div>
-
-                <div class="ml-auto flex shrink-0 flex-wrap items-center gap-2">
-                    <div class="flex items-center gap-0.5 rounded border border-snitch-ink/15 p-0.5 dark:border-snitch-ink/28">
-                        <button
-                            v-for="days in periods"
-                            :key="days"
-                            type="button"
-                            class="snitch-choice rounded px-2 py-1 text-sm font-medium"
-                            :class="period === days ? 'snitch-choice-active' : ''"
-                            @click="refreshQuery({ period: days })"
-                        >
-                            {{ days }}d
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <section
-                v-if="showOnboarding"
-                id="onboarding"
-                class="mt-3 rounded border border-snitch-ink/10 bg-snitch-lift p-4"
-            >
-                <h2 class="snitch-hero-display text-lg text-snitch-ink">
-                    Get ready
-                </h2>
-                <ol class="mt-3 grid gap-2 sm:grid-cols-3">
-                    <li
-                        v-for="(step, index) in onboarding.data?.steps || []"
-                        :key="step.key"
-                        class="flex gap-2 rounded border border-snitch-ink/10 px-3 py-2 text-sm"
-                    >
-                        <span
-                            class="flex size-5 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-                            :class="step.done ? 'bg-snitch-ink text-snitch-paper dark:bg-snitch-spot dark:text-snitch-on-spot' : 'bg-snitch-ink/10 text-snitch-ink/70'"
-                        >
-                            {{ step.done ? '✓' : index + 1 }}
-                        </span>
-                        <span class="text-snitch-ink">{{ step.label }}</span>
-                    </li>
-                </ol>
-                <Link
-                    v-if="rivals.length === 0"
-                    :href="competitors()"
-                    class="snitch-btn mt-3 inline-flex px-3 py-1.5 text-sm font-medium"
-                >
-                    Go to Tracking
-                </Link>
-            </section>
-
-            <template v-if="hasInstagramSet">
-                <!-- 1. What should we post? -->
-                <section
-                    id="what-to-post"
-                    class="mt-3 scroll-mt-[4.5rem] space-y-4"
-                >
-                    <header class="space-y-2">
-                        <p class="snitch-dash-eyebrow text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
-                            What should we post?
-                        </p>
-                        <h2 class="snitch-hero-display snitch-section-answer text-snitch-ink">
-                            <SnitchHighlightedText :text="whatToPostHeadline" />
-                        </h2>
-                    </header>
-
-                    <div
-                        v-if="weekly_brief?.ideas?.length"
-                        class="snitch-caution-band space-y-3"
-                    >
-                        <div class="flex flex-wrap items-baseline justify-between gap-2">
-                            <h3 class="text-sm font-semibold uppercase tracking-wide text-snitch-caution-ink">Post this next</h3>
-                            <Link
-                                :href="briefIndex.url()"
-                                class="text-sm font-medium text-snitch-caution-ink underline-offset-2 hover:underline"
-                            >
-                                See full brief
-                            </Link>
-                        </div>
-                        <div class="grid gap-2 sm:grid-cols-3 sm:items-stretch">
-                            <Link
-                                v-for="(idea, index) in weekly_brief.ideas.slice(0, 3)"
-                                :key="`${idea.slot}-${index}`"
-                                :href="briefIndex.url()"
-                                class="snitch-caution-card flex h-full min-w-0 flex-col gap-2 p-3 hover:opacity-90"
-                            >
-                                <div class="flex flex-wrap items-center gap-2 text-sm">
-                                    <span class="snitch-caution-num">0{{ index + 1 }}</span>
-                                    <span class="snitch-format-tag w-fit self-start text-sm">
-                                        {{ idea.format }}
-                                    </span>
-                                    <span class="whitespace-nowrap font-mono tabular-nums text-snitch-caution-fog/70">{{ idea.slot }}</span>
-                                </div>
-                                <span class="text-sm leading-snug text-snitch-caution-fog">{{ idea.hook }}</span>
-                                <p
-                                    v-if="ideaHowto(idea)"
-                                    class="flex-1 text-sm leading-relaxed text-snitch-caution-fog/85"
-                                >
-                                    {{ ideaHowto(idea) }}
-                                </p>
-                                <p
-                                    v-if="ideaCta(idea)"
-                                    class="text-sm leading-relaxed text-snitch-caution-fog/85"
-                                >
-                                    <strong class="font-semibold">Call to action:</strong>
-                                    {{ ideaCta(idea) }}
-                                </p>
-                            </Link>
-                        </div>
-                    </div>
-
-                    <div id="insights">
-                        <ExecTakeaways
-                            v-if="takeaways.length"
-                            :items="takeaways"
-                        />
-                        <SnitchSkeleton
-                            v-else-if="!insights"
-                            variant="scrap"
-                            height="4rem"
-                            label="Loading takeaways"
-                        />
-                    </div>
-
-                    <div
-                        id="caption_intel"
-                        class="grid items-stretch gap-3"
-                        :class="postingTimeBars.length ? 'lg:grid-cols-2' : ''"
-                    >
-                        <div
-                            v-if="postingTimeBars.length"
-                            class="flex h-full min-h-0 flex-col rounded border border-snitch-ink/10 bg-snitch-lift p-3"
-                        >
-                            <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
-                                Best posting times
-                            </p>
-                            <ul class="mt-3 flex flex-1 flex-col justify-evenly gap-3">
-                                <li
-                                    v-for="(slot, slotIndex) in postingTimeBars"
-                                    :key="slot.label"
-                                    class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2"
-                                >
-                                    <span class="whitespace-nowrap text-sm font-medium text-snitch-ink">{{ slot.label }}</span>
-                                    <div class="snitch-meter h-3 min-w-0">
-                                        <div
-                                            class="h-full rounded-sm"
-                                            :class="slotIndex === 0 ? 'snitch-meter-fill-lead' : 'snitch-meter-fill'"
-                                            :style="{ width: slot.width }"
-                                        />
-                                    </div>
-                                    <span
-                                        class="whitespace-nowrap font-mono text-sm tabular-nums"
-                                        :class="slotIndex === 0 ? 'snitch-stat-accent' : 'text-snitch-ink/70'"
-                                    >{{ slot.suffix }}</span>
-                                </li>
-                            </ul>
-                        </div>
-                        <ExecWhatWorks
-                            v-if="caption_intel || themes"
-                            class="h-full"
-                            :hashtags="caption_intel?.hashtags"
-                            :ctas="caption_intel?.ctas"
-                            :gaps="themeGaps"
-                        />
-                        <SnitchSkeleton
-                            v-else
-                            class="h-full min-h-[10rem]"
-                            variant="scrap"
-                            height="100%"
-                            label="Loading what works"
-                        />
-                    </div>
-                </section>
-
-                <!-- 2. How are they performing? -->
-                <section
-                    id="performance"
-                    class="mt-5 scroll-mt-[4.5rem] space-y-4 border-t border-snitch-ink/10 pt-5"
-                >
-                    <header class="space-y-2">
-                        <p class="snitch-dash-eyebrow text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
-                            How are they performing?
-                        </p>
-                        <h2 class="snitch-hero-display snitch-section-answer text-snitch-ink">
-                            <SnitchHighlightedText :text="performanceHeadline" />
-                        </h2>
-                    </header>
-
-                    <div
-                        id="rail"
-                        class="grid gap-2"
-                        :class="{
-                            'sm:grid-cols-2 xl:grid-cols-4': visibleKpiCards.length >= 4,
-                            'sm:grid-cols-3': visibleKpiCards.length === 3,
-                            'sm:grid-cols-2': visibleKpiCards.length === 2,
-                            'grid-cols-1': visibleKpiCards.length <= 1,
-                        }"
-                    >
-                        <template v-if="kpis?.status === 'ok' && visibleKpiCards.length">
-                            <ExecStatTile
-                                v-for="card in visibleKpiCards"
-                                :key="String(card.key)"
-                                :label="String(card.label)"
-                                :value="formatKpiValue(card)"
-                                :gap="(card.gap as Gap | null) ?? null"
-                                :note="card.you == null ? (card.reason as string | null) ?? null : null"
-                            />
-                        </template>
-                        <template v-else>
-                            <SnitchSkeleton
-                                v-for="slot in 3"
-                                :key="`kpi-${slot}`"
-                                variant="scrap"
-                                height="5.5rem"
-                                :label="`Loading KPI ${slot}`"
-                            />
-                        </template>
-                    </div>
-
-                    <div class="grid items-stretch gap-4 lg:grid-cols-2">
-                        <div
-                            id="leaderboard"
-                            class="flex h-full min-h-[12rem] flex-col rounded border border-snitch-ink/10 bg-snitch-lift p-3"
-                        >
-                            <ExecRankBars
-                                v-if="leaderboard"
-                                class="flex-1"
-                                :rows="leaderboardRows"
-                            />
-                            <SnitchSkeleton
-                                v-else
-                                variant="scrap"
-                                height="8rem"
-                                label="Loading leaderboard"
-                            />
-                        </div>
-                        <div
-                            id="format_mix"
-                            class="flex h-full min-h-[12rem] flex-col rounded border border-snitch-ink/10 bg-snitch-lift p-3"
-                        >
-                            <FormatMixChart
-                                v-if="caption_intel"
-                                class="flex-1"
-                                :formats="caption_intel.format_mix"
-                                :lifts="formatLifts"
-                            />
-                            <SnitchSkeleton
-                                v-else
-                                variant="scrap"
-                                height="8rem"
-                                label="Loading format mix"
-                            />
-                        </div>
-                    </div>
-
-                    <section
-                        id="activity"
-                        class="rounded border border-snitch-ink/10 bg-snitch-lift p-3"
-                    >
-                        <div class="mb-2 flex items-baseline justify-between gap-2">
-                            <p class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
-                                Posting heat map
-                            </p>
-                            <p class="text-sm tabular-nums text-snitch-ink/45">16 wks</p>
-                        </div>
-                        <PostingHeatmap
-                            v-if="activity"
-                            class="snitch-heatmap--dash"
-                            :days="activity.heatmap"
-                        />
-                        <SnitchSkeleton
-                            v-else
-                            variant="scrap"
-                            height="5rem"
-                            label="Loading heat map"
-                        />
-                    </section>
-
-                    <section
-                        id="winners"
-                        class="space-y-2"
-                    >
-                        <div class="flex flex-wrap items-center gap-2">
-                            <h3 class="text-sm font-semibold text-snitch-ink">Winning posts</h3>
-                            <button
-                                type="button"
-                                class="snitch-choice rounded px-2 py-0.5 text-sm font-medium"
-                                :class="winnerTab === 'winners' ? 'snitch-choice-active' : ''"
-                                @click="winnerTab = 'winners'"
-                            >
-                                Winners
-                            </button>
-                            <button
-                                type="button"
-                                class="snitch-choice rounded px-2 py-0.5 text-sm font-medium"
-                                :class="winnerTab === 'flops' ? 'snitch-choice-active' : ''"
-                                @click="winnerTab = 'flops'"
-                            >
-                                Flops
-                            </button>
-                        </div>
-                        <EmptyState
-                            v-if="winners && (winners.status !== 'ok' || !winnerItems.length)"
-                            :reason="winners.reason || 'No posts in this tab.'"
-                            compact
-                        />
-                        <div
-                            v-else-if="winnerItems.length"
-                            class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6"
-                        >
-                            <ExecWinnerThumb
-                                v-for="post in winnerItems"
-                                :key="String(post.id)"
-                                :post="post"
-                            />
-                        </div>
-                        <SnitchSkeleton
-                            v-else-if="!winners"
-                            variant="scrap"
-                            height="8rem"
-                            label="Loading winners"
-                        />
-                    </section>
-                </section>
-
-                <!-- 3. Are they running ads? -->
-                <section
-                    id="ads"
-                    class="mt-5 scroll-mt-[4.5rem] space-y-4 border-t border-snitch-ink/10 pt-5"
-                >
-                    <header class="space-y-2">
-                        <p class="snitch-dash-eyebrow text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
-                            Are they running ads?
-                        </p>
-                        <h2 class="snitch-hero-display snitch-section-answer text-snitch-ink">
-                            <SnitchHighlightedText :text="adsHeadline" />
-                        </h2>
-                    </header>
-
-                    <div
-                        v-if="!ads_panel"
-                        class="grid gap-2 sm:grid-cols-2"
-                        aria-busy="true"
-                    >
-                        <SnitchSkeleton
-                            v-for="row in 2"
-                            :key="`ad-skel-${row}`"
-                            variant="scrap"
-                            height="4rem"
-                            :label="`Loading ads ${row}`"
-                        />
-                    </div>
-                    <div
-                        v-else-if="ads_panel.accounts.length"
-                        class="space-y-3"
-                    >
-                        <details @toggle="detailsOpen = ($event.target as HTMLDetailsElement).open">
-                            <summary class="cursor-pointer text-sm font-medium text-snitch-ink/70 hover:text-snitch-ink">
-                                {{ detailsOpen ? 'Hide ad creatives' : 'See ad creatives' }}
-                            </summary>
-                            <div class="mt-3 space-y-3">
-                                <div
-                                    v-for="account in ads_panel.accounts"
-                                    :key="account.handle"
-                                    class="rounded border border-snitch-ink/10 bg-snitch-lift p-3"
-                                >
-                                    <div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-                                        <Link
-                                            v-if="account.tracked_account_id"
-                                            :href="competitorShow.url(account.tracked_account_id)"
-                                            class="whitespace-nowrap text-sm font-semibold text-snitch-ink hover:underline"
-                                        >
-                                            @{{ account.handle }}
-                                        </Link>
-                                        <span class="text-sm tabular-nums text-snitch-ink/55">
-                                            {{ account.count }} active
-                                        </span>
-                                    </div>
-                                    <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                        <a
-                                            v-for="ad in account.ads"
-                                            :key="ad.id"
-                                            :href="ad.url"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            class="rounded border border-snitch-ink/10 px-2.5 py-2 hover:border-snitch-ink/30"
-                                        >
-                                            <p class="text-sm text-snitch-ink/55">
-                                                {{ productPlatformLabel(ad.platform) }}
-                                                <span
-                                                    v-if="seenLabel(ad.last_seen_at)"
-                                                    class="ms-1 tabular-nums"
-                                                >
-                                                    · {{ seenLabel(ad.last_seen_at) }}
-                                                </span>
-                                            </p>
-                                            <p class="mt-1 text-sm font-medium leading-snug text-snitch-ink">
-                                                {{ ad.title }}
-                                            </p>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </details>
-                    </div>
-                </section>
-            </template>
+                <p class="text-sm text-snitch-ink/70 sm:text-base">
+                    Curated panels from your stored data. Full sections stay on Today, Growth, Feed, and Competitors.
+                </p>
+            </header>
 
             <div
-                v-else-if="!showOnboarding"
-                class="mt-3 rounded border border-dashed border-snitch-ink/20 bg-snitch-lift p-8 text-center"
+                v-if="! hasPanels"
+                class="rounded border border-snitch-ink/10 bg-snitch-lift p-6"
             >
                 <h2 class="snitch-hero-display text-xl text-snitch-ink">
-                    {{ own_account ? 'No rivals to compare yet' : 'No Instagram competitors yet' }}
+                    No panels yet
                 </h2>
-                <p class="mt-2 text-sm text-snitch-ink/60">
-                    Add Instagram competitor handles on Tracking to populate this dashboard.
+                <p class="mt-2 text-sm leading-relaxed text-snitch-ink/80">
+                    Add competitors and sync posts so default tiles can fill in, or connect your AI from Settings.
                 </p>
                 <Link
                     :href="competitors()"
-                    class="snitch-btn mt-4 inline-block px-3 py-1.5 text-sm"
+                    class="snitch-btn snitch-btn-spot mt-4 inline-flex px-3 py-2 text-sm font-medium"
                 >
-                    Go to Tracking
+                    Go to Competitors
                 </Link>
             </div>
 
-            <section
-                v-if="showTrackedBy"
-                id="tracked-by"
-                    class="mt-5 scroll-mt-[4.5rem] space-y-3 border-t border-snitch-ink/10 pt-5"
+            <div
+                v-else
+                class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
             >
-                <header>
-                    <h2 class="snitch-hero-display text-2xl text-snitch-ink md:text-3xl">
-                        Is anyone <span class="snitch-highlight">tracking you</span>?
-                    </h2>
-                </header>
-                <TrackedBySection :tracked-by="trackedBy ?? null" />
-            </section>
+                <template
+                    v-for="panel in panels"
+                    :key="panel.id ?? `${panel.type}-${panel.position}-${panel.title}`"
+                >
+                    <PanelBigNumber
+                        v-if="panel.type === 'big_number'"
+                        :title="panel.title"
+                        :payload="panel.payload"
+                    />
+                    <PanelPostCard
+                        v-else-if="panel.type === 'post_card'"
+                        :title="panel.title"
+                        :payload="panel.payload"
+                    />
+                    <PanelRankedList
+                        v-else-if="panel.type === 'ranked_list'"
+                        class="sm:col-span-2"
+                        :title="panel.title"
+                        :payload="panel.payload"
+                    />
+                    <PanelNote
+                        v-else-if="panel.type === 'note'"
+                        :title="panel.title"
+                        :payload="panel.payload"
+                    />
+                    <PanelChart
+                        v-else-if="panel.type === 'line_chart' || panel.type === 'bar_chart'"
+                        class="sm:col-span-2"
+                        :title="panel.title"
+                        :kind="panel.type === 'bar_chart' ? 'bar' : 'line'"
+                        :payload="panel.payload"
+                    />
+                    <div
+                        v-else
+                        class="rounded border border-snitch-ink/10 bg-snitch-lift p-4 text-sm text-snitch-ink/70"
+                        :class="widePanel(panel.type) ? 'sm:col-span-2' : ''"
+                    >
+                        Unknown panel type: {{ panel.type }}
+                    </div>
+                </template>
+            </div>
 
-            <section
+            <TrackedBySection
+                v-if="showTrackedBy && trackedBy"
+                id="tracked-by"
+                class="scroll-mt-[4.5rem]"
+                :tracked-by="trackedBy"
+            />
+
+            <VoteSection
                 id="vote"
-                    class="mt-5 scroll-mt-[4.5rem] space-y-3 border-t border-snitch-ink/10 pt-5"
-            >
-                <header>
-                    <h2 class="snitch-hero-display text-2xl text-snitch-ink md:text-3xl">
-                        Vote for what <span class="snitch-highlight">features</span> you want
-                    </h2>
-                </header>
-                <VoteSection :suggestions="featureSuggestions ?? []" />
-            </section>
-            <div class="snitch-dash-anchor-pad" aria-hidden="true" />
+                class="scroll-mt-[4.5rem]"
+                :suggestions="featureSuggestions ?? []"
+            />
         </div>
     </div>
 </template>

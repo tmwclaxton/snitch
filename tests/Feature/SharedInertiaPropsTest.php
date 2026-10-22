@@ -65,7 +65,7 @@ class SharedInertiaPropsTest extends TestCase
                 'X-Inertia' => 'true',
                 'X-Inertia-Version' => (string) app(Middleware::class)->version(request()),
                 'X-Inertia-Partial-Component' => 'Dashboard',
-                'X-Inertia-Partial-Data' => 'kpis',
+                'X-Inertia-Partial-Data' => 'panels',
             ])
             ->get(route('dashboard'))
             ->assertOk();

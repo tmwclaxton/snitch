@@ -169,37 +169,29 @@ class ExecutiveDashboardTest extends TestCase
     }
 
     #[Test]
-    public function dashboard_vue_is_executive_not_text_dump(): void
+    public function dashboard_vue_is_curated_panel_canvas(): void
     {
         $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
         $this->assertIsString($dashboard);
 
-        $this->assertStringContainsString('ExecStatTile', $dashboard);
-        $this->assertStringContainsString('ExecRankBars', $dashboard);
-        $this->assertStringContainsString('ExecWinnerThumb', $dashboard);
-        $this->assertStringContainsString('ExecWhatWorks', $dashboard);
+        $this->assertStringContainsString('PanelBigNumber', $dashboard);
+        $this->assertStringContainsString('PanelPostCard', $dashboard);
+        $this->assertStringContainsString('PanelChart', $dashboard);
+        $this->assertStringContainsString('PanelRankedList', $dashboard);
+        $this->assertStringContainsString('PanelNote', $dashboard);
+        $this->assertStringContainsString('id="vote"', $dashboard);
+        $this->assertStringContainsString('id="tracked-by"', $dashboard);
+        $this->assertStringNotContainsString('id="what-to-post"', $dashboard);
+        $this->assertStringNotContainsString('ExecStatTile', $dashboard);
+        $this->assertStringNotContainsString('CaptionPanels', $dashboard);
+        $this->assertStringNotContainsString('InsightList', $dashboard);
+        $this->assertStringNotContainsString('CompareTable', $dashboard);
+        $this->assertStringNotContainsString('line-clamp-', $dashboard);
 
         $winnerThumb = file_get_contents(resource_path('js/components/dashboard/ExecWinnerThumb.vue'));
         $this->assertIsString($winnerThumb);
         $this->assertDoesNotMatchRegularExpression('/\\btruncate\\b/', $winnerThumb);
         $this->assertStringNotContainsString('whitespace-nowrap', $winnerThumb);
-        $this->assertStringContainsString('\\u200b', $winnerThumb);
-        $this->assertStringContainsString('text-[13px]', $winnerThumb);
         $this->assertStringContainsString('feedShow.url(post.id)', $winnerThumb);
-        $this->assertStringContainsString('whatToPostHeadline', $dashboard);
-        $this->assertStringContainsString('performanceHeadline', $dashboard);
-        $this->assertStringContainsString('executive?.what_to_post?.headline', $dashboard);
-        $this->assertStringContainsString('id="what-to-post"', $dashboard);
-        $this->assertStringContainsString('id="performance"', $dashboard);
-        $this->assertStringContainsString('id="ads"', $dashboard);
-        $this->assertStringContainsString('id="vote"', $dashboard);
-
-        $this->assertStringNotContainsString('Post ${idea.format.toLowerCase()}s around', $dashboard);
-        $this->assertStringNotContainsString('CaptionPanels', $dashboard);
-        $this->assertStringNotContainsString('DataNotes', $dashboard);
-        $this->assertStringNotContainsString('ThemeMatrix', $dashboard);
-        $this->assertStringNotContainsString('FollowerHistoryChart', $dashboard);
-        $this->assertStringNotContainsString('InsightList', $dashboard);
-        $this->assertStringNotContainsString('CompareTable', $dashboard);
     }
 }
