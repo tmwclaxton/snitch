@@ -2937,6 +2937,41 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
         text-underline-offset: 0.15em;
     }
 
+    .snitch-chat-md-body.snitch-md {
+        font-size: 15px;
+        line-height: 1.65;
+        color: #edeae2;
+    }
+
+    .snitch-chat-md-body.snitch-md a {
+        color: #fcd700;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+
+    .snitch-md-table-wrap {
+        overflow-x: auto;
+        margin: 0.75rem 0;
+    }
+
+    .snitch-md-table-wrap table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 15px;
+    }
+
+    .snitch-md-table-wrap th,
+    .snitch-md-table-wrap td {
+        border: 1px solid color-mix(in oklab, var(--snitch-ink) 15%, transparent);
+        padding: 0.45rem 0.65rem;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .snitch-md-table-wrap th {
+        font-weight: 600;
+    }
+
     .snitch-md a:hover {
         text-decoration-color: var(--snitch-spot);
     }

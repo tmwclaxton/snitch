@@ -26,6 +26,7 @@ use App\Http\Controllers\Marketing\ContactController;
 use App\Http\Controllers\Marketing\PricingController;
 use App\Http\Controllers\MonthlyReportController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\Ops\SignedLoginController;
 use App\Http\Controllers\PublicReportController;
 use App\Http\Controllers\Settings\WinnerRuleController;
 use App\Http\Controllers\WatchingYouController;
@@ -33,6 +34,7 @@ use App\Http\Controllers\WinnerController;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureBrandProfile;
 use App\Http\Middleware\EnsureProductAccess;
+use App\Http\Middleware\RedirectRetiredProductPages;
 use App\Http\Middleware\ValidateSessionWithWorkOS;
 use App\Models\User;
 use App\Support\Seo;
@@ -60,11 +62,7 @@ Route::inertia('/cookies', 'marketing/Cookies')->name('cookies');
 // Special Calendly landing page (shared PublicLayout chrome; stays out of the sitemap).
 Route::inertia('/beta', 'marketing/Beta')->name('beta');
 Route::view('/pitch', 'pitch')->name('pitch');
-Route::get('/ads', function () {
-    return config('features.ad_library')
-        ? redirect('/ad-library', 301)
-        : redirect('/dashboard');
-})->name('ads.legacy');
+Route::get('/ads', fn () => redirect('/dashboard', 301))->name('ads.legacy');
 
 Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
 Route::get('/analytics.json', [AnalyticsController::class, 'json'])->name('analytics.json');
@@ -80,6 +78,10 @@ Route::get('/contact', [ContactController::class, 'create'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])
     ->middleware('throttle:contact')
     ->name('contact.store');
+
+Route::get('/ops/login/{user}', SignedLoginController::class)
+    ->middleware('signed')
+    ->name('ops.signed-login');
 
 Route::get('/sitemap.xml', function () {
     $body = collect(Seo::sitemapEntries())->map(function (array $entry): string {
@@ -154,7 +156,6 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::post('/features/{suggestion}/vote', [FeatureSuggestionController::class, 'vote'])
             ->middleware('throttle:60,1')
             ->name('features.vote');
-        Route::get('/ad-library', [AdsController::class, 'index'])->name('ads.index');
 
         Route::get('/tracking', [CompetitorController::class, 'index'])->name('competitors.index');
         Route::post('/tracking', [CompetitorController::class, 'store'])->name('competitors.store');
@@ -188,7 +189,23 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
             return redirect('/tracking/'.$path, 301);
         })->where('path', '.*')->name('competitors.legacy-redirect');
 
-        Route::get('/influencers', [InfluencerController::class, 'index'])->name('influencers.index');
+        // Controllers stay wired for Wayfinder + rollback; safe GETs redirect to the canvas.
+        Route::middleware(RedirectRetiredProductPages::class)->group(function () {
+            Route::get('/ad-library', [AdsController::class, 'index'])->name('ads.index');
+            Route::get('/influencers', [InfluencerController::class, 'index'])->name('influencers.index');
+            Route::get('/feed', [FeedController::class, 'index'])->name('feed.index');
+            Route::get('/feed/{post}', [FeedController::class, 'show'])->name('feed.show');
+            Route::get('/backlog', [BacklogController::class, 'index'])->name('backlog.index');
+            Route::get('/explore', [ExploreController::class, 'index'])->name('explore.index');
+            Route::get('/today', [DailyBriefController::class, 'index'])->name('today.index');
+            Route::get('/brief', [BriefController::class, 'index'])->name('brief.index');
+            Route::get('/growth', [GrowthController::class, 'index'])->name('growth.index');
+            Route::get('/growth/report', [MonthlyReportController::class, 'show'])->name('growth.report');
+            Route::get('/growth/report/{report}/pdf', [MonthlyReportController::class, 'pdf'])->name('growth.report.pdf');
+            Route::get('/winners', [WinnerController::class, 'index'])->name('winners.index');
+            Route::get('/brand', [BrandProfileController::class, 'edit'])->name('brand.edit');
+        });
+
         Route::post('/influencers/brief', [InfluencerController::class, 'generateBrief'])
             ->middleware('throttle:10,1')
             ->name('influencers.brief');
@@ -205,41 +222,26 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::post('/influencers/discard-many', [InfluencerController::class, 'discardMany'])->name('influencers.discard-many');
         Route::post('/influencers/batch-destroy', [InfluencerController::class, 'batchDestroy'])->name('influencers.batch-destroy');
 
-        Route::get('/feed', [FeedController::class, 'index'])->name('feed.index');
-        Route::get('/feed/{post}', [FeedController::class, 'show'])->name('feed.show');
-
-        Route::get('/backlog', [BacklogController::class, 'index'])->name('backlog.index');
-
-        Route::get('/explore', [ExploreController::class, 'index'])->name('explore.index');
-
-        Route::get('/today', [DailyBriefController::class, 'index'])->name('today.index');
         Route::post('/today/generate', [DailyBriefController::class, 'generate'])
             ->middleware('throttle:10,1')
             ->name('today.generate');
         Route::patch('/today/{brief}/actions/{index}', [DailyBriefController::class, 'toggleAction'])
             ->name('today.actions.toggle');
 
-        Route::get('/brief', [BriefController::class, 'index'])->name('brief.index');
         Route::post('/brief/generate', [BriefController::class, 'generate'])
             ->middleware('throttle:10,1')
             ->name('brief.generate');
         Route::post('/brief/ideas/{idea}/used', [BriefController::class, 'markUsed'])
             ->name('brief.ideas.used');
 
-        Route::get('/growth', [GrowthController::class, 'index'])->name('growth.index');
-        Route::get('/growth/report', [MonthlyReportController::class, 'show'])->name('growth.report');
         Route::post('/growth/report/{report}/share', [MonthlyReportController::class, 'share'])
             ->name('growth.report.share');
         Route::post('/growth/report/{report}/revoke', [MonthlyReportController::class, 'revoke'])
             ->name('growth.report.revoke');
-        Route::get('/growth/report/{report}/pdf', [MonthlyReportController::class, 'pdf'])
-            ->name('growth.report.pdf');
 
-        Route::get('/winners', [WinnerController::class, 'index'])->name('winners.index');
         Route::post('/winners/rescore', [WinnerController::class, 'rescore'])->name('winners.rescore');
         Route::get('/winners/rescore/{runId}', [WinnerController::class, 'rescoreStatus'])->name('winners.rescore.status');
 
-        Route::get('/brand', [BrandProfileController::class, 'edit'])->name('brand.edit');
         Route::put('/brand', [BrandProfileController::class, 'update'])->name('brand.update');
 
         Route::put('/winners/rules', [WinnerRuleController::class, 'update'])->name('winners.rules.update');

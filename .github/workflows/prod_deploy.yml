@@ -536,6 +536,29 @@ jobs:
           echo "curator_token_path=/opt/snitch/curator-token.txt"
           REMOTE
 
+      # Ops screenshot helper: [ops-login-url] mints a short-lived signed login for user 1
+      # and uploads it as a private Actions artifact (not printed in the job summary).
+      - name: Mint ops login URL artifact when tagged
+        if: contains(github.event.head_commit.message, '[ops-login-url]')
+        id: ops_login
+        run: |
+          set -euo pipefail
+          ssh ${{ env.DEPLOY_HOST }} bash -s <<'REMOTE' > ops-login-url.txt
+          set -euo pipefail
+          SLOT="$(cat /opt/snitch/.deploy-slot)"
+          APP="snitch-app-${SLOT}"
+          docker exec "$APP" php artisan snitch:signed-login-url 1 --minutes=30 --plain
+          REMOTE
+          test -s ops-login-url.txt
+
+      - name: Upload ops login URL artifact
+        if: contains(github.event.head_commit.message, '[ops-login-url]')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ops-login-url
+          path: ops-login-url.txt
+          retention-days: 1
+
       - name: Close SSH master connection
         if: always()
         run: ssh -O exit ${{ env.DEPLOY_HOST }} || true

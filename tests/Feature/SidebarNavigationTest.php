@@ -15,60 +15,30 @@ class SidebarNavigationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_sidebar_lists_core_product_pages(): void
+    public function test_sidebar_lists_simplified_product_pages(): void
     {
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
 
         $this->assertNotFalse($sidebar);
-        foreach (['Today', 'Brand', 'Competitors', 'Feed', 'This week', 'Growth', 'Monthly report', 'Explore'] as $title) {
+        foreach (['Dashboard', 'Chat', 'Competitors', 'Connect your AI'] as $title) {
             $this->assertStringContainsString("title: '{$title}'", $sidebar);
         }
 
-        $this->assertStringContainsString('label="Dashboard"', $sidebar);
-        $this->assertStringContainsString("title: 'What should we post?'", $sidebar);
-        $this->assertStringContainsString("title: 'How are they performing?'", $sidebar);
-        $this->assertStringContainsString("title: 'Are they running ads?'", $sidebar);
-        $this->assertStringNotContainsString("title: 'Winners'", $sidebar);
-        $this->assertStringNotContainsString("title: 'Ad Library'", $sidebar);
-        $this->assertStringNotContainsString("title: 'Influencers'", $sidebar);
-        $this->assertStringNotContainsString("title: 'Backlog'", $sidebar);
-        $navMain = file_get_contents(resource_path('js/components/NavMain.vue')) ?: '';
-        $this->assertStringContainsString('activeDashboardSection', $navMain);
-        $this->assertStringContainsString('item.exact', $navMain);
-        $this->assertStringContainsString('exact: true', $sidebar);
+        foreach (['Today', 'Brand', 'Feed', 'This week', 'Growth', 'Monthly report', 'Explore', 'Canvas', 'Vote on features'] as $title) {
+            $this->assertStringNotContainsString("title: '{$title}'", $sidebar);
+        }
+
+        $this->assertStringNotContainsString('questionNavItems', $sidebar);
+        $this->assertStringContainsString('label="App"', $sidebar);
+        $this->assertStringContainsString('adminNavItems', $sidebar);
+        $this->assertStringContainsString('label="Admin"', $sidebar);
+        $this->assertStringContainsString('accountNavItems', $sidebar);
+        $this->assertStringContainsString('Billing', $sidebar);
+        $this->assertStringContainsString('Settings', $sidebar);
         $this->assertMatchesRegularExpression(
             "/title: 'Admin',[\\s\\S]{0,120}exact: true/",
             $sidebar,
         );
-        $this->assertStringContainsString('overflow-y-auto', $sidebar);
-        $this->assertStringContainsString('gap-0 overflow-y-auto', $sidebar);
-        $this->assertStringContainsString('adminNavItems', $sidebar);
-        $this->assertStringContainsString('label="Admin"', $sidebar);
-        $this->assertStringContainsString('collapsible', $sidebar);
-        $this->assertStringContainsString(':default-open="adminGroupOpen"', $sidebar);
-        $this->assertStringNotContainsString('dashboardGroupOpen', $sidebar);
-        $this->assertStringContainsString(':items="questionNavItems"', $sidebar);
-        $this->assertStringContainsString('label="Dashboard"', $sidebar);
-        preg_match('/<NavMain[\s\S]*?label="Dashboard"[\s\S]*?\/>/', $sidebar, $dashboardGroup);
-        $this->assertArrayHasKey(0, $dashboardGroup);
-        $this->assertStringNotContainsString('collapsible', $dashboardGroup[0]);
-        $this->assertStringContainsString(':tight="adminGroupOpen"', $sidebar);
-        $this->assertStringContainsString('accountNavItems', $sidebar);
-        $this->assertStringContainsString('Billing', $sidebar);
-        $this->assertStringContainsString('Settings', $sidebar);
-
-        $rowPx = 32;
-        $labelPx = 14;
-        $dashboardItems = 5;
-        $platformItems = 8;
-        $adminItems = 4;
-        $groupCount = 3;
-        $productChrome = (8 * 2) + 48 + 1 + (8 * 2) + 32 + 8 + 48 + 1;
-        $productGroups = 10 + (12 * 2) + ($groupCount * (4 + $labelPx));
-        $adminChrome = 40 + 1 + 28 + 4 + 40 + 1;
-        $adminGroups = (10 * $groupCount) + ($groupCount * (2 + $labelPx));
-        $this->assertLessThanOrEqual(713, $productChrome + (($dashboardItems + $platformItems) * $rowPx) + $productGroups);
-        $this->assertLessThanOrEqual(713, $adminChrome + (($dashboardItems - 1 + $platformItems + $adminItems) * $rowPx) + $adminGroups);
     }
 
     public function test_account_nav_sits_above_the_profile(): void
@@ -92,12 +62,6 @@ class SidebarNavigationTest extends TestCase
         $this->assertLessThan($footer, $admin);
         $this->assertGreaterThan($footer, $account);
         $this->assertLessThan($profile, $footer);
-        $this->assertStringContainsString('title: \'Explore\'', $sidebar);
-        $explore = strpos($sidebar, "title: 'Explore'");
-        $adminTitle = strpos($sidebar, "title: 'Admin'");
-        $this->assertNotFalse($explore);
-        $this->assertNotFalse($adminTitle);
-        $this->assertLessThan($adminTitle, $explore);
     }
 
     public function test_nested_url_helper_matches_child_routes(): void
@@ -109,7 +73,7 @@ class SidebarNavigationTest extends TestCase
         $this->assertStringContainsString("path === '' || path === '/'", $source);
     }
 
-    public function test_core_pages_render_for_empty_and_populated_users(): void
+    public function test_core_pages_and_retired_redirects(): void
     {
         $empty = User::factory()->create();
         BrandProfile::factory()->for($empty)->create();
@@ -125,32 +89,17 @@ class SidebarNavigationTest extends TestCase
             'posted_at' => now()->subDay(),
         ]);
 
-        $routes = [
-            'dashboard',
-            'brand.edit',
-            'competitors.index',
-            'feed.index',
-            'brief.index',
-            'growth.index',
-            'growth.report',
-            'explore.index',
-        ];
-
         foreach ([$empty, $populated] as $user) {
-            foreach ($routes as $route) {
+            $this->actingAs($user)->get(route('dashboard'))->assertOk();
+            $this->actingAs($user)->get(route('chat.index'))->assertOk();
+            $this->actingAs($user)->get(route('competitors.index'))->assertOk();
+            $this->actingAs($user)->get(route('settings.mcp.show'))->assertOk();
+
+            foreach (['today.index', 'brief.index', 'growth.index', 'growth.report', 'explore.index', 'feed.index', 'brand.edit', 'winners.index', 'ads.index'] as $route) {
                 $this->actingAs($user)
                     ->get(route($route))
-                    ->assertOk();
+                    ->assertRedirect(route('dashboard'));
             }
-
-            $this->actingAs($user)
-                ->get(route('winners.index'))
-                ->assertRedirect(route('growth.index'));
-
-            // Standalone Ad Library stays behind config('features.ad_library'); default off → dashboard.
-            $this->actingAs($user)
-                ->get(route('ads.index'))
-                ->assertRedirect(route('dashboard'));
         }
 
         $this->actingAs($populated)
@@ -162,8 +111,7 @@ class SidebarNavigationTest extends TestCase
 
         $this->actingAs($populated)
             ->get(route('feed.show', $post))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('feed/Show'));
+            ->assertRedirect(route('dashboard'));
     }
 
     public function test_tracking_index_exposes_avatar_with_social_fallback(): void

@@ -5,14 +5,13 @@ namespace Tests\Feature;
 use App\Models\BrandProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class BrandProfileUpdateTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_brand_page_is_displayed(): void
+    public function test_brand_page_redirects_to_dashboard(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create([
@@ -24,14 +23,7 @@ class BrandProfileUpdateTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('brand.edit'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('brand/Index')
-                ->where('brand.name', 'Loaf Local')
-                ->where('brand.website', 'https://loaf.example')
-                ->where('brand.own_handles.instagram', '@loaf')
-                ->has('platforms')
-            );
+            ->assertRedirect(route('dashboard'));
     }
 
     public function test_user_without_brand_is_redirected_to_onboarding(): void
@@ -156,18 +148,19 @@ class BrandProfileUpdateTest extends TestCase
         ]);
     }
 
-    public function test_sidebar_includes_brand_link(): void
+    public function test_sidebar_includes_competitors_not_retired_pages(): void
     {
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
 
         $this->assertNotFalse($sidebar);
-        $this->assertStringContainsString("title: 'Brand'", $sidebar);
         $this->assertStringContainsString("title: 'Competitors'", $sidebar);
-        $this->assertStringContainsString("title: 'Feed'", $sidebar);
-        $this->assertStringContainsString("title: 'Monthly report'", $sidebar);
-        $this->assertStringContainsString("title: 'Explore'", $sidebar);
+        $this->assertStringContainsString("title: 'Dashboard'", $sidebar);
+        $this->assertStringContainsString("title: 'Chat'", $sidebar);
+        $this->assertStringContainsString("title: 'Connect your AI'", $sidebar);
+        $this->assertStringNotContainsString("title: 'Brand'", $sidebar);
+        $this->assertStringNotContainsString("title: 'Feed'", $sidebar);
+        $this->assertStringNotContainsString("title: 'Explore'", $sidebar);
         $this->assertStringNotContainsString("title: 'Winners'", $sidebar);
-        $this->assertStringContainsString('BrandProfileController', $sidebar);
         $this->assertStringContainsString('CompetitorController', $sidebar);
         $this->assertStringNotContainsString("title: 'MCP'", $sidebar);
         $this->assertStringNotContainsString("title: 'Brand Deals'", $sidebar);
@@ -187,13 +180,13 @@ class BrandProfileUpdateTest extends TestCase
         $this->assertStringNotContainsString('BrandProfileController', $layout);
     }
 
-    public function test_brand_page_html_includes_csrf_token_for_autofill_fetch(): void
+    public function test_app_shell_html_includes_csrf_token_for_autofill_fetch(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
 
         $this->actingAs($user)
-            ->get(route('brand.edit'))
+            ->get(route('dashboard'))
             ->assertOk()
             ->assertSee('<meta name="csrf-token"', false);
     }

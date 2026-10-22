@@ -33,7 +33,7 @@ class DashboardTest extends TestCase
                 ->component('Dashboard')
                 ->has('panels')
                 ->where('panels_source', 'default')
-                ->has('featureSuggestions')
+                ->missing('featureSuggestions')
             );
     }
 
@@ -75,13 +75,13 @@ class DashboardTest extends TestCase
         $this->assertStringContainsString('PanelBigNumber', $dashboard);
         $this->assertStringContainsString('PanelPostCard', $dashboard);
         $this->assertStringContainsString('PanelChart', $dashboard);
-        $this->assertStringContainsString('TrackedBySection', $dashboard);
-        $this->assertStringContainsString('VoteSection', $dashboard);
+        $this->assertStringNotContainsString('TrackedBySection', $dashboard);
+        $this->assertStringNotContainsString('VoteSection', $dashboard);
         $this->assertStringContainsString('Curated panels', $dashboard);
         $this->assertStringNotContainsString('id="what-to-post"', $dashboard);
         $this->assertStringNotContainsString('ExecStatTile', $dashboard);
-        $this->assertStringContainsString("title: 'Canvas'", $sidebar);
-        $this->assertStringContainsString('feedShow.url', $postCard);
+        $this->assertStringContainsString("title: 'Dashboard'", $sidebar);
+        $this->assertStringNotContainsString('feedShow.url', $postCard);
         $this->assertStringNotContainsString('line-clamp-', $dashboard);
         $this->assertStringNotContainsString('—', $dashboard);
         $this->assertStringNotContainsString('–', $dashboard);

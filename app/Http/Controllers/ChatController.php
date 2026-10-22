@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\Chat\ChatToolRunner;
+use App\Services\Chat\ChatSuggestionService;
 use App\Services\Chat\InAppChatService;
 use App\Support\McpConnectionGuide;
 use Illuminate\Http\Request;
@@ -12,8 +12,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ChatController extends Controller
 {
-    public function index(Request $request, InAppChatService $chat): Response
-    {
+    public function index(
+        Request $request,
+        InAppChatService $chat,
+        ChatSuggestionService $suggestions,
+    ): Response {
         $user = $request->user();
         $guide = McpConnectionGuide::payload();
 
@@ -23,7 +26,7 @@ class ChatController extends Controller
             'capped' => $chat->isCapped($user),
             'mcp_path' => '/settings/mcp',
             'mcp_url' => $guide['mcp_url'] ?? url('/mcp'),
-            'tools' => ChatToolRunner::toolNames(),
+            'suggestions' => $suggestions->forUser($user),
         ]);
     }
 

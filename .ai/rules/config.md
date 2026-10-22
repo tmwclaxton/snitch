@@ -10,7 +10,10 @@ paths:
 # Config
 
 ## In-app chat uses stored MCP reads and a daily cap
-`/chat` calls the same stored-data tools as MCP (`ChatToolRunner` / `McpReadService`) under the logged-in user. Never trigger Apify/TikHub from chat. Cap with `snitch.chat.daily_message_cap` (`SNITCH_CHAT_DAILY_CAP`, Europe/London day). When capped, stream a plain message plus Connect your AI (`/settings/mcp`). Model: `snitch.chat.model`.
+`/chat` calls the same stored-data tools as MCP (`ChatToolRunner` / `McpReadService`) under the logged-in user. Never trigger Apify/TikHub from chat. Cap with `snitch.chat.daily_message_cap` (`SNITCH_CHAT_DAILY_CAP`, Europe/London day). When capped, stream a plain message plus Connect your AI (`/settings/mcp`). Model: `snitch.chat.model`. UI: Caution Tape night chat shell (760px column, cream text, yellow send only, Archivo Black empty headline, suggestion chips from `ChatSuggestionService`, markdown + Instagram post cards, stick-to-bottom only when the user has not scrolled up).
+
+## Product nav is MCP-first
+Logged-in sidebar: Dashboard, Chat, Competitors, Connect your AI, then Billing/Settings. Admin stays for admins. Retired pages (Today, Growth, Feed, Brand, Explore, Winners, Ad Library, Vote, etc.) keep controllers/data but GET routes redirect to `/dashboard`. Ops screenshots: `snitch:signed-login-url` + deploy tag `[ops-login-url]`.
 
 ## Sync and analyze stay inside the recency cost cap
 Import only posts within the scrape window: weekly `snitch.sync.recency_days` (default 30) / `posts_limit` (12), or first-sync `first_sync_recency_days` (90) / `first_sync_posts_limit` (50). Analysis eligibility uses `SyncOptions::analysisRecencyDays()` = max of those windows so backfilled posts remain analyzable without widening every future scrape. Manual UI and MCP sync_competitor may override via posts_limit / recency_days (capped by posts_limit_max / recency_days_max). Do not scrape deep archives during vetting or probes. Documented via SNITCH_SYNC_* env vars.

@@ -2,34 +2,18 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     Activity,
-    CalendarDays,
-    Clapperboard,
-    Compass,
+    Bot,
     CreditCard,
-    FileText,
-    HelpCircle,
     KeyRound,
+    LayoutDashboard,
     Lightbulb,
-    Megaphone,
     MessageSquare,
     Settings,
     Shield,
-    Store,
-    Sun,
-    Target,
-    TrendingUp,
     Users,
-    Vote,
 } from '@lucide/vue';
 import { computed } from 'vue';
-import { edit as brand } from '@/actions/App/Http/Controllers/BrandProfileController';
-import { index as brief } from '@/actions/App/Http/Controllers/BriefController';
 import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
-import { index as today } from '@/actions/App/Http/Controllers/DailyBriefController';
-import { index as explore } from '@/actions/App/Http/Controllers/ExploreController';
-import { index as feed } from '@/actions/App/Http/Controllers/FeedController';
-import { index as growth } from '@/actions/App/Http/Controllers/GrowthController';
-import { show as monthlyReport } from '@/actions/App/Http/Controllers/MonthlyReportController';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -51,6 +35,7 @@ import { index as adminUsersIndex } from '@/routes/admin/users';
 import { edit as billing } from '@/routes/billing';
 import { index as chatIndex } from '@/routes/chat';
 import { edit as editProfile } from '@/routes/profile';
+import { show as mcpSettings } from '@/routes/settings/mcp';
 import type { NavItem } from '@/types';
 
 const page = usePage();
@@ -60,65 +45,12 @@ const adminGroupOpen = computed(
     () => currentUrl.value === '/admin' || currentUrl.value.startsWith('/admin/'),
 );
 
-const trackedBy = computed(() => {
-    const raw = (page.props as { trackedBy?: { count: number; since?: string | null } | null }).trackedBy;
-
-    return raw ?? null;
-});
-
-/*
- * Canvas dashboard is panel-based. Question shortcuts open the dedicated
- * product pages (Today, Growth, Competitors) so old section content stays reachable.
- */
-const questionNavItems = computed<NavItem[]>(() => {
-    const items: NavItem[] = [
-        {
-            title: 'Canvas',
-            href: dashboard.url(),
-            icon: Target,
-            exact: true,
-        },
-        {
-            title: 'What should we post?',
-            href: today(),
-            icon: HelpCircle,
-        },
-        {
-            title: 'How are they performing?',
-            href: growth(),
-            icon: TrendingUp,
-        },
-        {
-            title: 'Are they running ads?',
-            href: competitors(),
-            icon: Megaphone,
-        },
-    ];
-
-    if (trackedBy.value != null && trackedBy.value.count > 0) {
-        items.push({
-            title: 'Is anyone tracking you?',
-            href: `${dashboard.url()}#tracked-by`,
-            icon: MessageSquare,
-            section: 'tracked-by',
-        });
-    }
-
-    items.push({
-        title: 'Vote on features',
-        href: `${dashboard.url()}#vote`,
-        icon: Vote,
-        section: 'vote',
-    });
-
-    return items;
-});
-
 const mainNavItems: NavItem[] = [
     {
-        title: 'Today',
-        href: today(),
-        icon: Sun,
+        title: 'Dashboard',
+        href: dashboard.url(),
+        icon: LayoutDashboard,
+        exact: true,
     },
     {
         title: 'Chat',
@@ -126,41 +58,14 @@ const mainNavItems: NavItem[] = [
         icon: MessageSquare,
     },
     {
-        title: 'Brand',
-        href: brand(),
-        icon: Store,
-    },
-    {
         title: 'Competitors',
         href: competitors(),
         icon: Users,
     },
     {
-        title: 'Feed',
-        href: feed(),
-        icon: Clapperboard,
-    },
-    {
-        title: 'This week',
-        href: brief(),
-        icon: CalendarDays,
-    },
-    {
-        title: 'Growth',
-        href: growth(),
-        icon: TrendingUp,
-        exact: true,
-    },
-    {
-        title: 'Monthly report',
-        href: monthlyReport(),
-        icon: FileText,
-        exact: true,
-    },
-    {
-        title: 'Explore',
-        href: explore(),
-        icon: Compass,
+        title: 'Connect your AI',
+        href: mcpSettings(),
+        icon: Bot,
     },
 ];
 
@@ -240,13 +145,8 @@ const accountNavItems: NavItem[] = [
 
         <SidebarContent class="min-h-0 flex-1 gap-0 overflow-y-auto">
             <NavMain
-                :items="questionNavItems"
-                label="Dashboard"
-                :tight="adminGroupOpen"
-            />
-            <NavMain
                 :items="mainNavItems"
-                label="Platform"
+                label="App"
                 :tight="adminGroupOpen"
             />
             <NavMain

@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
 import { formatAppDate } from '@/lib/dates';
-import { show as feedShow } from '@/routes/feed';
 
 defineProps<{
     title: string;
@@ -75,15 +73,8 @@ function postedLabel(iso: string | null | undefined): string {
                 <dd class="font-mono tabular-nums text-snitch-ink">{{ payload.views }}</dd>
             </div>
         </dl>
-        <Link
-            v-if="payload.post_id"
-            :href="feedShow.url(payload.post_id)"
-            class="snitch-btn mt-4 inline-flex w-fit px-3 py-1.5 text-sm font-medium"
-        >
-            Open post
-        </Link>
         <a
-            v-else-if="payload.url"
+            v-if="payload.url"
             :href="payload.url"
             target="_blank"
             rel="noopener noreferrer"

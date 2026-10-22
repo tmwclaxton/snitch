@@ -34,6 +34,14 @@ class ValidateSessionWithWorkOS
             return $next($request);
         }
 
+        // Temporary signed ops login for production screenshots (snitch:signed-login-url).
+        $opsUntil = $request->session()->get('ops_signed_login_until');
+        if ($request->session()->get('workos_access_token') === 'ops-signed-login'
+            && is_numeric($opsUntil)
+            && (int) $opsUntil >= time()) {
+            return $next($request);
+        }
+
         WorkOS::configure();
 
         if (! $request->session()->get('workos_access_token') ||

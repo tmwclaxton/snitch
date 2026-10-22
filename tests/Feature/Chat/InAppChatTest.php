@@ -32,7 +32,7 @@ class InAppChatTest extends TestCase
                 ->component('chat/Index')
                 ->has('daily_cap')
                 ->has('remaining')
-                ->has('tools'));
+                ->has('suggestions'));
     }
 
     public function test_chat_tools_only_return_the_authenticated_users_trackers(): void

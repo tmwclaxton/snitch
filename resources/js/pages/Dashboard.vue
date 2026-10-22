@@ -7,8 +7,6 @@ import PanelChart from '@/components/dashboard/panels/PanelChart.vue';
 import PanelNote from '@/components/dashboard/panels/PanelNote.vue';
 import PanelPostCard from '@/components/dashboard/panels/PanelPostCard.vue';
 import PanelRankedList from '@/components/dashboard/panels/PanelRankedList.vue';
-import TrackedBySection from '@/components/dashboard/TrackedBySection.vue';
-import VoteSection from '@/components/dashboard/VoteSection.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 
 defineOptions({
@@ -27,20 +25,7 @@ type DashboardPanel = {
 const props = defineProps<{
     panels: DashboardPanel[];
     panels_source?: string;
-    trackedBy?: { count: number; since: string } | null;
-    featureSuggestions?: Array<{
-        id: number;
-        title: string;
-        body: string;
-        status: string;
-        votes_count: number;
-        voted: boolean;
-    }>;
 }>();
-
-const showTrackedBy = computed(
-    () => props.trackedBy != null && props.trackedBy.count > 0,
-);
 
 const hasPanels = computed(() => props.panels.length > 0);
 
@@ -56,13 +41,13 @@ function widePanel(type: string): boolean {
         <div class="flex flex-1 flex-col gap-4 p-4 md:p-6">
             <header class="space-y-1">
                 <p class="font-mono text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
-                    Canvas
+                    Dashboard
                 </p>
                 <h1 class="snitch-hero-display text-3xl text-snitch-ink sm:text-4xl">
-                    Dashboard
+                    Your canvas
                 </h1>
                 <p class="text-sm text-snitch-ink/70 sm:text-base">
-                    Curated panels from your stored data. Full sections stay on Today, Growth, Feed, and Competitors.
+                    Curated panels from your stored data. Ask Chat for the rest.
                 </p>
             </header>
 
@@ -74,7 +59,7 @@ function widePanel(type: string): boolean {
                     No panels yet
                 </h2>
                 <p class="mt-2 text-sm leading-relaxed text-snitch-ink/80">
-                    Add competitors and sync posts so default tiles can fill in, or connect your AI from Settings.
+                    Add competitors and sync posts so default tiles can fill in, or open Chat.
                 </p>
                 <Link
                     :href="competitors()"
@@ -129,19 +114,6 @@ function widePanel(type: string): boolean {
                     </div>
                 </template>
             </div>
-
-            <TrackedBySection
-                v-if="showTrackedBy && trackedBy"
-                id="tracked-by"
-                class="scroll-mt-[4.5rem]"
-                :tracked-by="trackedBy"
-            />
-
-            <VoteSection
-                id="vote"
-                class="scroll-mt-[4.5rem]"
-                :suggestions="featureSuggestions ?? []"
-            />
         </div>
     </div>
 </template>

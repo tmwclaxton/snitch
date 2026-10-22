@@ -117,6 +117,12 @@ function renderBlock(block: string): string {
     }
 
     const lines = block.split('\n');
+    const tableHtml = renderTable(lines);
+
+    if (tableHtml !== null) {
+        return tableHtml;
+    }
+
     const listKind = detectListKind(lines);
 
     if (listKind === 'ul') {
@@ -136,6 +142,57 @@ function renderBlock(block: string): string {
     }
 
     return `<p>${renderInline(lines.join('\n'))}</p>`;
+}
+
+function renderTable(lines: string[]): string | null {
+    if (lines.length < 2) {
+        return null;
+    }
+
+    if (! lines.every((line) => line.includes('|'))) {
+        return null;
+    }
+
+    const rows = lines.map((line) =>
+        line
+            .trim()
+            .replace(/^\|/, '')
+            .replace(/\|$/, '')
+            .split('|')
+            .map((cell) => cell.trim()),
+    );
+
+    if (rows.some((row) => row.length < 2)) {
+        return null;
+    }
+
+    const isDivider = (row: string[]): boolean =>
+        row.every((cell) => /^:?-{3,}:?$/.test(cell));
+
+    let bodyStart = 1;
+
+    if (rows[1] && isDivider(rows[1])) {
+        bodyStart = 2;
+    } else if (! isDivider(rows[0]!)) {
+        // header + body without a divider is still accepted when shapes match
+        bodyStart = 1;
+    } else {
+        return null;
+    }
+
+    const header = rows[0]!;
+    const body = rows.slice(bodyStart).filter((row) => ! isDivider(row));
+
+    if (body.length === 0) {
+        return null;
+    }
+
+    const thead = `<thead><tr>${header.map((cell) => `<th>${renderInline(cell)}</th>`).join('')}</tr></thead>`;
+    const tbody = `<tbody>${body
+        .map((row) => `<tr>${row.map((cell) => `<td>${renderInline(cell)}</td>`).join('')}</tr>`)
+        .join('')}</tbody>`;
+
+    return `<div class="snitch-md-table-wrap"><table>${thead}${tbody}</table></div>`;
 }
 
 function detectListKind(lines: string[]): 'ul' | 'ol' | null {

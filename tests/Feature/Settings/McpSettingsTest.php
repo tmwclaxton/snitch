@@ -61,7 +61,7 @@ class McpSettingsTest extends TestCase
             ->assertRedirect(route('settings.mcp.show'));
     }
 
-    public function test_mcp_is_a_settings_subnav_item_not_product_sidebar(): void
+    public function test_mcp_is_in_product_sidebar_and_settings_subnav(): void
     {
         $settings = file_get_contents(resource_path('js/layouts/settings/Layout.vue'));
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
@@ -69,7 +69,7 @@ class McpSettingsTest extends TestCase
         $this->assertIsString($settings);
         $this->assertIsString($sidebar);
         $this->assertStringContainsString("title: 'Connect your AI'", $settings);
-        $this->assertStringNotContainsString("title: 'Connect your AI'", $sidebar);
+        $this->assertStringContainsString("title: 'Connect your AI'", $sidebar);
         $this->assertStringNotContainsString("title: 'MCP'", $sidebar);
     }
 }

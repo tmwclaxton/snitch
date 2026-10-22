@@ -388,6 +388,7 @@ class McpReadService
                 : 'not enough history',
             'prior_n' => (int) ($pi['prior_n'] ?? 0),
             'likes_hidden' => $this->math->isHiddenLikes($post),
+            'thumbnail_url' => filled($post->cover_url) ? (string) $post->cover_url : null,
         ];
     }
 

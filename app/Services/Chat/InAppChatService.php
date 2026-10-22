@@ -87,9 +87,11 @@ class InAppChatService
         return response()->stream(function () use ($user, $messages, $model, $maxRounds): void {
             try {
                 $finalText = $this->completeWithTools($user, $messages, $model, $maxRounds);
+                $this->emit(['type' => 'status', 'message' => null]);
                 $this->emitChunks($finalText);
                 $this->emit(['type' => 'done', 'remaining' => $this->remainingToday($user)]);
             } catch (\Throwable $e) {
+                $this->emit(['type' => 'status', 'message' => null]);
                 $this->emit([
                     'type' => 'error',
                     'message' => 'Chat failed. Try again in a moment.',
@@ -149,11 +151,22 @@ class InAppChatService
 
             $toolCalls = $message['tool_calls'] ?? null;
             if (is_array($toolCalls) && $toolCalls !== []) {
+                $this->emit([
+                    'type' => 'status',
+                    'message' => 'Checking your data...',
+                ]);
+                if (function_exists('ob_flush')) {
+                    @ob_flush();
+                }
+                flush();
+
                 $messages[] = [
                     'role' => 'assistant',
                     'content' => $message['content'] ?? null,
                     'tool_calls' => $toolCalls,
                 ];
+
+                $collectedPosts = [];
 
                 foreach ($toolCalls as $call) {
                     if (! is_array($call)) {
@@ -168,6 +181,7 @@ class InAppChatService
 
                     try {
                         $result = $this->tools->run($user, $name, $args);
+                        $collectedPosts = array_merge($collectedPosts, $this->extractPosts($result));
                         $content = json_encode($result, JSON_UNESCAPED_SLASHES) ?: '{}';
                     } catch (\Throwable $e) {
                         $content = json_encode([
@@ -180,6 +194,14 @@ class InAppChatService
                         'tool_call_id' => $id,
                         'content' => $content,
                     ];
+                }
+
+                if ($collectedPosts !== []) {
+                    $this->emit(['type' => 'posts', 'posts' => array_values($collectedPosts)]);
+                    if (function_exists('ob_flush')) {
+                        @ob_flush();
+                    }
+                    flush();
                 }
 
                 continue;
@@ -238,8 +260,46 @@ class InAppChatService
             'Never invent metrics. If a tool returns empty data, say so plainly.',
             'Do not trigger scrapes, billing changes, or account mutations.',
             'Keep replies concise. Use plain words next to numbers. No em dashes.',
+            'Prefer short paragraphs and markdown lists. Include Instagram post URLs when citing posts.',
             'Prefer short paragraphs over long essays.',
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $result
+     * @return list<array<string, mixed>>
+     */
+    private function extractPosts(array $result): array
+    {
+        $posts = [];
+        $candidates = [];
+
+        if (isset($result['posts']) && is_array($result['posts'])) {
+            $candidates = $result['posts'];
+        } elseif (isset($result['summary']['last_post']) && is_array($result['summary']['last_post'])) {
+            $candidates = [$result['summary']['last_post']];
+        }
+
+        foreach ($candidates as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $url = isset($row['url']) ? (string) $row['url'] : '';
+            if ($url === '' || ! str_contains(strtolower($url), 'instagram.com')) {
+                continue;
+            }
+            $posts[$url] = [
+                'url' => $url,
+                'handle' => isset($row['handle']) ? (string) $row['handle'] : null,
+                'caption' => isset($row['caption']) ? (string) $row['caption'] : null,
+                'thumbnail_url' => isset($row['thumbnail_url']) ? (string) $row['thumbnail_url'] : (isset($row['cover_url']) ? (string) $row['cover_url'] : null),
+                'likes' => isset($row['likes']) && is_numeric($row['likes']) ? (int) $row['likes'] : null,
+                'comments' => isset($row['comments']) && is_numeric($row['comments']) ? (int) $row['comments'] : null,
+                'times_usual_label' => isset($row['times_usual_label']) ? (string) $row['times_usual_label'] : null,
+            ];
+        }
+
+        return array_values($posts);
     }
 
     private function usageKey(User $user): string
