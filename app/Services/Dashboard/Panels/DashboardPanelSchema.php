@@ -74,7 +74,7 @@ class DashboardPanelSchema
                 'format' => ['nullable', 'string', 'max:40'],
                 'url' => ['nullable', 'string', 'max:500'],
                 'posted_at' => ['nullable', 'string', 'max:40'],
-                'caption' => ['nullable', 'string', 'max:500'],
+                'caption' => ['nullable', 'string', 'max:4000'],
                 'likes' => ['nullable', 'integer', 'min:0'],
                 'comments' => ['nullable', 'integer', 'min:0'],
                 'views' => ['nullable', 'integer', 'min:0'],

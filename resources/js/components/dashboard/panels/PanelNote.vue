@@ -12,7 +12,7 @@ defineProps<{
 </script>
 
 <template>
-    <article class="flex h-full flex-col rounded border border-snitch-ink/10 bg-snitch-lift p-4">
+    <article class="flex flex-col self-start rounded border border-snitch-ink/10 bg-snitch-lift p-4">
         <h2 class="text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
             {{ title }}
         </h2>

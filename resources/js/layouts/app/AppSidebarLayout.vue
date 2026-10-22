@@ -23,7 +23,7 @@ withDefaults(defineProps<Props>(), {
             <AppSidebar />
             <AppContent variant="sidebar" class="relative min-w-0 overflow-x-clip bg-snitch-paper">
                 <AppSidebarHeader :breadcrumbs="breadcrumbs" />
-                <div class="snitch-app-chrome relative min-h-[calc(100svh-4rem)] bg-snitch-paper text-snitch-ink">
+                <div class="snitch-app-chrome relative flex min-h-[calc(100svh-4rem)] flex-col bg-snitch-paper text-snitch-ink">
                     <slot />
                     <BillingPaywall />
                 </div>

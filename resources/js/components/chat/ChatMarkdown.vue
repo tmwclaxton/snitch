@@ -30,6 +30,7 @@ const segments = computed((): Segment[] => {
     const byUrl = new Map(
         (props.posts ?? []).map((post) => [normalizeUrl(post.url), post] as const),
     );
+    const used = new Set<string>();
     const parts: Segment[] = [];
     let lastIndex = 0;
     const matches = [...text.matchAll(INSTAGRAM_URL)];
@@ -42,11 +43,15 @@ const segments = computed((): Segment[] => {
             const chunk = text.slice(lastIndex, index).trim();
 
             if (chunk !== '') {
-                parts.push({ type: 'html', html: renderMarkdown(chunk) });
+                parts.push({
+                    type: 'html',
+                    html: renderMarkdown(chunk, { linkHandles: true }),
+                });
             }
         }
 
-        const post = byUrl.get(normalizeUrl(url)) ?? {
+        const key = normalizeUrl(url);
+        const post = byUrl.get(key) ?? {
             url,
             handle: null,
             caption: null,
@@ -55,6 +60,7 @@ const segments = computed((): Segment[] => {
             comments: null,
             times_usual_label: null,
         };
+        used.add(key);
         parts.push({ type: 'post', post, url });
         lastIndex = index + url.length;
     }
@@ -62,11 +68,28 @@ const segments = computed((): Segment[] => {
     const tail = text.slice(lastIndex).trim();
 
     if (tail !== '') {
-        parts.push({ type: 'html', html: renderMarkdown(tail) });
+        parts.push({
+            type: 'html',
+            html: renderMarkdown(tail, { linkHandles: true }),
+        });
     }
 
     if (parts.length === 0 && text.trim() !== '') {
-        parts.push({ type: 'html', html: renderMarkdown(text) });
+        parts.push({
+            type: 'html',
+            html: renderMarkdown(text, { linkHandles: true }),
+        });
+    }
+
+    for (const post of props.posts ?? []) {
+        const key = normalizeUrl(post.url);
+
+        if (used.has(key)) {
+            continue;
+        }
+
+        used.add(key);
+        parts.push({ type: 'post', post, url: post.url });
     }
 
     return parts;

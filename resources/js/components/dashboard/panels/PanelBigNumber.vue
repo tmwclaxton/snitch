@@ -11,7 +11,7 @@ defineProps<{
 </script>
 
 <template>
-    <article class="flex min-h-[7rem] flex-col justify-between rounded border border-snitch-ink/10 bg-snitch-lift p-4">
+    <article class="flex flex-col self-start rounded border border-snitch-ink/10 bg-snitch-lift p-4">
         <p class="text-sm font-medium text-snitch-ink/70">
             {{ payload.label || title }}
         </p>

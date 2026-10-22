@@ -2906,6 +2906,10 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
         list-style-position: outside;
     }
 
+    .snitch-md ul {
+        list-style-type: disc;
+    }
+
     .snitch-md ol {
         list-style-type: decimal;
     }

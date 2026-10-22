@@ -44,7 +44,7 @@ function widePanel(type: string): boolean {
                     Dashboard
                 </p>
                 <h1 class="snitch-hero-display text-3xl text-snitch-ink sm:text-4xl">
-                    Your canvas
+                    Today
                 </h1>
                 <p class="text-sm text-snitch-ink/70 sm:text-base">
                     Curated panels from your stored data. Ask Chat for the rest.
@@ -71,7 +71,7 @@ function widePanel(type: string): boolean {
 
             <div
                 v-else
-                class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                class="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-3"
             >
                 <template
                     v-for="panel in panels"
@@ -89,7 +89,7 @@ function widePanel(type: string): boolean {
                     />
                     <PanelRankedList
                         v-else-if="panel.type === 'ranked_list'"
-                        class="sm:col-span-2"
+                        class="sm:col-span-2 xl:col-span-3"
                         :title="panel.title"
                         :payload="panel.payload"
                     />
@@ -100,15 +100,15 @@ function widePanel(type: string): boolean {
                     />
                     <PanelChart
                         v-else-if="panel.type === 'line_chart' || panel.type === 'bar_chart'"
-                        class="sm:col-span-2"
+                        class="sm:col-span-2 xl:col-span-2"
                         :title="panel.title"
                         :kind="panel.type === 'bar_chart' ? 'bar' : 'line'"
                         :payload="panel.payload"
                     />
                     <div
                         v-else
-                        class="rounded border border-snitch-ink/10 bg-snitch-lift p-4 text-sm text-snitch-ink/70"
-                        :class="widePanel(panel.type) ? 'sm:col-span-2' : ''"
+                        class="self-start rounded border border-snitch-ink/10 bg-snitch-lift p-4 text-sm text-snitch-ink/70"
+                        :class="widePanel(panel.type) ? 'sm:col-span-2 xl:col-span-2' : ''"
                     >
                         Unknown panel type: {{ panel.type }}
                     </div>

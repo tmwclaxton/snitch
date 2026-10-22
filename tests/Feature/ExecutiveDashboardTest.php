@@ -179,7 +179,8 @@ class ExecutiveDashboardTest extends TestCase
         $this->assertStringContainsString('PanelChart', $dashboard);
         $this->assertStringContainsString('PanelRankedList', $dashboard);
         $this->assertStringContainsString('PanelNote', $dashboard);
-        $this->assertStringContainsString('Your canvas', $dashboard);
+        $this->assertStringContainsString('Today', $dashboard);
+        $this->assertStringNotContainsString('Your canvas', $dashboard);
         $this->assertStringContainsString('panels', $dashboard);
         $this->assertStringNotContainsString('id="vote"', $dashboard);
         $this->assertStringNotContainsString('id="tracked-by"', $dashboard);

@@ -9,6 +9,7 @@ use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Dashboard\DashboardMath;
 use App\Services\Growth\GrowthMetricsBuilder;
+use App\Support\CaptionExcerpt;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -451,7 +452,7 @@ class McpReadService
             'format' => $this->math->formatLabel($post),
             'url' => $post->url,
             'posted_at' => $post->posted_at?->timezone(DashboardMath::TIMEZONE)?->toIso8601String(),
-            'caption' => mb_substr((string) $post->caption, 0, 280),
+            'caption' => CaptionExcerpt::limit($post->caption, 2000),
             'likes' => $this->math->likes($post),
             'comments' => $this->math->comments($post),
             'views' => $this->math->views($post),

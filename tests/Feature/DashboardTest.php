@@ -78,10 +78,16 @@ class DashboardTest extends TestCase
         $this->assertStringNotContainsString('TrackedBySection', $dashboard);
         $this->assertStringNotContainsString('VoteSection', $dashboard);
         $this->assertStringContainsString('Curated panels', $dashboard);
+        $this->assertStringContainsString('Today', $dashboard);
+        $this->assertStringNotContainsString('Your canvas', $dashboard);
+        $this->assertStringContainsString('items-start', $dashboard);
+        $this->assertStringContainsString('xl:grid-cols-3', $dashboard);
         $this->assertStringNotContainsString('id="what-to-post"', $dashboard);
         $this->assertStringNotContainsString('ExecStatTile', $dashboard);
         $this->assertStringContainsString("title: 'Dashboard'", $sidebar);
         $this->assertStringNotContainsString('feedShow.url', $postCard);
+        $this->assertStringContainsString('captionExcerpt', $postCard);
+        $this->assertStringContainsString('Show more', $postCard);
         $this->assertStringNotContainsString('line-clamp-', $dashboard);
         $this->assertStringNotContainsString('—', $dashboard);
         $this->assertStringNotContainsString('–', $dashboard);

@@ -72,7 +72,7 @@ class DefaultDashboardPanels
                 'comments' => $top['comments'] ?? null,
                 'views' => $top['views'] ?? null,
                 'times_usual_label' => $top['times_usual_label'] ?? null,
-                'thumbnail_url' => null,
+                'thumbnail_url' => $top['thumbnail_url'] ?? null,
             ]);
         }
 

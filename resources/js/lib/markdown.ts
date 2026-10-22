@@ -1,13 +1,28 @@
 /**
- * Escape HTML, then apply a small safe Markdown subset for analysis copy.
- * Supports paragraphs, line breaks, **bold**, *italic*, `code`, links, and lists.
+ * Escape HTML, then apply a small safe Markdown subset.
+ * Supports paragraphs, line breaks, **bold**, *italic*, `code`, links, tables, and lists.
  */
-export function renderMarkdown(source: string | null | undefined): string {
+export type RenderMarkdownOptions = {
+    /** Turn unnumbered multi-step remake copy into an ordered list (analysis copy). */
+    coerceSteps?: boolean;
+    /** Link @handles (and bare Instagram-looking handles after bullets) to Instagram. */
+    linkHandles?: boolean;
+};
+
+export function renderMarkdown(
+    source: string | null | undefined,
+    options: RenderMarkdownOptions = {},
+): string {
     if (source == null) {
         return '';
     }
 
-    const trimmed = coerceRemakeSteps(source.replace(/\r\n?/g, '\n')).trim();
+    const coerceSteps = options.coerceSteps ?? false;
+    const linkHandles = options.linkHandles ?? false;
+
+    let next = source.replace(/\r\n?/g, '\n');
+    next = coerceSteps ? coerceRemakeSteps(next) : normalizeListBreaks(next);
+    const trimmed = next.trim();
 
     if (trimmed === '') {
         return '';
@@ -16,7 +31,7 @@ export function renderMarkdown(source: string | null | undefined): string {
     const blocks = trimmed.split(/\n{2,}/);
 
     return blocks
-        .map((block) => renderBlock(block.trim()))
+        .map((block) => renderBlock(block.trim(), { linkHandles }))
         .filter(Boolean)
         .join('');
 }
@@ -34,8 +49,11 @@ export function normalizeListBreaks(text: string): string {
     // Bullet markers (dot / middle-dot) mid-line.
     next = next.replace(/(?<=\S)[ \t]+(?=[•·]\s+\S)/gu, '\n');
 
-    // Hyphen / asterisk bullets only after sentence punctuation.
+    // Hyphen / asterisk bullets after sentence punctuation or at line starts after text.
     next = next.replace(/(?<=[.;:!?\]])[ \t]+(?=[-*+]\s+\S)/gu, '\n');
+
+    // "Label:\n- item" style: ensure a blank-line-free intro still splits before bullets.
+    next = next.replace(/(?<=\S)\n(?=[-*+•·]\s+\S)/gu, '\n');
 
     return next;
 }
@@ -111,40 +129,101 @@ function hasStepMarkers(text: string): boolean {
         });
 }
 
-function renderBlock(block: string): string {
+function renderBlock(block: string, options: { linkHandles: boolean }): string {
     if (block === '') {
         return '';
     }
 
     const lines = block.split('\n');
-    const tableHtml = renderTable(lines);
+    const tableHtml = renderTable(lines, options);
 
     if (tableHtml !== null) {
         return tableHtml;
     }
 
-    const listKind = detectListKind(lines);
-
-    if (listKind === 'ul') {
-        const items = lines.map((line) =>
-            renderInline(line.replace(/^[-*+•·]\s+/, '')),
-        );
-
-        return `<ul>${items.map((item) => `<li>${item}</li>`).join('')}</ul>`;
-    }
-
-    if (listKind === 'ol') {
-        const items = lines.map((line) =>
-            renderInline(line.replace(/^\d+[.)]\s+/, '')),
-        );
-
-        return `<ol>${items.map((item) => `<li>${item}</li>`).join('')}</ol>`;
-    }
-
-    return `<p>${renderInline(lines.join('\n'))}</p>`;
+    return renderMixedLines(lines, options);
 }
 
-function renderTable(lines: string[]): string | null {
+/**
+ * A single Markdown block may mix a prose intro with a following list.
+ * Render consecutive list runs as real <ul>/<ol>, and prose as paragraphs.
+ */
+function renderMixedLines(lines: string[], options: { linkHandles: boolean }): string {
+    const parts: string[] = [];
+    let index = 0;
+
+    while (index < lines.length) {
+        const line = lines[index] ?? '';
+        const bullet = matchBullet(line);
+        const ordered = matchOrdered(line);
+
+        if (bullet || ordered) {
+            const kind = bullet ? 'ul' : 'ol';
+            const items: string[] = [];
+
+            while (index < lines.length) {
+                const current = lines[index] ?? '';
+                const b = matchBullet(current);
+                const o = matchOrdered(current);
+
+                if (kind === 'ul' && b) {
+                    items.push(renderInline(b, options));
+                    index += 1;
+                    continue;
+                }
+
+                if (kind === 'ol' && o) {
+                    items.push(renderInline(o, options));
+                    index += 1;
+                    continue;
+                }
+
+                break;
+            }
+
+            const tag = kind;
+            parts.push(
+                `<${tag}>${items.map((item) => `<li>${item}</li>`).join('')}</${tag}>`,
+            );
+            continue;
+        }
+
+        const prose: string[] = [];
+
+        while (index < lines.length) {
+            const current = lines[index] ?? '';
+
+            if (matchBullet(current) || matchOrdered(current)) {
+                break;
+            }
+
+            prose.push(current);
+            index += 1;
+        }
+
+        const joined = prose.join('\n').trim();
+
+        if (joined !== '') {
+            parts.push(`<p>${renderInline(joined, options)}</p>`);
+        }
+    }
+
+    return parts.join('');
+}
+
+function matchBullet(line: string): string | null {
+    const match = line.match(/^[-*+•·]\s+(\S.*)$/u);
+
+    return match?.[1] ?? null;
+}
+
+function matchOrdered(line: string): string | null {
+    const match = line.match(/^\d+[.)]\s+(\S.*)$/u);
+
+    return match?.[1] ?? null;
+}
+
+function renderTable(lines: string[], options: { linkHandles: boolean }): string | null {
     if (lines.length < 2) {
         return null;
     }
@@ -174,7 +253,6 @@ function renderTable(lines: string[]): string | null {
     if (rows[1] && isDivider(rows[1])) {
         bodyStart = 2;
     } else if (! isDivider(rows[0]!)) {
-        // header + body without a divider is still accepted when shapes match
         bodyStart = 1;
     } else {
         return null;
@@ -187,38 +265,57 @@ function renderTable(lines: string[]): string | null {
         return null;
     }
 
-    const thead = `<thead><tr>${header.map((cell) => `<th>${renderInline(cell)}</th>`).join('')}</tr></thead>`;
+    const thead = `<thead><tr>${header.map((cell) => `<th>${renderInline(cell, options)}</th>`).join('')}</tr></thead>`;
     const tbody = `<tbody>${body
-        .map((row) => `<tr>${row.map((cell) => `<td>${renderInline(cell)}</td>`).join('')}</tr>`)
+        .map((row) => `<tr>${row.map((cell) => `<td>${renderInline(cell, options)}</td>`).join('')}</tr>`)
         .join('')}</tbody>`;
 
     return `<div class="snitch-md-table-wrap"><table>${thead}${tbody}</table></div>`;
 }
 
-function detectListKind(lines: string[]): 'ul' | 'ol' | null {
-    if (lines.length === 0 || lines.some((line) => line.trim() === '')) {
-        return null;
-    }
+function renderInline(text: string, options: { linkHandles: boolean }): string {
+    let escaped = escapeHtml(text).replace(/\n/g, '<br>\n');
 
-    if (lines.every((line) => /^[-*+•·]\s+\S/.test(line))) {
-        return 'ul';
-    }
-
-    if (lines.every((line) => /^\d+[.)]\s+\S/.test(line))) {
-        return 'ol';
-    }
-
-    return null;
-}
-
-function renderInline(text: string): string {
-    const escaped = escapeHtml(text).replace(/\n/g, '<br>\n');
-
-    return escaped
+    escaped = escaped
         .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         .replace(/(^|[^*])\*(?!\s)(.+?)(?<!\s)\*(?!\*)/g, '$1<em>$2</em>')
         .replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    if (options.linkHandles) {
+        escaped = linkInstagramHandles(escaped);
+    }
+
+    return escaped;
+}
+
+/**
+ * Link @handles (and bare handles that look like Instagram usernames) without
+ * touching text already inside an <a> or HTML tag attribute.
+ */
+function linkInstagramHandles(html: string): string {
+    const parts = html.split(/(<[^>]+>)/g);
+
+    return parts
+        .map((part) => {
+            if (part.startsWith('<')) {
+                return part;
+            }
+
+            let next = part.replace(
+                /(^|[\s([{])@([A-Za-z0-9._]{1,30})\b/g,
+                '$1<a href="https://www.instagram.com/$2/" target="_blank" rel="noopener noreferrer">@$2</a>',
+            );
+
+            // Bare handle at the start of a list item / line: "letsgosocialuk: 104 followers"
+            next = next.replace(
+                /(^|<br>\n?)([A-Za-z0-9._]{2,30})(?=\s*[:,]\s*\d)/gm,
+                '$1<a href="https://www.instagram.com/$2/" target="_blank" rel="noopener noreferrer">$2</a>',
+            );
+
+            return next;
+        })
+        .join('');
 }
 
 function escapeHtml(text: string): string {

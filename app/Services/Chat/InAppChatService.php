@@ -209,7 +209,7 @@ class InAppChatService
 
             $text = $this->nanoGpt->extractAssistantText($response);
             if ($text !== '') {
-                return $text;
+                return $this->sanitizeAssistantText($text);
             }
 
             throw new RuntimeException('Chat model returned an empty reply.');
@@ -245,6 +245,17 @@ class InAppChatService
     }
 
     /**
+     * Strip em/en dashes from model output. Prefer colon before a number, otherwise a comma.
+     */
+    public function sanitizeAssistantText(string $text): string
+    {
+        $text = preg_replace('/\s*[\x{2014}\x{2013}]\s*(?=\d)/u', ': ', $text) ?? $text;
+        $text = preg_replace('/\s*[\x{2014}\x{2013}]\s*/u', ', ', $text) ?? $text;
+
+        return $text;
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      */
     private function emit(array $payload): void
@@ -259,8 +270,11 @@ class InAppChatService
             'Answer using only the provided tools, which read stored Snitch data for this user.',
             'Never invent metrics. If a tool returns empty data, say so plainly.',
             'Do not trigger scrapes, billing changes, or account mutations.',
-            'Keep replies concise. Use plain words next to numbers. No em dashes.',
-            'Prefer short paragraphs and markdown lists. Include Instagram post URLs when citing posts.',
+            'Keep replies concise. Use plain words next to numbers.',
+            'Never use em dashes or en dashes. Use commas or colons instead (example: "letsgosocialuk: 104 followers").',
+            'Prefer short paragraphs and real markdown lists (hyphen bullets or numbered). Bold key labels with **label**.',
+            'Prefix Instagram handles with @ so they can be linked (example: @letsgosocialuk).',
+            'When citing a post, include the full Instagram post or reel URL on its own line so it can render as a card.',
             'Prefer short paragraphs over long essays.',
         ]);
     }

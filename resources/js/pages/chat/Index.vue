@@ -46,6 +46,9 @@ const stickToBottom = ref(true);
 
 const canSend = computed(() => !sending.value && draft.value.trim() !== '' && !capped.value);
 const empty = computed(() => messages.value.length === 0);
+const remainingLabel = computed(
+    () => `${remaining.value} of ${props.daily_cap} questions left today`,
+);
 
 function onScroll(): void {
     const el = transcript.value;
@@ -242,17 +245,17 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="flex min-h-0 flex-1 flex-col bg-[#0E0E10]">
+    <div class="flex h-[calc(100svh-4rem)] min-h-0 flex-1 flex-col bg-[#0E0E10]">
         <Head title="Chat" />
 
-        <div class="mx-auto flex min-h-0 w-full max-w-[760px] flex-1 flex-col px-4 pb-4 pt-4 sm:px-6 sm:pb-6 sm:pt-6">
+        <div class="mx-auto flex min-h-0 w-full max-w-[760px] flex-1 flex-col px-4 pb-3 pt-4 sm:px-6 sm:pb-4 sm:pt-6">
             <div
                 ref="transcript"
                 class="min-h-0 flex-1 overflow-y-auto"
             >
                 <div
                     v-if="empty"
-                    class="flex min-h-full flex-col justify-center gap-8 py-10"
+                    class="flex min-h-full flex-col justify-center gap-8 py-8"
                 >
                     <div class="space-y-3 text-center">
                         <h1 class="font-hero text-3xl uppercase leading-tight tracking-tight text-[#EDEAE2] sm:text-4xl">
@@ -279,7 +282,7 @@ onUnmounted(() => {
 
                 <div
                     v-else
-                    class="space-y-5 py-2"
+                    class="space-y-5 py-2 pb-4"
                 >
                     <div
                         v-for="(row, index) in messages"
@@ -321,65 +324,67 @@ onUnmounted(() => {
                 </div>
             </div>
 
-            <div
-                v-if="capped"
-                class="mt-3 rounded-xl border border-white/10 bg-[#141416] p-4 text-[15px] leading-relaxed text-[#EDEAE2]"
-            >
-                <p>
-                    You have hit today's in-app chat limit. Connect your AI to keep asking with MCP.
+            <div class="mt-auto shrink-0 pt-2">
+                <div
+                    v-if="capped"
+                    class="mb-3 rounded-xl border border-white/10 bg-[#141416] p-4 text-[15px] leading-relaxed text-[#EDEAE2]"
+                >
+                    <p>
+                        You have hit today's in-app chat limit. Connect your AI to keep asking with MCP.
+                    </p>
+                    <Link
+                        :href="mcp_path"
+                        class="mt-3 inline-flex items-center gap-2 rounded-md bg-[#FCD700] px-3 py-2 text-sm font-medium uppercase tracking-wide text-[#0E0E10]"
+                    >
+                        <Bot
+                            class="size-3.5"
+                            aria-hidden="true"
+                        />
+                        Connect your AI
+                    </Link>
+                </div>
+
+                <form
+                    class="flex items-end gap-2 rounded-2xl border border-white/10 bg-[#141416] p-2"
+                    @submit.prevent="send()"
+                >
+                    <label
+                        class="sr-only"
+                        for="chat-message"
+                    >Message</label>
+                    <textarea
+                        id="chat-message"
+                        v-model="draft"
+                        rows="1"
+                        class="max-h-40 min-h-[44px] flex-1 resize-none bg-transparent px-3 py-2.5 text-[15px] leading-relaxed text-[#EDEAE2] outline-none placeholder:text-[#EDEAE2]/45"
+                        placeholder="Ask about growth, rivals, or today's brief"
+                        :disabled="sending || capped"
+                        @keydown="onKeydown"
+                    />
+                    <button
+                        type="submit"
+                        class="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#FCD700] text-[#0E0E10] transition disabled:opacity-40"
+                        :disabled="!canSend"
+                        aria-label="Send"
+                    >
+                        <Send
+                            class="size-4"
+                            aria-hidden="true"
+                        />
+                    </button>
+                </form>
+
+                <p class="mt-2 text-center text-sm text-[#EDEAE2]/55">
+                    {{ remainingLabel }}
                 </p>
-                <Link
-                    :href="mcp_path"
-                    class="mt-3 inline-flex items-center gap-2 rounded-md bg-[#FCD700] px-3 py-2 text-sm font-medium uppercase tracking-wide text-[#0E0E10]"
+
+                <p
+                    v-if="streamError"
+                    class="mt-1 text-center text-[15px] text-[#FF3D8B]"
                 >
-                    <Bot
-                        class="size-3.5"
-                        aria-hidden="true"
-                    />
-                    Connect your AI
-                </Link>
+                    {{ streamError }}
+                </p>
             </div>
-
-            <form
-                class="mt-3 flex items-end gap-2 rounded-2xl border border-white/10 bg-[#141416] p-2"
-                @submit.prevent="send()"
-            >
-                <label
-                    class="sr-only"
-                    for="chat-message"
-                >Message</label>
-                <textarea
-                    id="chat-message"
-                    v-model="draft"
-                    rows="1"
-                    class="max-h-40 min-h-[44px] flex-1 resize-none bg-transparent px-3 py-2.5 text-[15px] leading-relaxed text-[#EDEAE2] outline-none placeholder:text-[#EDEAE2]/45"
-                    placeholder="Ask about growth, rivals, or today's brief"
-                    :disabled="sending || capped"
-                    @keydown="onKeydown"
-                />
-                <button
-                    type="submit"
-                    class="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#FCD700] text-[#0E0E10] transition disabled:opacity-40"
-                    :disabled="!canSend"
-                    aria-label="Send"
-                >
-                    <Send
-                        class="size-4"
-                        aria-hidden="true"
-                    />
-                </button>
-            </form>
-
-            <p class="mt-2 text-center font-mono text-sm text-[#EDEAE2]/45">
-                Remaining today {{ remaining }} of {{ daily_cap }}
-            </p>
-
-            <p
-                v-if="streamError"
-                class="mt-1 text-center text-[15px] text-[#FF3D8B]"
-            >
-                {{ streamError }}
-            </p>
         </div>
     </div>
 </template>
