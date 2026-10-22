@@ -228,7 +228,15 @@ class ExecutiveBriefPresenter
             ]];
         }
 
-        $handle = is_array($own) ? (string) ($own['handle'] ?? 'your account') : 'your account';
+        $handle = is_array($own) ? (string) ($own['handle'] ?? '') : '';
+        if ($handle === '') {
+            $brandHandles = is_array($facts['brand']['own_handles'] ?? null)
+                ? $facts['brand']['own_handles']
+                : [];
+            $handle = is_string($brandHandles[0] ?? null) && $brandHandles[0] !== ''
+                ? (string) $brandHandles[0]
+                : 'your account';
+        }
         $posts7 = is_array($own) ? (int) ($own['posts_last_7d_count'] ?? 0) : count($payload['own_last_7_days'] ?? []);
         $format7 = is_array($own) ? ($own['posts_last_7d_by_format'] ?? []) : [];
         $formatBit7 = $this->formatMixPhrase(is_array($format7) ? $format7 : []);

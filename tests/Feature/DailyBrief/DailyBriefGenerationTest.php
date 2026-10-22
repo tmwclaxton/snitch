@@ -2649,6 +2649,20 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertStringContainsString('Reel from 20 Oct at 1.2 times their usual', (string) ($corrupted['competitor_summary'] ?? ''));
         $this->assertStringNotContainsString('17 Oct', (string) ($corrupted['headline'] ?? ''));
         $this->assertStringNotContainsString('0.8', (string) ($corrupted['headline'] ?? ''));
+
+        $quietKept = $generator->rebindTemplateCitation([
+            'headline' => '21 days quiet while rivals posted 13 times.',
+            'actions' => $narrative['actions'] ?? [],
+            'own_summary' => (string) ($narrative['own_summary'] ?? ''),
+            'competitor_summary' => 'Competitors published 5 posts in the last 7 days.',
+            'watch' => [],
+        ], $facts);
+
+        $this->assertSame(
+            '21 days quiet while rivals posted 13 times.',
+            (string) ($quietKept['headline'] ?? ''),
+        );
+        $this->assertStringContainsString('Strongest recent post:', (string) ($quietKept['competitor_summary'] ?? ''));
     }
 
     /**

@@ -338,10 +338,13 @@ PROMPT;
         }
 
         $dateBit = $cite['date_short'] !== null ? ' from '.$cite['date_short'] : '';
-        $output['headline'] = '@'.$cite['handle'].' '.$cite['format']
-            .$dateBit
-            .' at '.$cite['multiplier_short']
-            .'. Post a '.$cite['format'].' today at '.$when.'.';
+        // Keep quiet-gap headlines; cite rebinding is for format/date/Nx consistency only.
+        if (preg_match('/\bday(?:s)? quiet while rivals\b/iu', $headline) !== 1) {
+            $output['headline'] = '@'.$cite['handle'].' '.$cite['format']
+                .$dateBit
+                .' at '.$cite['multiplier_short']
+                .'. Post a '.$cite['format'].' today at '.$when.'.';
+        }
 
         $clause = 'Strongest recent post: @'.$cite['handle'].' '.$cite['format']
             .$dateBit
@@ -379,7 +382,15 @@ PROMPT;
     public function deterministicNarrative(array $facts): array
     {
         $own = $facts['own'] ?? null;
-        $handle = is_array($own) ? (string) ($own['handle'] ?? 'your account') : 'your account';
+        $handle = is_array($own) ? (string) ($own['handle'] ?? '') : '';
+        if ($handle === '') {
+            $brandHandles = is_array($facts['brand']['own_handles'] ?? null)
+                ? $facts['brand']['own_handles']
+                : [];
+            $handle = is_string($brandHandles[0] ?? null) && $brandHandles[0] !== ''
+                ? (string) $brandHandles[0]
+                : 'your account';
+        }
         $followers = is_array($own) ? $own['followers_now'] : null;
         $posts7 = is_array($own) ? (int) ($own['posts_last_7d_count'] ?? 0) : 0;
         $daysSince = is_array($own) ? $own['days_since_last_post'] : null;
