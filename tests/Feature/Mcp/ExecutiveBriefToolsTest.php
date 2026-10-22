@@ -35,6 +35,12 @@ class ExecutiveBriefToolsTest extends TestCase
             'status' => 'ready',
             'headline' => 'Post today.',
             'payload' => [
+                'narrative' => 'Account is active this week with steady Reels while rivals keep posting in the same format. The opportunity is to stay in that rhythm and ship another short Reel before the week goes quiet again. Leave one grounded comment on a rival hit so you show up where attention already sits, then keep the plan tight and ship something concrete today.',
+                'automation_overrides' => [
+                    'updated_at' => now()->toIso8601String(),
+                    'run_uuid' => 'mcp-get-run',
+                    'sections' => [],
+                ],
                 'summary' => 'Account is active. Rivals posted Reels.',
                 'own_summary' => 'Account is active.',
                 'competitor_summary' => 'Rivals posted Reels.',

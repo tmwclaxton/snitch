@@ -214,18 +214,13 @@ class ExecutiveBriefPresenter
     }
 
     /**
+     * Intentional prose only: automation narrative, or a curator summary override.
+     *
      * @param  array<string, mixed>  $payload
      */
     private function hasAgentNarrative(array $payload): bool
     {
-        $narrative = is_string($payload['narrative'] ?? null) ? trim($payload['narrative']) : '';
-        if ($narrative === '') {
-            return false;
-        }
-
-        $automation = $payload['automation_overrides'] ?? null;
-
-        return is_array($automation) && $automation !== [];
+        return $this->agentNarrative($payload) !== null;
     }
 
     /**
@@ -234,8 +229,15 @@ class ExecutiveBriefPresenter
     private function agentNarrative(array $payload): ?string
     {
         $narrative = is_string($payload['narrative'] ?? null) ? trim($payload['narrative']) : '';
+        $automation = $payload['automation_overrides'] ?? null;
+        if ($narrative !== '' && is_array($automation) && $automation !== []) {
+            return $narrative;
+        }
 
-        return $narrative !== '' ? $narrative : null;
+        $curator = is_array($payload['curator_overrides'] ?? null) ? $payload['curator_overrides'] : [];
+        $curatorSummary = is_string($curator['summary'] ?? null) ? trim($curator['summary']) : '';
+
+        return $curatorSummary !== '' ? $curatorSummary : null;
     }
 
     /**

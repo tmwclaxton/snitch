@@ -161,7 +161,7 @@ class EmbedLoadQueueContractTest extends TestCase
         $dashboard = file_get_contents(base_path('resources/js/pages/ExecutiveBrief.vue'));
         $this->assertIsString($dashboard);
         $this->assertStringContainsString('Executive Brief', $dashboard);
-        $this->assertStringContainsString('Our suggestions', $dashboard);
+        $this->assertStringContainsString('What to do', $dashboard);
         $this->assertStringNotContainsString('id="recent_posts"', $dashboard);
         $this->assertStringNotContainsString('Latest posts', $dashboard);
         $this->assertStringNotContainsString('FollowerHistoryChart', $dashboard);
@@ -201,7 +201,7 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('competitorShow.url(id)', $insightList);
         $this->assertStringContainsString('collapsedCount: 5', $insightList);
         $this->assertStringNotContainsString('fitHeight', $insightList);
-        $this->assertStringContainsString('max-w-none', $dashboard);
+        $this->assertStringContainsString('max-w-[1100px]', $dashboard);
         $this->assertStringNotContainsString('CaptionPanels', $dashboard);
         $this->assertStringNotContainsString('DataNotes', $dashboard);
         $this->assertStringNotContainsString('Length vs PI', $captions);

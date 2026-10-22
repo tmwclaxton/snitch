@@ -69,7 +69,8 @@ class DashboardTest extends TestCase
         $this->assertNotFalse($page);
         $this->assertNotFalse($sidebar);
         $this->assertStringContainsString('Executive Brief', $page);
-        $this->assertStringContainsString('max-w-none', $page);
+        $this->assertStringContainsString('max-w-[1100px]', $page);
+        $this->assertStringContainsString('What to do', $page);
         $this->assertStringNotContainsString('PanelBigNumber', $page);
         $this->assertStringNotContainsString('TrackedBySection', $page);
         $this->assertStringNotContainsString('VoteSection', $page);
