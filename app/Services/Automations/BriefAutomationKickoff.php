@@ -115,12 +115,12 @@ You likely only have Memories as a Cursor tool - call Snitch MCP yourself via HT
 Call whoami, get_daily_brief, get_executive_brief, then evidence tools (list_trackers, get_competitor_posts, get_top_posts, get_posting_times, get_format_mix) as needed. Read captions/hooks so you can name the idea that worked.
 Never trust a user_id argument for scope - the token is already bound to one user and one run.
 Required fields for save_executive_brief:
-- headline: short yellow-block line (one breath). Concrete gap or insight. Not jargon. Keep it short so it wraps; never write a paragraph as the headline.
-- narrative: REQUIRED 80-140 words of flowing advice. What it means for THIS account, why it matters, what to do first. At most 4 numbers in the whole narrative. At most 2 sentences starting with @handle. Server rejects inventory dumps like "@a has 0 posts. @b posted 4 times. Followers 104."
-- summary: up to 3 interpretive sentences (no repeated rivals-published filler).
-- suggestions: prefer exactly 3. Each title says what to make (format + time block), why explains why it will work for this audience grounded in one evidence post (idea + handle + Nx/date), evidence_post_ids has that ONE post. Prefer one post, one comment, one study-or-avoid. Never praise a sub-1.2x post as a model. End titles with a period.
-Competitor section prose (if used): interpret moves, do not list stats per handle.
-Save with save_executive_brief. If validation returns errors, revise tone and grounding and save again (token stays open until ok=true). Every number and handle must cite stored data. If you cannot ground a claim, omit it. No em dashes. No ellipsis.
+- headline: short yellow-block line (one breath). Concrete gap or insight. Keep it short so it wraps.
+- narrative: REQUIRED 80-140 words. One lead story for THIS account + what to do first. At most 4 numbers. At most 2 sentences starting with @handle. Server rejects inventory dumps.
+- summary: up to 3 interpretive sentences. Must not restate the narrative.
+- sections: REQUIRED. Include "What happened this week" covering DIFFERENT ground from the narrative (other rivals, follower growth, format winners). One or two sentences per point. Server rejects overlap with the narrative.
+- suggestions: exactly 3, all POSITIVE (server rejects titles starting with Do not / Don't / Skip / Avoid). Prefer (1) post, (2) comment, (3) positive Carousel test or collab grounded in a strong rival hit the narrative did not already use. End titles with a period. Each why + evidence_post_ids[0] cite the same post. Never praise a sub-1.2x post as a model.
+Save with save_executive_brief. If validation returns errors, revise tone, grounding, and overlap, then save again (token stays open until ok=true). Every number and handle must cite stored data. If you cannot ground a claim, omit it. No em dashes. No ellipsis.
 When save returns ok=true, the run closes and the token is revoked.
 PROMPT;
     }

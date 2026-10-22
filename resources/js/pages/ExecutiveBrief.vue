@@ -62,6 +62,7 @@ type KeyFigure = {
     label: string;
     value: string;
     detail: string | null;
+    href?: string | null;
 };
 
 type Brief = {
@@ -131,7 +132,27 @@ const showCadence = computed(() => {
 
     const s = signals.value;
 
-    return !! s && (s.cadence_days?.length ?? 0) > 0;
+    return !! s && (s.own_posts_7d !== null || (s.cadence_days?.length ?? 0) > 0);
+});
+
+const quietWeek = computed(() => (signals.value?.own_posts_7d ?? null) === 0);
+
+const cadenceComparePct = computed(() => {
+    const s = signals.value;
+
+    if (! s || s.own_posts_7d === null) {
+        return null;
+    }
+
+    const own = Math.max(0, s.own_posts_7d);
+    const rival = Math.max(0, s.rival_median_posts_7d ?? 0);
+    const max = Math.max(own, rival, 1);
+
+    return {
+        own: Math.round((own / max) * 100),
+        rival: Math.round((rival / max) * 100),
+        rivalMedian: s.rival_median_posts_7d,
+    };
 });
 
 function postHref(post: BriefPost): string | null {
@@ -221,30 +242,63 @@ function competitorTextWithoutHandle(item: CompetitorItem): string {
                                 <h2 class="text-sm font-semibold uppercase tracking-wide text-snitch-ink/70">
                                     Cadence
                                 </h2>
-                                <p class="max-w-[70ch] text-base text-snitch-ink/85">
-                                    You posted
-                                    <span class="font-semibold text-snitch-ink">{{ signals.own_posts_7d ?? 0 }}</span>
-                                    in the last 7 days
-                                    <template v-if="signals.rival_median_posts_7d !== null && signals.rival_median_posts_7d !== undefined">
-                                        · rival median
-                                        <span class="font-semibold text-snitch-ink">{{ signals.rival_median_posts_7d }}</span>
-                                    </template>
-                                    .
-                                </p>
-                                <div class="flex items-end gap-1.5">
-                                    <div
-                                        v-for="(day, idx) in signals.cadence_days"
-                                        :key="`cadence-${idx}`"
-                                        class="flex w-7 flex-col items-center gap-1"
-                                    >
-                                        <span
-                                            class="block w-full rounded-sm"
-                                            :class="day.posted ? 'h-8 bg-snitch-ink' : 'h-3 bg-snitch-ink/20'"
-                                            :title="day.posted ? `${day.label}: posted` : `${day.label}: quiet`"
-                                        />
-                                        <span class="text-xs font-medium text-snitch-ink/65">{{ day.label }}</span>
+                                <template v-if="quietWeek && cadenceComparePct">
+                                    <p class="max-w-[70ch] text-base text-snitch-ink/85">
+                                        <span class="font-semibold text-snitch-ink">0</span> posts this week vs a rival median of
+                                        <span class="font-semibold text-snitch-ink">{{ cadenceComparePct.rivalMedian ?? 0 }}</span>.
+                                    </p>
+                                    <div class="max-w-xs space-y-2">
+                                        <div class="flex items-center gap-2 text-sm text-snitch-ink/80">
+                                            <span class="w-14 shrink-0">You</span>
+                                            <span class="h-2 flex-1 rounded-sm bg-snitch-ink/10">
+                                                <span
+                                                    class="block h-full rounded-sm bg-snitch-ink/35"
+                                                    :style="{ width: `${cadenceComparePct.own}%` }"
+                                                />
+                                            </span>
+                                            <span class="w-6 tabular-nums">0</span>
+                                        </div>
+                                        <div class="flex items-center gap-2 text-sm text-snitch-ink/80">
+                                            <span class="w-14 shrink-0">Rivals</span>
+                                            <span class="h-2 flex-1 rounded-sm bg-snitch-ink/10">
+                                                <span
+                                                    class="block h-full rounded-sm bg-snitch-ink"
+                                                    :style="{ width: `${cadenceComparePct.rival}%` }"
+                                                />
+                                            </span>
+                                            <span class="w-6 tabular-nums">{{ cadenceComparePct.rivalMedian ?? 0 }}</span>
+                                        </div>
                                     </div>
-                                </div>
+                                </template>
+                                <template v-else>
+                                    <p class="max-w-[70ch] text-base text-snitch-ink/85">
+                                        You posted
+                                        <span class="font-semibold text-snitch-ink">{{ signals.own_posts_7d ?? 0 }}</span>
+                                        in the last 7 days
+                                        <template v-if="signals.rival_median_posts_7d !== null && signals.rival_median_posts_7d !== undefined">
+                                            · rival median
+                                            <span class="font-semibold text-snitch-ink">{{ signals.rival_median_posts_7d }}</span>
+                                        </template>
+                                        .
+                                    </p>
+                                    <div
+                                        v-if="signals.cadence_days.length > 0"
+                                        class="flex items-end gap-1.5"
+                                    >
+                                        <div
+                                            v-for="(day, idx) in signals.cadence_days"
+                                            :key="`cadence-${idx}`"
+                                            class="flex w-7 flex-col items-center gap-1"
+                                        >
+                                            <span
+                                                class="block w-full rounded-sm"
+                                                :class="day.posted ? 'h-8 bg-snitch-ink' : 'h-3 bg-snitch-ink/20'"
+                                                :title="day.posted ? `${day.label}: posted` : `${day.label}: quiet`"
+                                            />
+                                            <span class="text-xs font-medium text-snitch-ink/65">{{ day.label }}</span>
+                                        </div>
+                                    </div>
+                                </template>
                             </section>
 
                             <section class="space-y-5 border-t border-snitch-ink/12 pt-8">
@@ -318,7 +372,7 @@ function competitorTextWithoutHandle(item: CompetitorItem): string {
                                         </p>
                                         <div
                                             v-if="bullet.posts.length > 0"
-                                            class="flex flex-row gap-2"
+                                            class="flex flex-row flex-wrap gap-3"
                                         >
                                             <a
                                                 v-for="post in bullet.posts"
@@ -326,20 +380,28 @@ function competitorTextWithoutHandle(item: CompetitorItem): string {
                                                 :href="postHref(post) || undefined"
                                                 :target="post.url ? '_blank' : undefined"
                                                 :rel="post.url ? 'noopener noreferrer' : undefined"
-                                                class="block no-underline"
-                                                :title="evidenceLabel(post)"
+                                                class="w-24 no-underline"
                                             >
                                                 <img
                                                     v-if="post.thumbnail_url"
                                                     :src="post.thumbnail_url"
                                                     alt=""
-                                                    class="size-16 object-cover sm:size-[4.5rem]"
+                                                    class="size-24 object-cover"
                                                 />
                                                 <span
                                                     v-else
-                                                    class="flex size-16 items-center justify-center bg-snitch-ink/10 text-xs uppercase text-snitch-ink/60 sm:size-[4.5rem]"
+                                                    class="flex size-24 items-center justify-center bg-snitch-ink/10 text-xs uppercase text-snitch-ink/60"
                                                 >
                                                     {{ post.format || 'Post' }}
+                                                </span>
+                                                <span class="mt-1 block text-xs leading-snug text-snitch-ink">
+                                                    <span class="font-medium">@{{ post.handle || 'post' }}</span>
+                                                    <span
+                                                        v-if="post.times_usual_label || post.times_usual"
+                                                        class="block text-snitch-ink/70"
+                                                    >
+                                                        {{ post.times_usual_label || `${post.times_usual}x` }}
+                                                    </span>
                                                 </span>
                                             </a>
                                         </div>
@@ -365,7 +427,7 @@ function competitorTextWithoutHandle(item: CompetitorItem): string {
                                         </p>
                                         <div
                                             v-if="item.posts.length > 0"
-                                            class="flex flex-row gap-2"
+                                            class="flex flex-row flex-wrap gap-3"
                                         >
                                             <a
                                                 v-for="post in item.posts"
@@ -373,20 +435,28 @@ function competitorTextWithoutHandle(item: CompetitorItem): string {
                                                 :href="postHref(post) || undefined"
                                                 :target="post.url ? '_blank' : undefined"
                                                 :rel="post.url ? 'noopener noreferrer' : undefined"
-                                                class="block no-underline"
-                                                :title="evidenceLabel(post)"
+                                                class="w-24 no-underline"
                                             >
                                                 <img
                                                     v-if="post.thumbnail_url"
                                                     :src="post.thumbnail_url"
                                                     alt=""
-                                                    class="size-16 object-cover sm:size-[4.5rem]"
+                                                    class="size-24 object-cover"
                                                 />
                                                 <span
                                                     v-else
-                                                    class="flex size-16 items-center justify-center bg-snitch-ink/10 text-xs uppercase text-snitch-ink/60 sm:size-[4.5rem]"
+                                                    class="flex size-24 items-center justify-center bg-snitch-ink/10 text-xs uppercase text-snitch-ink/60"
                                                 >
                                                     {{ post.format || 'Post' }}
+                                                </span>
+                                                <span class="mt-1 block text-xs leading-snug text-snitch-ink">
+                                                    <span class="font-medium">@{{ post.handle || item.handle || 'post' }}</span>
+                                                    <span
+                                                        v-if="post.times_usual_label || post.times_usual"
+                                                        class="block text-snitch-ink/70"
+                                                    >
+                                                        {{ post.times_usual_label || `${post.times_usual}x` }}
+                                                    </span>
                                                 </span>
                                             </a>
                                         </div>
@@ -427,13 +497,27 @@ function competitorTextWithoutHandle(item: CompetitorItem): string {
                                         {{ figure.label }}
                                     </dt>
                                     <dd class="mt-1 font-hero text-2xl tracking-tight text-snitch-ink">
-                                        {{ figure.value }}
+                                        <a
+                                            v-if="figure.href"
+                                            :href="figure.href"
+                                            class="text-snitch-ink underline decoration-snitch-ink/30 underline-offset-2"
+                                        >{{ figure.value }}</a>
+                                        <template v-else>
+                                            {{ figure.value }}
+                                        </template>
                                     </dd>
                                     <dd
                                         v-if="figure.detail"
                                         class="mt-0.5 text-sm text-snitch-ink/70"
                                     >
-                                        {{ figure.detail }}
+                                        <a
+                                            v-if="figure.href"
+                                            :href="figure.href"
+                                            class="text-snitch-ink/70 underline decoration-snitch-ink/25 underline-offset-2"
+                                        >{{ figure.detail }}</a>
+                                        <template v-else>
+                                            {{ figure.detail }}
+                                        </template>
                                     </dd>
                                 </div>
                             </dl>

@@ -95,7 +95,9 @@ class ExecutiveBriefPresenter
         $narrative = $hasAgentMemo ? $this->agentNarrative($agentPayload) : null;
         // Agent memos: interpretive prose only for "what happened" - never the per-handle stats inventory.
         $ownActivity = $hasAgentMemo ? $this->interpretiveOwnActivity($agentPayload, $facts) : [];
-        $competitorActivity = $hasAgentMemo ? $this->interpretiveCompetitorActivity($agentPayload, $facts) : [];
+        $competitorActivity = $hasAgentMemo
+            ? $this->interpretiveCompetitorActivity($agentPayload, $facts, $narrative)
+            : [];
         $suggestions = $this->resolveSuggestions(
             $hasAgentMemo ? $agentPayload : $payload,
             $overrides,
@@ -246,7 +248,7 @@ class ExecutiveBriefPresenter
      *
      * @param  array<string, mixed>  $facts
      * @param  array<string, mixed>  $payload
-     * @return list<array{label: string, value: string, detail: string|null}>
+     * @return list<array{label: string, value: string, detail: string|null, href: string|null}>
      */
     private function keyFigures(array $facts, array $payload): array
     {
@@ -262,6 +264,7 @@ class ExecutiveBriefPresenter
                 'label' => 'Followers',
                 'value' => number_format((int) $followers),
                 'detail' => $change !== '' ? $change : null,
+                'href' => null,
             ];
         }
 
@@ -271,15 +274,17 @@ class ExecutiveBriefPresenter
                 'label' => 'Days quiet',
                 'value' => (string) (int) $daysSince,
                 'detail' => null,
+                'href' => null,
             ];
         }
 
         $bestRival = $this->bestRivalPost($facts, $payload);
         if ($bestRival !== null) {
             $figures[] = [
-                'label' => 'Best rival post',
+                'label' => (string) ($bestRival['label'] ?? 'Best rival post'),
                 'value' => (string) ($bestRival['times_usual_label'] ?? $bestRival['value'] ?? ''),
                 'detail' => (string) ($bestRival['detail'] ?? null),
+                'href' => is_string($bestRival['href'] ?? null) ? $bestRival['href'] : null,
             ];
         }
 
@@ -287,7 +292,7 @@ class ExecutiveBriefPresenter
     }
 
     /**
-     * @return list<array{label: string, value: string, detail: string|null}>
+     * @return list<array{label: string, value: string, detail: string|null, href: string|null}>
      */
     private function emptyKeyFigures(): array
     {
@@ -295,43 +300,23 @@ class ExecutiveBriefPresenter
     }
 
     /**
+     * Prefer the best in-window rival hit; otherwise label as this month and link the post.
+     *
      * @param  array<string, mixed>  $facts
      * @param  array<string, mixed>  $payload
-     * @return array{times_usual_label: string, detail: string, value: string}|null
+     * @return array{label: string, times_usual_label: string, detail: string, value: string, href: string|null}|null
      */
     private function bestRivalPost(array $facts, array $payload): ?array
     {
-        $candidates = [];
-        $walker = function (mixed $value) use (&$candidates, &$walker): void {
-            if (! is_array($value)) {
-                return;
-            }
-            if (isset($value['post_id'], $value['times_usual']) && is_numeric($value['times_usual'])) {
-                $candidates[] = $value;
-            }
-            foreach ($value as $child) {
-                $walker($child);
-            }
-        };
-
         $ownHandle = $this->normaliseHandle((string) ($facts['own']['handle'] ?? ''));
-        foreach (['top_competitor_hit_7d', 'competitors'] as $key) {
-            if (isset($facts[$key])) {
-                $walker($facts[$key]);
-            }
-        }
-        if (isset($payload['competitor_moves'])) {
-            $walker($payload['competitor_moves']);
-        }
+        $inWeek = $this->collectRivalPosts($facts, $payload, $ownHandle, true);
+        $any = $inWeek !== [] ? $inWeek : $this->collectRivalPosts($facts, $payload, $ownHandle, false);
+        $fromWeek = $inWeek !== [];
 
         $best = null;
         $bestScore = 0.0;
-        foreach ($candidates as $post) {
-            $handle = $this->normaliseHandle((string) ($post['handle'] ?? ''));
-            if ($ownHandle !== '' && $handle === $ownHandle) {
-                continue;
-            }
-            $score = (float) $post['times_usual'];
+        foreach ($any as $post) {
+            $score = (float) ($post['times_usual'] ?? 0);
             if ($score > $bestScore) {
                 $bestScore = $score;
                 $best = $post;
@@ -342,17 +327,104 @@ class ExecutiveBriefPresenter
             return null;
         }
 
-        $handle = (string) ($best['handle'] ?? 'rival');
-        $format = (string) ($best['format'] ?? 'post');
-        $label = is_string($best['times_usual_label'] ?? null) && $best['times_usual_label'] !== ''
-            ? (string) $best['times_usual_label']
-            : (rtrim(rtrim(number_format($bestScore, 1), '0'), '.').'x');
+        $enriched = $this->enrichPosts([$best]);
+        $row = $enriched[0] ?? $best;
+        $handle = (string) ($row['handle'] ?? $best['handle'] ?? 'rival');
+        $format = (string) ($row['format'] ?? $best['format'] ?? 'post');
+        $label = is_string($row['times_usual_label'] ?? null) && $row['times_usual_label'] !== ''
+            ? (string) $row['times_usual_label']
+            : (is_string($best['times_usual_label'] ?? null) && $best['times_usual_label'] !== ''
+                ? (string) $best['times_usual_label']
+                : (rtrim(rtrim(number_format($bestScore, 1), '0'), '.').'x'));
+        $href = is_string($row['snitch_url'] ?? null) && $row['snitch_url'] !== ''
+            ? (string) $row['snitch_url']
+            : (is_string($row['url'] ?? null) && $row['url'] !== '' ? (string) $row['url'] : null);
 
         return [
+            'label' => $fromWeek ? 'Best rival post this week' : 'Best rival post this month',
             'times_usual_label' => $label,
             'value' => $label,
             'detail' => '@'.$handle.' '.$format,
+            'href' => $href,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @param  array<string, mixed>  $payload
+     * @return list<array<string, mixed>>
+     */
+    private function collectRivalPosts(array $facts, array $payload, string $ownHandle, bool $weekOnly): array
+    {
+        $candidates = [];
+        $walker = function (mixed $value) use (&$candidates, &$walker, $ownHandle, $weekOnly): void {
+            if (! is_array($value)) {
+                return;
+            }
+            if (isset($value['post_id'], $value['times_usual']) && is_numeric($value['times_usual'])) {
+                $handle = $this->normaliseHandle((string) ($value['handle'] ?? ''));
+                if ($ownHandle !== '' && $handle === $ownHandle) {
+                    // skip own
+                } elseif ($weekOnly && ! $this->postLooksInWeekWindow($value)) {
+                    // skip older standouts when asking for this week
+                } else {
+                    $candidates[] = $value;
+                }
+            }
+            foreach ($value as $child) {
+                $walker($child);
+            }
+        };
+
+        if ($weekOnly) {
+            $walker($facts['top_competitor_hit_7d'] ?? null);
+            foreach (is_array($facts['competitors'] ?? null) ? $facts['competitors'] : [] as $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+                $walker($row['best_post_7d'] ?? null);
+                $walker($row['posts_last_7d'] ?? null);
+            }
+            foreach (is_array($payload['competitor_moves'] ?? null) ? $payload['competitor_moves'] : [] as $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+                $walker($row['posts_last_7d'] ?? null);
+                $walker($row['best_post_7d'] ?? null);
+            }
+        } else {
+            $walker($facts['top_competitor_hit_7d'] ?? null);
+            $walker($facts['competitors'] ?? null);
+            $walker($payload['competitor_moves'] ?? null);
+        }
+
+        return $candidates;
+    }
+
+    /**
+     * @param  array<string, mixed>  $post
+     */
+    private function postLooksInWeekWindow(array $post): bool
+    {
+        if (isset($post['in_last_7d'])) {
+            return (bool) $post['in_last_7d'];
+        }
+
+        $postedAt = is_string($post['posted_at'] ?? null) ? $post['posted_at'] : null;
+        if ($postedAt !== null && $postedAt !== '') {
+            try {
+                $at = CarbonImmutable::parse($postedAt)->timezone(DashboardMath::TIMEZONE);
+
+                return $at->greaterThanOrEqualTo(
+                    CarbonImmutable::now(DashboardMath::TIMEZONE)->startOfDay()->subDays(7),
+                );
+            } catch (\Throwable) {
+                // fall through
+            }
+        }
+
+        // Keys from 7d bags are treated as in-window; standout_winners alone are not.
+        return false;
     }
 
     /**
@@ -754,7 +826,7 @@ class ExecutiveBriefPresenter
      * @param  array<string, mixed>  $facts
      * @return list<array{text: string, handle: string|null, posts: list<array<string, mixed>>}>
      */
-    private function interpretiveCompetitorActivity(array $payload, array $facts): array
+    private function interpretiveCompetitorActivity(array $payload, array $facts, ?string $narrative): array
     {
         $items = [];
         $automation = is_array($payload['automation_overrides'] ?? null)
@@ -770,11 +842,16 @@ class ExecutiveBriefPresenter
             if ($body === '') {
                 continue;
             }
-            if (str_contains($title, 'competitor') || str_contains($title, 'rival') || str_contains($title, 'happened')) {
+            if (
+                str_contains($title, 'competitor')
+                || str_contains($title, 'rival')
+                || str_contains($title, 'happened')
+                || str_contains($title, 'this week')
+            ) {
                 $items[] = [
                     'text' => $body,
                     'handle' => null,
-                    'posts' => $this->topCompetitorEvidenceThumbs($payload, $facts),
+                    'posts' => $this->topCompetitorEvidenceThumbs($payload, $facts, $narrative, $body),
                 ];
             }
         }
@@ -787,7 +864,7 @@ class ExecutiveBriefPresenter
                 $items[] = [
                     'text' => $text,
                     'handle' => null,
-                    'posts' => $this->topCompetitorEvidenceThumbs($payload, $facts),
+                    'posts' => $this->topCompetitorEvidenceThumbs($payload, $facts, $narrative, $text),
                 ];
             }
         }
@@ -797,13 +874,18 @@ class ExecutiveBriefPresenter
 
     /**
      * At most 2 standout thumbs as evidence under competitor prose.
+     * Prefer posts named in the section body; skip posts the opening narrative already used.
      *
      * @param  array<string, mixed>  $payload
      * @param  array<string, mixed>  $facts
      * @return list<array<string, mixed>>
      */
-    private function topCompetitorEvidenceThumbs(array $payload, array $facts): array
-    {
+    private function topCompetitorEvidenceThumbs(
+        array $payload,
+        array $facts,
+        ?string $narrative,
+        string $sectionBody,
+    ): array {
         $candidates = [];
         $walker = function (mixed $value) use (&$candidates, &$walker): void {
             if (! is_array($value)) {
@@ -820,7 +902,45 @@ class ExecutiveBriefPresenter
         $walker($payload['competitor_moves'] ?? null);
         $walker($facts['competitors'] ?? null);
 
-        usort($candidates, fn (array $a, array $b): int => ((float) $b['times_usual']) <=> ((float) $a['times_usual']));
+        $narrativeLower = mb_strtolower((string) $narrative);
+        $sectionLower = mb_strtolower($sectionBody);
+
+        $candidates = array_values(array_filter(
+            $candidates,
+            function (array $post) use ($narrativeLower): bool {
+                $handle = mb_strtolower(ltrim((string) ($post['handle'] ?? ''), '@'));
+                $format = mb_strtolower((string) ($post['format'] ?? ''));
+                if ($handle === '' || $narrativeLower === '') {
+                    return true;
+                }
+                // Drop posts the opening narrative already argued from (same handle + format or Nx).
+                $nx = isset($post['times_usual'])
+                    ? rtrim(rtrim(number_format((float) $post['times_usual'], 1), '0'), '.')
+                    : '';
+                $mentionsHandle = str_contains($narrativeLower, '@'.$handle)
+                    || str_contains($narrativeLower, $handle);
+                if (! $mentionsHandle) {
+                    return true;
+                }
+                if ($format !== '' && str_contains($narrativeLower, $format) && $nx !== '' && str_contains($narrativeLower, $nx)) {
+                    return false;
+                }
+
+                return ! ($nx !== '' && str_contains($narrativeLower, $nx));
+            },
+        ));
+
+        usort($candidates, function (array $a, array $b) use ($sectionLower): int {
+            $aHandle = mb_strtolower(ltrim((string) ($a['handle'] ?? ''), '@'));
+            $bHandle = mb_strtolower(ltrim((string) ($b['handle'] ?? ''), '@'));
+            $aInSection = $aHandle !== '' && str_contains($sectionLower, $aHandle) ? 1 : 0;
+            $bInSection = $bHandle !== '' && str_contains($sectionLower, $bHandle) ? 1 : 0;
+            if ($aInSection !== $bInSection) {
+                return $bInSection <=> $aInSection;
+            }
+
+            return ((float) $b['times_usual']) <=> ((float) $a['times_usual']);
+        });
 
         return $this->enrichPosts(array_slice($candidates, 0, 2));
     }

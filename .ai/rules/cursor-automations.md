@@ -23,7 +23,7 @@ Each kickoff creates an `automation_runs` row and a Sanctum token named `automat
 - Preflight refuses empty or placeholder values (`example.com`, `YOUR_`, `changeme`, …)
 
 ## MCP tools
-- `save_executive_brief` - automation brief write; requires `headline`, interpretive `narrative` (80-140 words, ≤4 numbers, ≤2 `@handle`-opening sentences), `summary`, and suggestions; validates with `DailyBriefValidator`; on failure keeps current brief and leaves the run open for retry. Page never shows deterministic fact-dump prose as the narrative.
+- `save_executive_brief` - automation brief write; requires `headline`, interpretive `narrative` (80-140 words, ≤4 numbers, ≤2 `@handle`-opening sentences), `summary`, sections (including "What happened this week" that must not overlap the narrative), and 3 positive suggestions (no Do not / Skip / Avoid titles); validates with `DailyBriefValidator`; on failure keeps current brief and leaves the run open for retry. Page never shows deterministic fact-dump prose as the narrative.
 - `post_chat_reply` - automation chat write; `partial=true` streams; `done=true` / `partial=false` finalises
 
 ## Prompts for cursor.com
