@@ -53,6 +53,9 @@ class ExecutiveBriefTest extends TestCase
         $this->assertStringContainsString('What happened this week', $page);
         $this->assertStringContainsString('Key figures', $page);
         $this->assertStringContainsString('narrativeText', $page);
+        $this->assertStringContainsString('awaitingNarrative', $page);
+        $this->assertStringContainsString('break-words', $page);
+        $this->assertStringNotContainsString('v-if="brief.headline_detail"', $page);
         $this->assertStringNotContainsString('PanelBigNumber', $page);
         $this->assertStringNotContainsString('text-snitch-spot', $page);
         $this->assertStringNotContainsString('rounded border border-snitch-ink/12 bg-snitch-lift', $page);
@@ -81,6 +84,11 @@ class ExecutiveBriefTest extends TestCase
             'payload' => [
                 'headline' => 'Post a Reel today.',
                 'narrative' => 'Own club is steady this week with one Reel already shipped, while rivals posted more Reels across the stored window. The gap is cadence and format focus rather than audience size: followers sit near 1500 with a modest lift. Start by posting another Reel in a proven evening block so you stay visible where attention already sits. Then leave one grounded comment on a rival hit above 1.2 times their usual instead of copying weak posts. Keep the brief short and ship something concrete before the week drifts quiet again.',
+                'automation_overrides' => [
+                    'updated_at' => now()->toIso8601String(),
+                    'run_uuid' => 'test-run',
+                    'sections' => [],
+                ],
                 'summary' => 'Own club is steady. Rivals posted more Reels this week.',
                 'own_summary' => 'Own club is steady.',
                 'competitor_summary' => 'Rivals posted more Reels this week.',
@@ -159,6 +167,12 @@ class ExecutiveBriefTest extends TestCase
             'headline' => '21 days quiet while rivals posted 13 times.',
             'payload' => [
                 'headline' => '21 days quiet while rivals posted 13 times.',
+                'narrative' => implode(' ', array_fill(0, 90, 'word')),
+                'automation_overrides' => [
+                    'updated_at' => now()->toIso8601String(),
+                    'run_uuid' => 'shape-run',
+                    'sections' => [],
+                ],
                 'summary' => 'Quiet stretch while rivals kept posting.',
                 'own_summary' => '@ownclub has been quiet for 21 days while rivals published 13 posts this week.',
                 'competitor_summary' => 'Competitors published 13 posts in the last 7 days.',
@@ -285,6 +299,12 @@ class ExecutiveBriefTest extends TestCase
             'headline' => 'Post a Reel today.',
             'payload' => [
                 'headline' => 'Post a Reel today.',
+                'narrative' => implode(' ', array_fill(0, 90, 'word')),
+                'automation_overrides' => [
+                    'updated_at' => now()->toIso8601String(),
+                    'run_uuid' => 'dedupe-run',
+                    'sections' => [],
+                ],
                 'own_summary' => '@aprilrosemarketing posted nothing in the last 7 days while competitors published 5 posts.',
                 'competitor_summary' => 'Competitors published 5 posts in the last 7 days, including 0 posts in the last 24 hours. Strongest recent post: @yellowzest Reel from 18 Oct at 3.2 times their usual.',
                 'actions' => [

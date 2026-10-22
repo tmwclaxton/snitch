@@ -63,6 +63,10 @@ class DailyBriefValidator
             if ($wordCount < 80 || $wordCount > 140) {
                 $errors[] = 'narrative must be 80 to 140 words, got '.$wordCount;
             }
+
+            foreach ($this->narrativeToneErrors($narrative) as $toneError) {
+                $errors[] = $toneError;
+            }
         }
 
         if (! is_array($actions)) {
@@ -793,6 +797,34 @@ class DailyBriefValidator
         }
 
         return $normalised;
+    }
+
+    /**
+     * Reject inventory-style narratives: too many numbers, or too many sentences that open on a handle.
+     *
+     * @return list<string>
+     */
+    public function narrativeToneErrors(string $narrative): array
+    {
+        $errors = [];
+        $numberCount = count($this->numbersInText($narrative));
+        if ($numberCount > 4) {
+            $errors[] = 'narrative cites too many numbers ('.$numberCount.'; max 4) - interpret, do not list stats';
+        }
+
+        $sentences = preg_split('/(?<=[.!?])\s+/u', trim($narrative)) ?: [];
+        $handleOpeners = 0;
+        foreach ($sentences as $sentence) {
+            $sentence = trim($sentence);
+            if ($sentence !== '' && preg_match('/^@[A-Za-z0-9._]+/u', $sentence) === 1) {
+                $handleOpeners++;
+            }
+        }
+        if ($handleOpeners > 2) {
+            $errors[] = 'narrative has too many sentences starting with a handle ('.$handleOpeners.'; max 2) - write flowing advice, not an inventory';
+        }
+
+        return $errors;
     }
 
     /**

@@ -15,7 +15,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('save_executive_brief')]
-#[Description('Automation only. Save a grounded Executive Brief for the token-bound user and run. Pass headline (short), narrative (80-140 words of flowing prose), summary (up to 3 interpretive sentences), and 3 suggestions each with why and evidence_post_ids. Server validates every number against stored facts; on validation failure the run stays open so you can revise and save again.')]
+#[Description('Automation only. Save a grounded Executive Brief for the token-bound user and run. Pass headline (short), narrative (80-140 words of interpretive prose - at most 4 numbers, at most 2 sentences starting with @handle), summary (up to 3 interpretive sentences), and 3 suggestions each with why and evidence_post_ids. Server rejects inventory-style narratives and invented numbers; on validation failure the run stays open so you can revise and save again.')]
 class SaveExecutiveBriefTool extends Tool
 {
     public function handle(Request $request, SaveExecutiveBriefService $saver): Response
@@ -81,7 +81,7 @@ class SaveExecutiveBriefTool extends Tool
                 ->description('Short yellow-block headline, about 90 characters max.')
                 ->required(),
             'narrative' => $schema->string()
-                ->description('Memo opening: 80-140 words of flowing prose (not bullets). What is happening, why it matters, what to do first. Cite real figures.')
+                ->description('Memo opening: 80-140 words a consultant would say out loud. What it means, why it matters for this account, what to do first. At most 4 numbers; at most 2 sentences starting with @handle. Not a list of stats.')
                 ->required(),
             'summary' => $schema->string()
                 ->description('Up to 3 short interpretive sentences (bullets on the page).')
