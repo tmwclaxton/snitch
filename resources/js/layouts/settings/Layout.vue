@@ -21,7 +21,7 @@ const sidebarNavItems: NavItem[] = [
     //     icon: Palette,
     // },
     {
-        title: 'MCP',
+        title: 'Connect your AI',
         href: editMcp(),
         icon: Bot,
     },
@@ -38,7 +38,7 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                 Settings
             </h1>
             <p class="mt-1.5 text-sm text-snitch-ink/70 sm:text-base">
-                Profile and MCP.
+                Profile and Connect your AI.
             </p>
         </header>
 

@@ -18,17 +18,25 @@ use App\Mcp\Tools\DismissInfluencerSuggestionsTool;
 use App\Mcp\Tools\ExplorePostsTool;
 use App\Mcp\Tools\FindInfluencersTool;
 use App\Mcp\Tools\GenerateInfluencerBriefTool;
+use App\Mcp\Tools\GetAccountSummaryTool;
 use App\Mcp\Tools\GetBrandTool;
+use App\Mcp\Tools\GetCompetitorPostsTool;
 use App\Mcp\Tools\GetDailyBriefTool;
+use App\Mcp\Tools\GetFormatMixTool;
+use App\Mcp\Tools\GetGapsTool;
+use App\Mcp\Tools\GetGrowthSeriesTool;
 use App\Mcp\Tools\GetGrowthTool;
 use App\Mcp\Tools\GetMonthlyReportTool;
+use App\Mcp\Tools\GetPostingTimesTool;
 use App\Mcp\Tools\GetPostTool;
+use App\Mcp\Tools\GetTopPostsTool;
 use App\Mcp\Tools\GetWeeklyBriefTool;
 use App\Mcp\Tools\InfluencerSearchStatusTool;
 use App\Mcp\Tools\KeepInfluencerTool;
 use App\Mcp\Tools\ListCompetitorsTool;
 use App\Mcp\Tools\ListFeedTool;
 use App\Mcp\Tools\ListInfluencersTool;
+use App\Mcp\Tools\ListTrackersTool;
 use App\Mcp\Tools\ListWinnersTool;
 use App\Mcp\Tools\MarkWeeklyBriefIdeaUsedTool;
 use App\Mcp\Tools\RemoveCompetitorTool;
@@ -72,6 +80,14 @@ class SnitchServer extends Server
         StartBrandAutofillTool::class,
         AutofillStatusTool::class,
         ListCompetitorsTool::class,
+        ListTrackersTool::class,
+        GetAccountSummaryTool::class,
+        GetCompetitorPostsTool::class,
+        GetTopPostsTool::class,
+        GetPostingTimesTool::class,
+        GetFormatMixTool::class,
+        GetGapsTool::class,
+        GetGrowthSeriesTool::class,
         AddCompetitorTool::class,
         RemoveCompetitorTool::class,
         SyncCompetitorTool::class,

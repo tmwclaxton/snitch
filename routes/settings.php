@@ -24,6 +24,9 @@ Route::middleware([
     Route::post('settings/mcp/token', [McpController::class, 'rotateToken'])
         ->middleware('throttle:10,1')
         ->name('settings.mcp.token');
+    Route::delete('settings/mcp/token', [McpController::class, 'revokeToken'])
+        ->middleware('throttle:10,1')
+        ->name('settings.mcp.token.revoke');
 
     Route::get('billing', [BillingController::class, 'index'])->name('billing.edit');
     Route::get('billing/charges', [BillingController::class, 'charges'])->name('billing.charges');

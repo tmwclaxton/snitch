@@ -187,7 +187,19 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('mcp', function (Request $request) {
-            return Limit::perMinute(120)->by($request->user()?->id ?: ClientIp::from($request));
+            $user = $request->user();
+            $tokenId = null;
+            if ($user !== null && method_exists($user, 'currentSanctumToken')) {
+                $token = $user->currentSanctumToken();
+                $tokenId = $token !== null ? (string) $token->id : null;
+            }
+
+            // Prefer per-token limits so one leaked PAT cannot burn the whole user budget.
+            return Limit::perMinute(120)->by(
+                $tokenId !== null && $tokenId !== ''
+                    ? 'mcp-token:'.$tokenId
+                    : ($user?->id ? 'mcp-user:'.$user->id : ClientIp::from($request))
+            );
         });
 
         RateLimiter::for('mcp-register', function (Request $request) {

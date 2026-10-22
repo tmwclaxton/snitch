@@ -28,7 +28,7 @@ class McpConnectionGuide
                     'name' => 'Cursor',
                     'blurb' => 'Add Snitch in Cursor Settings → MCP, or merge into your project mcp.json.',
                     'steps' => [
-                        'Mint an API token in Settings, under MCP.',
+                        'Mint an API token in Settings → Connect your AI.',
                         'Open Cursor Settings → MCP and add snitch with the config below.',
                         'Reload MCP servers, then call whoami.',
                     ],
@@ -62,7 +62,7 @@ class McpConnectionGuide
                     'name' => 'Claude Desktop / Claude Code',
                     'blurb' => 'HTTP MCP with a bearer token, same pattern as Cursor.',
                     'steps' => [
-                        'Mint an API token in Settings, under MCP.',
+                        'Mint an API token in Settings → Connect your AI.',
                         'Add an HTTP MCP server with the config below.',
                         'Restart Claude and call whoami.',
                     ],
@@ -79,11 +79,25 @@ class McpConnectionGuide
                     ]),
                 ],
                 [
+                    'id' => 'chatgpt',
+                    'name' => 'ChatGPT',
+                    'blurb' => 'Custom GPT or agent actions that support remote HTTP MCP with a bearer token.',
+                    'steps' => [
+                        'Mint an API token in Settings → Connect your AI.',
+                        'Add the Snitch MCP URL and Authorization bearer header below.',
+                        'Call whoami, then list_trackers or get_daily_brief.',
+                    ],
+                    'snippet' => implode("\n", [
+                        'MCP server URL: '.$mcpUrl,
+                        'Auth header: Authorization: Bearer YOUR_SNITCH_API_TOKEN',
+                    ]),
+                ],
+                [
                     'id' => 'codex',
                     'name' => 'Codex',
                     'blurb' => 'Any Codex or OpenAI agent harness that supports remote HTTP MCP.',
                     'steps' => [
-                        'Mint an API token in Settings, under MCP.',
+                        'Mint an API token in Settings → Connect your AI.',
                         'Register the Snitch MCP URL with the bearer header below.',
                         'Call whoami, then workflow_guide for tool order.',
                     ],
@@ -97,7 +111,7 @@ class McpConnectionGuide
                     'name' => 'Windsurf',
                     'blurb' => 'Same HTTP + bearer pattern as Cursor.',
                     'steps' => [
-                        'Mint an API token in Settings, under MCP.',
+                        'Mint an API token in Settings → Connect your AI.',
                         'Open Windsurf MCP settings and add snitch with the config below.',
                         'Call whoami to confirm.',
                     ],
@@ -117,7 +131,7 @@ class McpConnectionGuide
                 'title' => 'General MCP',
                 'blurb' => 'Any MCP client over HTTPS can connect to production Snitch.',
                 'steps' => [
-                    'Mint an API token in Settings, under MCP, or call create_account on the register endpoint.',
+                    'Mint an API token in Settings → Connect your AI, or call create_account on the register endpoint.',
                     'Paste the config into your MCP client (see tabs above).',
                     'Call whoami to confirm the connection.',
                     'If an agent created the account, open the claim URL in your browser.',
@@ -130,14 +144,16 @@ class McpConnectionGuide
                     'Authenticated: '.$mcpUrl,
                     '  Header: Authorization: Bearer YOUR_SNITCH_API_TOKEN',
                     '',
-                    'Starter calls: workflow_guide, whoami, billing_status, get_brand',
+                    'Starter calls: workflow_guide, whoami, list_trackers, get_daily_brief',
                 ]),
             ],
             'tools' => [
                 'create_account', 'workflow_guide', 'whoami', 'claim_info', 'rotate_token',
                 'billing_status', 'create_platform_checkout', 'create_credit_checkout', 'billing_portal',
                 'get_brand', 'update_brand', 'start_brand_autofill', 'autofill_status',
-                'list_competitors', 'add_competitor', 'remove_competitor', 'sync_competitor',
+                'list_competitors', 'list_trackers', 'get_account_summary', 'get_competitor_posts',
+                'get_top_posts', 'get_posting_times', 'get_format_mix', 'get_gaps', 'get_growth_series',
+                'add_competitor', 'remove_competitor', 'sync_competitor',
                 'suggest_competitors', 'suggest_competitors_status', 'confirm_competitor_suggestions', 'dismiss_competitor_suggestions',
                 'generate_influencer_brief', 'find_influencers', 'influencer_search_status', 'list_influencers', 'keep_influencer', 'discard_influencer', 'dismiss_influencer_suggestions', 'remove_influencer',
                 'list_feed', 'get_post', 'analyze_post',

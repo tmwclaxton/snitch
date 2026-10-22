@@ -13,12 +13,26 @@ use Laravel\Sanctum\PersonalAccessToken;
  */
 trait HasSanctumMcpTokens
 {
+    protected ?PersonalAccessToken $currentSanctumToken = null;
+
     /**
      * @return MorphMany<PersonalAccessToken, $this>
      */
     public function sanctumTokens()
     {
         return $this->morphMany(PersonalAccessToken::class, 'tokenable');
+    }
+
+    public function currentSanctumToken(): ?PersonalAccessToken
+    {
+        return $this->currentSanctumToken;
+    }
+
+    public function withSanctumToken(?PersonalAccessToken $token): static
+    {
+        $this->currentSanctumToken = $token;
+
+        return $this;
     }
 
     /**

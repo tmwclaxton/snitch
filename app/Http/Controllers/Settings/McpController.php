@@ -44,4 +44,22 @@ class McpController extends Controller
 
         return to_route('settings.mcp.show')->with('agents.plain_token', $token);
     }
+
+    /**
+     * Revoke the Sanctum token without minting a replacement.
+     */
+    public function revokeToken(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null, 403);
+
+        $user->sanctumTokens()->where('name', 'mcp')->delete();
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('API token revoked.'),
+        ]);
+
+        return to_route('settings.mcp.show');
+    }
 }

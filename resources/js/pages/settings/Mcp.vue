@@ -2,7 +2,7 @@
 import { Form, Head } from '@inertiajs/vue3';
 import { Bot } from '@lucide/vue';
 import { ref, watch } from 'vue';
-import { rotateToken } from '@/actions/App/Http/Controllers/Settings/McpController';
+import McpController from '@/actions/App/Http/Controllers/Settings/McpController';
 import McpConnectGuide from '@/components/agents/McpConnectGuide.vue';
 import { show } from '@/routes/settings/mcp';
 
@@ -10,7 +10,7 @@ defineOptions({
     layout: {
         breadcrumbs: [
             {
-                title: 'MCP',
+                title: 'Connect your AI',
                 href: show(),
             },
         ],
@@ -52,7 +52,7 @@ watch(
 
 <template>
     <div>
-        <Head title="MCP" />
+        <Head title="Connect your AI" />
 
         <McpConnectGuide
             :mcp-url="mcp_url"
@@ -63,14 +63,24 @@ watch(
             :api-token="liveToken"
         >
             <template #title-action>
-                <Form v-bind="rotateToken.form()">
-                    <button type="submit" class="snitch-btn snitch-btn-spot px-3 py-2 text-sm">
-                        <Bot class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
-                        <span class="relative z-10">
-                            {{ has_mcp_token ? 'Rotate token' : 'Create token' }}
-                        </span>
-                    </button>
-                </Form>
+                <div class="flex flex-wrap items-center gap-2">
+                    <Form v-bind="McpController.rotateToken.form()">
+                        <button type="submit" class="snitch-btn snitch-btn-spot px-3 py-2 text-sm">
+                            <Bot class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                            <span class="relative z-10">
+                                {{ has_mcp_token ? 'Rotate token' : 'Create token' }}
+                            </span>
+                        </button>
+                    </Form>
+                    <Form
+                        v-if="has_mcp_token"
+                        v-bind="McpController.revokeToken.form()"
+                    >
+                        <button type="submit" class="snitch-btn px-3 py-2 text-sm">
+                            <span class="relative z-10">Revoke token</span>
+                        </button>
+                    </Form>
+                </div>
             </template>
         </McpConnectGuide>
     </div>

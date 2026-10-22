@@ -62,8 +62,13 @@ class AuthenticateMcp
             return false;
         }
 
+        if (method_exists($user, 'withSanctumToken')) {
+            $user->withSanctumToken($accessToken);
+        }
+
         Auth::setUser($user);
         Auth::shouldUse('web');
+        $request->setUserResolver(static fn () => $user);
 
         if (method_exists($accessToken->getConnection(), 'hasModifiedRecords')
             && method_exists($accessToken->getConnection(), 'setRecordModificationState')) {
