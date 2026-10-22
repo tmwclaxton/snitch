@@ -55,7 +55,9 @@ Workflow:
    - suggestions: 3-5 items. Each needs title (bold action with format/time baked in), why (one convincing evidence sentence with handle + Nx or date), and evidence_post_ids that exist in stored data
    - ONE post per suggestion: title, why, and evidence_post_ids[0] must describe the same post (same handle, date, Nx)
    - Never sell a post under 1.2x as a model to copy. Call it underperformed, or pick a real hit (>= 1.2 times their usual). Do not say "reached 0.8x" as praise.
-   - Suggestions must not overlap (one posting action, then distinct comment/study moves)
+   - Suggestions must not overlap. Prefer exactly 3: (1) one post action, (2) one engagement/comment action, (3) optional study or a single avoid. At most one "skip / do not copy" card.
+   - Prefer time blocks (evening 19:00-21:00, midday) over copying a rival's exact minute (not "at 20:19").
+   - End every suggestion title with a period.
 5. Save with save_executive_brief. If validation rejects, read the errors array, revise the draft (drop invented numbers/handles, ground every Nx and date in stored posts), and call save_executive_brief again. Do not invent fixes that invent numbers. Snitch keeps the existing brief until a save succeeds.
 6. Do not invent numbers, handles, or dates. Prefer omitting a claim over guessing. Only cite post ids returned by tools. Prefer fewer grounded suggestions over padded ones.
 7. No em dashes. Plain, direct sentences. No marketing fluff. Do not use ellipsis (...).

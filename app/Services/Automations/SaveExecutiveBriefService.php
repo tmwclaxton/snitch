@@ -167,8 +167,13 @@ class SaveExecutiveBriefService
             foreach ($row['evidence_post_ids'] ?? $row['related_post_ids'] ?? [] as $id) {
                 $ids[] = (int) $id;
             }
+            $title = trim((string) ($row['title'] ?? ''));
+            if ($title !== '' && ! preg_match('/[.!?]$/u', $title)) {
+                $title .= '.';
+            }
+
             $actions[] = [
-                'title' => trim((string) ($row['title'] ?? '')),
+                'title' => $title,
                 'why' => trim((string) ($row['why'] ?? '')),
                 'how' => trim((string) ($row['how'] ?? 'Follow through today.')),
                 'when' => $row['when'] ?? null,
