@@ -444,31 +444,40 @@ jobs:
           echo 'template_headline='.((string) ($template['headline'] ?? ''))."\n";
           echo 'template_competitor_summary='.((string) ($template['competitor_summary'] ?? ''))."\n";
 
-          $blob = strtolower(
-              (string) ($payload['headline'] ?? $brief->headline ?? '')
-              .' '.
-              (string) ($payload['competitor_summary'] ?? '')
-              .' '.
-              (string) ($template['headline'] ?? '')
-              .' '.
-              (string) ($template['competitor_summary'] ?? '')
-          );
-          $hasReel = str_contains($blob, 'reel');
-          $has20Oct = str_contains($blob, '20 oct');
-          $has12x = str_contains($blob, '1.2');
-          echo 'confirm_reel='.($hasReel ? 'yes' : 'no')."\n";
-          echo 'confirm_20_oct='.($has20Oct ? 'yes' : 'no')."\n";
-          echo 'confirm_1_2x='.($has12x ? 'yes' : 'no')."\n";
+          // Cite check: format, London date short, and Nx must come from one live post
+          // (top_competitor_hit_24h when present), not a hard-coded historical fixture.
+          $citeSource = is_array($hit24) && filled($hit24['format'] ?? null) ? $hit24 : null;
+          if ($citeSource === null) {
+              fwrite(STDERR, "brief_cite_mismatch: missing top_competitor_hit_24h to ground the check\n");
+              exit(1);
+          }
+          $citeFormat = strtolower((string) ($citeSource['format'] ?? ''));
+          $citeNx = is_numeric($citeSource['times_usual'] ?? null)
+              ? (string) round((float) $citeSource['times_usual'], 1)
+              : '';
+          $citeLabel = strtolower((string) ($citeSource['posted_label'] ?? ''));
+          $citeDate = '';
+          if (preg_match('/\b(\d{1,2}\s+[a-z]{3})\b/', $citeLabel, $m) === 1) {
+              $citeDate = $m[1];
+          }
+          echo 'cite_format='.$citeFormat."\n";
+          echo 'cite_date='.$citeDate."\n";
+          echo 'cite_nx='.$citeNx."\n";
 
           $storedBlob = strtolower(
               (string) ($payload['headline'] ?? $brief->headline ?? '')
               .' '.
               (string) ($payload['competitor_summary'] ?? '')
           );
-          if (! str_contains($storedBlob, 'reel')
-              || ! str_contains($storedBlob, '20 oct')
-              || ! str_contains($storedBlob, '1.2')
-          ) {
+          $citeOk = $citeFormat !== ''
+              && $citeDate !== ''
+              && $citeNx !== ''
+              && str_contains($storedBlob, $citeFormat)
+              && str_contains($storedBlob, $citeDate)
+              && str_contains($storedBlob, $citeNx);
+          echo 'confirm_cite='.($citeOk ? 'yes' : 'no')."\n";
+
+          if (! $citeOk) {
               $rebound = $generator->rebindTemplateCitation([
                   'headline' => (string) ($payload['headline'] ?? $brief->headline ?? ''),
                   'actions' => is_array($payload['actions'] ?? null) ? $payload['actions'] : [],
@@ -479,6 +488,13 @@ jobs:
               $payload['headline'] = (string) ($rebound['headline'] ?? '');
               $payload['competitor_summary'] = (string) ($rebound['competitor_summary'] ?? '');
               $payload['actions'] = $rebound['actions'] ?? ($payload['actions'] ?? []);
+              if (! isset($payload['summary']) || ! is_string($payload['summary']) || trim($payload['summary']) === '') {
+                  $payload['summary'] = trim(
+                      (string) ($payload['own_summary'] ?? '')
+                      .' '.
+                      (string) ($payload['competitor_summary'] ?? '')
+                  );
+              }
               $brief->fill([
                   'headline' => $payload['headline'],
                   'payload' => $payload,
@@ -488,13 +504,13 @@ jobs:
               echo 'headline='.$payload['headline']."\n";
               echo 'competitor_summary='.$payload['competitor_summary']."\n";
               $storedBlob = strtolower($payload['headline'].' '.$payload['competitor_summary']);
+              $citeOk = str_contains($storedBlob, $citeFormat)
+                  && str_contains($storedBlob, $citeDate)
+                  && str_contains($storedBlob, $citeNx);
           }
 
-          if (! str_contains($storedBlob, 'reel')
-              || ! str_contains($storedBlob, '20 oct')
-              || ! str_contains($storedBlob, '1.2')
-          ) {
-              fwrite(STDERR, "brief_cite_mismatch: expected Reel, 20 Oct, 1.2x in headline/competitor_summary\n");
+          if (! $citeOk) {
+              fwrite(STDERR, "brief_cite_mismatch: expected {$citeFormat}, {$citeDate}, {$citeNx}x in headline/competitor_summary\n");
               exit(1);
           }
           PHP

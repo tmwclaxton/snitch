@@ -15,7 +15,7 @@ class PersonalWorkspaceTest extends TestCase
 
     public function test_dashboard_route_has_no_team_slug(): void
     {
-        $this->assertSame(url('/dashboard'), route('dashboard'));
+        $this->assertSame(url('/executive-brief'), route('dashboard'));
     }
 
     public function test_team_settings_routes_are_removed(): void
@@ -33,8 +33,12 @@ class PersonalWorkspaceTest extends TestCase
         BrandProfile::factory()->for($user)->create();
 
         $this->actingAs($user)
-            ->get('/dashboard')
+            ->get('/executive-brief')
             ->assertOk();
+
+        $this->actingAs($user)
+            ->get('/dashboard')
+            ->assertRedirect('/executive-brief');
     }
 
     public function test_users_table_has_no_current_team_id(): void
