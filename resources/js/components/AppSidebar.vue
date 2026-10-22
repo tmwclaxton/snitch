@@ -122,17 +122,14 @@ const accountNavItems: NavItem[] = [
     <Sidebar
         collapsible="icon"
         variant="sidebar"
-        class="border-r border-white/10 bg-black"
+        class="border-r border-sidebar-border bg-sidebar"
     >
-        <SidebarHeader
-            class="shrink-0 border-b border-snitch-ink/10 px-2"
-            :class="adminGroupOpen ? 'py-0' : 'py-2'"
-        >
+        <SidebarHeader class="shrink-0 border-b border-sidebar-border px-3 py-3">
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton
                         size="lg"
-                        :class="adminGroupOpen ? 'h-10' : 'h-12'"
+                        class="h-12"
                         as-child
                     >
                         <Link :href="home()">
@@ -143,11 +140,10 @@ const accountNavItems: NavItem[] = [
             </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent class="min-h-0 flex-1 gap-0 overflow-y-auto">
+        <SidebarContent class="min-h-0 flex-1 gap-1 overflow-y-auto">
             <NavMain
                 :items="mainNavItems"
                 label="App"
-                :tight="adminGroupOpen"
             />
             <NavMain
                 v-if="adminNavItems.length"
@@ -155,30 +151,23 @@ const accountNavItems: NavItem[] = [
                 label="Admin"
                 collapsible
                 :default-open="adminGroupOpen"
-                :tight="adminGroupOpen"
             />
         </SidebarContent>
 
-        <SidebarFooter
-            class="shrink-0 border-t border-snitch-ink/10 px-2"
-            :class="adminGroupOpen ? 'py-0' : 'py-2'"
-        >
-            <div
-                class="flex items-center gap-3 px-2 text-sm"
-                :class="adminGroupOpen ? 'h-7' : 'h-8'"
-            >
+        <SidebarFooter class="shrink-0 border-t border-sidebar-border px-3 py-3">
+            <div class="flex items-center gap-4 px-2 py-2 text-sm">
                 <Link
                     v-for="item in accountNavItems"
                     :key="item.title"
                     :href="item.href"
-                    class="hover:text-sidebar-foreground"
+                    class="rounded-sm px-1.5 py-1 hover:text-sidebar-foreground"
                     :class="isCurrentOrParentUrl(item.href) ? 'snitch-nav-current font-medium text-[#0e0e10]' : 'text-sidebar-foreground/80'"
                 >
                     {{ item.title }}
                 </Link>
             </div>
-            <div :class="adminGroupOpen ? 'mt-1' : 'mt-2'">
-                <NavUser :compact="adminGroupOpen" />
+            <div class="mt-2">
+                <NavUser />
             </div>
         </SidebarFooter>
     </Sidebar>

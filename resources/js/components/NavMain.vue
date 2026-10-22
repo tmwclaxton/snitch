@@ -92,13 +92,10 @@ function toggleGroup(): void {
 </script>
 
 <template>
-    <SidebarGroup
-        class="px-2 pb-0"
-        :class="tight ? 'pt-2.5' : 'pt-3 first:pt-2.5'"
-    >
+    <SidebarGroup class="px-2 pb-1 pt-4 first:pt-3">
         <SidebarGroupLabel
-            class="h-3.5 gap-1 px-2 text-sm leading-none"
-            :class="[tight ? 'mb-0.5' : 'mb-1', collapsible ? 'cursor-pointer select-none' : '']"
+            class="mb-2 h-4 gap-1 px-2 text-sm leading-none"
+            :class="collapsible ? 'cursor-pointer select-none' : ''"
             :as="collapsible ? 'button' : undefined"
             :aria-expanded="collapsible ? open : undefined"
             @click="toggleGroup"
@@ -112,7 +109,7 @@ function toggleGroup(): void {
         </SidebarGroupLabel>
         <SidebarMenu
             v-if="!collapsible || open"
-            class="gap-0"
+            class="gap-1"
         >
             <SidebarMenuItem
                 v-for="item in items"

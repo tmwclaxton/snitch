@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\AppearanceController;
 use App\Http\Controllers\Settings\BillingController;
 use App\Http\Controllers\Settings\McpController;
 use App\Http\Controllers\Settings\ProfileController;
@@ -16,9 +17,7 @@ Route::middleware([
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Appearance is hidden while the logged-in app is pinned to Caution Tape
-    // night. Keep settings/Appearance.vue so the setting can come back.
-    Route::redirect('settings/appearance', '/settings/profile')->name('appearance.edit');
+    Route::get('settings/appearance', [AppearanceController::class, 'edit'])->name('appearance.edit');
 
     Route::get('settings/mcp', [McpController::class, 'show'])->name('settings.mcp.show');
     Route::post('settings/mcp/token', [McpController::class, 'rotateToken'])

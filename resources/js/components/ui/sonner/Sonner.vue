@@ -7,11 +7,19 @@ import 'vue-sonner/style.css';
 const { appearance } = useAppearance();
 
 const toastTheme = computed(() => {
-    if (typeof document !== 'undefined' && document.documentElement.dataset.appNight === '1') {
+    if (typeof document !== 'undefined' && document.documentElement.classList.contains('dark')) {
         return 'dark';
     }
 
-    return appearance.value;
+    if (appearance.value === 'dark') {
+        return 'dark';
+    }
+
+    if (appearance.value === 'light') {
+        return 'light';
+    }
+
+    return 'system';
 });
 </script>
 

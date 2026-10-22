@@ -18,30 +18,28 @@ export function snitchIsDark(): boolean {
         return false;
     }
 
-    return document.documentElement.classList.contains('dark')
-        || document.documentElement.dataset.appNight === '1'
-        || document.querySelector('.snitch-app-night') !== null;
+    return document.documentElement.classList.contains('dark');
 }
 
-export function snitchInk(fallback = '#141414'): string {
+export function snitchInk(fallback = '#0e0e10'): string {
     return snitchCssVar('--snitch-ink', fallback);
 }
 
-export function snitchPaper(fallback = '#f3eee3'): string {
+export function snitchPaper(fallback = '#edeae2'): string {
     return snitchCssVar('--snitch-paper', fallback);
 }
 
-export function snitchFog(fallback = '#ebe4d6'): string {
+export function snitchFog(fallback = '#e4e0d6'): string {
     return snitchCssVar('--snitch-fog', fallback);
 }
 
-export function snitchSpot(fallback = '#ffd60a'): string {
+export function snitchSpot(fallback = '#fcd700'): string {
     return snitchCssVar('--snitch-spot', fallback);
 }
 
 /** "You" series: charcoal on light paper, Caution Tape yellow on night. */
 export function snitchYouSeries(): string {
-    return snitchIsDark() ? '#fcd700' : snitchInk('#141414');
+    return snitchIsDark() ? '#fcd700' : snitchInk('#0e0e10');
 }
 
 /** Distinct rival hues that stay readable on both shells. */

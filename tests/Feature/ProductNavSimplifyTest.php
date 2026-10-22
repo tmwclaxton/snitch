@@ -36,7 +36,8 @@ class ProductNavSimplifyTest extends TestCase
         $this->assertStringContainsString('max-w-[760px]', $chat);
         $this->assertStringContainsString('Ask Snitch', $chat);
         $this->assertStringContainsString('font-hero', $chat);
-        $this->assertStringContainsString('bg-[#FCD700]', $chat);
+        $this->assertStringContainsString('bg-snitch-spot', $chat);
+        $this->assertStringContainsString('bg-snitch-paper', $chat);
         $this->assertStringContainsString('ChatMarkdown', $chat);
         $this->assertStringContainsString('stickToBottom', $chat);
         $this->assertStringNotContainsString('—', $chat);

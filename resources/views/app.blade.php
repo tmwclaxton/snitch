@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-app-night="{{ ($appNight ?? false) ? '1' : '0' }}" @class(['dark' => ($appNight ?? false) || ($appearance ?? 'system') == 'dark'])>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['dark' => ($appearance ?? 'system') == 'dark'])>
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -65,19 +65,16 @@
             (function() {
                 const appearance = '{{ $appearance ?? "system" }}';
                 const root = document.documentElement;
-                const appNight = root.dataset.appNight === '1';
-                let dark = appNight || appearance === 'dark';
+                let dark = appearance === 'dark';
 
-                if (!appNight && appearance === 'system') {
+                if (appearance === 'system') {
                     dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-                    if (dark) {
-                        root.classList.add('dark');
-                    }
                 }
 
-                if (appNight) {
+                if (dark) {
                     root.classList.add('dark');
+                } else {
+                    root.classList.remove('dark');
                 }
 
                 root.style.colorScheme = dark ? 'dark' : 'light';
@@ -87,12 +84,11 @@
         {{-- Inline style matches snitch paper so the first paint matches the shell --}}
         <style>
             html {
-                background-color: #f3eee3;
+                background-color: #edeae2;
                 color-scheme: light;
             }
 
-            html.dark,
-            html[data-app-night="1"] {
+            html.dark {
                 background-color: #0e0e10;
                 color-scheme: dark;
             }

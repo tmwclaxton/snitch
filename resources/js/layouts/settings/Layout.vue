@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Bot, User } from '@lucide/vue';
+import { Bot, Palette, User } from '@lucide/vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
+import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editProfile } from '@/routes/profile';
 import { show as editMcp } from '@/routes/settings/mcp';
 import type { NavItem } from '@/types';
@@ -13,13 +14,11 @@ const sidebarNavItems: NavItem[] = [
         href: editProfile(),
         icon: User,
     },
-    // Appearance is hidden while the logged-in app is pinned to Caution Tape
-    // night. Leave this entry (and settings/Appearance.vue) so it can come back.
-    // {
-    //     title: 'Appearance',
-    //     href: editAppearance(),
-    //     icon: Palette,
-    // },
+    {
+        title: 'Appearance',
+        href: editAppearance(),
+        icon: Palette,
+    },
     {
         title: 'Connect your AI',
         href: editMcp(),
@@ -38,13 +37,16 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                 Settings
             </h1>
             <p class="mt-1.5 text-sm text-snitch-ink/70 sm:text-base">
-                Profile and Connect your AI.
+                Profile, appearance, and Connect your AI.
             </p>
         </header>
 
         <div class="flex flex-col gap-8 lg:flex-row lg:gap-10">
             <aside class="w-full lg:w-44 lg:shrink-0">
-                <nav class="flex flex-col gap-1" aria-label="Settings">
+                <nav
+                    class="flex flex-col gap-1"
+                    aria-label="Settings"
+                >
                     <Link
                         v-for="item in sidebarNavItems"
                         :key="toUrl(item.href)"

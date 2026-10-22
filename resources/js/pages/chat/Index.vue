@@ -245,7 +245,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="flex h-[calc(100svh-4rem)] min-h-0 flex-1 flex-col bg-[#0E0E10]">
+    <div class="flex h-[calc(100svh-4rem)] min-h-0 flex-1 flex-col bg-snitch-paper text-snitch-ink">
         <Head title="Chat" />
 
         <div class="mx-auto flex min-h-0 w-full max-w-[760px] flex-1 flex-col px-4 pb-3 pt-4 sm:px-6 sm:pb-4 sm:pt-6">
@@ -258,10 +258,10 @@ onUnmounted(() => {
                     class="flex min-h-full flex-col justify-center gap-8 py-8"
                 >
                     <div class="space-y-3 text-center">
-                        <h1 class="font-hero text-3xl uppercase leading-tight tracking-tight text-[#EDEAE2] sm:text-4xl">
+                        <h1 class="font-hero text-3xl uppercase leading-tight tracking-tight text-snitch-ink sm:text-4xl">
                             Ask Snitch
                         </h1>
-                        <p class="text-[15px] leading-relaxed text-[#EDEAE2]/70">
+                        <p class="text-[15px] leading-relaxed text-snitch-ink/70">
                             Answers from your stored trackers, posts, and briefs.
                         </p>
                     </div>
@@ -271,7 +271,7 @@ onUnmounted(() => {
                             v-for="chip in suggestions"
                             :key="chip"
                             type="button"
-                            class="rounded-full border border-white/10 bg-[#141416] px-3.5 py-2 text-left text-[15px] leading-snug text-[#EDEAE2]/75 transition hover:border-white/25 hover:text-[#EDEAE2]"
+                            class="rounded-full border border-snitch-ink/15 bg-snitch-lift px-3.5 py-2 text-left text-[15px] leading-snug text-snitch-ink/80 transition hover:border-snitch-ink/30 hover:text-snitch-ink"
                             :disabled="sending || capped"
                             @click="send(chip)"
                         >
@@ -293,7 +293,7 @@ onUnmounted(() => {
                             v-if="row.role === 'user'"
                             class="flex justify-end"
                         >
-                            <div class="max-w-[85%] rounded-2xl bg-[#1E1E22] px-4 py-2.5 text-[15px] leading-relaxed text-[#EDEAE2]">
+                            <div class="max-w-[85%] rounded-2xl bg-snitch-fog px-4 py-2.5 text-[15px] leading-relaxed text-snitch-ink dark:bg-[#1E1E22]">
                                 {{ row.content }}
                             </div>
                         </div>
@@ -308,7 +308,7 @@ onUnmounted(() => {
                             />
                             <p
                                 v-else-if="sending && index === messages.length - 1"
-                                class="text-[15px] text-[#EDEAE2]/55"
+                                class="text-[15px] text-snitch-ink/55"
                             >
                                 {{ statusMessage || 'Thinking...' }}
                             </p>
@@ -317,7 +317,7 @@ onUnmounted(() => {
 
                     <p
                         v-if="sending && statusMessage && messages[messages.length - 1]?.content"
-                        class="text-[15px] text-[#EDEAE2]/55"
+                        class="text-[15px] text-snitch-ink/55"
                     >
                         {{ statusMessage }}
                     </p>
@@ -327,14 +327,14 @@ onUnmounted(() => {
             <div class="mt-auto shrink-0 pt-2">
                 <div
                     v-if="capped"
-                    class="mb-3 rounded-xl border border-white/10 bg-[#141416] p-4 text-[15px] leading-relaxed text-[#EDEAE2]"
+                    class="mb-3 rounded-xl border border-snitch-ink/10 bg-snitch-lift p-4 text-[15px] leading-relaxed text-snitch-ink"
                 >
                     <p>
                         You have hit today's in-app chat limit. Connect your AI to keep asking with MCP.
                     </p>
                     <Link
                         :href="mcp_path"
-                        class="mt-3 inline-flex items-center gap-2 rounded-md bg-[#FCD700] px-3 py-2 text-sm font-medium uppercase tracking-wide text-[#0E0E10]"
+                        class="mt-3 inline-flex items-center gap-2 rounded-md bg-snitch-spot px-3 py-2 text-sm font-medium uppercase tracking-wide text-snitch-on-spot"
                     >
                         <Bot
                             class="size-3.5"
@@ -345,7 +345,7 @@ onUnmounted(() => {
                 </div>
 
                 <form
-                    class="flex items-end gap-2 rounded-2xl border border-white/10 bg-[#141416] p-2"
+                    class="flex items-end gap-2 rounded-2xl border border-snitch-ink/10 bg-snitch-lift p-2"
                     @submit.prevent="send()"
                 >
                     <label
@@ -356,14 +356,14 @@ onUnmounted(() => {
                         id="chat-message"
                         v-model="draft"
                         rows="1"
-                        class="max-h-40 min-h-[44px] flex-1 resize-none bg-transparent px-3 py-2.5 text-[15px] leading-relaxed text-[#EDEAE2] outline-none placeholder:text-[#EDEAE2]/45"
+                        class="max-h-40 min-h-[44px] flex-1 resize-none bg-transparent px-3 py-2.5 text-[15px] leading-relaxed text-snitch-ink outline-none placeholder:text-snitch-ink/45"
                         placeholder="Ask about growth, rivals, or today's brief"
                         :disabled="sending || capped"
                         @keydown="onKeydown"
                     />
                     <button
                         type="submit"
-                        class="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#FCD700] text-[#0E0E10] transition disabled:opacity-40"
+                        class="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-snitch-spot text-snitch-on-spot transition disabled:opacity-40"
                         :disabled="!canSend"
                         aria-label="Send"
                     >
@@ -374,13 +374,13 @@ onUnmounted(() => {
                     </button>
                 </form>
 
-                <p class="mt-2 text-center text-sm text-[#EDEAE2]/55">
+                <p class="mt-2 text-center text-sm text-snitch-ink/55">
                     {{ remainingLabel }}
                 </p>
 
                 <p
                     v-if="streamError"
-                    class="mt-1 text-center text-[15px] text-[#FF3D8B]"
+                    class="mt-1 text-center text-[15px] text-snitch-alert"
                 >
                     {{ streamError }}
                 </p>

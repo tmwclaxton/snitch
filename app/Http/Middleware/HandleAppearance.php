@@ -17,9 +17,9 @@ class HandleAppearance
     public function handle(Request $request, Closure $next): Response
     {
         View::share('appearance', $request->cookie('appearance') ?? 'system');
-        // Logged-in app is pinned to Caution Tape night. Appearance cookie still
-        // exists so the setting can come back; it must not flip the app to cream.
-        View::share('appNight', $request->user() !== null);
+        // Logged-in app follows Appearance (light / dark / system). Public
+        // marketing stays night via PublicLayout's own `dark` class.
+        View::share('appNight', false);
 
         return $next($request);
     }

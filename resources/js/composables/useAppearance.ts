@@ -14,13 +14,10 @@ export function updateTheme(value: Appearance): void {
         return;
     }
 
-    const appNight = document.documentElement.dataset.appNight === '1';
-    let dark = appNight || value === 'dark';
+    let dark = value === 'dark';
 
-    if (! appNight && value === 'system') {
-        const mediaQueryList = window.matchMedia(
-            '(prefers-color-scheme: dark)',
-        );
+    if (value === 'system') {
+        const mediaQueryList = window.matchMedia('(prefers-color-scheme: dark)');
         dark = mediaQueryList.matches;
     }
 
@@ -65,11 +62,9 @@ export function initializeTheme(): void {
         return;
     }
 
-    // Initialize theme from saved preference or default to system...
     const savedAppearance = getStoredAppearance();
     updateTheme(savedAppearance || 'system');
 
-    // Set up system theme change listener...
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
 }
 
@@ -77,9 +72,7 @@ const appearance = ref<Appearance>('system');
 
 export function useAppearance(): UseAppearanceReturn {
     onMounted(() => {
-        const savedAppearance = localStorage.getItem(
-            'appearance',
-        ) as Appearance | null;
+        const savedAppearance = localStorage.getItem('appearance') as Appearance | null;
 
         if (savedAppearance) {
             appearance.value = savedAppearance;
@@ -89,10 +82,8 @@ export function useAppearance(): UseAppearanceReturn {
     function updateAppearance(value: Appearance) {
         appearance.value = value;
 
-        // Store in localStorage for client-side persistence...
         localStorage.setItem('appearance', value);
 
-        // Store in cookie for SSR...
         setCookie('appearance', value);
 
         updateTheme(value);

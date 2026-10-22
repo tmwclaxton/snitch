@@ -17,11 +17,14 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-    <div class="snitch-app-night dark min-h-svh bg-snitch-paper text-snitch-ink">
+    <div class="min-h-svh bg-snitch-paper text-snitch-ink">
         <AppShell variant="sidebar">
             <AppHead />
             <AppSidebar />
-            <AppContent variant="sidebar" class="relative min-w-0 overflow-x-clip bg-snitch-paper">
+            <AppContent
+                variant="sidebar"
+                class="relative min-w-0 overflow-x-clip bg-snitch-paper"
+            >
                 <AppSidebarHeader :breadcrumbs="breadcrumbs" />
                 <div class="snitch-app-chrome relative flex min-h-[calc(100svh-4rem)] flex-col bg-snitch-paper text-snitch-ink">
                     <slot />

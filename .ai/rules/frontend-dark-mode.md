@@ -5,34 +5,33 @@ paths:
   - 'resources/views/app.blade.php'
 ---
 
-# Evidence File + Caution Tape tokens
+# Caution Tape light + dark appearance
 
-Appearance is light / dark / system via `useAppearance`, the `appearance` cookie, and the `dark` class on `<html>`. When dark is active, set `color-scheme: dark` on the root (CSS + `documentElement.style.colorScheme` in `updateTheme` / the boot script) so native scrollbars follow night; light uses `color-scheme: light`. Dark also styles scrollbar thumbs fog-on-`#1A1A1D`.
+Appearance is light / dark / system via `useAppearance`, the `appearance` cookie, and the `dark` class on `<html>`. When dark is active, set `color-scheme: dark` on the root (CSS + `documentElement.style.colorScheme` in `updateTheme` / the boot script) so native scrollbars follow night; light uses `color-scheme: light`. Dark also styles scrollbar thumbs fog-on-`#1A1A1D`. Default is **system**.
 
-The **logged-in app is pinned to Caution Tape night** whatever the Appearance cookie says. `HandleAppearance` shares `appNight` when a user is authenticated. Blade sets `data-app-night="1"` and `html.dark`. `updateTheme` must not remove `dark` while `data-app-night="1"`. Charts read `snitchIsDark()` (html.dark, data-app-night, or `.snitch-app-night`). Settings hides the Appearance nav and redirects `/settings/appearance` to profile. Leave `settings/Appearance.vue` and `AppearanceTabs` in place so the setting can come back.
+The **logged-in app follows Appearance**. Do not pin authenticated pages with `snitch-app-night`, nested `dark`, or `data-app-night`. `HandleAppearance` shares `appNight` as `false`. Settings → Appearance is live (`AppearanceController`, `AppearanceTabs`). Public marketing stays night via `PublicLayout` `snitch-public-shell dark`. Charts read `snitchIsDark()` from `html.dark` only.
 
 ## Palettes
 
-- **Logged-in app (Caution Tape night, always):** paper `#0E0E10`, fog type `#EDEAE2`, panels `#141416`, bold yellow `#FCD700`, pink alerts `#FF3D8B`, thin `white/10` borders. Sidebar is black (`#000000`) with the active item a yellow `#FCD700` block and black text. Fonts: Inter (body), Archivo Black (`font-hero` / `.snitch-hero-display` page and section headlines, uppercase), Space Mono (small labels and stats only). Primary buttons are solid yellow with black uppercase text. Secondary buttons are outlined cream. Format tags use the landing small-label style (mono, yellow type, no slab). Highlight **one** key word or number per headline with `.snitch-highlight` (`#FCD700` block, `#0E0E10` text). Big tile numbers are cream; yellow text (no block) only for the single most important stat. Optional one `.snitch-caution-band` per page (yellow ground, black cards, numbered yellow tiles).
-- **:root Evidence File tokens** stay defined for public `/beta` (`snitch-light`) and a future Appearance return: cream paper `#F3EEE3`, near-black ink `#141414`, highlighter yellow `#FFD60A`, alert red `#E5341D`.
-- **Public shell (Caution Tape):** same night tokens, pinned via `PublicLayout` `snitch-public-shell dark` so appearance does not flip marketing pages. Hero headlines use Archivo Black (`font-hero` / `.snitch-hero-display`) in caps. TrackedBy keeps its own Caution Tape treatment in both app modes.
+- **Light (logged-in):** paper `#EDEAE2`, ink `#0E0E10`, panels white / fog `#E4E0D6`, spot `#FCD700`, pink alerts `#FF3D8B`, thin ink/12 borders. Sidebar cream paper; hover grey `#E0DDD4`; selected item full yellow `#FCD700` + black text. Primary buttons yellow with black type. Pills / segs / filters: grey selected states with dark or cream text - never yellow.
+- **Dark (logged-in / public):** paper `#0E0E10`, fog type `#EDEAE2`, panels `#141416`, spot `#FCD700`, pink `#FF3D8B`, thin `white/10` borders. Sidebar black; hover grey `#1E1E22`; selected yellow `#FCD700` + black text.
+- Fonts: Inter (body), Archivo Black (`font-hero` / `.snitch-hero-display` uppercase headlines), Space Mono (small labels and stats only).
+- Highlight **one** key word or number per headline with `.snitch-highlight` (`#FCD700` block, `#0E0E10` text).
 
 ## Token rules
 
 - Flip `--snitch-paper`, `--snitch-ink`, `--snitch-fog`, `--snitch-spot`, and related grade / halftone / washi under `.dark` so `snitch-*` utilities and `text-snitch-ink` / `bg-snitch-paper` / `bg-snitch-lift` work everywhere without per-page `dark:` classes.
-- Prefer `bg-snitch-lift` over bare `bg-white` for cards and panels.
+- Prefer `bg-snitch-lift` / `bg-snitch-paper` / `border-snitch-ink/10` over hard-coded `#0E0E10`, `#141416`, `border-white/10`, or `bg-black` on logged-in surfaces (header, chat, sidebar, modals, dropdowns, toasts, mobile drawer).
 - Keep `--snitch-on-spot` near-black for text on yellow fills. Never leave fog/cream type on a yellow face.
-- Use `--snitch-lift` instead of bare `white` in `color-mix` surface lifts.
-- Use `--snitch-print-blend` (`multiply` light / `soft-light` dark) for print overlays on paper.
-- Light spot stays `#FFD60A`; dark / app spot is `#FCD700`. Genuine errors may stay `#E5341D`. App alerts and "lower than" badges use pink `#FF3D8B`.
-- Caution Tape tokens (`--snitch-caution-*`) stay fixed for landing accents and TrackedBy.
-- Chart series read live CSS vars (`snitchTheme.ts`). Dark: You = `#FCD700`, rivals = pink/blue/green/orange (`SNITCH_RIVAL_COLOURS_DARK`), rivals' average = dashed fog. Light: You = ink, existing teal/red rival set. Growth filter chips, legends, and lines share `snitchAccountColour(handle)` (stable hash; strip leading `@`) so dots match series in both modes. ApexCharts use `snitchApexTheme()` (`theme.mode: 'dark'` on the night shell) so axis labels and tooltips stay readable.
-- Line charts must join sparse weeks: ApexCharts 7 has no `connectNulls`, so null category slots break strokes. Use `resources/js/lib/lineChart.ts` (`connectedLineData` + datetime `{x,y}` points, drop nulls). You stroke width 3; rivals 2. Empty post weeks stay null in `GrowthMetricsBuilder` (no false zero plunge); Average X× usual stays null until PI has ≥3 priors.
-- Never invert ink↔paper for selected chips in dark (pale pill + pale text). Use `.snitch-choice` / `.snitch-choice-active` (light selected = ink + paper text; dark selected = `#1E1E22` + cream outline/text, never yellow; idle = lift / `#1A1A1D` + fog border). `.snitch-seg` follows the same grey/cream selected state in dark. Format tags use `.snitch-format-tag` (yellow mono label on night; no yellow slab). Meter bars use `.snitch-meter-fill` / `-lead` (ink in light; dark lead stays yellow). Heat / density cells use `--snitch-heat` (ink in light, yellow in dark).
-- Light sidebar active item highlights the label only (`html:not(.dark) ... [data-active=true] > span:last-child`), not a full-width yellow bar. Dark `--sidebar-accent` is grey `#1E1E22` (cream text) so hover is never yellow. The current item uses `.snitch-nav-current` / `data-[active=true]:bg-[#fcd700]` so it stays yellow `#FCD700` + black text even on hover. Sidebar rows are `h-8` (32px) with 14px type, no truncate. Group labels are `h-3.5` with `pt-3` (10-12px) above and `mb-1` below so groups read as separate blocks. Product nav is MCP-first: Dashboard, Chat, Competitors, Connect your AI (App group), Admin collapsible for admins, Billing/Settings in the footer. The Admin overview link is exact `/admin` so `/admin/*` does not highlight both Admin and the child page. Off admin, the logo block is `h-12` with `p-2` and the footer uses `p-2` plus a `h-12` user chip. On `/admin`, logo/footer padding is tighter (`h-10`, less py) and group gaps use `tight`.
+- Use `.snitch-choice` / `.snitch-choice-active` and `.snitch-seg` for pills (grey selected in dark; ink selected in light - never yellow). Yellow stays on headlines, primary buttons, and the one active sidebar item.
+- App header (`AppSidebarHeader`) uses `bg-snitch-paper` + `border-snitch-ink/10` so it matches the page in both modes.
+- Chart series read live CSS vars (`snitchTheme.ts`). ApexCharts use `snitchApexTheme()`.
+
+## Sidebar spacing
+
+Product nav is MCP-first: Dashboard, Chat, Competitors, Connect your AI (App group), Admin collapsible for admins, Billing/Settings in the footer. Rows are ~44px (`2.75rem`) with 14px type, no truncate. Comfortable group gaps (`pt-4`, `mb-2` labels, `gap-1` between rows). Logo block and footer use `py-3`. Must still fit without a scrollbar on an 800px-tall window with Admin collapsed.
 
 ## Public shell is pinned to Caution Tape night
 
-- `PublicLayout` carries `snitch-public-shell dark`, so every public page (landing, pricing, blog, legal, contact, 404, agents, analytics, onboarding) renders the night snitch tokens and `dark:` variants whatever the OS / appearance cookie. Light and dark visitors see the same page; the logged-in app is also pinned to night via `appNight`.
-- Public page copy uses Caution Tape classes (`text-snitch-caution-fog` + `/70`-`/85` for secondary, `snitch-hero-display` headings, `border-white/10 bg-[#141416]` panels, yellow `bg-snitch-caution-yellow` primary / fog-outline secondary buttons). Never `text-neutral-950`, `bg-white` cards, `text-xs`, or `line-clamp` on the black shell.
+- `PublicLayout` carries `snitch-public-shell dark`, so every public page renders the night snitch tokens whatever the OS / appearance cookie.
 - Sections that are deliberately cream/white (e.g. `/beta`) add `snitch-light` to re-scope the day tokens.

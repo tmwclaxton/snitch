@@ -107,23 +107,23 @@
 :root,
 .snitch-light {
     /*
-      Evidence File (logged-in app) - cream archive paper + highlighter yellow.
-      Caution Tape tokens are landing-only accents (black / bold yellow / pink).
+      Logged-in light shell - cream Caution Tape day (landing fog paper),
+      near-black ink, bold yellow spot, pink alerts. Not the old beige Evidence File.
     */
-    --snitch-paper: #f3eee3;
-    --snitch-fog: #ebe4d6;
-    --snitch-ink: #141414;
+    --snitch-paper: #edeae2;
+    --snitch-fog: #e4e0d6;
+    --snitch-ink: #0e0e10;
     /* Stable press / stock for film gutters, ticket rings, type on press */
-    --snitch-press: #141414;
-    --snitch-stock: #f3eee3;
-    --snitch-on-spot: #141414;
+    --snitch-press: #0e0e10;
+    --snitch-stock: #edeae2;
+    --snitch-on-spot: #0e0e10;
     --snitch-lift: #ffffff;
     --snitch-print-blend: multiply;
-    --snitch-spot: #ffd60a;
-    --snitch-accent: #ffd60a;
-    --snitch-marker: #ffd60a;
-    --snitch-alert: #e5341d;
-    --snitch-heat: #141414;
+    --snitch-spot: #fcd700;
+    --snitch-accent: #fcd700;
+    --snitch-marker: #fcd700;
+    --snitch-alert: #ff3d8b;
+    --snitch-heat: #0e0e10;
     /* Darker highlighter mix for chart stipple / heat cells (AA on cream). */
     --snitch-stipple-spot: color-mix(in oklab, var(--snitch-spot) 42%, var(--snitch-press));
     --snitch-teal: #3a5f6b;
@@ -132,16 +132,16 @@
     --snitch-caution-yellow: #fcd700;
     --snitch-caution-pink: #ff3d8b;
     --snitch-caution-fog: #edeae2;
-    --snitch-grade-tint: rgba(255, 214, 10, 0.2);
-    --snitch-grade-shadow: rgba(20, 20, 20, 0.42);
-    --snitch-grade-fade: rgba(243, 238, 227, 0.35);
-    --snitch-grade-warm: rgba(255, 214, 10, 0.12);
+    --snitch-grade-tint: rgba(252, 215, 0, 0.2);
+    --snitch-grade-shadow: rgba(14, 14, 16, 0.42);
+    --snitch-grade-fade: rgba(237, 234, 226, 0.35);
+    --snitch-grade-warm: rgba(252, 215, 0, 0.12);
     --snitch-grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
-    --snitch-halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Ccircle cx='2' cy='2' r='1.1' fill='%23141414' fill-opacity='0.16'/%3E%3C/svg%3E");
-    --snitch-tape: rgba(255, 214, 10, 0.42);
-    --snitch-washi: rgba(243, 238, 227, 0.72);
+    --snitch-halftone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Ccircle cx='2' cy='2' r='1.1' fill='%230e0e10' fill-opacity='0.14'/%3E%3C/svg%3E");
+    --snitch-tape: rgba(252, 215, 0, 0.42);
+    --snitch-washi: rgba(237, 234, 226, 0.72);
     --snitch-torn-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 24' preserveAspectRatio='none'%3E%3Cpath fill='black' d='M0 10 C14 2 22 18 36 9 C50 0 58 17 74 10 C90 3 98 18 114 9 C130 0 140 17 156 10 C172 3 180 18 196 9 C214 0 222 17 240 10 C256 3 266 18 282 9 C298 0 308 17 324 10 C340 3 350 18 366 9 C382 2 392 16 400 10 L400 24 L0 24 Z'/%3E%3C/svg%3E");
-    --snitch-washi-fill: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='32' viewBox='0 0 64 32'%3E%3Crect width='64' height='32' fill='%23ffd60a' fill-opacity='0.32'/%3E%3Cg stroke='%23c9a000' stroke-opacity='0.28' stroke-width='0.5'%3E%3Cpath d='M0 6h64M0 12h64M0 18h64M0 24h64'/%3E%3C/g%3E%3C/svg%3E");
+    --snitch-washi-fill: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='32' viewBox='0 0 64 32'%3E%3Crect width='64' height='32' fill='%23fcd700' fill-opacity='0.32'/%3E%3Cg stroke='%23c9a000' stroke-opacity='0.28' stroke-width='0.5'%3E%3Cpath d='M0 6h64M0 12h64M0 18h64M0 24h64'/%3E%3C/g%3E%3C/svg%3E");
     --snitch-ticket-clip: polygon(
         0% 8%,
         3% 0%,
@@ -169,42 +169,42 @@
     /* Ghost outline width: ink ring between outer clip and inset face */
     --snitch-ticket-stroke: 2px;
 
-    --background: #f3eee3;
-    --foreground: #141414;
+    --background: #edeae2;
+    --foreground: #0e0e10;
     --card: #ffffff;
-    --card-foreground: #141414;
+    --card-foreground: #0e0e10;
     --popover: #ffffff;
-    --popover-foreground: #141414;
-    --primary: #141414;
-    --primary-foreground: #f3eee3;
-    --secondary: #ebe4d6;
-    --secondary-foreground: #141414;
-    --muted: #ebe4d6;
+    --popover-foreground: #0e0e10;
+    --primary: #fcd700;
+    --primary-foreground: #0e0e10;
+    --secondary: #e4e0d6;
+    --secondary-foreground: #0e0e10;
+    --muted: #e4e0d6;
     --muted-foreground: #4a4740;
-    --accent: #ebe4d6;
-    --accent-foreground: #141414;
-    --destructive: #e5341d;
+    --accent: #e4e0d6;
+    --accent-foreground: #0e0e10;
+    --destructive: #ff3d8b;
     --destructive-foreground: #ffffff;
-    --border: rgb(20 20 20 / 0.1);
-    --input: #ebe4d6;
-    --ring: #141414;
-    /* Chart series: ink / teal / alert / warm brown / slate - AA on cream */
-    --chart-1: #141414;
+    --border: rgb(14 14 16 / 0.12);
+    --input: #ffffff;
+    --ring: #0e0e10;
+    /* Chart series: ink / teal / pink / warm brown / slate - AA on cream */
+    --chart-1: #0e0e10;
     --chart-2: #3a5f6b;
-    --chart-3: #e5341d;
+    --chart-3: #ff3d8b;
     --chart-4: #8b5a2b;
     --chart-5: #5b7c99;
     --radius: 0.15rem;
-    --sidebar-background: #f3eee3;
-    --sidebar-foreground: #141414;
-    --sidebar-primary: #141414;
-    --sidebar-primary-foreground: #f3eee3;
-    --sidebar-accent: color-mix(in oklab, #141414 6%, #f3eee3);
-    --sidebar-accent-foreground: #141414;
-    --sidebar-border: rgb(20 20 20 / 0.1);
-    --sidebar-ring: #141414;
-    --sidebar: #f3eee3;
-    --snitch-heat: #141414;
+    --sidebar-background: #edeae2;
+    --sidebar-foreground: #0e0e10;
+    --sidebar-primary: #fcd700;
+    --sidebar-primary-foreground: #0e0e10;
+    --sidebar-accent: #e0ddd4;
+    --sidebar-accent-foreground: #0e0e10;
+    --sidebar-border: rgb(14 14 16 / 0.12);
+    --sidebar-ring: #fcd700;
+    --sidebar: #edeae2;
+    --snitch-heat: #0e0e10;
 }
 
 .dark {
@@ -212,7 +212,6 @@
       Authenticated night shell - Caution Tape night (matches live /pricing).
       Paper #0E0E10, fog type, bold yellow spot, thin white/10 borders.
       Press / stock / on-spot stay near-black + cream for film and yellow fills.
-      Light mode (:root) keeps Evidence File cream unchanged.
     */
     --snitch-paper: #0e0e10;
     --snitch-fog: #141416;
@@ -225,7 +224,7 @@
     --snitch-spot: #fcd700;
     --snitch-accent: #fcd700;
     --snitch-marker: #fcd700;
-    --snitch-alert: #e5341d;
+    --snitch-alert: #ff3d8b;
     --snitch-heat: #fcd700;
     --snitch-stipple-spot: color-mix(in oklab, var(--snitch-spot) 55%, var(--snitch-stock));
     --snitch-teal: #7a9aa6;
@@ -317,48 +316,42 @@ html.dark *::-webkit-scrollbar-thumb:hover {
     background: color-mix(in oklab, var(--snitch-ink) 58%, transparent);
 }
 
-html:has(.snitch-public-shell),
-html:has(.snitch-app-night),
-html[data-app-night='1'] {
+html:has(.snitch-public-shell) {
     background-color: #0e0e10;
     color-scheme: dark;
 }
 
 /*
- * Night sidebar: compact 28px rows. Hover is grey. The current item
- * (.snitch-nav-current / data-active) stays yellow even while hovered.
+ * Sidebar rows ~44-48px. Hover is grey. The current item stays yellow
+ * in both light and dark (full row fill, black type on yellow).
  */
-html.dark [data-sidebar='menu-button'][data-size='sm'],
-html:has(.snitch-app-night) [data-sidebar='menu-button'][data-size='sm'],
-html[data-app-night='1'] [data-sidebar='menu-button'][data-size='sm'] {
-    height: 1.75rem;
-    min-height: 1.75rem;
+[data-sidebar='menu-button'][data-size='sm'],
+[data-sidebar='menu-button'][data-size='default'] {
+    height: 2.75rem;
+    min-height: 2.75rem;
     align-items: center;
     padding-top: 0;
     padding-bottom: 0;
+    font-size: 0.875rem;
+}
+
+html:not(.dark) [data-sidebar='menu-button']:hover:not([data-active='true']):not(.snitch-nav-current),
+html:not(.dark) [data-sidebar='menu-button']:active:not([data-active='true']):not(.snitch-nav-current) {
+    background-color: #e0ddd4 !important;
+    color: #0e0e10 !important;
 }
 
 html.dark [data-sidebar='menu-button']:hover:not([data-active='true']):not(.snitch-nav-current),
-html.dark [data-sidebar='menu-button']:active:not([data-active='true']):not(.snitch-nav-current),
-html:has(.snitch-app-night) [data-sidebar='menu-button']:hover:not([data-active='true']):not(.snitch-nav-current),
-html[data-app-night='1'] [data-sidebar='menu-button']:hover:not([data-active='true']):not(.snitch-nav-current) {
+html.dark [data-sidebar='menu-button']:active:not([data-active='true']):not(.snitch-nav-current) {
     background-color: #1e1e22 !important;
     color: #edeae2 !important;
 }
 
-html.dark .snitch-nav-current,
-html.dark .snitch-nav-current:hover,
-html.dark .snitch-nav-current:focus,
-html.dark [data-sidebar='menu-button'][data-active='true'],
-html.dark [data-sidebar='menu-button'][data-active='true']:hover,
-html:has(.snitch-app-night) .snitch-nav-current,
-html:has(.snitch-app-night) .snitch-nav-current:hover,
-html:has(.snitch-app-night) [data-sidebar='menu-button'][data-active='true'],
-html:has(.snitch-app-night) [data-sidebar='menu-button'][data-active='true']:hover,
-html[data-app-night='1'] .snitch-nav-current,
-html[data-app-night='1'] .snitch-nav-current:hover,
-html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true'],
-html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover {
+.snitch-nav-current,
+.snitch-nav-current:hover,
+.snitch-nav-current:focus,
+[data-sidebar='menu-button'][data-active='true'],
+[data-sidebar='menu-button'][data-active='true']:hover {
     background-color: #fcd700 !important;
     color: #0e0e10 !important;
 }
@@ -469,10 +462,9 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
 
 
     /*
-     * Logged-in app chrome: Caution Tape night (matches the public landing).
-     * Paper #0E0E10, fog type, lifted panels, yellow spot, pink alerts.
+     * Logged-in app chrome follows Appearance (light cream / dark night).
      * Headlines: Archivo Black uppercase. Body: Inter. Labels/stats: Space Mono.
-     * Appearance no longer flips this shell to Evidence File cream.
+     * Yellow spot for primary buttons + selected sidebar; pills stay grey.
      */
     .snitch-app-chrome {
         background-color: var(--snitch-paper);
@@ -496,30 +488,6 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
 
     [data-slot='sidebar'][data-mobile='true'] {
         background-color: var(--snitch-paper);
-    }
-
-    /*
-     * Light sidebar: active item is a highlighter hugging the label,
-     * not a full-width yellow slab. Dark keeps the yellow fill.
-     */
-    html:not(.dark) .snitch-app-chrome [data-slot='sidebar-menu-button'][data-active='true'] {
-        background-color: transparent !important;
-        background-image: none !important;
-    }
-
-    html:not(.dark) .snitch-app-chrome [data-slot='sidebar-menu-button'][data-active='true'] > span:last-child {
-        background-color: transparent;
-        width: max-content;
-        max-width: 100%;
-        flex: 0 1 auto;
-    }
-
-    html:not(.dark) .snitch-app-chrome [data-slot='sidebar-menu-button'][data-active='true'] .snitch-nav-label {
-        background-color: var(--snitch-spot);
-        color: var(--snitch-ink);
-        box-decoration-break: clone;
-        -webkit-box-decoration-break: clone;
-        padding: 0.05em 0.28em;
     }
 
     .snitch-app-chrome .snitch-app-shell {
@@ -2944,13 +2912,18 @@ html[data-app-night='1'] [data-sidebar='menu-button'][data-active='true']:hover 
     .snitch-chat-md-body.snitch-md {
         font-size: 15px;
         line-height: 1.65;
-        color: #edeae2;
+        color: var(--snitch-ink);
     }
 
     .snitch-chat-md-body.snitch-md a {
-        color: #fcd700;
+        color: color-mix(in oklab, var(--snitch-ink) 85%, var(--snitch-spot));
         text-decoration: underline;
+        text-decoration-color: var(--snitch-spot);
         text-underline-offset: 2px;
+    }
+
+    .dark .snitch-chat-md-body.snitch-md a {
+        color: #fcd700;
     }
 
     .snitch-md-table-wrap {

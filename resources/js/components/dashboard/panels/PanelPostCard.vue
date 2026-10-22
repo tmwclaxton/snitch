@@ -44,7 +44,7 @@ function postedLabel(iso: string | null | undefined): string {
         </p>
         <div
             v-if="payload.thumbnail_url"
-            class="mt-3 overflow-hidden rounded border border-snitch-ink/10 bg-[#1a1a1d]"
+            class="mt-3 overflow-hidden rounded border border-snitch-ink/10 bg-snitch-fog"
         >
             <img
                 :src="payload.thumbnail_url"

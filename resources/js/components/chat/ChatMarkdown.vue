@@ -101,7 +101,7 @@ function normalizeUrl(url: string): string {
 </script>
 
 <template>
-    <div class="snitch-chat-md space-y-1 text-[15px] leading-relaxed text-[#EDEAE2]">
+    <div class="snitch-chat-md space-y-1 text-[15px] leading-relaxed text-snitch-ink">
         <template
             v-for="(segment, index) in segments"
             :key="index"
