@@ -47,6 +47,14 @@ type Freshness = {
     failed_handles: string[];
 };
 
+type Signals = {
+    cadence_days: Array<{ label: string; posted: boolean }>;
+    own_posts_7d: number | null;
+    format_mix: Array<{ label: string; count: number }>;
+    best_slot_label: string | null;
+    best_slot_sample_count: number | null;
+};
+
 type Brief = {
     empty: boolean;
     empty_reason: string | null;
@@ -57,6 +65,7 @@ type Brief = {
     own_activity: OwnBullet[];
     competitor_activity: CompetitorItem[];
     suggestions: Suggestion[];
+    signals?: Signals | null;
     freshness: Freshness;
     chat_url: string;
     competitors_url: string;
@@ -127,10 +136,32 @@ function competitorTextWithoutHandle(item: CompetitorItem): string {
 /** Compact fact lines from a long own-activity sentence. */
 function ownFactLines(text: string): string[] {
     return text
-        .split(/\s+-\s+/)
+        .split(/\s*(?:·|-)\s*/)
         .map((part) => part.trim())
         .filter((part) => part !== '');
 }
+
+function timesUsualPct(post: BriefPost): number | null {
+    if (typeof post.times_usual !== 'number' || ! Number.isFinite(post.times_usual) || post.times_usual <= 0) {
+        return null;
+    }
+
+    // Cap the bar at 5x so outliers stay readable.
+    return Math.min(100, Math.round((post.times_usual / 5) * 100));
+}
+
+const signals = computed(() => props.brief.signals ?? null);
+const hasSignals = computed(() => {
+    const s = signals.value;
+
+    if (! s) {
+        return false;
+    }
+
+    return (s.cadence_days?.length ?? 0) > 0
+        || (s.format_mix?.length ?? 0) > 0
+        || !! s.best_slot_label;
+});
 </script>
 
 <template>
@@ -150,8 +181,65 @@ function ownFactLines(text: string): string[] {
                         v-if="dateLabel"
                         class="text-base text-snitch-ink/80"
                     >
-                        Brief date: {{ dateLabel }}
+                        <span class="font-medium text-snitch-ink">Brief date</span>
+                        {{ dateLabel }}
                     </p>
+                    <div
+                        v-if="!brief.empty && hasSignals && signals"
+                        class="flex flex-wrap items-end gap-6 pt-2"
+                    >
+                        <div
+                            v-if="signals.cadence_days.length > 0"
+                            class="space-y-2"
+                        >
+                            <p class="text-sm font-semibold uppercase tracking-wide text-snitch-ink/80">
+                                Your 7-day cadence
+                                <span
+                                    v-if="signals.own_posts_7d !== null"
+                                    class="ml-1 font-normal normal-case tracking-normal text-snitch-ink/70"
+                                >
+                                    · {{ signals.own_posts_7d }} posts
+                                </span>
+                            </p>
+                            <div class="flex items-end gap-1.5">
+                                <div
+                                    v-for="(day, idx) in signals.cadence_days"
+                                    :key="`cadence-${idx}`"
+                                    class="flex w-7 flex-col items-center gap-1"
+                                >
+                                    <span
+                                        class="block w-full rounded-sm"
+                                        :class="day.posted ? 'h-8 bg-snitch-ink' : 'h-3 bg-snitch-ink/15'"
+                                        :title="day.posted ? `${day.label}: posted` : `${day.label}: quiet`"
+                                    />
+                                    <span class="text-xs font-medium text-snitch-ink/70">{{ day.label }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div
+                            v-if="signals.format_mix.length > 0"
+                            class="flex flex-wrap gap-2"
+                        >
+                            <span
+                                v-for="row in signals.format_mix"
+                                :key="row.label"
+                                class="inline-flex items-center gap-1.5 rounded-full bg-snitch-ink/10 px-2.5 py-1 text-sm text-snitch-ink"
+                            >
+                                <span class="font-medium">{{ row.label }}</span>
+                                <span class="text-snitch-ink/70">{{ row.count }}</span>
+                            </span>
+                        </div>
+                        <p
+                            v-if="signals.best_slot_label"
+                            class="text-sm text-snitch-ink/80"
+                        >
+                            <span class="font-semibold text-snitch-ink">Best slot</span>
+                            {{ signals.best_slot_label }}
+                            <template v-if="signals.best_slot_sample_count !== null">
+                                · n={{ signals.best_slot_sample_count }}
+                            </template>
+                        </p>
+                    </div>
                 </header>
 
                 <section
@@ -310,6 +398,16 @@ function ownFactLines(text: string): string[] {
                                                     >
                                                         {{ post.times_usual_label }}
                                                     </span>
+                                                    <span
+                                                        v-if="timesUsualPct(post) !== null"
+                                                        class="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-snitch-ink/10"
+                                                        :title="post.times_usual_label || undefined"
+                                                    >
+                                                        <span
+                                                            class="block h-full rounded-full bg-snitch-ink"
+                                                            :style="{ width: `${timesUsualPct(post)}%` }"
+                                                        />
+                                                    </span>
                                                 </span>
                                             </a>
                                         </div>
@@ -379,6 +477,16 @@ function ownFactLines(text: string): string[] {
                                                         class="block text-snitch-ink/85"
                                                     >
                                                         {{ post.times_usual_label }}
+                                                    </span>
+                                                    <span
+                                                        v-if="timesUsualPct(post) !== null"
+                                                        class="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-snitch-ink/10"
+                                                        :title="post.times_usual_label || undefined"
+                                                    >
+                                                        <span
+                                                            class="block h-full rounded-full bg-snitch-ink"
+                                                            :style="{ width: `${timesUsualPct(post)}%` }"
+                                                        />
                                                     </span>
                                                     <span
                                                         v-if="post.hook || post.caption"

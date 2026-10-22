@@ -137,6 +137,9 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
             ->middleware('throttle:20,1')
             ->name('curator-tokens.destroy');
         Route::get('/automation-runs', [AutomationRunController::class, 'index'])->name('automation-runs.index');
+        Route::post('/automation-runs/kickoff-brief', [AutomationRunController::class, 'kickoffBrief'])
+            ->middleware('throttle:10,1')
+            ->name('automation-runs.kickoff-brief');
         Route::post('/automation-runs/{run}/revoke', [AutomationRunController::class, 'revoke'])
             ->middleware('throttle:20,1')
             ->name('automation-runs.revoke');

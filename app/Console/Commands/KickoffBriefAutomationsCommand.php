@@ -2,8 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Models\AutomationRun;
 use App\Models\User;
 use App\Services\Automations\BriefAutomationKickoff;
+use App\Services\Automations\CursorWebhookTriggerGuard;
 use App\Support\ScheduleHeartbeat;
 use Illuminate\Console\Command;
 use Throwable;
@@ -11,11 +13,12 @@ use Throwable;
 class KickoffBriefAutomationsCommand extends Command
 {
     protected $signature = 'snitch:kickoff-brief-automations
-        {--user= : Limit to a single user id}';
+        {--user= : Limit to a single user id}
+        {--force : Bypass the recent-trigger guard}';
 
     protected $description = 'Trigger Cursor Automations Executive Brief webhooks for users with trackers (no-op when not configured)';
 
-    public function handle(BriefAutomationKickoff $kickoff): int
+    public function handle(BriefAutomationKickoff $kickoff, CursorWebhookTriggerGuard $guard): int
     {
         if (! $kickoff->configured()) {
             $this->info('Brief automation not configured; skipping.');
@@ -34,6 +37,10 @@ class KickoffBriefAutomationsCommand extends Command
         $skipped = 0;
 
         foreach ($users as $user) {
+            if ($this->option('force')) {
+                $guard->forget(AutomationRun::TYPE_BRIEF, (int) $user->id);
+            }
+
             try {
                 $result = $kickoff->kickOff($user);
             } catch (Throwable $e) {

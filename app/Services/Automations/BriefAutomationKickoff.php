@@ -111,11 +111,12 @@ class BriefAutomationKickoff
     {
         return <<<'PROMPT'
 Write today's Executive Brief for this Snitch user from stored MCP data only.
-Authenticate to mcp_url with Authorization: Bearer <scoped_token> from this payload.
-Call read tools (get_daily_brief, get_executive_brief, list_trackers, get_competitor_posts, get_top_posts, get_posting_times, get_format_mix) as needed.
+You likely only have Memories as a Cursor tool - call Snitch MCP yourself via HTTPS JSON-RPC POST to mcp_url with Authorization: Bearer <scoped_token>, Content-Type application/json, body {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"TOOL","arguments":{}}}.
+Call whoami, get_daily_brief, get_executive_brief, then evidence tools (list_trackers, get_competitor_posts, get_top_posts, get_posting_times, get_format_mix) as needed.
 Never trust a user_id argument for scope - the token is already bound to one user and one run.
-Save with save_executive_brief (headline, summary, sections, suggestions with why and evidence post ids).
-Every number and handle must cite stored data. If you cannot ground a claim, omit it.
+Draft like a sharp consultant: concrete headline with a real number/gap, interpretive summary (no repeated rivals-published filler), optional own/competitors sections, 3-5 suggestions with title+why+evidence_post_ids.
+Bake format and posting time into the suggestion title when grounded. Each why must cite one real post (handle + date or Nx).
+Save with save_executive_brief. Every number and handle must cite stored data. If you cannot ground a claim, omit it. No em dashes.
 When finished, the save tool closes the run and revokes the token.
 PROMPT;
     }

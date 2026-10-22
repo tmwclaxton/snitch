@@ -30,4 +30,9 @@ class CursorWebhookTriggerGuard
     {
         Cache::put($this->key($type, $userId, $extra), now()->toIso8601String(), $this->seconds());
     }
+
+    public function forget(string $type, int $userId, ?string $extra = null): void
+    {
+        Cache::forget($this->key($type, $userId, $extra));
+    }
 }

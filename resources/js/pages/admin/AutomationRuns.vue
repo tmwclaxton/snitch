@@ -52,6 +52,43 @@ defineProps<{
                 </p>
             </header>
 
+            <section
+                v-if="brief_configured"
+                class="rounded border border-snitch-ink/10 bg-snitch-lift p-4"
+            >
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-snitch-ink/80">
+                    Kick off brief automation
+                </h2>
+                <p class="mt-1 text-sm text-snitch-ink/70">
+                    Posts the real webhook for one user (force clears the 180s guard).
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <Form
+                        v-for="userId in [1, 6]"
+                        :key="`kick-${userId}`"
+                        v-bind="AutomationRunController.kickoffBrief.form()"
+                        class="inline"
+                    >
+                        <input
+                            type="hidden"
+                            name="user_id"
+                            :value="userId"
+                        >
+                        <input
+                            type="hidden"
+                            name="force"
+                            value="1"
+                        >
+                        <button
+                            type="submit"
+                            class="snitch-btn snitch-btn-spot px-3 py-1.5 text-sm font-medium"
+                        >
+                            User {{ userId }}
+                        </button>
+                    </Form>
+                </div>
+            </section>
+
             <section class="rounded border border-snitch-ink/10 bg-snitch-lift p-4">
                 <h2 class="flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
                     <Bot

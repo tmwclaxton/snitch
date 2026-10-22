@@ -4,11 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AutomationRun;
+use App\Models\User;
 use App\Services\Automations\AutomationRunTokenIssuer;
+use App\Services\Automations\BriefAutomationKickoff;
+use App\Services\Automations\CursorWebhookTriggerGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class AutomationRunController extends Controller
 {
@@ -46,6 +50,70 @@ class AutomationRunController extends Controller
             'chat_configured' => filled(config('services.cursor_automations.chat.webhook_url'))
                 && filled(config('services.cursor_automations.chat.webhook_token')),
         ]);
+    }
+
+    public function kickoffBrief(
+        Request $request,
+        BriefAutomationKickoff $kickoff,
+        CursorWebhookTriggerGuard $guard,
+    ): RedirectResponse {
+        $data = $request->validate([
+            'user_id' => ['required', 'integer', 'min:1'],
+            'force' => ['sometimes', 'boolean'],
+        ]);
+
+        $user = User::query()->find((int) $data['user_id']);
+        if ($user === null) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => __('User not found.'),
+            ]);
+
+            return to_route('admin.automation-runs.index');
+        }
+
+        if (! $kickoff->configured()) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => __('Brief webhook is not configured.'),
+            ]);
+
+            return to_route('admin.automation-runs.index');
+        }
+
+        if ($request->boolean('force')) {
+            $guard->forget(AutomationRun::TYPE_BRIEF, (int) $user->id);
+        }
+
+        try {
+            $result = $kickoff->kickOff($user);
+        } catch (Throwable $e) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => $e->getMessage(),
+            ]);
+
+            return to_route('admin.automation-runs.index');
+        }
+
+        if (! $result['kicked_off']) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => __('Brief kickoff skipped: :reason', ['reason' => (string) $result['reason']]),
+            ]);
+
+            return to_route('admin.automation-runs.index');
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Brief automation kicked off for user :id (run :uuid).', [
+                'id' => $user->id,
+                'uuid' => $result['run']?->uuid ?? '?',
+            ]),
+        ]);
+
+        return to_route('admin.automation-runs.index');
     }
 
     public function revoke(Request $request, AutomationRun $run, AutomationRunTokenIssuer $tokens): RedirectResponse

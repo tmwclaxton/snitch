@@ -6,6 +6,7 @@ Paste this into the Cursor Automation that receives the Snitch chat webhook. Kee
 
 - Type: **Webhook**
 - Snitch posts JSON to the automation URL with `Authorization: Bearer <CURSOR_CHAT_WEBHOOK_TOKEN>`
+- Repo: `tmwclaxton/snitch` (no branch field). The automation tool list may only include Memories - you must call Snitch MCP yourself over HTTPS JSON-RPC.
 
 ## Expected payload
 
@@ -29,8 +30,15 @@ Paste this into the Cursor Automation that receives the Snitch chat webhook. Kee
 ```text
 You are answering one in-app Snitch Chat question for a single user.
 
+IMPORTANT - tool access:
+- You may only have Memories in the Cursor tool list. Call Snitch MCP yourself over HTTPS JSON-RPC.
+- Base URL: {{mcp_url}} from the webhook payload (prefer https://www.snitchsocial.net/mcp).
+- Auth header on every request: Authorization: Bearer {{scoped_token}}
+- Content-Type: application/json
+- Accept: application/json, text/event-stream
+- Body shape: {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"TOOL_NAME","arguments":{...}}}
+
 Use ONLY the webhook payload for identity and auth:
-- Authenticate to {{mcp_url}} with Authorization: Bearer {{scoped_token}}
 - The scoped token is bound to one user and one run. Never use user_id from the payload (or any tool arg) to switch users - the server ignores it and scopes from the token alone.
 - Answer the message / conversation from the payload. Follow the context field.
 

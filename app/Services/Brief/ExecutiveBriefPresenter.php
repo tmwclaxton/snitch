@@ -101,6 +101,7 @@ class ExecutiveBriefPresenter
             'own_activity' => $ownActivity,
             'competitor_activity' => $competitorActivity,
             'suggestions' => $suggestions,
+            'signals' => $this->signals($facts),
             'freshness' => $this->freshnessSummary($payload),
             'chat_url' => rtrim((string) config('app.url'), '/').'/chat',
             'competitors_url' => rtrim((string) config('app.url'), '/').'/competitors',
@@ -131,6 +132,7 @@ class ExecutiveBriefPresenter
             'own_activity' => [],
             'competitor_activity' => [],
             'suggestions' => [],
+            'signals' => $this->emptySignals(),
             'freshness' => [
                 'line' => null,
                 'failed_handles' => [],
@@ -144,6 +146,102 @@ class ExecutiveBriefPresenter
             ],
             'insufficient_data' => true,
             'app_url' => rtrim((string) config('app.url'), '/').'/executive-brief',
+        ];
+    }
+
+    /**
+     * Compact visual signals for the memo (cadence strip, format mix, best slot).
+     *
+     * @param  array<string, mixed>  $facts
+     * @return array{
+     *     cadence_days: list<array{label: string, posted: bool}>,
+     *     own_posts_7d: int|null,
+     *     format_mix: list<array{label: string, count: int}>,
+     *     best_slot_label: string|null,
+     *     best_slot_sample_count: int|null
+     * }
+     */
+    private function signals(array $facts): array
+    {
+        $own = is_array($facts['own'] ?? null) ? $facts['own'] : [];
+        $ownCadence = is_array($own['cadence'] ?? null) ? $own['cadence'] : [];
+        $posts7 = isset($own['posts_last_7d_count'])
+            ? (int) $own['posts_last_7d_count']
+            : (isset($ownCadence['posts_last_7d']) ? (int) $ownCadence['posts_last_7d'] : null);
+        $postedDays = is_array($ownCadence['posted_days_last_7'] ?? null)
+            ? $ownCadence['posted_days_last_7']
+            : (is_array($own['posted_days_last_7'] ?? null) ? $own['posted_days_last_7'] : null);
+
+        // Match facts cadence window: the previous 7 London calendar days (not today).
+        $cadenceDays = [];
+        $today = CarbonImmutable::now(DashboardMath::TIMEZONE)->startOfDay();
+        $hasDayKeys = is_array($postedDays) && $postedDays !== [];
+        for ($i = 7; $i >= 1; $i--) {
+            $day = $today->subDays($i);
+            $key = $day->toDateString();
+            $posted = false;
+            if ($hasDayKeys) {
+                $posted = in_array($key, $postedDays, true)
+                    || (bool) ($postedDays[$key] ?? false);
+            } elseif ($posts7 !== null) {
+                $posted = (7 - $i) < min(7, max(0, $posts7));
+            }
+            $cadenceDays[] = [
+                'label' => $day->format('D'),
+                'posted' => $posted,
+            ];
+        }
+
+        $formatMix = [];
+        $rawMix = is_array($own['posts_last_7d_by_format'] ?? null)
+            ? $own['posts_last_7d_by_format']
+            : (is_array($facts['format_mix']['own_7d'] ?? null) ? $facts['format_mix']['own_7d'] : []);
+        foreach ($rawMix as $label => $count) {
+            if (! is_string($label) || ! is_numeric($count) || (int) $count <= 0) {
+                continue;
+            }
+            $formatMix[] = ['label' => $label, 'count' => (int) $count];
+        }
+
+        $slot = is_array($facts['best_times']['today_slot'] ?? null)
+            ? $facts['best_times']['today_slot']
+            : null;
+        $slotLabel = null;
+        $sampleCount = null;
+        if (is_array($slot)) {
+            $sampleCount = isset($slot['sample_count']) ? (int) $slot['sample_count'] : null;
+            $start = is_string($slot['start'] ?? null) ? $slot['start'] : null;
+            $end = is_string($slot['end'] ?? null) ? $slot['end'] : null;
+            $label = is_string($slot['label'] ?? null) ? $slot['label'] : null;
+            $slotLabel = $label ?: (($start && $end) ? $start.'-'.$end : null);
+        }
+
+        return [
+            'cadence_days' => $cadenceDays,
+            'own_posts_7d' => $posts7,
+            'format_mix' => $formatMix,
+            'best_slot_label' => $slotLabel,
+            'best_slot_sample_count' => $sampleCount,
+        ];
+    }
+
+    /**
+     * @return array{
+     *     cadence_days: list<array{label: string, posted: bool}>,
+     *     own_posts_7d: int|null,
+     *     format_mix: list<array{label: string, count: int}>,
+     *     best_slot_label: string|null,
+     *     best_slot_sample_count: int|null
+     * }
+     */
+    private function emptySignals(): array
+    {
+        return [
+            'cadence_days' => [],
+            'own_posts_7d' => null,
+            'format_mix' => [],
+            'best_slot_label' => null,
+            'best_slot_sample_count' => null,
         ];
     }
 

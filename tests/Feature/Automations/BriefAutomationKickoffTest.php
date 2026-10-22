@@ -84,6 +84,7 @@ class BriefAutomationKickoffTest extends TestCase
 
         Http::assertSent(function ($request) use ($user): bool {
             $data = $request->data();
+            $context = (string) ($data['context'] ?? '');
 
             return $request->url() === 'https://api2.cursor.sh/automations/webhook/test-brief'
                 && $request->hasHeader('Authorization', 'Bearer brief-secret-token')
@@ -92,7 +93,9 @@ class BriefAutomationKickoffTest extends TestCase
                 && ($data['mode'] ?? null) === 'executive_brief'
                 && is_string($data['scoped_token'] ?? null)
                 && is_string($data['run_id'] ?? null)
-                && in_array('briefclub', $data['handles'] ?? [], true);
+                && in_array('briefclub', $data['handles'] ?? [], true)
+                && str_contains($context, 'tools/call')
+                && str_contains($context, 'jsonrpc');
         });
 
         $again = app(BriefAutomationKickoff::class)->kickOff($user);

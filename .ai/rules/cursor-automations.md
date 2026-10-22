@@ -27,4 +27,4 @@ Each kickoff creates an `automation_runs` row and a Sanctum token named `automat
 - `post_chat_reply` - automation chat write; `partial=true` streams; `done=true` / `partial=false` finalises
 
 ## Prompts for cursor.com
-`docs/cursor-automations/brief-prompt.md` and `chat-prompt.md` (generic; user specifics in webhook payload).
+`docs/cursor-automations/brief-prompt.md` and `chat-prompt.md` (generic; user specifics in webhook payload). Cursor.com automations may only expose Memories - prompts must tell the agent to call Snitch MCP over HTTPS JSON-RPC (`POST /mcp`, `Authorization: Bearer <scoped_token>`, `tools/call`). Ops: `snitch:automation-brief {user} --force`, admin Kick off buttons, deploy tag `[kickoff-brief-1-6]`.

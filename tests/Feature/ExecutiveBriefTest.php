@@ -50,6 +50,8 @@ class ExecutiveBriefTest extends TestCase
         $this->assertStringContainsString('max-w-[1280px]', $page);
         $this->assertStringContainsString("What you've been doing", $page);
         $this->assertStringContainsString('Our suggestions', $page);
+        $this->assertStringContainsString('Your 7-day cadence', $page);
+        $this->assertStringContainsString('timesUsualPct', $page);
         $this->assertStringNotContainsString('PanelBigNumber', $page);
         $this->assertStringNotContainsString('text-snitch-spot', $page);
     }

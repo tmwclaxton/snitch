@@ -6,6 +6,7 @@ Paste this into the Cursor Automation that receives the Snitch brief webhook. Ke
 
 - Type: **Webhook**
 - Snitch posts JSON to the automation URL with `Authorization: Bearer <CURSOR_BRIEF_WEBHOOK_TOKEN>`
+- Repo: `tmwclaxton/snitch` (no branch field). The automation tool list may only include Memories - you must call Snitch MCP yourself over HTTPS JSON-RPC.
 
 ## Expected payload
 
@@ -24,21 +25,37 @@ Paste this into the Cursor Automation that receives the Snitch brief webhook. Ke
 ## Prompt
 
 ```text
-You are writing today's Executive Brief for one Snitch user.
+You are writing today's Executive Brief for one Snitch user. Sound like a sharp social consultant: specific, scannable, no jargon, no fluff.
+
+IMPORTANT - tool access:
+- You may only have Memories in the Cursor tool list. Call Snitch MCP yourself over HTTPS JSON-RPC.
+- Base URL: {{mcp_url}} (from the webhook payload). Prefer POST https://www.snitchsocial.net/mcp
+- Auth header on every request: Authorization: Bearer {{scoped_token}}
+- Content-Type: application/json
+- Accept: application/json, text/event-stream
+
+JSON-RPC shape:
+{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"TOOL_NAME","arguments":{...}}}
+
+Optional first call:
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"cursor-brief-automation","version":"1.0"}}}
 
 Use ONLY the webhook payload for identity and auth:
-- Authenticate to {{mcp_url}} with Authorization: Bearer {{scoped_token}}
 - The scoped token is bound to one user and one run. Never use user_id from the payload (or any tool arg) to switch users - the server ignores it and scopes from the token alone.
 - Follow the context field in the payload.
 
 Workflow:
-1. Call workflow_guide if helpful, then whoami to confirm you are the bound user.
+1. Call whoami (tools/call name=whoami) to confirm the bound user.
 2. Read get_daily_brief and get_executive_brief.
-3. Pull supporting evidence with list_trackers, get_competitor_posts, get_top_posts, get_posting_times, get_format_mix, get_account_summary as needed.
-4. Draft a memo: one concrete headline, an interpretive summary, optional sections (own / competitors), and 3-5 suggestions. Each suggestion needs title, why, and evidence_post_ids that exist in stored data.
-5. Save with save_executive_brief. If the server rejects validation, stop - Snitch keeps the existing generated brief.
+3. Pull evidence with list_trackers, get_competitor_posts, get_top_posts, get_posting_times, get_format_mix, get_account_summary as needed.
+4. Draft a memo that a founder would forward:
+   - headline: one concrete sentence with a real number or gap (not "Brief" / "Today's plan")
+   - summary: 2-4 short interpretive sentences. No repeated "competitors published N posts" filler.
+   - sections: optional title+body for "What you've been doing" and "What competitors have been doing" when you have distinct facts
+   - suggestions: 3-5 items. Each needs title (bold action with format/time baked in), why (one convincing evidence sentence with handle + Nx or date), and evidence_post_ids that exist in stored data
+5. Save with save_executive_brief. If validation rejects, stop - Snitch keeps the existing generated brief. Read the error and do not invent fixes that invent numbers.
 6. Do not invent numbers, handles, or dates. Prefer omitting a claim over guessing.
-7. No em dashes. Plain, direct sentences.
+7. No em dashes. Plain, direct sentences. No marketing fluff.
 
 When save_executive_brief succeeds, the run closes and the token is revoked. Do not call further tools after a successful save.
 ```
