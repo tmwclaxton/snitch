@@ -84,25 +84,42 @@ class ExecutiveBriefPresenter
             ? $payload['curator_overrides']
             : [];
 
-        $summary = $this->resolveSummary($payload, $overrides, $facts);
-        $narrative = $this->resolveNarrative($payload, $summary);
-        $ownActivity = $this->ownActivityBullets($payload, $facts);
-        $competitorActivity = $this->competitorActivity($payload);
-        $suggestions = $this->resolveSuggestions($payload, $overrides, $facts);
-        $headlineParts = $this->splitHeadline($this->resolveHeadline($payload, $facts));
+        $agentSource = $this->resolveAgentSource($brief, $payload);
+        $agentPayload = $agentSource['payload'];
+        $hasAgentMemo = $agentSource['has_agent'];
+        $awaitingNarrative = ! $hasAgentMemo;
+
+        $summary = $hasAgentMemo
+            ? $this->resolveSummary($agentPayload, $overrides, $facts)
+            : null;
+        $narrative = $hasAgentMemo ? $this->agentNarrative($agentPayload) : null;
+        $ownActivity = $hasAgentMemo ? $this->ownActivityBullets($agentPayload, $facts) : [];
+        $competitorActivity = $hasAgentMemo ? $this->competitorActivity($agentPayload) : [];
+        $suggestions = $this->resolveSuggestions(
+            $hasAgentMemo ? $agentPayload : $payload,
+            $overrides,
+            $facts,
+        );
+        // Never clip the yellow headline into a subtitle repeat - wrap in the column instead.
+        $headline = $hasAgentMemo
+            ? $this->resolveHeadline($agentPayload, $facts)
+            : $this->resolveHeadline($payload, $facts);
         $signals = $this->signals($facts);
         $keyFigures = $this->keyFigures($facts, $payload);
-        $insufficient = ($narrative === null && $summary === null)
-            || ($ownActivity === [] && $competitorActivity === [] && $suggestions === []);
+        $insufficient = $suggestions === [];
 
         return [
             'empty' => false,
             'empty_reason' => null,
             'brief_date' => $brief->brief_date?->toDateString(),
             'generated_at' => $brief->generated_at?->timezone(DashboardMath::TIMEZONE)->toIso8601String(),
-            'headline' => $headlineParts['headline'],
-            'headline_detail' => $headlineParts['detail'],
+            'headline' => $headline,
+            'headline_detail' => null,
             'narrative' => $narrative,
+            'awaiting_narrative' => $awaitingNarrative,
+            'narrative_note' => $awaitingNarrative
+                ? 'Today\'s written brief is still drafting. Actions below use stored figures until the consultant rewrite lands.'
+                : null,
             'summary' => $summary,
             'summary_bullets' => $this->summaryBullets($summary),
             'own_activity' => $ownActivity,
@@ -110,7 +127,8 @@ class ExecutiveBriefPresenter
             'suggestions' => $suggestions,
             'signals' => $signals,
             'key_figures' => $keyFigures,
-            'show_cadence_visual' => $this->shouldShowCadenceVisual($headlineParts['headline'], $signals, $facts),
+            'show_cadence_visual' => $hasAgentMemo
+                && $this->shouldShowCadenceVisual($headline, $signals, $facts),
             'freshness' => $this->freshnessSummary($payload),
             'chat_url' => rtrim((string) config('app.url'), '/').'/chat',
             'competitors_url' => rtrim((string) config('app.url'), '/').'/competitors',
@@ -139,6 +157,8 @@ class ExecutiveBriefPresenter
             'headline' => null,
             'headline_detail' => null,
             'narrative' => null,
+            'awaiting_narrative' => false,
+            'narrative_note' => null,
             'summary' => null,
             'summary_bullets' => [],
             'own_activity' => [],
@@ -164,18 +184,58 @@ class ExecutiveBriefPresenter
     }
 
     /**
-     * Memo opening paragraph. Prefer the saved narrative; fall back to summary prose.
+     * Agent-written memo only. Never concatenate deterministic summary facts as "narrative".
      *
      * @param  array<string, mixed>  $payload
+     * @return array{has_agent: bool, payload: array<string, mixed>}
      */
-    private function resolveNarrative(array $payload, ?string $summary): ?string
+    private function resolveAgentSource(DailyBrief $brief, array $payload): array
     {
-        $narrative = is_string($payload['narrative'] ?? null) ? trim($payload['narrative']) : '';
-        if ($narrative !== '') {
-            return $narrative;
+        if ($this->hasAgentNarrative($payload)) {
+            return ['has_agent' => true, 'payload' => $payload];
         }
 
-        return $summary !== null && trim($summary) !== '' ? trim($summary) : null;
+        $prior = DailyBrief::query()
+            ->where('user_id', $brief->user_id)
+            ->where('status', 'ready')
+            ->where('id', '!=', $brief->id)
+            ->orderByDesc('brief_date')
+            ->limit(5)
+            ->get();
+
+        foreach ($prior as $candidate) {
+            $candidatePayload = $this->dailyPresenter->payload($candidate);
+            if ($this->hasAgentNarrative($candidatePayload)) {
+                return ['has_agent' => true, 'payload' => $candidatePayload];
+            }
+        }
+
+        return ['has_agent' => false, 'payload' => $payload];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function hasAgentNarrative(array $payload): bool
+    {
+        $narrative = is_string($payload['narrative'] ?? null) ? trim($payload['narrative']) : '';
+        if ($narrative === '') {
+            return false;
+        }
+
+        $automation = $payload['automation_overrides'] ?? null;
+
+        return is_array($automation) && $automation !== [];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function agentNarrative(array $payload): ?string
+    {
+        $narrative = is_string($payload['narrative'] ?? null) ? trim($payload['narrative']) : '';
+
+        return $narrative !== '' ? $narrative : null;
     }
 
     /**

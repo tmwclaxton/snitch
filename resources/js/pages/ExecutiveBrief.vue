@@ -72,6 +72,8 @@ type Brief = {
     headline: string | null;
     headline_detail?: string | null;
     narrative?: string | null;
+    awaiting_narrative?: boolean;
+    narrative_note?: string | null;
     summary: string | null;
     own_activity: OwnBullet[];
     competitor_activity: CompetitorItem[];
@@ -112,15 +114,11 @@ const headlineText = computed(() => {
     return 'Nothing sharp enough for a headline yet.';
 });
 
-const narrativeText = computed(() => {
-    const narrative = props.brief.narrative?.trim();
+const narrativeText = computed(() => props.brief.narrative?.trim() || null);
 
-    if (narrative) {
-        return narrative;
-    }
+const awaitingNarrative = computed(() => !! props.brief.awaiting_narrative);
 
-    return props.brief.summary?.trim() || null;
-});
+const narrativeNote = computed(() => props.brief.narrative_note?.trim() || null);
 
 const keyFigures = computed(() => props.brief.key_figures ?? []);
 
@@ -176,15 +174,9 @@ function competitorTextWithoutHandle(item: CompetitorItem): string {
                             · {{ dateLabel }}
                         </template>
                     </p>
-                    <h1 class="snitch-hero-display text-2xl leading-snug text-snitch-ink sm:text-3xl">
-                        <span class="snitch-highlight">{{ headlineText }}</span>
+                    <h1 class="snitch-hero-display max-w-[70ch] text-2xl leading-[1.2] text-snitch-ink sm:text-3xl">
+                        <span class="snitch-highlight inline box-decoration-clone break-words [overflow-wrap:anywhere]">{{ headlineText }}</span>
                     </h1>
-                    <p
-                        v-if="brief.headline_detail"
-                        class="max-w-[70ch] text-base leading-[1.6] text-snitch-ink/80"
-                    >
-                        {{ brief.headline_detail }}
-                    </p>
                 </header>
 
                 <section
@@ -216,10 +208,10 @@ function competitorTextWithoutHandle(item: CompetitorItem): string {
                                 {{ narrativeText }}
                             </p>
                             <p
-                                v-else
-                                class="max-w-[70ch] text-[17px] leading-[1.7] text-snitch-ink/80"
+                                v-else-if="awaitingNarrative && narrativeNote"
+                                class="max-w-[70ch] text-base leading-[1.65] text-snitch-ink/75"
                             >
-                                Not enough stored data for a narrative yet.
+                                {{ narrativeNote }}
                             </p>
 
                             <section

@@ -110,13 +110,17 @@ class BriefAutomationKickoff
     public function contextPrompt(): string
     {
         return <<<'PROMPT'
-Write today's Executive Brief for this Snitch user from stored MCP data only.
+Write today's Executive Brief for this Snitch user from stored MCP data only. Sound like a smart consultant talking out loud - interpret, do not vomit stats.
 You likely only have Memories as a Cursor tool - call Snitch MCP yourself via HTTPS JSON-RPC POST to mcp_url with Authorization: Bearer <scoped_token>, Content-Type application/json, body {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"TOOL","arguments":{}}}.
-Call whoami, get_daily_brief, get_executive_brief, then evidence tools (list_trackers, get_competitor_posts, get_top_posts, get_posting_times, get_format_mix) as needed.
+Call whoami, get_daily_brief, get_executive_brief, then evidence tools (list_trackers, get_competitor_posts, get_top_posts, get_posting_times, get_format_mix) as needed. Read captions/hooks so you can name the idea that worked.
 Never trust a user_id argument for scope - the token is already bound to one user and one run.
-Draft like a sharp consultant: concrete headline with a real number/gap (never "stored posts" jargon), interpretive summary (no repeated rivals-published filler), optional own/competitors sections, 3-5 suggestions with title+why+evidence_post_ids.
-Bake format and a time block into the suggestion title when grounded (evening 19:00-21:00, not a rival's exact minute). Prefer 3 suggestions: one post, one comment, one study-or-avoid. At most one avoid card. Each suggestion cites ONE post - title, why, and evidence_post_ids[0] must agree. Never praise a sub-1.2x post as a model. End titles with a period.
-Save with save_executive_brief. If validation returns errors, revise and save again (token stays open until ok=true). Every number and handle must cite stored data. If you cannot ground a claim, omit it. No em dashes. No ellipsis.
+Required fields for save_executive_brief:
+- headline: short yellow-block line (one breath). Concrete gap or insight. Not jargon. Keep it short so it wraps; never write a paragraph as the headline.
+- narrative: REQUIRED 80-140 words of flowing advice. What it means for THIS account, why it matters, what to do first. At most 4 numbers in the whole narrative. At most 2 sentences starting with @handle. Server rejects inventory dumps like "@a has 0 posts. @b posted 4 times. Followers 104."
+- summary: up to 3 interpretive sentences (no repeated rivals-published filler).
+- suggestions: prefer exactly 3. Each title says what to make (format + time block), why explains why it will work for this audience grounded in one evidence post (idea + handle + Nx/date), evidence_post_ids has that ONE post. Prefer one post, one comment, one study-or-avoid. Never praise a sub-1.2x post as a model. End titles with a period.
+Competitor section prose (if used): interpret moves, do not list stats per handle.
+Save with save_executive_brief. If validation returns errors, revise tone and grounding and save again (token stays open until ok=true). Every number and handle must cite stored data. If you cannot ground a claim, omit it. No em dashes. No ellipsis.
 When save returns ok=true, the run closes and the token is revoked.
 PROMPT;
     }
