@@ -340,12 +340,10 @@ PROMPT;
         }
 
         $dateBit = $cite['date_short'] !== null ? ' from '.$cite['date_short'] : '';
-        // Keep quiet-gap headlines; cite rebinding is for format/date/Nx consistency only.
+        // Keep quiet-gap headlines; otherwise plain-English takeaway (no @handle, no Nx).
         if (preg_match('/\bday(?:s)? quiet while rivals\b/iu', $headline) !== 1) {
-            $output['headline'] = '@'.$cite['handle'].' '.$cite['format']
-                .$dateBit
-                .' at '.$cite['multiplier_short']
-                .'. Post a '.$cite['format'].' today at '.$when.'.';
+            $output['headline'] = 'Rivals are winning with '.$cite['format']
+                .'s - post one today at '.$when.'.';
         }
 
         $clause = 'Strongest recent post: @'.$cite['handle'].' '.$cite['format']
@@ -368,9 +366,9 @@ PROMPT;
             $action['related_handles'] = [$cite['handle']];
             $action['related_post_ids'] = [$cite['post_id']];
             $action['title'] = 'Post a '.$cite['format'].' today at '.$when.'.';
-            $action['why'] = '@'.$cite['handle'].'\'s '.$cite['format']
+            $action['why'] = 'That '.$cite['format'].' idea is earning attention'
                 .$dateBit
-                .' got '.$cite['multiplier_label'].'.';
+                .' at '.$cite['multiplier_label'].'.';
             $output['actions'][0] = $action;
         }
 
