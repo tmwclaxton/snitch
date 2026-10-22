@@ -26,7 +26,7 @@ class WatchingYouTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
+                ->component('ExecutiveBrief')
                 ->missing('watching')
             );
     }
@@ -47,11 +47,11 @@ class WatchingYouTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
+                ->component('ExecutiveBrief')
                 ->missing('watching')
             );
 
-        $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
+        $dashboard = file_get_contents(resource_path('js/pages/ExecutiveBrief.vue'));
         $this->assertIsString($dashboard);
         $this->assertStringNotContainsString('Am I being tracked?', $dashboard);
         $this->assertStringNotContainsString('WatchingYouModal', $dashboard);

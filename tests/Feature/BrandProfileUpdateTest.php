@@ -154,7 +154,7 @@ class BrandProfileUpdateTest extends TestCase
 
         $this->assertNotFalse($sidebar);
         $this->assertStringContainsString("title: 'Competitors'", $sidebar);
-        $this->assertStringContainsString("title: 'Dashboard'", $sidebar);
+        $this->assertStringContainsString("title: 'Executive Brief'", $sidebar);
         $this->assertStringContainsString("title: 'Chat'", $sidebar);
         $this->assertStringContainsString("title: 'Connect your AI'", $sidebar);
         $this->assertStringNotContainsString("title: 'Brand'", $sidebar);

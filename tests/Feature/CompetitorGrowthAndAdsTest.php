@@ -25,7 +25,7 @@ class CompetitorGrowthAndAdsTest extends TestCase
 
     public function test_dashboard_omits_not_in_this_build_copy(): void
     {
-        $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
+        $dashboard = file_get_contents(resource_path('js/pages/ExecutiveBrief.vue'));
         $show = file_get_contents(resource_path('js/pages/competitors/Show.vue'));
 
         $this->assertIsString($dashboard);
@@ -33,8 +33,8 @@ class CompetitorGrowthAndAdsTest extends TestCase
         $this->assertStringNotContainsString('not in this build', $dashboard);
         $this->assertStringNotContainsString('Not click-through', $dashboard);
         $this->assertStringNotContainsString('Not conversion', $show);
-        $this->assertStringContainsString('PanelBigNumber', $dashboard);
-        $this->assertStringContainsString('Curated panels', $dashboard);
+        $this->assertStringContainsString('Executive Brief', $dashboard);
+        $this->assertStringContainsString('Our suggestions', $dashboard);
         $this->assertStringContainsString('Posts with an ask', $show);
         $this->assertStringNotContainsString('CTA clicks', $dashboard);
         $this->assertStringNotContainsString('CTA clicks', $show);

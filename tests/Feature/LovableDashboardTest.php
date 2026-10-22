@@ -52,9 +52,9 @@ class LovableDashboardTest extends TestCase
             ->get(route('dashboard', ['accounts' => 'rivalbrand']))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
-                ->has('panels')
-                ->where('panels_source', 'default')
+                ->component('ExecutiveBrief')
+                ->has('brief')
+                ->missing('panels')
                 ->missing('own_account')
                 ->missing('rivals')
             );

@@ -694,10 +694,22 @@ PROMPT;
             $watch = $this->deterministicWatch($facts, (string) ($facts['best_times']['weekday_evening_block'] ?? 'weekday evenings'));
         }
 
+        $ownSummary = (string) ($llm['own_summary'] ?? '');
+        $competitorSummary = (string) ($llm['competitor_summary'] ?? '');
+        $summary = trim($ownSummary.($ownSummary !== '' && $competitorSummary !== '' ? ' ' : '').$competitorSummary);
+        if ($summary === '') {
+            $summary = (string) ($llm['headline'] ?? 'Here is today\'s plan.');
+        }
+
+        $previousOverrides = is_array($previousPayload['curator_overrides'] ?? null)
+            ? $previousPayload['curator_overrides']
+            : null;
+
         return [
             'headline' => (string) ($llm['headline'] ?? 'Here is today\'s plan.'),
-            'own_summary' => (string) ($llm['own_summary'] ?? ''),
-            'competitor_summary' => (string) ($llm['competitor_summary'] ?? ''),
+            'summary' => $summary,
+            'own_summary' => $ownSummary,
+            'competitor_summary' => $competitorSummary,
             'big_numbers' => [
                 [
                     'label' => 'Followers',
@@ -745,6 +757,7 @@ PROMPT;
                 'used_fallback' => $usedFallback,
                 'diagnostics' => $diagnostics,
             ],
+            'curator_overrides' => $previousOverrides,
         ];
     }
 

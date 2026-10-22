@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Enums\Platform;
 use App\Models\BrandProfile;
-use App\Models\DashboardPanel;
 use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
@@ -21,7 +20,7 @@ class DashboardTest extends TestCase
         $this->get(route('dashboard'))->assertRedirect(route('login'));
     }
 
-    public function test_authenticated_users_can_visit_the_dashboard(): void
+    public function test_authenticated_users_can_visit_the_executive_brief(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -30,14 +29,14 @@ class DashboardTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
-                ->has('panels')
-                ->where('panels_source', 'default')
+                ->component('ExecutiveBrief')
+                ->has('brief')
+                ->missing('panels')
                 ->missing('featureSuggestions')
             );
     }
 
-    public function test_dashboard_builds_default_panels_for_rivals_with_posts(): void
+    public function test_executive_brief_empty_state_when_rivals_exist_but_no_brief(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -55,72 +54,37 @@ class DashboardTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
-                ->where('panels_source', 'default')
-                ->has('panels')
+                ->component('ExecutiveBrief')
+                ->where('brief.empty', true)
                 ->missing('rivals')
-                ->missing('executive')
+                ->missing('panels')
             );
     }
 
-    public function test_dashboard_vue_is_panel_canvas(): void
+    public function test_executive_brief_vue_is_memo_not_panel_canvas(): void
     {
-        $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
+        $page = file_get_contents(resource_path('js/pages/ExecutiveBrief.vue'));
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
-        $postCard = file_get_contents(resource_path('js/components/dashboard/panels/PanelPostCard.vue'));
 
-        $this->assertNotFalse($dashboard);
+        $this->assertNotFalse($page);
         $this->assertNotFalse($sidebar);
-        $this->assertNotFalse($postCard);
-        $this->assertStringContainsString('PanelBigNumber', $dashboard);
-        $this->assertStringContainsString('PanelPostCard', $dashboard);
-        $this->assertStringContainsString('PanelChart', $dashboard);
-        $this->assertStringNotContainsString('TrackedBySection', $dashboard);
-        $this->assertStringNotContainsString('VoteSection', $dashboard);
-        $this->assertStringContainsString('Curated panels', $dashboard);
-        $this->assertStringContainsString('Today', $dashboard);
-        $this->assertStringNotContainsString('Your canvas', $dashboard);
-        $this->assertStringContainsString('items-start', $dashboard);
-        $this->assertStringContainsString('xl:grid-cols-3', $dashboard);
-        $this->assertStringNotContainsString('id="what-to-post"', $dashboard);
-        $this->assertStringNotContainsString('ExecStatTile', $dashboard);
-        $this->assertStringContainsString("title: 'Dashboard'", $sidebar);
-        $this->assertStringNotContainsString('feedShow.url', $postCard);
-        $this->assertStringContainsString('captionExcerpt', $postCard);
-        $this->assertStringContainsString('Show more', $postCard);
-        $this->assertStringNotContainsString('line-clamp-', $dashboard);
-        $this->assertStringNotContainsString('—', $dashboard);
-        $this->assertStringNotContainsString('–', $dashboard);
+        $this->assertStringContainsString('Executive Brief', $page);
+        $this->assertStringContainsString('max-w-[52.5rem]', $page);
+        $this->assertStringNotContainsString('PanelBigNumber', $page);
+        $this->assertStringNotContainsString('TrackedBySection', $page);
+        $this->assertStringNotContainsString('VoteSection', $page);
+        $this->assertStringContainsString("title: 'Executive Brief'", $sidebar);
     }
 
-    public function test_dashboard_uses_stored_curator_panels(): void
+    public function test_paywalled_users_see_empty_executive_brief(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
-        DashboardPanel::factory()->for($user)->create([
-            'type' => DashboardPanel::TYPE_NOTE,
-            'title' => 'Action',
-            'payload' => ['body' => 'Review rival Reels today.'],
-            'source' => 'curator',
-        ]);
+        // No subscription / credits: product access blocked for non-admins.
+        $user->forceFill(['trial_ends_at' => null])->save();
 
         $this->actingAs($user)
             ->get(route('dashboard'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
-                ->where('panels_source', 'stored')
-                ->has('panels', 1)
-                ->where('panels.0.payload.body', 'Review rival Reels today.')
-            );
-    }
-
-    public function test_authenticated_users_without_brand_are_sent_to_onboarding(): void
-    {
-        $user = User::factory()->create();
-
-        $this->actingAs($user)
-            ->get(route('dashboard'))
-            ->assertRedirect(route('onboarding.show'));
+            ->assertOk();
     }
 }

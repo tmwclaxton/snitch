@@ -28,9 +28,9 @@ class AdsPageTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('ads.index'))
-            ->assertRedirect(route('dashboard'));
+            ->assertRedirect('/executive-brief');
 
-        $this->get('/ads')->assertRedirect('/dashboard');
+        $this->get('/ads')->assertRedirect('/executive-brief');
         $this->assertFileExists(resource_path('js/pages/ad-library/Index.vue'));
         $this->assertFileDoesNotExist(resource_path('js/pages/ads/Index.vue'));
     }

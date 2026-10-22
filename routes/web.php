@@ -62,7 +62,7 @@ Route::inertia('/cookies', 'marketing/Cookies')->name('cookies');
 // Special Calendly landing page (shared PublicLayout chrome; stays out of the sitemap).
 Route::inertia('/beta', 'marketing/Beta')->name('beta');
 Route::view('/pitch', 'pitch')->name('pitch');
-Route::get('/ads', fn () => redirect('/dashboard', 301))->name('ads.legacy');
+Route::get('/ads', fn () => redirect('/executive-brief', 301))->name('ads.legacy');
 
 Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
 Route::get('/analytics.json', [AnalyticsController::class, 'json'])->name('analytics.json');
@@ -142,7 +142,8 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
     });
 
     Route::middleware([EnsureBrandProfile::class, EnsureProductAccess::class])->group(function () {
-        Route::get('dashboard', DashboardController::class)->name('dashboard');
+        Route::get('executive-brief', DashboardController::class)->name('dashboard');
+        Route::permanentRedirect('dashboard', '/executive-brief');
         Route::post('dashboard/watching', WatchingYouController::class)
             ->middleware('throttle:30,1')
             ->name('dashboard.watching');

@@ -20,7 +20,7 @@ class DashboardPanelsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_dashboard_renders_default_panels_from_stored_data(): void
+    public function test_panel_service_still_builds_defaults_while_page_is_executive_brief(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -40,19 +40,22 @@ class DashboardPanelsTest extends TestCase
             'metrics' => ['likes' => 40, 'comments' => 3, 'views' => 900],
         ]);
 
+        $resolved = app(DashboardPanelService::class)->forDashboard($user);
+        $this->assertSame('default', $resolved['source']);
+        $this->assertNotEmpty($resolved['panels']);
+        $this->assertSame('big_number', $resolved['panels'][0]['type'] ?? null);
+
         $this->actingAs($user)
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
-                ->where('panels_source', 'default')
-                ->has('panels')
-                ->where('panels.0.type', 'big_number')
-                ->where('panels.0.payload.label', 'Followers')
+                ->component('ExecutiveBrief')
+                ->has('brief')
+                ->missing('panels')
             );
     }
 
-    public function test_dashboard_uses_stored_panels_and_skips_empty_ones(): void
+    public function test_stored_panels_remain_readable_via_service(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -72,15 +75,10 @@ class DashboardPanelsTest extends TestCase
             'source' => 'curator',
         ]);
 
-        $this->actingAs($user)
-            ->get(route('dashboard'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
-                ->where('panels_source', 'stored')
-                ->has('panels', 1)
-                ->where('panels.0.title', 'Followers')
-            );
+        $resolved = app(DashboardPanelService::class)->forDashboard($user);
+        $this->assertSame('stored', $resolved['source']);
+        $this->assertCount(1, $resolved['panels']);
+        $this->assertSame('Followers', $resolved['panels'][0]['title'] ?? null);
     }
 
     public function test_set_panels_validates_schema(): void

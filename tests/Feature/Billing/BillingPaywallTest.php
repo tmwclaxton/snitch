@@ -250,8 +250,8 @@ class BillingPaywallTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('subscription.paywall.blocked', false)
-                ->has('panels')
-                ->where('panels_source', 'default')
+                ->has('brief')
+                ->missing('panels')
             );
 
         $metrics = app(DashboardMetrics::class)->forUser($user, [], 30);

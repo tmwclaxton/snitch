@@ -66,9 +66,10 @@ class TrackedByTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->component('Dashboard')
-                ->has('panels')
+                ->component('ExecutiveBrief')
+                ->has('brief')
                 ->missing('trackedBy')
+                ->missing('panels')
             );
     }
 }

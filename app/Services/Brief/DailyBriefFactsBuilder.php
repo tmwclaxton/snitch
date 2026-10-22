@@ -293,6 +293,11 @@ class DailyBriefFactsBuilder
         $captionExcerpt = $caption === '' ? null : mb_substr($caption, 0, 200);
         $london = $this->math->toLondon($post->posted_at);
 
+        $thumbnail = $post->cover_url;
+        if (! is_string($thumbnail) || $thumbnail === '') {
+            $thumbnail = null;
+        }
+
         return [
             'post_id' => (int) $post->id,
             'url' => $post->url,
@@ -312,6 +317,7 @@ class DailyBriefFactsBuilder
             'views_vs_usual' => $viewsIndex,
             'prior_n' => $priorN,
             'times_usual_early' => $piEarly || $priorN < DashboardMath::PI_MIN_PRIORS,
+            'thumbnail_url' => $thumbnail,
         ];
     }
 

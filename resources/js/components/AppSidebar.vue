@@ -47,7 +47,7 @@ const adminGroupOpen = computed(
 
 const mainNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
+        title: 'Executive Brief',
         href: dashboard.url(),
         icon: LayoutDashboard,
         exact: true,

@@ -9,7 +9,7 @@ class EvidenceFileLightChromeTest extends TestCase
     public function test_light_mode_keeps_yellow_for_highlights_not_filter_pills(): void
     {
         $css = file_get_contents(resource_path('css/app.css'));
-        $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
+        $dashboard = file_get_contents(resource_path('js/pages/ExecutiveBrief.vue'));
         $whatWorks = file_get_contents(resource_path('js/components/dashboard/ExecWhatWorks.vue'));
         $formatMix = file_get_contents(resource_path('js/components/dashboard/FormatMixChart.vue'));
         $phrase = file_get_contents(resource_path('js/lib/highlightPhrase.ts'));
@@ -20,7 +20,8 @@ class EvidenceFileLightChromeTest extends TestCase
         $this->assertNotFalse($formatMix);
         $this->assertNotFalse($phrase);
 
-        $this->assertStringContainsString('PanelBigNumber', $dashboard);
+        $this->assertStringContainsString('Executive Brief', $dashboard);
+        $this->assertStringContainsString('snitch-highlight', $dashboard);
         $this->assertStringNotContainsString('peer-checked:bg-snitch-ink', $dashboard);
         $this->assertStringContainsString('snitch-btn-spot', $dashboard);
         $this->assertStringContainsString('snitch-choice', $whatWorks);

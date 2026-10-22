@@ -22,6 +22,7 @@ use App\Mcp\Tools\GetAccountSummaryTool;
 use App\Mcp\Tools\GetBrandTool;
 use App\Mcp\Tools\GetCompetitorPostsTool;
 use App\Mcp\Tools\GetDailyBriefTool;
+use App\Mcp\Tools\GetExecutiveBriefTool;
 use App\Mcp\Tools\GetFormatMixTool;
 use App\Mcp\Tools\GetGapsTool;
 use App\Mcp\Tools\GetGrowthSeriesTool;
@@ -48,6 +49,7 @@ use App\Mcp\Tools\RescoreWinnersTool;
 use App\Mcp\Tools\RevokeMonthlyReportTool;
 use App\Mcp\Tools\RollbackPanelsTool;
 use App\Mcp\Tools\RotateTokenTool;
+use App\Mcp\Tools\SetExecutiveBriefTool;
 use App\Mcp\Tools\SetPanelsTool;
 use App\Mcp\Tools\ShareMonthlyReportTool;
 use App\Mcp\Tools\StartBrandAutofillTool;
@@ -96,6 +98,8 @@ class SnitchServer extends Server
         GetPanelsTool::class,
         SetPanelsTool::class,
         RollbackPanelsTool::class,
+        GetExecutiveBriefTool::class,
+        SetExecutiveBriefTool::class,
         AddCompetitorTool::class,
         RemoveCompetitorTool::class,
         SyncCompetitorTool::class,

@@ -169,19 +169,18 @@ class ExecutiveDashboardTest extends TestCase
     }
 
     #[Test]
-    public function dashboard_vue_is_curated_panel_canvas(): void
+    public function dashboard_vue_is_executive_brief_memo(): void
     {
-        $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
+        $dashboard = file_get_contents(resource_path('js/pages/ExecutiveBrief.vue'));
         $this->assertIsString($dashboard);
 
-        $this->assertStringContainsString('PanelBigNumber', $dashboard);
-        $this->assertStringContainsString('PanelPostCard', $dashboard);
-        $this->assertStringContainsString('PanelChart', $dashboard);
-        $this->assertStringContainsString('PanelRankedList', $dashboard);
-        $this->assertStringContainsString('PanelNote', $dashboard);
-        $this->assertStringContainsString('Today', $dashboard);
+        $this->assertStringContainsString('Executive Brief', $dashboard);
+        $this->assertStringContainsString("What you've been doing", $dashboard);
+        $this->assertStringContainsString('What competitors have been doing', $dashboard);
+        $this->assertStringContainsString('Our suggestions', $dashboard);
+        $this->assertStringContainsString('max-w-[52.5rem]', $dashboard);
         $this->assertStringNotContainsString('Your canvas', $dashboard);
-        $this->assertStringContainsString('panels', $dashboard);
+        $this->assertStringNotContainsString('PanelBigNumber', $dashboard);
         $this->assertStringNotContainsString('id="vote"', $dashboard);
         $this->assertStringNotContainsString('id="tracked-by"', $dashboard);
         $this->assertStringNotContainsString('id="what-to-post"', $dashboard);

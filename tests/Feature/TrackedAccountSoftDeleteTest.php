@@ -91,8 +91,9 @@ class TrackedAccountSoftDeleteTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
-                ->has('panels')
+                ->component('ExecutiveBrief')
+                ->has('brief')
+                ->missing('panels')
             );
 
         $this->actingAs($user)

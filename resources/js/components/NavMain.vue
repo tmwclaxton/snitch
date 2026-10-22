@@ -46,7 +46,12 @@ const { isCurrentOrParentUrl, isCurrentUrl, currentUrl } = useCurrentUrl();
 
 function itemIsActive(item: NavItem): boolean {
     if (item.section) {
-        if (currentUrl.value !== '/dashboard' && ! currentUrl.value.startsWith('/dashboard?')) {
+        if (
+            currentUrl.value !== '/executive-brief'
+            && ! currentUrl.value.startsWith('/executive-brief?')
+            && currentUrl.value !== '/dashboard'
+            && ! currentUrl.value.startsWith('/dashboard?')
+        ) {
             return false;
         }
 
@@ -65,7 +70,9 @@ function onNavClick(event: MouseEvent, item: NavItem): void {
         return;
     }
 
-    const onDashboard = currentUrl.value === '/dashboard'
+    const onDashboard = currentUrl.value === '/executive-brief'
+        || currentUrl.value.startsWith('/executive-brief?')
+        || currentUrl.value === '/dashboard'
         || currentUrl.value.startsWith('/dashboard?');
 
     if (! onDashboard) {
