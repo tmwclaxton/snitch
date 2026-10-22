@@ -36,6 +36,8 @@ class SidebarNavigationTest extends TestCase
             $this->assertStringContainsString("title: '{$title}'", $sidebar);
         }
 
+        $this->assertStringContainsString("title: 'Automation runs'", $sidebar);
+
         foreach (['Today', 'Brand', 'Feed', 'This week', 'Growth', 'Monthly report', 'Explore', 'Canvas', 'Vote on features'] as $title) {
             $this->assertStringNotContainsString("title: '{$title}'", $sidebar);
         }

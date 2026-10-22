@@ -51,7 +51,7 @@ class InAppChatService
     /**
      * @param  list<array{role: string, content: string}>  $history
      */
-    public function streamReply(User $user, string $message, array $history = []): StreamedResponse
+    public function streamReply(User $user, string $message, array $history = [], bool $countTowardCap = true): StreamedResponse
     {
         $message = trim($message);
         if ($message === '') {
@@ -62,7 +62,65 @@ class InAppChatService
             return $this->cappedStream($user);
         }
 
-        $this->incrementUsage($user);
+        if ($countTowardCap) {
+            $this->incrementUsage($user);
+        }
+
+        return $this->streamReplyBody($user, $message, $history);
+    }
+
+    /**
+     * Write an LLM reply into the already-open SSE stream (no daily-cap bump).
+     * Used when Cursor chat automation times out mid-response.
+     *
+     * @param  list<array{role: string, content: string}>  $history
+     */
+    public function writeLlmReplyToOpenStream(User $user, string $message, array $history = []): void
+    {
+        $model = (string) config('snitch.chat.model');
+        $maxRounds = max(1, (int) config('snitch.chat.max_tool_rounds', 4));
+
+        $messages = [
+            [
+                'role' => 'system',
+                'content' => $this->systemPrompt($user),
+            ],
+            ...array_values(array_filter(
+                $history,
+                fn (array $row): bool => in_array($row['role'] ?? null, ['user', 'assistant'], true)
+                    && is_string($row['content'] ?? null)
+                    && trim((string) $row['content']) !== '',
+            )),
+            [
+                'role' => 'user',
+                'content' => trim($message),
+            ],
+        ];
+
+        try {
+            $finalText = $this->completeWithTools($user, $messages, $model, $maxRounds);
+            $this->emit(['type' => 'status', 'message' => null, 'mode' => 'fallback']);
+            $this->emitChunks($finalText);
+            $this->emit([
+                'type' => 'done',
+                'remaining' => $this->remainingToday($user),
+                'mode' => 'fallback',
+            ]);
+        } catch (\Throwable $e) {
+            $this->emit(['type' => 'status', 'message' => null]);
+            $this->emit([
+                'type' => 'error',
+                'message' => 'Chat failed. Try again in a moment.',
+            ]);
+            report($e);
+        }
+    }
+
+    /**
+     * @param  list<array{role: string, content: string}>  $history
+     */
+    private function streamReplyBody(User $user, string $message, array $history = []): StreamedResponse
+    {
 
         $model = (string) config('snitch.chat.model');
         $maxRounds = max(1, (int) config('snitch.chat.max_tool_rounds', 4));

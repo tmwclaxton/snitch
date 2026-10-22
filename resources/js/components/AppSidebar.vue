@@ -29,6 +29,7 @@ import {
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard, home } from '@/routes';
 import { overview as adminOverview, activity as adminActivity } from '@/routes/admin';
+import { index as adminAutomationRunsIndex } from '@/routes/admin/automation-runs';
 import { index as adminCuratorTokensIndex } from '@/routes/admin/curator-tokens';
 import { index as adminFeaturesIndex } from '@/routes/admin/features';
 import { index as adminUsersIndex } from '@/routes/admin/users';
@@ -100,6 +101,11 @@ const adminNavItems = computed<NavItem[]>(() => {
             title: 'Curator tokens',
             href: adminCuratorTokensIndex(),
             icon: KeyRound,
+        },
+        {
+            title: 'Automation runs',
+            href: adminAutomationRunsIndex(),
+            icon: Bot,
         },
     ];
 });

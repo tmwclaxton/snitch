@@ -32,6 +32,8 @@ const props = defineProps<{
     mcp_path: string;
     mcp_url: string;
     suggestions: string[];
+    automation_enabled?: boolean;
+    automation_timeout_seconds?: number;
 }>();
 
 const messages = ref<ChatMessage[]>([]);
@@ -163,6 +165,11 @@ async function send(textOverride?: string): Promise<void> {
 
                 if (payload.type === 'status') {
                     statusMessage.value = payload.message ?? null;
+                }
+
+                if (payload.type === 'reset') {
+                    messages.value[assistantIndex].content = '';
+                    messages.value[assistantIndex].posts = [];
                 }
 
                 if (payload.type === 'posts' && Array.isArray(payload.posts)) {
@@ -376,6 +383,13 @@ onUnmounted(() => {
 
                 <p class="mt-2 text-center text-sm text-snitch-ink/55">
                     {{ remainingLabel }}
+                </p>
+                <p
+                    v-if="automation_enabled"
+                    class="mt-1 text-center text-xs text-snitch-ink/45"
+                >
+                    Cursor automation drafts replies when available; if it times out
+                    (about {{ automation_timeout_seconds ?? 180 }}s) we fall back to the in-app model.
                 </p>
 
                 <p

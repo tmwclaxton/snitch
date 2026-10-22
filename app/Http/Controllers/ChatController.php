@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Automations\ChatAutomationKickoff;
+use App\Services\Automations\ChatAutomationResponder;
 use App\Services\Chat\ChatSuggestionService;
 use App\Services\Chat\InAppChatService;
 use App\Support\McpConnectionGuide;
@@ -16,6 +18,7 @@ class ChatController extends Controller
         Request $request,
         InAppChatService $chat,
         ChatSuggestionService $suggestions,
+        ChatAutomationKickoff $automation,
     ): Response {
         $user = $request->user();
         $guide = McpConnectionGuide::payload();
@@ -27,10 +30,12 @@ class ChatController extends Controller
             'mcp_path' => '/settings/mcp',
             'mcp_url' => $guide['mcp_url'] ?? url('/mcp'),
             'suggestions' => $suggestions->forUser($user),
+            'automation_enabled' => $automation->configured(),
+            'automation_timeout_seconds' => $automation->timeoutSeconds(),
         ]);
     }
 
-    public function stream(Request $request, InAppChatService $chat): StreamedResponse
+    public function stream(Request $request, ChatAutomationResponder $responder): StreamedResponse
     {
         $data = $request->validate([
             'message' => ['required', 'string', 'max:4000'],
@@ -42,6 +47,6 @@ class ChatController extends Controller
         /** @var list<array{role: string, content: string}> $history */
         $history = is_array($data['history'] ?? null) ? $data['history'] : [];
 
-        return $chat->streamReply($request->user(), (string) $data['message'], $history);
+        return $responder->stream($request->user(), (string) $data['message'], $history);
     }
 }

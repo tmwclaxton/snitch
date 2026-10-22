@@ -53,4 +53,28 @@ return [
         'ads_signup_send_to' => env('GOOGLE_ADS_SIGNUP_SEND_TO', 'AW-18219075665/xFpFCIDTldQcENGQxO9D'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cursor Automations (Executive Brief + in-app Chat)
+    |--------------------------------------------------------------------------
+    |
+    | When webhook URL/token pairs are missing or look like placeholders, Snitch
+    | keeps today's existing brief generation and in-app LLM chat unchanged.
+    |
+    */
+    'cursor_automations' => [
+        'mcp_url' => env('CURSOR_AUTOMATIONS_MCP_URL', 'https://www.snitchsocial.net/mcp'),
+        'token_ttl_minutes' => (int) env('CURSOR_AUTOMATIONS_TOKEN_TTL_MINUTES', 30),
+        'trigger_guard_seconds' => (int) env('CURSOR_AUTOMATIONS_TRIGGER_GUARD_SECONDS', 180),
+        'brief' => [
+            'webhook_url' => env('CURSOR_BRIEF_WEBHOOK_URL'),
+            'webhook_token' => env('CURSOR_BRIEF_WEBHOOK_TOKEN'),
+        ],
+        'chat' => [
+            'webhook_url' => env('CURSOR_CHAT_WEBHOOK_URL'),
+            'webhook_token' => env('CURSOR_CHAT_WEBHOOK_TOKEN'),
+            'timeout_seconds' => (int) env('CURSOR_CHAT_TIMEOUT_SECONDS', 180),
+        ],
+    ],
+
 ];

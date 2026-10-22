@@ -42,6 +42,7 @@ use App\Mcp\Tools\ListTrackersTool;
 use App\Mcp\Tools\ListUsersTool;
 use App\Mcp\Tools\ListWinnersTool;
 use App\Mcp\Tools\MarkWeeklyBriefIdeaUsedTool;
+use App\Mcp\Tools\PostChatReplyTool;
 use App\Mcp\Tools\RemoveCompetitorTool;
 use App\Mcp\Tools\RemoveInfluencerTool;
 use App\Mcp\Tools\RescoreWinnersStatusTool;
@@ -49,6 +50,7 @@ use App\Mcp\Tools\RescoreWinnersTool;
 use App\Mcp\Tools\RevokeMonthlyReportTool;
 use App\Mcp\Tools\RollbackPanelsTool;
 use App\Mcp\Tools\RotateTokenTool;
+use App\Mcp\Tools\SaveExecutiveBriefTool;
 use App\Mcp\Tools\SetExecutiveBriefTool;
 use App\Mcp\Tools\SetPanelsTool;
 use App\Mcp\Tools\ShareMonthlyReportTool;
@@ -100,6 +102,8 @@ class SnitchServer extends Server
         RollbackPanelsTool::class,
         GetExecutiveBriefTool::class,
         SetExecutiveBriefTool::class,
+        SaveExecutiveBriefTool::class,
+        PostChatReplyTool::class,
         AddCompetitorTool::class,
         RemoveCompetitorTool::class,
         SyncCompetitorTool::class,

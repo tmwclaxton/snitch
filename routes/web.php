@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminActivityController;
 use App\Http\Controllers\Admin\AdminOverviewController;
 use App\Http\Controllers\Admin\AdminReferralController;
 use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\AutomationRunController;
 use App\Http\Controllers\Admin\CuratorTokenController;
 use App\Http\Controllers\Admin\FeatureSuggestionController as AdminFeatureSuggestionController;
 use App\Http\Controllers\AdsController;
@@ -135,6 +136,10 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::delete('/curator-tokens/{token}', [CuratorTokenController::class, 'destroy'])
             ->middleware('throttle:20,1')
             ->name('curator-tokens.destroy');
+        Route::get('/automation-runs', [AutomationRunController::class, 'index'])->name('automation-runs.index');
+        Route::post('/automation-runs/{run}/revoke', [AutomationRunController::class, 'revoke'])
+            ->middleware('throttle:20,1')
+            ->name('automation-runs.revoke');
         Route::get('/referrals', [AdminReferralController::class, 'index'])->name('referrals.index');
         Route::post('/referrals', [AdminReferralController::class, 'store'])->name('referrals.store');
         Route::get('/referrals/{referral}', [AdminReferralController::class, 'show'])->name('referrals.show');

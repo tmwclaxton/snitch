@@ -55,6 +55,16 @@ Schedule::command('snitch:generate-daily-briefs')
     ->onSuccess(fn () => ScheduleHeartbeat::mark('snitch:generate-daily-briefs'))
     ->onFailure(fn () => ScheduleHeartbeat::mark('snitch:generate-daily-briefs', 'failure'));
 
+// After local brief generation: optional Cursor Automations rewrite per user.
+// No-op when CURSOR_BRIEF_WEBHOOK_URL / TOKEN are missing or placeholders.
+Schedule::command('snitch:kickoff-brief-automations')
+    ->name('snitch:kickoff-brief-automations')
+    ->dailyAt('06:30')
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->onSuccess(fn () => ScheduleHeartbeat::mark('snitch:kickoff-brief-automations'))
+    ->onFailure(fn () => ScheduleHeartbeat::mark('snitch:kickoff-brief-automations', 'failure'));
+
 // After Monday sync: free weekly "Post this next" brief when missing.
 Schedule::command('snitch:generate-weekly-briefs')
     ->weeklyOn(1, '8:00')

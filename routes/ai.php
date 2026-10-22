@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AuthenticateMcp;
 use App\Http\Middleware\EnsureMcpProductAccess;
+use App\Http\Middleware\LogAutomationMcpCall;
 use App\Http\Middleware\LogCuratorMcpAudit;
 use App\Http\Middleware\LogMcpToolInvocation;
 use App\Http\Middleware\RejectAdminMcpTools;
@@ -17,6 +18,7 @@ Mcp::web('/mcp/register', SnitchRegisterServer::class)
 Mcp::web('/mcp', SnitchServer::class)
     ->middleware([
         AuthenticateMcp::class,
+        LogAutomationMcpCall::class,
         LogMcpToolInvocation::class,
         LogCuratorMcpAudit::class,
         RejectAdminMcpTools::class,
