@@ -93,8 +93,9 @@ class ExecutiveBriefPresenter
             ? $this->resolveSummary($agentPayload, $overrides, $facts)
             : null;
         $narrative = $hasAgentMemo ? $this->agentNarrative($agentPayload) : null;
-        $ownActivity = $hasAgentMemo ? $this->ownActivityBullets($agentPayload, $facts) : [];
-        $competitorActivity = $hasAgentMemo ? $this->competitorActivity($agentPayload) : [];
+        // Agent memos: interpretive prose only for "what happened" - never the per-handle stats inventory.
+        $ownActivity = $hasAgentMemo ? $this->interpretiveOwnActivity($agentPayload, $facts) : [];
+        $competitorActivity = $hasAgentMemo ? $this->interpretiveCompetitorActivity($agentPayload, $facts) : [];
         $suggestions = $this->resolveSuggestions(
             $hasAgentMemo ? $agentPayload : $payload,
             $overrides,
@@ -720,6 +721,108 @@ class ExecutiveBriefPresenter
         }
 
         return rtrim($ownSummary, ' ').' '.$comp;
+    }
+
+    /**
+     * Agent "what happened" for own account: interpretive prose + at most 2 evidence thumbs.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $facts
+     * @return list<array{text: string, posts: list<array<string, mixed>>}>
+     */
+    private function interpretiveOwnActivity(array $payload, array $facts): array
+    {
+        $text = is_string($payload['own_summary'] ?? null) ? trim($payload['own_summary']) : '';
+        if ($text === '') {
+            return [];
+        }
+
+        $posts = $this->enrichPosts(
+            array_slice(is_array($payload['own_last_7_days'] ?? null) ? $payload['own_last_7_days'] : [], 0, 2),
+        );
+
+        return [[
+            'text' => $text,
+            'posts' => $posts,
+        ]];
+    }
+
+    /**
+     * Agent competitor prose: one interpretive block (or section bodies), not a stats row per rival.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $facts
+     * @return list<array{text: string, handle: string|null, posts: list<array<string, mixed>>}>
+     */
+    private function interpretiveCompetitorActivity(array $payload, array $facts): array
+    {
+        $items = [];
+        $automation = is_array($payload['automation_overrides'] ?? null)
+            ? $payload['automation_overrides']
+            : [];
+        $sections = is_array($automation['sections'] ?? null) ? $automation['sections'] : [];
+        foreach ($sections as $section) {
+            if (! is_array($section)) {
+                continue;
+            }
+            $title = mb_strtolower(trim((string) ($section['title'] ?? '')));
+            $body = trim((string) ($section['body'] ?? ''));
+            if ($body === '') {
+                continue;
+            }
+            if (str_contains($title, 'competitor') || str_contains($title, 'rival') || str_contains($title, 'happened')) {
+                $items[] = [
+                    'text' => $body,
+                    'handle' => null,
+                    'posts' => $this->topCompetitorEvidenceThumbs($payload, $facts),
+                ];
+            }
+        }
+
+        if ($items === []) {
+            $text = is_string($payload['competitor_summary'] ?? null)
+                ? trim($payload['competitor_summary'])
+                : '';
+            if ($text !== '') {
+                $items[] = [
+                    'text' => $text,
+                    'handle' => null,
+                    'posts' => $this->topCompetitorEvidenceThumbs($payload, $facts),
+                ];
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * At most 2 standout thumbs as evidence under competitor prose.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $facts
+     * @return list<array<string, mixed>>
+     */
+    private function topCompetitorEvidenceThumbs(array $payload, array $facts): array
+    {
+        $candidates = [];
+        $walker = function (mixed $value) use (&$candidates, &$walker): void {
+            if (! is_array($value)) {
+                return;
+            }
+            if (isset($value['post_id'], $value['times_usual']) && is_numeric($value['times_usual'])) {
+                $candidates[] = $value;
+            }
+            foreach ($value as $child) {
+                $walker($child);
+            }
+        };
+        $walker($facts['top_competitor_hit_7d'] ?? null);
+        $walker($payload['competitor_moves'] ?? null);
+        $walker($facts['competitors'] ?? null);
+
+        usort($candidates, fn (array $a, array $b): int => ((float) $b['times_usual']) <=> ((float) $a['times_usual']));
+
+        return $this->enrichPosts(array_slice($candidates, 0, 2));
     }
 
     /**
