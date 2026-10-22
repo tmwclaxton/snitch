@@ -309,7 +309,9 @@ PROMPT;
 
         // Claim rewrites can retarget format/date/Nx independently. Re-bind the
         // template inspiration cite so those three always come from one post.
-        return $this->rebindTemplateCitation($checked, $facts);
+        $rebound = $this->rebindTemplateCitation($checked, $facts);
+
+        return $this->alignActionCitations($rebound, $facts);
     }
 
     /**
@@ -373,6 +375,137 @@ PROMPT;
         }
 
         return $output;
+    }
+
+    /**
+     * Force every action's title/why date and Nx onto its related_post_ids[0] cite.
+     *
+     * @param  array<string, mixed>  $output
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>
+     */
+    public function alignActionCitations(array $output, array $facts): array
+    {
+        $actions = is_array($output['actions'] ?? null) ? $output['actions'] : [];
+        $aligned = [];
+
+        foreach ($actions as $action) {
+            if (! is_array($action)) {
+                continue;
+            }
+
+            $ids = is_array($action['related_post_ids'] ?? null) ? $action['related_post_ids'] : [];
+            $postId = isset($ids[0]) ? (int) $ids[0] : 0;
+            if ($postId < 1) {
+                $aligned[] = $action;
+
+                continue;
+            }
+
+            $post = $this->findFactPostById($facts, $postId);
+            $cite = $this->citationFromPost($post);
+            if ($cite === null) {
+                $aligned[] = $action;
+
+                continue;
+            }
+
+            $dateBit = $cite['date_short'] !== null ? ' from '.$cite['date_short'] : '';
+            $title = (string) ($action['title'] ?? '');
+            $why = (string) ($action['why'] ?? '');
+
+            if (preg_match('/^Comment on @/iu', $title) === 1) {
+                $title = 'Comment on @'.$cite['handle'].'\'s '.$cite['format'].$dateBit.'.';
+                $why = '@'.$cite['handle'].'\'s '.$cite['format'].$dateBit.' is at '.$cite['multiplier_label'].'.';
+            } else {
+                $title = $this->rewriteActionProseToCite($title, $cite);
+                $why = $this->rewriteActionProseToCite($why, $cite);
+            }
+
+            $action['title'] = $title;
+            $action['why'] = $why;
+            $action['format'] = $cite['format'];
+            $action['hook'] = $cite['hook'];
+            $action['related_handles'] = [$cite['handle']];
+            $action['related_post_ids'] = [$cite['post_id']];
+            $aligned[] = $action;
+        }
+
+        $output['actions'] = $aligned;
+
+        return $output;
+    }
+
+    /**
+     * @param  array{handle: string, format: string, date_short: ?string, multiplier_label: string, multiplier_short: string, comments: int, post_id: int, hook: ?string}  $cite
+     */
+    private function rewriteActionProseToCite(string $prose, array $cite): string
+    {
+        if ($prose === '') {
+            return $prose;
+        }
+
+        $format = preg_quote($cite['format'], '/');
+        $handle = preg_quote($cite['handle'], '/');
+        $dateBit = $cite['date_short'] !== null ? ' from '.$cite['date_short'] : '';
+
+        // "@handle's Reel from 16 Oct" → cite date (keep the possessive prefix).
+        $prose = (string) preg_replace(
+            '/(@'.$handle.'\'s\s+)'.$format.'(?:\s+from\s+\d{1,2}\s+[A-Za-z]{3,9})?/iu',
+            '$1'.$cite['format'].$dateBit,
+            $prose,
+        );
+
+        // Standalone "Reel from 16 Oct" cite (not "Post a Reel today").
+        $prose = (string) preg_replace(
+            '/(?<!Post a )\b'.$format.'\s+from\s+\d{1,2}\s+[A-Za-z]{3,9}\b/u',
+            $cite['format'].ltrim($dateBit),
+            $prose,
+        );
+
+        // Nx / "N times their usual" → cite multiplier.
+        $prose = (string) preg_replace(
+            '/\d+(?:\.\d+)?\s*times their usual(?:\s+views)?/iu',
+            $cite['multiplier_label'],
+            $prose,
+        );
+
+        return $prose;
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @return array<string, mixed>|null
+     */
+    private function findFactPostById(array $facts, int $postId): ?array
+    {
+        $found = null;
+        $walker = function (mixed $value, ?string $parentHandle = null) use (&$found, &$walker, $postId): void {
+            if ($found !== null || ! is_array($value)) {
+                return;
+            }
+
+            if (isset($value['post_id']) && (int) $value['post_id'] === $postId) {
+                $merged = [...$value];
+                if (! filled($merged['handle'] ?? null) && is_string($parentHandle) && $parentHandle !== '') {
+                    $merged['handle'] = $parentHandle;
+                }
+                $found = $merged;
+
+                return;
+            }
+
+            $handle = isset($value['handle']) && is_string($value['handle'])
+                ? (string) $value['handle']
+                : $parentHandle;
+
+            foreach ($value as $child) {
+                $walker($child, $handle);
+            }
+        };
+        $walker($facts);
+
+        return $found;
     }
 
     /**
@@ -444,35 +577,41 @@ PROMPT;
             $formatWhy .= ' Your last 30 days were '.$ownFormatBit.'.';
         }
 
+        $hasSolidTiming = is_array($slot) && $sampleCount >= 3 && ! $slotEarly;
+        $formatTitle = $hasSolidTiming
+            ? 'Post a '.$hitFormat.' today at '.$when.'.'
+            : 'Post a '.$hitFormat.' today.';
+        if ($hasSolidTiming) {
+            $formatWhy .= ' Best stored slot is '.$when.' ('.$this->pluralise($sampleCount, 'post').').';
+        }
+
         $actions[] = [
-            'title' => 'Post a '.$hitFormat.' today at '.$when.'.',
+            'title' => $formatTitle,
             'why' => $formatWhy,
             'how' => $hitHandle !== '' && $hitPostId !== null
                 ? 'Study their '.$hitFormat.', then publish your own version today.'
                 : 'Keep it under 30 seconds. Open with a first-person line. Ask people to comment or DM.',
-            'when' => $when,
+            'when' => $hasSolidTiming ? $when : null,
             'format' => $hitFormat,
             'hook' => $cite['hook'] ?? null,
             'related_handles' => $hitHandle !== '' ? [$hitHandle] : [],
             'related_post_ids' => $hitPostId !== null ? [$hitPostId] : [],
         ];
 
-        $timeWhy = is_array($slot)
-            ? 'Stored posting data peaks at '.$when
-                .($sampleCount > 0 ? ' across '.$this->pluralise($sampleCount, 'post') : '')
-                .($slotEarly ? ' (early signal, under 3 posts in that slot)' : '')
-                .'.'
-            : 'Weekday evenings 19:00-21:00 are the stored peak block when the sample is still thin.';
-        $actions[] = [
-            'title' => 'Schedule today\'s post for '.$when.'.',
-            'why' => $timeWhy,
-            'how' => 'Queue the '.$hitFormat.' for '.$when.' London time, then engage for 10 minutes after it goes live.',
-            'when' => $when,
-            'format' => $hitFormat,
-            'hook' => null,
-            'related_handles' => $handle !== 'your account' ? [$handle] : [],
-            'related_post_ids' => [],
-        ];
+        // Separate time tip only when per-account timing has a real sample, and it
+        // is not just restating the format suggestion's clock.
+        if ($hasSolidTiming && $daysSince !== null && (int) $daysSince < 2) {
+            $actions[] = [
+                'title' => 'Keep publishing around '.$when.'.',
+                'why' => 'Your stored posts peak at '.$when.' across '.$this->pluralise($sampleCount, 'post').'.',
+                'how' => 'Queue the next '.$hitFormat.' for '.$when.' London time.',
+                'when' => $when,
+                'format' => $hitFormat,
+                'hook' => null,
+                'related_handles' => $handle !== 'your account' ? [$handle] : [],
+                'related_post_ids' => [],
+            ];
+        }
 
         if ($daysSince !== null && (int) $daysSince >= 2) {
             $actions[] = [
@@ -1058,7 +1197,12 @@ PROMPT;
                     }
 
                     if ((int) ($post['comments'] ?? 0) > 0) {
-                        return $post;
+                        $merged = [...$post];
+                        if (! filled($merged['handle'] ?? null) && filled($row['handle'] ?? null)) {
+                            $merged['handle'] = $row['handle'];
+                        }
+
+                        return $merged;
                     }
                 }
             }

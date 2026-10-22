@@ -1674,13 +1674,101 @@ class DailyBriefGenerationTest extends TestCase
         $titles = collect($narrative['actions'])->pluck('title')->implode(' ');
         $this->assertStringNotContainsString('Post this next', $titles);
         $this->assertStringNotContainsString('unused', mb_strtolower($titles));
+        $this->assertStringNotContainsString('Schedule today', $titles);
+        $this->assertStringNotContainsString('stored peak block', mb_strtolower(collect($narrative['actions'])->pluck('why')->implode(' ')));
         $this->assertStringContainsString('21 days quiet', $narrative['headline']);
-        $this->assertGreaterThanOrEqual(3, count($narrative['actions']));
-        $this->assertTrue(collect($narrative['actions'])->contains(
-            fn (array $action): bool => str_contains((string) $action['why'], 'sample')
-                || str_contains((string) $action['why'], '12 posts')
-                || str_contains((string) $action['why'], '20:00'),
-        ));
+        $this->assertGreaterThanOrEqual(2, count($narrative['actions']));
+        $this->assertStringContainsString('Post a Carousel today at 20:00.', (string) ($narrative['actions'][0]['title'] ?? ''));
+        $this->assertStringContainsString('12 posts', (string) ($narrative['actions'][0]['why'] ?? ''));
+    }
+
+    public function test_fallback_omits_separate_time_tip_when_timing_sample_is_thin(): void
+    {
+        $narrative = app(DailyBriefGenerator::class)->deterministicNarrative([
+            'own' => [
+                'handle' => 'letsgosocialuk',
+                'followers_now' => 104,
+                'posts_last_7d_count' => 0,
+                'days_since_last_post' => 21,
+            ],
+            'format_mix' => [
+                'competitor_posts_24h' => 2,
+                'competitor_posts_7d' => 13,
+                'competitors_7d' => ['Carousel' => 8],
+            ],
+            'best_times' => [
+                'today_slot' => [
+                    'hour' => 20,
+                    'label' => 'Wed 20:00',
+                    'sample_count' => 2,
+                    'early_signal' => true,
+                ],
+                'weekday_evening_block' => 'weekday evenings 19:00-21:00',
+            ],
+            'competitors' => [],
+            'top_competitor_hit_7d' => [
+                'handle' => 'goodgym',
+                'post_id' => 501,
+                'times_usual' => 12.6,
+                'times_usual_label' => '12.6 times their usual',
+                'format' => 'Carousel',
+                'posted_label' => '18 Oct',
+            ],
+        ]);
+
+        $titles = collect($narrative['actions'])->pluck('title')->implode(' ');
+        $whys = mb_strtolower(collect($narrative['actions'])->pluck('why')->implode(' '));
+        $this->assertStringContainsString('Post a Carousel today.', (string) ($narrative['actions'][0]['title'] ?? ''));
+        $this->assertStringNotContainsString('at 20:00', (string) ($narrative['actions'][0]['title'] ?? ''));
+        $this->assertStringNotContainsString('Schedule today', $titles);
+        $this->assertStringNotContainsString('stored peak block', $whys);
+    }
+
+    public function test_align_action_citations_rewrites_title_why_to_one_post(): void
+    {
+        $generator = app(DailyBriefGenerator::class);
+        $facts = [
+            'competitors' => [
+                [
+                    'handle' => 'yellowzest',
+                    'posts_last_7d' => [
+                        [
+                            'post_id' => 9001,
+                            'handle' => 'yellowzest',
+                            'format' => 'Reel',
+                            'posted_at' => '2026-10-18T10:22:00+01:00',
+                            'posted_label' => 'Sun 18 Oct, 11:22',
+                            'times_usual' => 3.2,
+                            'times_usual_label' => '3.2 times their usual',
+                            'comments' => 4,
+                            'hook' => 'What a night!',
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $aligned = $generator->alignActionCitations([
+            'actions' => [
+                [
+                    'title' => 'Comment on @yellowzest\'s Reel from 20 Oct.',
+                    'why' => '@yellowzest\'s Reel from 16 Oct is at 1.1 times their usual.',
+                    'how' => 'Leave a genuine comment on the post.',
+                    'related_post_ids' => [9001],
+                    'related_handles' => ['yellowzest'],
+                ],
+            ],
+        ], $facts);
+
+        $this->assertSame(
+            'Comment on @yellowzest\'s Reel from 18 Oct.',
+            (string) ($aligned['actions'][0]['title'] ?? ''),
+        );
+        $this->assertSame(
+            '@yellowzest\'s Reel from 18 Oct is at 3.2 times their usual.',
+            (string) ($aligned['actions'][0]['why'] ?? ''),
+        );
+        $this->assertSame([9001], $aligned['actions'][0]['related_post_ids']);
     }
 
     public function test_fallback_omits_below_usual_posts_as_hits_or_inspiration(): void

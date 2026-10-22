@@ -15,6 +15,17 @@ class SidebarNavigationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_desktop_sidebar_stretches_with_page_and_keeps_sticky_viewport_shell(): void
+    {
+        $sidebar = file_get_contents(resource_path('js/components/ui/sidebar/Sidebar.vue'));
+
+        $this->assertNotFalse($sidebar);
+        $this->assertStringContainsString('self-stretch', $sidebar);
+        $this->assertStringContainsString('sticky top-0', $sidebar);
+        $this->assertStringContainsString('h-svh', $sidebar);
+        $this->assertStringNotContainsString('fixed inset-y-0', $sidebar);
+    }
+
     public function test_sidebar_lists_simplified_product_pages(): void
     {
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));

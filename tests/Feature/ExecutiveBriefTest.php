@@ -260,4 +260,57 @@ class ExecutiveBriefTest extends TestCase
         $this->assertStringContainsString('Data last updated 22 Oct, 07:15', (string) $memo['freshness']['line']);
         $this->assertStringContainsString('@badhandle', (string) $memo['freshness']['line']);
     }
+
+    public function test_presenter_dedupes_repeated_competitor_volume_in_summary(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'aprilrosemarketing',
+            'is_own_account' => true,
+        ]);
+
+        DailyBrief::query()->create([
+            'user_id' => $user->id,
+            'brief_date' => now('Europe/London')->toDateString(),
+            'status' => 'ready',
+            'headline' => 'Post a Reel today.',
+            'payload' => [
+                'headline' => 'Post a Reel today.',
+                'own_summary' => '@aprilrosemarketing posted nothing in the last 7 days while competitors published 5 posts.',
+                'competitor_summary' => 'Competitors published 5 posts in the last 7 days, including 0 posts in the last 24 hours. Strongest recent post: @yellowzest Reel from 18 Oct at 3.2 times their usual.',
+                'actions' => [
+                    [
+                        'title' => 'Post a Reel today.',
+                        'why' => '@yellowzest Reel got 3.2 times their usual.',
+                        'related_post_ids' => [],
+                        'inspiration' => [],
+                    ],
+                ],
+                'own_last_7_days' => [],
+                'competitor_moves' => [],
+                'data_freshness' => [],
+            ],
+            'facts' => [
+                'own' => [
+                    'handle' => 'aprilrosemarketing',
+                    'followers_now' => 200,
+                    'posts_last_7d_count' => 0,
+                    'days_since_last_post' => 10,
+                ],
+                'format_mix' => ['competitor_posts_7d' => 5],
+            ],
+            'model' => 'fallback',
+            'llm_attempts' => 0,
+            'was_free' => true,
+            'generated_at' => now(),
+        ]);
+
+        $memo = app(ExecutiveBriefPresenter::class)->forUser($user);
+        $summary = (string) $memo['summary'];
+
+        $this->assertSame(1, substr_count(mb_strtolower($summary), 'competitors published 5 posts'));
+        $this->assertStringContainsString('Strongest recent post: @yellowzest', $summary);
+    }
 }

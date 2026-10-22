@@ -31,7 +31,7 @@ The **logged-in app follows Appearance**. Do not pin authenticated pages with `s
 
 ## Sidebar spacing
 
-Product nav is MCP-first: Executive Brief, Chat, Competitors, Connect your AI (App group), Admin collapsible for admins, Billing/Settings in the footer. Landing URL is `/executive-brief` (route name `dashboard`; `/dashboard` redirects). Rows are ~44px (`2.75rem`) with 14px type, no truncate. Comfortable group gaps (`pt-4`, `mb-2` labels, `gap-1` between rows). Logo block and footer use `py-3`. Must still fit without a scrollbar on an 800px-tall window with Admin collapsed.
+Product nav is MCP-first: Executive Brief, Chat, Competitors, Connect your AI (App group), Admin collapsible for admins, Billing/Settings in the footer. Landing URL is `/executive-brief` (route name `dashboard`; `/dashboard` redirects). Rows are ~44px (`2.75rem`) with 14px type, no truncate. Comfortable group gaps (`pt-4`, `mb-2` labels, `gap-1` between rows). Logo block and footer use `py-3`. Must still fit without a scrollbar on an 800px-tall window with Admin collapsed. Desktop sidebar: in-flow column `self-stretch` with sticky inner `h-svh` so full-page screenshots keep the sidebar rail for the whole page height (do not use a viewport-only fixed shell that ends mid-memo).
 
 ## Public shell is pinned to Caution Tape night
 

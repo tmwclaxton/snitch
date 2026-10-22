@@ -184,10 +184,16 @@ class ExecutiveBriefPresenter
             ? trim($payload['competitor_summary'])
             : '';
 
-        // Prefer own_summary (interpretation) plus the rival clause that names the move.
-        $parts = array_values(array_filter([$ownSummary, $competitorSummary], fn (string $part): bool => $part !== ''));
-        if ($parts !== []) {
-            return implode(' ', array_slice($parts, 0, 2));
+        if ($ownSummary !== '' && $competitorSummary !== '') {
+            return $this->joinSummaryParts($ownSummary, $competitorSummary);
+        }
+
+        if ($ownSummary !== '') {
+            return $ownSummary;
+        }
+
+        if ($competitorSummary !== '') {
+            return $competitorSummary;
         }
 
         if (filled($payload['summary'] ?? null) && is_string($payload['summary'])) {
@@ -205,6 +211,38 @@ class ExecutiveBriefPresenter
         }
 
         return null;
+    }
+
+    /**
+     * Join interpretation + rival clause without repeating "competitors published N posts".
+     */
+    private function joinSummaryParts(string $ownSummary, string $competitorSummary): string
+    {
+        $ownLower = mb_strtolower($ownSummary);
+        $alreadyCounts = str_contains($ownLower, 'competitors published')
+            || str_contains($ownLower, 'rivals published')
+            || str_contains($ownLower, 'rivals posted');
+
+        $comp = $competitorSummary;
+        if ($alreadyCounts) {
+            // Keep the distinctive strongest-post clause; drop the repeated volume sentence.
+            if (preg_match('/\bStrongest recent post:.+$/u', $comp, $match) === 1) {
+                $comp = trim($match[0]);
+            } else {
+                $comp = (string) preg_replace(
+                    '/^Competitors published \d+ posts? in the last 7 days(?:, including \d+ posts? in the last 24 hours)?\.?\s*/iu',
+                    '',
+                    $comp,
+                );
+                $comp = trim($comp);
+            }
+        }
+
+        if ($comp === '') {
+            return $ownSummary;
+        }
+
+        return rtrim($ownSummary, ' ').' '.$comp;
     }
 
     /**
