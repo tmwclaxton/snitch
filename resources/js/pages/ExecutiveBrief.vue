@@ -90,6 +90,22 @@ const headlineText = computed(() => {
     return 'Nothing sharp enough for a headline yet.';
 });
 
+/** Split summary into short bullets for scanability. */
+const summaryBullets = computed((): string[] => {
+    const summary = props.brief.summary?.trim();
+
+    if (! summary) {
+        return ['Not enough stored data for a summary yet.'];
+    }
+
+    const parts = summary
+        .split(/(?<=[.!?])\s+/)
+        .map((part) => part.trim())
+        .filter((part) => part !== '');
+
+    return parts.length > 0 ? parts : [summary];
+});
+
 function postHref(post: BriefPost): string | null {
     return post.snitch_url || post.url || null;
 }
@@ -107,28 +123,32 @@ function competitorTextWithoutHandle(item: CompetitorItem): string {
 
     return ' ' + item.text;
 }
+
+/** Compact fact lines from a long own-activity sentence. */
+function ownFactLines(text: string): string[] {
+    return text
+        .split(/\s+-\s+/)
+        .map((part) => part.trim())
+        .filter((part) => part !== '');
+}
 </script>
 
 <template>
     <div>
         <Head title="Executive Brief" />
 
-        <div class="flex flex-1 flex-col px-4 py-6 md:px-6 md:py-8">
-            <article
-                class="mx-auto w-full max-w-[52.5rem] space-y-8 text-[15px] leading-relaxed text-snitch-ink"
-            >
-                <header class="space-y-3 border-b border-snitch-ink/10 pb-6">
-                    <p class="font-mono text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
+        <div class="flex flex-1 flex-col px-4 py-6 sm:px-6 md:px-8 md:py-8 lg:px-10">
+            <article class="mx-auto w-full max-w-[1280px] text-base leading-[1.6] text-snitch-ink">
+                <header class="space-y-4 border-b border-snitch-ink/15 pb-8">
+                    <p class="text-sm font-semibold uppercase tracking-wide text-snitch-ink/75">
                         Executive Brief
                     </p>
-                    <h1
-                        class="snitch-hero-display text-2xl leading-snug text-snitch-ink sm:text-3xl"
-                    >
+                    <h1 class="snitch-hero-display text-2xl leading-snug text-snitch-ink sm:text-3xl lg:text-4xl">
                         <span class="snitch-highlight">{{ headlineText }}</span>
                     </h1>
                     <p
                         v-if="dateLabel"
-                        class="text-sm text-snitch-ink/70"
+                        class="text-base text-snitch-ink/80"
                     >
                         Brief date: {{ dateLabel }}
                     </p>
@@ -136,12 +156,12 @@ function competitorTextWithoutHandle(item: CompetitorItem): string {
 
                 <section
                     v-if="brief.empty"
-                    class="rounded border border-snitch-ink/10 bg-snitch-lift p-6"
+                    class="mt-10 rounded border border-snitch-ink/10 bg-snitch-lift p-6"
                 >
                     <h2 class="snitch-hero-display text-xl text-snitch-ink">
                         Nothing to brief yet
                     </h2>
-                    <p class="mt-3 text-[15px] leading-relaxed text-snitch-ink/80">
+                    <p class="mt-3 text-base leading-[1.6] text-snitch-ink/90">
                         {{ brief.empty_reason }}
                     </p>
                     <Link
@@ -153,204 +173,229 @@ function competitorTextWithoutHandle(item: CompetitorItem): string {
                 </section>
 
                 <template v-else>
-                    <section class="space-y-3">
-                        <h2 class="font-mono text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
-                            Summary
-                        </h2>
-                        <p class="text-[15px] leading-relaxed text-snitch-ink">
-                            {{ brief.summary || 'Not enough stored data for a summary yet.' }}
-                        </p>
-                    </section>
-
-                    <section class="space-y-4">
-                        <h2 class="font-mono text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
-                            What you've been doing
-                        </h2>
-                        <ul class="space-y-4">
-                            <li
-                                v-for="(bullet, index) in brief.own_activity"
-                                :key="`own-${index}`"
-                                class="space-y-3"
-                            >
-                                <p class="text-[15px] leading-relaxed text-snitch-ink">
-                                    {{ bullet.text }}
-                                </p>
-                                <div
-                                    v-if="bullet.posts.length > 0"
-                                    class="flex flex-wrap gap-2"
-                                >
-                                    <a
-                                        v-for="post in bullet.posts"
-                                        :key="`own-post-${post.post_id}-${post.url}`"
-                                        :href="postHref(post) || undefined"
-                                        :target="post.url ? '_blank' : undefined"
-                                        :rel="post.url ? 'noopener noreferrer' : undefined"
-                                        class="group flex max-w-full items-start gap-2 rounded border border-snitch-ink/10 bg-snitch-lift p-2 no-underline"
+                    <div
+                        class="mt-10 grid gap-12 min-[1000px]:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] min-[1000px]:items-start min-[1000px]:gap-x-12 min-[1000px]:gap-y-0"
+                    >
+                        <!-- Left: summary + suggestions -->
+                        <div class="space-y-12">
+                            <section class="space-y-4">
+                                <h2 class="text-sm font-semibold uppercase tracking-wide text-snitch-ink/80">
+                                    Summary
+                                </h2>
+                                <ul class="space-y-2.5">
+                                    <li
+                                        v-for="(line, index) in summaryBullets"
+                                        :key="`summary-${index}`"
+                                        class="flex gap-3 text-base leading-[1.6] text-snitch-ink"
                                     >
-                                        <img
-                                            v-if="post.thumbnail_url"
-                                            :src="post.thumbnail_url"
-                                            alt=""
-                                            class="size-14 shrink-0 object-cover"
-                                        />
                                         <span
-                                            v-else
-                                            class="flex size-14 shrink-0 items-center justify-center bg-snitch-fog font-mono text-xs uppercase text-snitch-ink/55"
-                                        >
-                                            {{ post.format || 'Post' }}
-                                        </span>
-                                        <span class="min-w-0 text-sm text-snitch-ink">
-                                            <span class="font-medium">
-                                                {{ post.format || 'Post' }}
-                                            </span>
-                                            <span
-                                                v-if="post.posted_label"
-                                                class="text-snitch-ink/60"
-                                            >
-                                                · {{ post.posted_label }}
-                                            </span>
-                                            <span
-                                                v-if="post.times_usual_label"
-                                                class="mt-0.5 block text-snitch-ink/80"
-                                            >
-                                                {{ post.times_usual_label }}
-                                            </span>
-                                        </span>
-                                    </a>
-                                </div>
-                            </li>
-                        </ul>
-                    </section>
-
-                    <section class="space-y-4">
-                        <h2 class="font-mono text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
-                            What competitors have been doing
-                        </h2>
-                        <ul class="space-y-5">
-                            <li
-                                v-for="(item, index) in brief.competitor_activity"
-                                :key="`comp-${index}`"
-                                class="space-y-3"
-                            >
-                                <p class="text-[15px] leading-relaxed text-snitch-ink">
-                                    <template v-if="item.handle">
-                                        <a
-                                            :href="`https://www.instagram.com/${item.handle}/`"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            class="font-medium text-snitch-ink underline decoration-snitch-ink/30 underline-offset-2"
-                                        >@{{ item.handle }}</a>{{ competitorTextWithoutHandle(item) }}
-                                    </template>
-                                    <template v-else>
-                                        {{ item.text }}
-                                    </template>
-                                </p>
-                                <div
-                                    v-if="item.posts.length > 0"
-                                    class="grid gap-2 sm:grid-cols-2"
-                                >
-                                    <a
-                                        v-for="post in item.posts"
-                                        :key="`comp-post-${post.post_id}-${post.url}`"
-                                        :href="postHref(post) || undefined"
-                                        :target="post.url ? '_blank' : undefined"
-                                        :rel="post.url ? 'noopener noreferrer' : undefined"
-                                        class="flex gap-3 rounded border border-snitch-ink/10 bg-snitch-lift p-3 no-underline"
-                                    >
-                                        <img
-                                            v-if="post.thumbnail_url"
-                                            :src="post.thumbnail_url"
-                                            alt=""
-                                            class="size-16 shrink-0 object-cover"
+                                            class="mt-2 size-1.5 shrink-0 rounded-full bg-snitch-ink"
+                                            aria-hidden="true"
                                         />
-                                        <span
-                                            v-else
-                                            class="flex size-16 shrink-0 items-center justify-center bg-snitch-fog font-mono text-xs uppercase text-snitch-ink/55"
-                                        >
-                                            {{ post.format || 'Post' }}
-                                        </span>
-                                        <span class="min-w-0 space-y-1 text-sm text-snitch-ink">
-                                            <span class="block font-medium">
-                                                @{{ post.handle || item.handle }}
-                                            </span>
-                                            <span class="block text-snitch-ink/70">
-                                                {{ post.format || 'Post' }}
-                                                <template v-if="post.posted_label">
-                                                    · {{ post.posted_label }}
-                                                </template>
-                                            </span>
-                                            <span
-                                                v-if="post.times_usual_label"
-                                                class="block text-snitch-ink/80"
-                                            >
-                                                {{ post.times_usual_label }}
-                                            </span>
-                                            <span
-                                                v-if="post.hook || post.caption"
-                                                class="block text-snitch-ink/70"
-                                            >
-                                                {{ post.hook || post.caption }}
-                                            </span>
-                                        </span>
-                                    </a>
-                                </div>
-                            </li>
-                        </ul>
-                    </section>
+                                        <span>{{ line }}</span>
+                                    </li>
+                                </ul>
+                            </section>
 
-                    <section class="space-y-4">
-                        <h2 class="font-mono text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
-                            Our suggestions
-                        </h2>
-                        <ol class="space-y-5">
-                            <li
-                                v-for="suggestion in brief.suggestions"
-                                :key="suggestion.number"
-                                class="space-y-2"
-                            >
-                                <p class="text-[15px] font-medium leading-relaxed text-snitch-ink">
-                                    {{ suggestion.number }}. {{ suggestion.title }}
-                                </p>
-                                <p class="text-[15px] leading-relaxed text-snitch-ink/85">
-                                    <span class="font-medium text-snitch-ink">Why:</span>
-                                    {{ suggestion.why }}
-                                </p>
-                                <div
-                                    v-if="suggestion.evidence.length > 0"
-                                    class="flex flex-wrap gap-2 pt-1"
-                                >
-                                    <a
-                                        v-for="post in suggestion.evidence"
-                                        :key="`ev-${suggestion.number}-${post.post_id}`"
-                                        :href="postHref(post) || undefined"
-                                        :target="post.url ? '_blank' : undefined"
-                                        :rel="post.url ? 'noopener noreferrer' : undefined"
-                                        class="flex items-center gap-2 rounded border border-snitch-ink/10 bg-snitch-lift px-2 py-1.5 text-sm text-snitch-ink no-underline"
+                            <section class="space-y-5">
+                                <h2 class="text-sm font-semibold uppercase tracking-wide text-snitch-ink/80">
+                                    Our suggestions
+                                </h2>
+                                <ol class="space-y-4">
+                                    <li
+                                        v-for="suggestion in brief.suggestions"
+                                        :key="suggestion.number"
+                                        class="rounded border border-snitch-ink/12 bg-snitch-lift p-4 sm:p-5"
                                     >
-                                        <img
-                                            v-if="post.thumbnail_url"
-                                            :src="post.thumbnail_url"
-                                            alt=""
-                                            class="size-10 shrink-0 object-cover"
-                                        />
-                                        <span>
-                                            <span class="font-medium">
-                                                @{{ post.handle || 'post' }}
-                                            </span>
-                                            <span class="text-snitch-ink/65">
-                                                · {{ post.format || 'Post' }}
-                                                <template v-if="post.times_usual_label">
-                                                    · {{ post.times_usual_label }}
-                                                </template>
-                                            </span>
-                                        </span>
-                                    </a>
-                                </div>
-                            </li>
-                        </ol>
-                    </section>
+                                        <p class="text-base font-semibold leading-[1.45] text-snitch-ink">
+                                            <span class="mr-1.5 text-snitch-ink/55">{{ suggestion.number }}.</span>
+                                            {{ suggestion.title }}
+                                        </p>
+                                        <p class="mt-2 text-base leading-[1.6] text-snitch-ink/90">
+                                            <span class="font-semibold text-snitch-ink">Why:</span>
+                                            {{ suggestion.why }}
+                                        </p>
+                                        <div
+                                            v-if="suggestion.evidence.length > 0"
+                                            class="mt-3 flex flex-wrap gap-2"
+                                        >
+                                            <a
+                                                v-for="post in suggestion.evidence"
+                                                :key="`ev-${suggestion.number}-${post.post_id}`"
+                                                :href="postHref(post) || undefined"
+                                                :target="post.url ? '_blank' : undefined"
+                                                :rel="post.url ? 'noopener noreferrer' : undefined"
+                                                class="flex items-center gap-2 rounded border border-snitch-ink/12 bg-snitch-paper px-2 py-1.5 text-sm text-snitch-ink no-underline"
+                                            >
+                                                <img
+                                                    v-if="post.thumbnail_url"
+                                                    :src="post.thumbnail_url"
+                                                    alt=""
+                                                    class="size-10 shrink-0 object-cover"
+                                                />
+                                                <span>
+                                                    <span class="font-medium">
+                                                        @{{ post.handle || 'post' }}
+                                                    </span>
+                                                    <span class="text-snitch-ink/70">
+                                                        · {{ post.format || 'Post' }}
+                                                        <template v-if="post.times_usual_label">
+                                                            · {{ post.times_usual_label }}
+                                                        </template>
+                                                    </span>
+                                                </span>
+                                            </a>
+                                        </div>
+                                    </li>
+                                </ol>
+                            </section>
+                        </div>
 
-                    <footer class="space-y-3 border-t border-snitch-ink/10 pt-6 text-sm text-snitch-ink/70">
+                        <!-- Right: own + competitors -->
+                        <div class="space-y-12">
+                            <section class="space-y-4">
+                                <h2 class="text-sm font-semibold uppercase tracking-wide text-snitch-ink/80">
+                                    What you've been doing
+                                </h2>
+                                <ul class="space-y-3">
+                                    <li
+                                        v-for="(bullet, index) in brief.own_activity"
+                                        :key="`own-${index}`"
+                                        class="rounded border border-snitch-ink/12 bg-snitch-lift p-4"
+                                    >
+                                        <ul class="space-y-1.5">
+                                            <li
+                                                v-for="(line, lineIndex) in ownFactLines(bullet.text)"
+                                                :key="`own-line-${index}-${lineIndex}`"
+                                                class="text-base leading-[1.55] text-snitch-ink"
+                                            >
+                                                {{ line }}
+                                            </li>
+                                        </ul>
+                                        <div
+                                            v-if="bullet.posts.length > 0"
+                                            class="mt-3 grid grid-cols-2 gap-2"
+                                        >
+                                            <a
+                                                v-for="post in bullet.posts"
+                                                :key="`own-post-${post.post_id}-${post.url}`"
+                                                :href="postHref(post) || undefined"
+                                                :target="post.url ? '_blank' : undefined"
+                                                :rel="post.url ? 'noopener noreferrer' : undefined"
+                                                class="flex items-start gap-2 rounded border border-snitch-ink/10 bg-snitch-paper p-2 no-underline"
+                                            >
+                                                <img
+                                                    v-if="post.thumbnail_url"
+                                                    :src="post.thumbnail_url"
+                                                    alt=""
+                                                    class="size-12 shrink-0 object-cover"
+                                                />
+                                                <span
+                                                    v-else
+                                                    class="flex size-12 shrink-0 items-center justify-center bg-snitch-fog text-xs uppercase text-snitch-ink/60"
+                                                >
+                                                    {{ post.format || 'Post' }}
+                                                </span>
+                                                <span class="min-w-0 text-sm leading-snug text-snitch-ink">
+                                                    <span class="font-medium">{{ post.format || 'Post' }}</span>
+                                                    <span
+                                                        v-if="post.posted_label"
+                                                        class="block text-snitch-ink/70"
+                                                    >
+                                                        {{ post.posted_label }}
+                                                    </span>
+                                                    <span
+                                                        v-if="post.times_usual_label"
+                                                        class="mt-0.5 block text-snitch-ink/85"
+                                                    >
+                                                        {{ post.times_usual_label }}
+                                                    </span>
+                                                </span>
+                                            </a>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </section>
+
+                            <section class="space-y-4">
+                                <h2 class="text-sm font-semibold uppercase tracking-wide text-snitch-ink/80">
+                                    What competitors have been doing
+                                </h2>
+                                <ul class="space-y-4">
+                                    <li
+                                        v-for="(item, index) in brief.competitor_activity"
+                                        :key="`comp-${index}`"
+                                        class="rounded border border-snitch-ink/12 bg-snitch-lift p-4"
+                                    >
+                                        <p class="text-base leading-[1.55] text-snitch-ink">
+                                            <template v-if="item.handle">
+                                                <a
+                                                    :href="`https://www.instagram.com/${item.handle}/`"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    class="font-semibold text-snitch-ink underline decoration-snitch-ink/35 underline-offset-2"
+                                                >@{{ item.handle }}</a>{{ competitorTextWithoutHandle(item) }}
+                                            </template>
+                                            <template v-else>
+                                                {{ item.text }}
+                                            </template>
+                                        </p>
+                                        <div
+                                            v-if="item.posts.length > 0"
+                                            class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2"
+                                        >
+                                            <a
+                                                v-for="post in item.posts"
+                                                :key="`comp-post-${post.post_id}-${post.url}`"
+                                                :href="postHref(post) || undefined"
+                                                :target="post.url ? '_blank' : undefined"
+                                                :rel="post.url ? 'noopener noreferrer' : undefined"
+                                                class="flex gap-2.5 rounded border border-snitch-ink/10 bg-snitch-paper p-2.5 no-underline"
+                                            >
+                                                <img
+                                                    v-if="post.thumbnail_url"
+                                                    :src="post.thumbnail_url"
+                                                    alt=""
+                                                    class="size-14 shrink-0 object-cover"
+                                                />
+                                                <span
+                                                    v-else
+                                                    class="flex size-14 shrink-0 items-center justify-center bg-snitch-fog text-xs uppercase text-snitch-ink/60"
+                                                >
+                                                    {{ post.format || 'Post' }}
+                                                </span>
+                                                <span class="min-w-0 space-y-0.5 text-sm leading-snug text-snitch-ink">
+                                                    <span class="block font-medium">
+                                                        @{{ post.handle || item.handle }}
+                                                    </span>
+                                                    <span class="block text-snitch-ink/70">
+                                                        {{ post.format || 'Post' }}
+                                                        <template v-if="post.posted_label">
+                                                            · {{ post.posted_label }}
+                                                        </template>
+                                                    </span>
+                                                    <span
+                                                        v-if="post.times_usual_label"
+                                                        class="block text-snitch-ink/85"
+                                                    >
+                                                        {{ post.times_usual_label }}
+                                                    </span>
+                                                    <span
+                                                        v-if="post.hook || post.caption"
+                                                        class="block text-snitch-ink/70"
+                                                    >
+                                                        {{ post.hook || post.caption }}
+                                                    </span>
+                                                </span>
+                                            </a>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </section>
+                        </div>
+                    </div>
+
+                    <footer class="mt-14 space-y-3 border-t border-snitch-ink/15 pt-8 text-base text-snitch-ink/80">
                         <p v-if="dateLabel">
                             Brief date: {{ dateLabel }}
                         </p>
@@ -361,7 +406,7 @@ function competitorTextWithoutHandle(item: CompetitorItem): string {
                             Ask follow-ups in
                             <Link
                                 :href="chatIndex()"
-                                class="font-medium text-snitch-ink underline decoration-snitch-ink/35 underline-offset-2"
+                                class="font-semibold text-snitch-ink underline decoration-snitch-ink/40 underline-offset-2"
                             >
                                 Chat
                             </Link>.

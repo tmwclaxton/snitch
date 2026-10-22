@@ -178,7 +178,7 @@ class ExecutiveDashboardTest extends TestCase
         $this->assertStringContainsString("What you've been doing", $dashboard);
         $this->assertStringContainsString('What competitors have been doing', $dashboard);
         $this->assertStringContainsString('Our suggestions', $dashboard);
-        $this->assertStringContainsString('max-w-[52.5rem]', $dashboard);
+        $this->assertStringContainsString('max-w-[1280px]', $dashboard);
         $this->assertStringNotContainsString('Your canvas', $dashboard);
         $this->assertStringNotContainsString('PanelBigNumber', $dashboard);
         $this->assertStringNotContainsString('id="vote"', $dashboard);

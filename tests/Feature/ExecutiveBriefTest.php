@@ -47,7 +47,7 @@ class ExecutiveBriefTest extends TestCase
         $this->assertNotFalse($page);
         $this->assertStringContainsString("title: 'Executive Brief'", $sidebar);
         $this->assertStringNotContainsString("title: 'Dashboard'", $sidebar);
-        $this->assertStringContainsString('max-w-[52.5rem]', $page);
+        $this->assertStringContainsString('max-w-[1280px]', $page);
         $this->assertStringContainsString("What you've been doing", $page);
         $this->assertStringContainsString('Our suggestions', $page);
         $this->assertStringNotContainsString('PanelBigNumber', $page);
