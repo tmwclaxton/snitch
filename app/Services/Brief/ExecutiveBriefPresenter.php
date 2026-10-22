@@ -85,10 +85,14 @@ class ExecutiveBriefPresenter
             : [];
 
         $summary = $this->resolveSummary($payload, $overrides, $facts);
+        $narrative = $this->resolveNarrative($payload, $summary);
         $ownActivity = $this->ownActivityBullets($payload, $facts);
         $competitorActivity = $this->competitorActivity($payload);
         $suggestions = $this->resolveSuggestions($payload, $overrides, $facts);
-        $insufficient = $summary === null
+        $headlineParts = $this->splitHeadline($this->resolveHeadline($payload, $facts));
+        $signals = $this->signals($facts);
+        $keyFigures = $this->keyFigures($facts, $payload);
+        $insufficient = ($narrative === null && $summary === null)
             || ($ownActivity === [] && $competitorActivity === [] && $suggestions === []);
 
         return [
@@ -96,12 +100,17 @@ class ExecutiveBriefPresenter
             'empty_reason' => null,
             'brief_date' => $brief->brief_date?->toDateString(),
             'generated_at' => $brief->generated_at?->timezone(DashboardMath::TIMEZONE)->toIso8601String(),
-            'headline' => $this->resolveHeadline($payload, $facts),
+            'headline' => $headlineParts['headline'],
+            'headline_detail' => $headlineParts['detail'],
+            'narrative' => $narrative,
             'summary' => $summary,
+            'summary_bullets' => $this->summaryBullets($summary),
             'own_activity' => $ownActivity,
             'competitor_activity' => $competitorActivity,
             'suggestions' => $suggestions,
-            'signals' => $this->signals($facts),
+            'signals' => $signals,
+            'key_figures' => $keyFigures,
+            'show_cadence_visual' => $this->shouldShowCadenceVisual($headlineParts['headline'], $signals, $facts),
             'freshness' => $this->freshnessSummary($payload),
             'chat_url' => rtrim((string) config('app.url'), '/').'/chat',
             'competitors_url' => rtrim((string) config('app.url'), '/').'/competitors',
@@ -128,11 +137,16 @@ class ExecutiveBriefPresenter
             'brief_date' => null,
             'generated_at' => null,
             'headline' => null,
+            'headline_detail' => null,
+            'narrative' => null,
             'summary' => null,
+            'summary_bullets' => [],
             'own_activity' => [],
             'competitor_activity' => [],
             'suggestions' => [],
             'signals' => $this->emptySignals(),
+            'key_figures' => $this->emptyKeyFigures(),
+            'show_cadence_visual' => false,
             'freshness' => [
                 'line' => null,
                 'failed_handles' => [],
@@ -150,12 +164,245 @@ class ExecutiveBriefPresenter
     }
 
     /**
+     * Memo opening paragraph. Prefer the saved narrative; fall back to summary prose.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function resolveNarrative(array $payload, ?string $summary): ?string
+    {
+        $narrative = is_string($payload['narrative'] ?? null) ? trim($payload['narrative']) : '';
+        if ($narrative !== '') {
+            return $narrative;
+        }
+
+        return $summary !== null && trim($summary) !== '' ? trim($summary) : null;
+    }
+
+    /**
+     * Slim margin figures: followers, days quiet, best rival post.
+     *
+     * @param  array<string, mixed>  $facts
+     * @param  array<string, mixed>  $payload
+     * @return list<array{label: string, value: string, detail: string|null}>
+     */
+    private function keyFigures(array $facts, array $payload): array
+    {
+        $own = is_array($facts['own'] ?? null) ? $facts['own'] : [];
+        $figures = [];
+
+        $followers = $own['followers_now'] ?? null;
+        if ($followers !== null && is_numeric($followers)) {
+            $change = is_array($own['followers_change_7d'] ?? null)
+                ? trim((string) ($own['followers_change_7d']['label'] ?? ''))
+                : '';
+            $figures[] = [
+                'label' => 'Followers',
+                'value' => number_format((int) $followers),
+                'detail' => $change !== '' ? $change : null,
+            ];
+        }
+
+        $daysSince = $own['days_since_last_post'] ?? null;
+        if ($daysSince !== null && is_numeric($daysSince)) {
+            $figures[] = [
+                'label' => 'Days quiet',
+                'value' => (string) (int) $daysSince,
+                'detail' => null,
+            ];
+        }
+
+        $bestRival = $this->bestRivalPost($facts, $payload);
+        if ($bestRival !== null) {
+            $figures[] = [
+                'label' => 'Best rival post',
+                'value' => (string) ($bestRival['times_usual_label'] ?? $bestRival['value'] ?? ''),
+                'detail' => (string) ($bestRival['detail'] ?? null),
+            ];
+        }
+
+        return $figures;
+    }
+
+    /**
+     * @return list<array{label: string, value: string, detail: string|null}>
+     */
+    private function emptyKeyFigures(): array
+    {
+        return [];
+    }
+
+    /**
+     * @param  array<string, mixed>  $facts
+     * @param  array<string, mixed>  $payload
+     * @return array{times_usual_label: string, detail: string, value: string}|null
+     */
+    private function bestRivalPost(array $facts, array $payload): ?array
+    {
+        $candidates = [];
+        $walker = function (mixed $value) use (&$candidates, &$walker): void {
+            if (! is_array($value)) {
+                return;
+            }
+            if (isset($value['post_id'], $value['times_usual']) && is_numeric($value['times_usual'])) {
+                $candidates[] = $value;
+            }
+            foreach ($value as $child) {
+                $walker($child);
+            }
+        };
+
+        $ownHandle = $this->normaliseHandle((string) ($facts['own']['handle'] ?? ''));
+        foreach (['top_competitor_hit_7d', 'competitors'] as $key) {
+            if (isset($facts[$key])) {
+                $walker($facts[$key]);
+            }
+        }
+        if (isset($payload['competitor_moves'])) {
+            $walker($payload['competitor_moves']);
+        }
+
+        $best = null;
+        $bestScore = 0.0;
+        foreach ($candidates as $post) {
+            $handle = $this->normaliseHandle((string) ($post['handle'] ?? ''));
+            if ($ownHandle !== '' && $handle === $ownHandle) {
+                continue;
+            }
+            $score = (float) $post['times_usual'];
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $best = $post;
+            }
+        }
+
+        if ($best === null) {
+            return null;
+        }
+
+        $handle = (string) ($best['handle'] ?? 'rival');
+        $format = (string) ($best['format'] ?? 'post');
+        $label = is_string($best['times_usual_label'] ?? null) && $best['times_usual_label'] !== ''
+            ? (string) $best['times_usual_label']
+            : (rtrim(rtrim(number_format($bestScore, 1), '0'), '.').'x');
+
+        return [
+            'times_usual_label' => $label,
+            'value' => $label,
+            'detail' => '@'.$handle.' '.$format,
+        ];
+    }
+
+    /**
+     * Only show the cadence strip when it proves a quiet / cadence headline.
+     *
+     * @param  array<string, mixed>  $signals
+     * @param  array<string, mixed>  $facts
+     */
+    private function shouldShowCadenceVisual(?string $headline, array $signals, array $facts): bool
+    {
+        if ($headline === null || trim($headline) === '') {
+            return false;
+        }
+
+        $days = $signals['cadence_days'] ?? [];
+        if (! is_array($days) || $days === []) {
+            return false;
+        }
+
+        $ownPosts = $signals['own_posts_7d'] ?? null;
+        $rivalMedian = $signals['rival_median_posts_7d'] ?? null;
+        $lower = mb_strtolower($headline);
+        $provesQuiet = str_contains($lower, 'quiet')
+            || str_contains($lower, 'days')
+            || str_contains($lower, 'cadence')
+            || str_contains($lower, 'posted')
+            || str_contains($lower, 'silence');
+
+        if (! $provesQuiet) {
+            return false;
+        }
+
+        if ($ownPosts === null) {
+            return false;
+        }
+
+        // Prefer when own cadence is behind rivals, or the week is empty.
+        if ((int) $ownPosts === 0) {
+            return true;
+        }
+
+        if ($rivalMedian !== null && (int) $ownPosts < (int) $rivalMedian) {
+            return true;
+        }
+
+        $own = is_array($facts['own'] ?? null) ? $facts['own'] : [];
+        $daysSince = isset($own['days_since_last_post']) ? (int) $own['days_since_last_post'] : null;
+
+        return $daysSince !== null && $daysSince >= 3;
+    }
+
+    /**
+     * Keep the yellow headline short (~90 chars); put the rest under it.
+     *
+     * @return array{headline: string|null, detail: string|null}
+     */
+    private function splitHeadline(?string $headline): array
+    {
+        $headline = is_string($headline) ? trim($headline) : '';
+        if ($headline === '') {
+            return ['headline' => null, 'detail' => null];
+        }
+
+        if (mb_strlen($headline) <= 90) {
+            return ['headline' => $headline, 'detail' => null];
+        }
+
+        if (preg_match('/^(.+?[.!?])\s+(.+)$/u', $headline, $match) === 1) {
+            $first = trim($match[1]);
+            $rest = trim($match[2]);
+            if (mb_strlen($first) <= 90 && $rest !== '') {
+                return ['headline' => $first, 'detail' => $rest];
+            }
+        }
+
+        $cut = mb_substr($headline, 0, 87);
+        $space = mb_strrpos($cut, ' ');
+        if ($space !== false && $space > 40) {
+            $cut = mb_substr($cut, 0, $space);
+        }
+
+        return [
+            'headline' => rtrim($cut, '.,;:').'.',
+            'detail' => $headline,
+        ];
+    }
+
+    /**
+     * At most 3 interpretive bullets for the memo summary.
+     *
+     * @return list<string>
+     */
+    private function summaryBullets(?string $summary): array
+    {
+        if ($summary === null || trim($summary) === '') {
+            return [];
+        }
+
+        $parts = preg_split('/(?<=[.!?])\s+/u', trim($summary)) ?: [];
+        $parts = array_values(array_filter(array_map('trim', $parts), fn (string $part): bool => $part !== ''));
+
+        return array_slice($parts === [] ? [trim($summary)] : $parts, 0, 3);
+    }
+
+    /**
      * Compact visual signals for the memo (cadence strip, format mix, best slot).
      *
      * @param  array<string, mixed>  $facts
      * @return array{
      *     cadence_days: list<array{label: string, posted: bool}>,
      *     own_posts_7d: int|null,
+     *     rival_median_posts_7d: int|null,
+     *     rival_cadence_label: string|null,
      *     format_mix: list<array{label: string, count: int}>,
      *     best_slot_label: string|null,
      *     best_slot_sample_count: int|null
@@ -229,9 +476,17 @@ class ExecutiveBriefPresenter
             }
         }
 
+        $rivalMedian = $this->rivalMedianPosts7d($facts);
+        $rivalLabel = null;
+        if ($rivalMedian !== null) {
+            $rivalLabel = 'Rival median '.$this->pluralise($rivalMedian, 'post').' / 7 days';
+        }
+
         return [
             'cadence_days' => $cadenceDays,
             'own_posts_7d' => $posts7,
+            'rival_median_posts_7d' => $rivalMedian,
+            'rival_cadence_label' => $rivalLabel,
             'format_mix' => $formatMix,
             'best_slot_label' => $slotLabel,
             'best_slot_sample_count' => $sampleCount,
@@ -239,9 +494,56 @@ class ExecutiveBriefPresenter
     }
 
     /**
+     * @param  array<string, mixed>  $facts
+     */
+    private function rivalMedianPosts7d(array $facts): ?int
+    {
+        $counts = [];
+        $ownHandle = $this->normaliseHandle((string) (is_array($facts['own'] ?? null) ? ($facts['own']['handle'] ?? '') : ''));
+
+        $rows = is_array($facts['cadence'] ?? null) ? $facts['cadence'] : [];
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $handle = $this->normaliseHandle((string) ($row['handle'] ?? ''));
+            if ($handle === '' || ($ownHandle !== '' && $handle === $ownHandle)) {
+                continue;
+            }
+            $counts[] = (int) ($row['posts_last_7d'] ?? 0);
+        }
+
+        if ($counts === []) {
+            foreach (is_array($facts['competitors'] ?? null) ? $facts['competitors'] : [] as $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+                $counts[] = (int) ($row['posts_last_7d_count'] ?? 0);
+            }
+        }
+
+        $counts = array_values(array_filter($counts, fn (int $n): bool => $n >= 0));
+        if ($counts === []) {
+            return null;
+        }
+
+        sort($counts);
+        $mid = (int) floor((count($counts) - 1) / 2);
+
+        return (int) $counts[$mid];
+    }
+
+    private function normaliseHandle(string $handle): string
+    {
+        return mb_strtolower(ltrim(trim($handle), '@'));
+    }
+
+    /**
      * @return array{
      *     cadence_days: list<array{label: string, posted: bool}>,
      *     own_posts_7d: int|null,
+     *     rival_median_posts_7d: int|null,
+     *     rival_cadence_label: string|null,
      *     format_mix: list<array{label: string, count: int}>,
      *     best_slot_label: string|null,
      *     best_slot_sample_count: int|null
@@ -252,6 +554,8 @@ class ExecutiveBriefPresenter
         return [
             'cadence_days' => [],
             'own_posts_7d' => null,
+            'rival_median_posts_7d' => null,
+            'rival_cadence_label' => null,
             'format_mix' => [],
             'best_slot_label' => null,
             'best_slot_sample_count' => null,
@@ -367,7 +671,7 @@ class ExecutiveBriefPresenter
     {
         $own = is_array($facts['own'] ?? null) ? $facts['own'] : null;
         $recentPosts = $this->enrichPosts(
-            array_slice(is_array($payload['own_last_7_days'] ?? null) ? $payload['own_last_7_days'] : [], 0, 4),
+            array_slice(is_array($payload['own_last_7_days'] ?? null) ? $payload['own_last_7_days'] : [], 0, 2),
         );
 
         if (! is_array($own) && $recentPosts === []) {
@@ -454,7 +758,8 @@ class ExecutiveBriefPresenter
 
             $standouts = is_array($row['standout_winners'] ?? null) ? $row['standout_winners'] : [];
             $recent = is_array($row['posts_last_7d'] ?? null) ? $row['posts_last_7d'] : [];
-            $posts = $this->enrichPosts(array_slice($standouts !== [] ? $standouts : $recent, 0, 3));
+            // Memo evidence: at most two standout thumbs in one horizontal row.
+            $posts = $this->enrichPosts(array_slice($standouts !== [] ? $standouts : $recent, 0, 2));
             $change = is_array($row['followers_change_7d'] ?? null)
                 ? trim((string) ($row['followers_change_7d']['label'] ?? ''))
                 : '';
@@ -520,15 +825,18 @@ class ExecutiveBriefPresenter
                 $evidenceIds = is_array($row['related_post_ids'] ?? null)
                     ? $row['related_post_ids']
                     : [];
+                $expected = trim((string) ($row['expected'] ?? ''));
+                $evidence = array_slice($this->evidencePosts($facts, $payload, $evidenceIds), 0, 1);
                 $out[] = [
                     'number' => count($out) + 1,
                     'title' => $title,
                     'why' => $why,
-                    'evidence' => $this->evidencePosts($facts, $payload, $evidenceIds),
+                    'expected' => $expected !== '' ? $expected : null,
+                    'evidence' => $evidence,
                 ];
             }
 
-            return array_slice($out, 0, 5);
+            return array_slice($out, 0, 3);
         }
 
         $actions = is_array($payload['actions'] ?? null) ? $payload['actions'] : [];
@@ -553,12 +861,14 @@ class ExecutiveBriefPresenter
             if ($evidence === [] && $inspiration !== []) {
                 $evidence = $this->enrichPosts($inspiration);
             }
+            $expected = trim((string) ($action['expected'] ?? ''));
 
             $out[] = [
                 'number' => count($out) + 1,
                 'title' => $title,
                 'why' => $why,
-                'evidence' => $evidence,
+                'expected' => $expected !== '' ? $expected : null,
+                'evidence' => array_slice($evidence, 0, 1),
             ];
         }
 
@@ -567,11 +877,12 @@ class ExecutiveBriefPresenter
                 'number' => 1,
                 'title' => 'Not enough stored data for grounded suggestions yet.',
                 'why' => 'Sync competitors and wait for the morning brief before expecting numbered actions with figures.',
+                'expected' => null,
                 'evidence' => [],
             ]];
         }
 
-        return array_slice($out, 0, 5);
+        return array_slice($out, 0, 3);
     }
 
     /**

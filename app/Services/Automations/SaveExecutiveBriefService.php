@@ -24,9 +24,10 @@ class SaveExecutiveBriefService
     /**
      * @param  array{
      *     headline: string,
+     *     narrative: string,
      *     summary: string,
      *     sections?: list<array{title?: string, body: string}>,
-     *     suggestions: list<array{title: string, why: string, evidence_post_ids?: list<int>, related_post_ids?: list<int>}>
+     *     suggestions: list<array{title: string, why: string, expected?: string, evidence_post_ids?: list<int>, related_post_ids?: list<int>}>
      * }  $input
      * @return array{ok: bool, kept_existing: bool, brief: array<string, mixed>|null, errors: list<string>, run: AutomationRun}
      */
@@ -85,6 +86,7 @@ class SaveExecutiveBriefService
         $payload = is_array($brief->payload) ? $brief->payload : [];
 
         $payload['headline'] = (string) ($checked['headline'] ?? $input['headline']);
+        $payload['narrative'] = trim((string) ($checked['narrative'] ?? ($input['narrative'] ?? '')));
         $payload['summary'] = trim((string) $input['summary']);
         $payload['own_summary'] = (string) ($checked['own_summary'] ?? '');
         $payload['competitor_summary'] = (string) ($checked['competitor_summary'] ?? $payload['summary']);
@@ -172,10 +174,13 @@ class SaveExecutiveBriefService
                 $title .= '.';
             }
 
+            $expected = trim((string) ($row['expected'] ?? ''));
+
             $actions[] = [
                 'title' => $title,
                 'why' => trim((string) ($row['why'] ?? '')),
                 'how' => trim((string) ($row['how'] ?? 'Follow through today.')),
+                'expected' => $expected !== '' ? $expected : null,
                 'when' => $row['when'] ?? null,
                 'format' => $row['format'] ?? null,
                 'hook' => $row['hook'] ?? null,
@@ -186,6 +191,7 @@ class SaveExecutiveBriefService
 
         return [
             'headline' => trim((string) ($input['headline'] ?? '')),
+            'narrative' => trim((string) ($input['narrative'] ?? '')),
             'own_summary' => $ownSummary,
             'competitor_summary' => $competitorSummary,
             'actions' => array_slice($actions, 0, 5),

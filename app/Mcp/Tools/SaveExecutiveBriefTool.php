@@ -15,7 +15,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('save_executive_brief')]
-#[Description('Automation only. Save a grounded Executive Brief for the token-bound user and run. Pass headline, summary, optional sections, and 3-5 suggestions each with why and evidence_post_ids. Server validates every number against stored facts; on failure the current generated brief is kept and the run is closed.')]
+#[Description('Automation only. Save a grounded Executive Brief for the token-bound user and run. Pass headline (short), narrative (80-140 words of flowing prose), summary (up to 3 interpretive sentences), and 3 suggestions each with why and evidence_post_ids. Server validates every number against stored facts; on validation failure the run stays open so you can revise and save again.')]
 class SaveExecutiveBriefTool extends Tool
 {
     public function handle(Request $request, SaveExecutiveBriefService $saver): Response
@@ -36,7 +36,8 @@ class SaveExecutiveBriefTool extends Tool
         }
 
         $data = $request->validate([
-            'headline' => ['required', 'string', 'max:500'],
+            'headline' => ['required', 'string', 'max:120'],
+            'narrative' => ['required', 'string', 'max:2000'],
             'summary' => ['required', 'string', 'max:4000'],
             'sections' => ['nullable', 'array', 'max:10'],
             'sections.*.title' => ['nullable', 'string', 'max:120'],
@@ -45,6 +46,7 @@ class SaveExecutiveBriefTool extends Tool
             'suggestions.*.title' => ['required', 'string', 'max:500'],
             'suggestions.*.why' => ['required', 'string', 'max:2000'],
             'suggestions.*.how' => ['nullable', 'string', 'max:2000'],
+            'suggestions.*.expected' => ['nullable', 'string', 'max:500'],
             'suggestions.*.evidence_post_ids' => ['nullable', 'array', 'max:10'],
             'suggestions.*.evidence_post_ids.*' => ['integer', 'min:1'],
             'suggestions.*.related_post_ids' => ['nullable', 'array', 'max:10'],
@@ -75,13 +77,20 @@ class SaveExecutiveBriefTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'headline' => $schema->string()->description('Yellow-block headline.')->required(),
-            'summary' => $schema->string()->description('2-3 sentence interpretive summary.')->required(),
+            'headline' => $schema->string()
+                ->description('Short yellow-block headline, about 90 characters max.')
+                ->required(),
+            'narrative' => $schema->string()
+                ->description('Memo opening: 80-140 words of flowing prose (not bullets). What is happening, why it matters, what to do first. Cite real figures.')
+                ->required(),
+            'summary' => $schema->string()
+                ->description('Up to 3 short interpretive sentences (bullets on the page).')
+                ->required(),
             'sections' => $schema->array()
                 ->description('Optional memo sections (title + body), e.g. own / competitors.')
                 ->nullable(),
             'suggestions' => $schema->array()
-                ->description('3-5 suggestions with title, why, and evidence_post_ids.')
+                ->description('Exactly 3 preferred: title, why, evidence_post_ids. Optional expected outcome line.')
                 ->required(),
             'user_id' => $schema->integer()
                 ->description('Ignored. Scope is the token owner only.')
