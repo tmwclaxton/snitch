@@ -340,12 +340,10 @@ PROMPT;
         }
 
         $dateBit = $cite['date_short'] !== null ? ' from '.$cite['date_short'] : '';
-        // Keep quiet-gap headlines; cite rebinding is for format/date/Nx consistency only.
+        // Keep quiet-gap headlines; otherwise plain-English takeaway (no @handle, no Nx).
         if (preg_match('/\bday(?:s)? quiet while rivals\b/iu', $headline) !== 1) {
-            $output['headline'] = '@'.$cite['handle'].' '.$cite['format']
-                .$dateBit
-                .' at '.$cite['multiplier_short']
-                .'. Post a '.$cite['format'].' today at '.$when.'.';
+            $output['headline'] = 'Rivals are winning with '.$cite['format']
+                .'s - post one today at '.$when.'.';
         }
 
         $clause = 'Strongest recent post: @'.$cite['handle'].' '.$cite['format']
@@ -368,9 +366,9 @@ PROMPT;
             $action['related_handles'] = [$cite['handle']];
             $action['related_post_ids'] = [$cite['post_id']];
             $action['title'] = 'Post a '.$cite['format'].' today at '.$when.'.';
-            $action['why'] = '@'.$cite['handle'].'\'s '.$cite['format']
+            $action['why'] = 'That '.$cite['format'].' idea is earning attention'
                 .$dateBit
-                .' got '.$cite['multiplier_label'].'.';
+                .' at '.$cite['multiplier_label'].'.';
             $output['actions'][0] = $action;
         }
 
@@ -416,10 +414,15 @@ PROMPT;
 
             if (preg_match('/^Comment on @/iu', $title) === 1) {
                 $title = 'Comment on @'.$cite['handle'].'\'s '.$cite['format'].$dateBit.'.';
-                $why = '@'.$cite['handle'].'\'s '.$cite['format'].$dateBit.' is at '.$cite['multiplier_label'].'.';
+                $why = 'That thread is still warm'.$dateBit.' at '.$cite['multiplier_label'].' - leave one real comment.';
             } else {
                 $title = $this->rewriteActionProseToCite($title, $cite);
                 $why = $this->rewriteActionProseToCite($why, $cite);
+                // Keep idea-first whys: never let a rewrite leave the line opening on @handle.
+                if (preg_match('/^@[A-Za-z0-9._]+/u', $why) === 1) {
+                    $why = 'That '.$cite['format'].' idea is earning attention'.$dateBit
+                        .' at '.$cite['multiplier_label'].'.';
+                }
             }
 
             $action['title'] = $title;
@@ -554,24 +557,19 @@ PROMPT;
 
         $headline = 'Your next move is a '.$hitFormat.' today at '.$when.'.';
         if ($daysSince !== null && (int) $daysSince >= 3 && $comp7 > 0) {
-            $headline = (int) $daysSince.' days quiet while rivals posted '.$this->pluralise($comp7, 'time').'.';
+            $headline = (int) $daysSince.' days quiet while rivals keep posting.';
         } elseif ($cite !== null) {
-            $headline = '@'.$cite['handle'].' '.$cite['format']
-                .($cite['date_short'] !== null ? ' from '.$cite['date_short'] : '')
-                .' at '.$cite['multiplier_short'].'. Post a '.$cite['format'].' today.';
+            $headline = 'Rivals are winning with '.$cite['format'].'s - post one today.';
         } elseif (is_numeric($change7) && (int) $change7 !== 0 && $reels7 > 0) {
-            $changeNote = $changeLabel !== ''
-                ? $changeLabel
-                : ((int) $change7 > 0 ? 'up '.(int) $change7 : (string) (int) $change7).' followers';
-            $headline = 'You are '.$changeNote.' but competitors posted '.$this->pluralise($reels7, 'Reel').'.';
+            $headline = 'Followers moved, but competitors are still shipping Reels.';
         }
 
         $actions = [];
 
         $formatWhy = $hitHandle !== ''
-            ? '@'.$hitHandle.'\'s '.$hitFormat
-                .($hitDate !== null ? ' from '.$hitDate : '')
-                .' got '.$hitLabel.'. Match that format today.'
+            ? 'That '.$hitFormat.' idea is earning attention'
+                .($hitDate !== null ? ' (see their post from '.$hitDate.')' : '')
+                .' at '.$hitLabel.'. Match that format today.'
             : 'Competitors posted '.$this->pluralise($reels7 > 0 ? $reels7 : $comp7, $reels7 > 0 ? 'Reel' : 'post').' in the last 7 days.';
         $ownFormats = is_array($own) ? ($own['posts_last_30d_by_format'] ?? []) : [];
         $ownFormatBit = $this->formatMixShort(is_array($ownFormats) ? $ownFormats : []);
@@ -657,7 +655,9 @@ PROMPT;
                 $dateBit = $engageCite['date_short'] !== null ? ' from '.$engageCite['date_short'] : '';
                 $actions[] = [
                     'title' => 'Comment on @'.$engageCite['handle'].'\'s '.$engageCite['format'].$dateBit.'.',
-                    'why' => '@'.$engageCite['handle'].'\'s '.$engageCite['format'].$dateBit.' is at '.$engageCite['multiplier_label'].'.',
+                    'why' => 'That thread is still warm'
+                        .$dateBit
+                        .' at '.$engageCite['multiplier_label'].' - show up with one real comment.',
                     'how' => 'Leave a genuine comment on the post.',
                     'when' => null,
                     'format' => 'Engage',

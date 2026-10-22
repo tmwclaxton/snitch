@@ -56,6 +56,10 @@ class DailyBriefValidator
 
         if ($headline === '') {
             $errors[] = 'headline is empty';
+        } else {
+            foreach ($this->headlineToneErrors($headline) as $headlineError) {
+                $errors[] = $headlineError;
+            }
         }
 
         if ($narrative !== '') {
@@ -124,6 +128,12 @@ class DailyBriefValidator
                 $errors[] = 'action '.($index + 1).' is missing a title';
             } elseif (preg_match('/^(do not|don\'t|dont|skip|avoid)\b/iu', $title) === 1) {
                 $errors[] = 'action '.($index + 1).' must be a positive action (not skip / avoid / do not)';
+            }
+
+            if ($why !== '' && preg_match('/^@[A-Za-z0-9._]+/u', $why) === 1) {
+                $errors[] = 'action '.($index + 1).' why must lead with the idea, not an @handle citation';
+            } elseif ($why !== '' && preg_match('/^@[A-Za-z0-9._]+\'s\b.+\breached\b.+\btimes their usual/iu', $why) === 1) {
+                $errors[] = 'action '.($index + 1).' why repeats the "@handle\'s X reached N times" template - vary the phrasing';
             }
 
             if ($this->containsEllipsis($title.$why.$how.$hook.$expected)) {
@@ -833,6 +843,27 @@ class DailyBriefValidator
         }
         if ($handleOpeners > 2) {
             $errors[] = 'narrative has too many sentences starting with a handle ('.$handleOpeners.'; max 2) - write flowing advice, not an inventory';
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Memo headline is a plain-English takeaway in sentence case - not @handle + Nx.
+     *
+     * @return list<string>
+     */
+    public function headlineToneErrors(string $headline): array
+    {
+        $errors = [];
+
+        if (str_contains($headline, '@')) {
+            $errors[] = 'headline must be plain English without @handles';
+        }
+
+        if (preg_match('/\d+(?:\.\d+)?\s*x\b/iu', $headline) === 1
+            || preg_match('/\d+(?:\.\d+)?\s*times\b/iu', $headline) === 1) {
+            $errors[] = 'headline must not cite an Nx / times-usual multiplier - say the takeaway instead';
         }
 
         return $errors;

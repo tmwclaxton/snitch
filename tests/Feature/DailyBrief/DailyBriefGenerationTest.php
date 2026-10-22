@@ -1020,7 +1020,7 @@ class DailyBriefGenerationTest extends TestCase
         $actions = [
             [
                 'title' => 'Close the gap',
-                'why' => '@letsgosocialuk has the longest gap among all tracked accounts.',
+                'why' => 'The longest quiet stretch is still on @letsgosocialuk among all tracked accounts.',
                 'how' => 'Post a Reel today.',
                 'related_handles' => ['letsgosocialuk'],
                 'related_post_ids' => [],
@@ -1050,7 +1050,7 @@ class DailyBriefGenerationTest extends TestCase
     public function test_validator_allows_brand_own_handle_even_when_missing_from_allowed_handles(): void
     {
         $result = app(DailyBriefValidator::class)->validate([
-            'headline' => 'Plan for @letsgosocialuk',
+            'headline' => 'Plan replies on the brand account today.',
             'actions' => [
                 ['title' => 'Reply on @letsgosocialuk', 'why' => 'why', 'how' => 'how', 'related_handles' => ['letsgosocialuk'], 'related_post_ids' => []],
                 ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
@@ -1087,7 +1087,7 @@ class DailyBriefGenerationTest extends TestCase
 
         Http::fake([
             'https://nano-gpt.test/api/v1/chat/completions' => Http::response($this->llmResponse([
-                'headline' => 'Plan for @letsgosocialuk',
+                'headline' => 'Plan replies on the brand account today.',
                 'actions' => [
                     ['title' => 'Reply on @letsgosocialuk', 'why' => 'Own account needs replies.', 'how' => 'Reply to comments.', 'related_handles' => ['letsgosocialuk'], 'related_post_ids' => []],
                     ['title' => 'Two', 'why' => 'why', 'how' => 'how', 'related_handles' => [], 'related_post_ids' => []],
@@ -1765,7 +1765,7 @@ class DailyBriefGenerationTest extends TestCase
             (string) ($aligned['actions'][0]['title'] ?? ''),
         );
         $this->assertSame(
-            '@yellowzest\'s Reel from 18 Oct is at 3.2 times their usual.',
+            'That thread is still warm from 18 Oct at 3.2 times their usual - leave one real comment.',
             (string) ($aligned['actions'][0]['why'] ?? ''),
         );
         $this->assertStringNotContainsString('Reelfrom', (string) ($aligned['actions'][0]['why'] ?? ''));
@@ -2259,7 +2259,7 @@ class DailyBriefGenerationTest extends TestCase
         $actions = [
             [
                 'title' => 'Study the Living Room Listens Reel',
-                'why' => '@onehousesocialclub hit 5.0 times their usual.',
+                'why' => 'Living Room Listens is earning attention at 5.0 times their usual.',
                 'how' => 'Borrow the hook.',
                 'related_handles' => ['onehousesocialclub'],
                 'related_post_ids' => [218],
@@ -2401,7 +2401,7 @@ class DailyBriefGenerationTest extends TestCase
         ];
 
         $result = app(DailyBriefValidator::class)->validate([
-            'headline' => 'One House presentation-night Carousel at 23.5x usual',
+            'headline' => 'One House presentation-night Carousel is the week standout.',
             'actions' => $actions,
             'own_summary' => 'ok',
             'competitor_summary' => $badSummary,
@@ -2414,7 +2414,8 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertStringContainsString('2.5', $result['output']['competitor_summary']);
         $this->assertStringNotContainsString('1.7', $result['output']['competitor_summary']);
         $this->assertStringNotContainsString('1.7', $result['output']['trends'][0] ?? '');
-        $this->assertStringContainsString('23.5x', $result['output']['headline']);
+        $this->assertStringContainsString('presentation-night', $result['output']['headline']);
+        $this->assertStringNotContainsString('23.5x', $result['output']['headline']);
     }
 
     public function test_validator_repairs_oct20_misbound_claims(): void
@@ -2689,8 +2690,8 @@ class DailyBriefGenerationTest extends TestCase
         $blob = strtolower($headline.' '.$summary.' '.json_encode($narrative['actions'] ?? []));
 
         $this->assertStringContainsString('Reel', $headline);
-        $this->assertStringContainsString('20 Oct', $headline);
-        $this->assertStringContainsString('1.2', $headline);
+        $this->assertStringNotContainsString('@', $headline);
+        $this->assertDoesNotMatchRegularExpression('/\d+(?:\.\d+)?\s*x\b/i', $headline);
         $this->assertStringNotContainsString('Carousel', $headline);
         $this->assertStringContainsString('Reel from 20 Oct', $summary);
         $this->assertStringContainsString('1.2 times their usual', $summary);
@@ -2698,9 +2699,10 @@ class DailyBriefGenerationTest extends TestCase
         $this->assertStringNotContainsString('from 12 October', $summary);
         $this->assertDoesNotMatchRegularExpression('/from 12 oct(?:ober)?[^.]{0,40}0\\.8/i', $summary);
         $this->assertDoesNotMatchRegularExpression('/reply(?:ing)?\\s+to\\s+(?:the\\s+|their\\s+)?comments?/i', $blob);
+        $this->assertStringNotContainsString('@', (string) ($narrative['actions'][0]['why'] ?? ''));
 
         $misbound = app(DailyBriefValidator::class)->validate([
-            'headline' => 'One House Carousel at 1.2x usual',
+            'headline' => 'One House Carousel is the week standout.',
             'actions' => [
                 [
                     'title' => 'Engage GoodGym',
@@ -2721,7 +2723,7 @@ class DailyBriefGenerationTest extends TestCase
         $fixedHeadline = (string) ($misbound['output']['headline'] ?? '');
         $fixedHow = (string) ($misbound['output']['actions'][0]['how'] ?? '');
 
-        $this->assertStringNotContainsString('Carousel at 1.2', $fixedHeadline);
+        $this->assertStringNotContainsString('1.2x', $fixedHeadline);
         $this->assertStringNotContainsString('from 12 October at 0.8', $fixedSummary);
         $this->assertDoesNotMatchRegularExpression('/reply(?:ing)?\\s+to\\s+(?:the\\s+|their\\s+)?comments?/i', $fixedHow);
         $this->assertMatchesRegularExpression('/comment on the post/i', $fixedHow);
@@ -2735,13 +2737,16 @@ class DailyBriefGenerationTest extends TestCase
             'watch' => [],
         ], $facts);
 
-        $this->assertStringContainsString('Reel from 20 Oct at 1.2x', (string) ($corrupted['headline'] ?? ''));
+        $this->assertStringContainsString('Reel', (string) ($corrupted['headline'] ?? ''));
+        $this->assertStringNotContainsString('@', (string) ($corrupted['headline'] ?? ''));
+        $this->assertDoesNotMatchRegularExpression('/\d+(?:\.\d+)?\s*x\b/i', (string) ($corrupted['headline'] ?? ''));
         $this->assertStringContainsString('Reel from 20 Oct at 1.2 times their usual', (string) ($corrupted['competitor_summary'] ?? ''));
         $this->assertStringNotContainsString('17 Oct', (string) ($corrupted['headline'] ?? ''));
         $this->assertStringNotContainsString('0.8', (string) ($corrupted['headline'] ?? ''));
+        $this->assertStringStartsWith('That ', (string) ($corrupted['actions'][0]['why'] ?? ''));
 
         $quietKept = $generator->rebindTemplateCitation([
-            'headline' => '21 days quiet while rivals posted 13 times.',
+            'headline' => '21 days quiet while rivals keep posting.',
             'actions' => $narrative['actions'] ?? [],
             'own_summary' => (string) ($narrative['own_summary'] ?? ''),
             'competitor_summary' => 'Competitors published 5 posts in the last 7 days.',
@@ -2749,7 +2754,7 @@ class DailyBriefGenerationTest extends TestCase
         ], $facts);
 
         $this->assertSame(
-            '21 days quiet while rivals posted 13 times.',
+            '21 days quiet while rivals keep posting.',
             (string) ($quietKept['headline'] ?? ''),
         );
         $this->assertStringContainsString('Strongest recent post:', (string) ($quietKept['competitor_summary'] ?? ''));
@@ -2778,7 +2783,7 @@ class DailyBriefGenerationTest extends TestCase
                 'actions' => [
                     [
                         'title' => 'Post a Reel today at 20:00.',
-                        'why' => '@onehousesocialclub is posting Reels.',
+                        'why' => 'Reels are still the format rivals ship most.',
                         'how' => 'Keep it short and ask people to comment.',
                         'when' => '20:00',
                         'format' => 'Reel',

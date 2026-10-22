@@ -57,14 +57,14 @@ class HookTimesUsualFalsePositiveTest extends TestCase
         $actions = [
             [
                 'title' => 'Post a Reel today at 20:00.',
-                'why' => '@yellowzest Reel from 18 Oct at 3.2 times their usual.',
+                'why' => 'That Reel idea is earning attention from 18 Oct at 3.2 times their usual.',
                 'how' => 'Ship one Reel tonight.',
                 'related_handles' => ['yellowzest'],
                 'related_post_ids' => [10],
             ],
             [
                 'title' => 'Comment on the 1.2x Reel.',
-                'why' => '@yellowzest Reel at 1.2 times their usual.',
+                'why' => 'A quieter Reel is still warm at 1.2 times their usual - leave one real comment.',
                 'how' => 'Leave a useful comment.',
                 'related_handles' => ['yellowzest'],
                 'related_post_ids' => [11],
@@ -79,7 +79,7 @@ class HookTimesUsualFalsePositiveTest extends TestCase
         ];
 
         $result = app(DailyBriefValidator::class)->validate([
-            'headline' => '@yellowzest Reel at 3.2x. Post a Reel today at 20:00.',
+            'headline' => 'Rivals are winning with Reels - post one today at 20:00.',
             'actions' => $actions,
             'own_summary' => 'Quiet week for @aprilrosemarketing.',
             'competitor_summary' => '@yellowzest posted 5 times; strongest Reel at 3.2 times their usual.',
