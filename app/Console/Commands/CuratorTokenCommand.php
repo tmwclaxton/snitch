@@ -13,6 +13,7 @@ class CuratorTokenCommand extends Command
         {--email= : Admin user email to attach the curator token to}
         {--user= : Admin user id to attach the curator token to}
         {--token-id= : Sanctum token id to revoke}
+        {--all : With revoke, delete every curator token}
         {--write= : Optional path to write the plain token (chmod 600)}';
 
     protected $description = 'Create, list, or revoke curator-scoped Sanctum MCP tokens';
@@ -68,6 +69,18 @@ class CuratorTokenCommand extends Command
 
     private function revokeToken(): int
     {
+        if ((bool) $this->option('all')) {
+            $deleted = 0;
+            foreach (User::query()->cursor() as $user) {
+                $deleted += $user->sanctumTokens()
+                    ->where('name', McpAuth::CURATOR_TOKEN_NAME)
+                    ->delete();
+            }
+            $this->info('Revoked '.$deleted.' curator token(s) (all).');
+
+            return self::SUCCESS;
+        }
+
         $tokenId = $this->option('token-id');
         if ($tokenId !== null && $tokenId !== '') {
             $deleted = 0;

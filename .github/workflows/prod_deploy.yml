@@ -515,12 +515,22 @@ jobs:
           SLOT="$(cat /opt/snitch/.deploy-slot)"
           APP="snitch-app-${SLOT}"
           echo "LIVE_SLOT=${SLOT}"
-          docker exec "$APP" php artisan snitch:curator-token create --write=/tmp/curator-token.txt
+          # Prefer Toby's account; fall back to first admin if email missing.
+          docker exec "$APP" php artisan snitch:curator-token revoke --all || true
+          if docker exec "$APP" php artisan snitch:curator-token create --email=tmwclaxton@gmail.com --write=/tmp/curator-token.txt; then
+            :
+          else
+            docker exec "$APP" php artisan snitch:curator-token create --write=/tmp/curator-token.txt
+          fi
           docker cp "$APP:/tmp/curator-token.txt" /opt/snitch/curator-token.txt
           docker exec "$APP" rm -f /tmp/curator-token.txt
           chmod 600 /opt/snitch/curator-token.txt
           if id gunnergrant >/dev/null 2>&1; then
-            chown gunnergrant:gunnergrant /opt/snitch/curator-token.txt
+            if sudo -n chown gunnergrant:gunnergrant /opt/snitch/curator-token.txt 2>/dev/null; then
+              echo "owner=gunnergrant"
+            else
+              echo "WARN: could not chown to gunnergrant; leaving $(stat -c '%U:%G' /opt/snitch/curator-token.txt)"
+            fi
           fi
           ls -la /opt/snitch/curator-token.txt
           echo "curator_token_path=/opt/snitch/curator-token.txt"
