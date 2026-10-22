@@ -8,11 +8,19 @@ use App\Models\ReportShareLink;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\WithoutRetiredPageRedirects;
 use Tests\TestCase;
 
 class MonthlyReportShareTest extends TestCase
 {
     use RefreshDatabase;
+    use WithoutRetiredPageRedirects;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpWithoutRetiredPageRedirects();
+    }
 
     public function test_share_token_grants_public_read_access_and_can_be_revoked(): void
     {

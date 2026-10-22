@@ -13,11 +13,19 @@ use App\Models\User;
 use Database\Seeders\AnalysisTermSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\WithoutRetiredPageRedirects;
 use Tests\TestCase;
 
 class BackfillAnalysisTermsCommandTest extends TestCase
 {
     use RefreshDatabase;
+    use WithoutRetiredPageRedirects;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpWithoutRetiredPageRedirects();
+    }
 
     public function test_backfill_attaches_myth_bust_so_explore_filter_matches(): void
     {

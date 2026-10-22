@@ -16,11 +16,19 @@ use App\Services\Billing\UsageBillingService;
 use Database\Seeders\AnalysisTermSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\WithoutRetiredPageRedirects;
 use Tests\TestCase;
 
 class ExploreTest extends TestCase
 {
     use RefreshDatabase;
+    use WithoutRetiredPageRedirects;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpWithoutRetiredPageRedirects();
+    }
 
     public function test_explore_uses_sectioned_multi_select_pickers(): void
     {

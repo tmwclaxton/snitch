@@ -11,11 +11,19 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\WithoutRetiredPageRedirects;
 use Tests\TestCase;
 
 class GrowthPageTest extends TestCase
 {
     use RefreshDatabase;
+    use WithoutRetiredPageRedirects;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpWithoutRetiredPageRedirects();
+    }
 
     public function test_growth_page_shows_snapshot_note_with_single_point(): void
     {

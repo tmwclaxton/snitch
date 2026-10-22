@@ -13,13 +13,21 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\WithoutRetiredPageRedirects;
 use Tests\Concerns\WithPlatformBilling;
 use Tests\TestCase;
 
 class GenerateInfluencerBriefJobTest extends TestCase
 {
     use RefreshDatabase;
+    use WithoutRetiredPageRedirects;
     use WithPlatformBilling;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpWithoutRetiredPageRedirects();
+    }
 
     public function test_onboarding_does_not_dispatch_influencer_brief_job(): void
     {

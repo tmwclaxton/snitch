@@ -6,15 +6,15 @@ use App\Enums\Platform;
 use App\Models\BrandProfile;
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Services\Tracking\TrackedByService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class TrackedByTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_dashboard_exposes_tracked_by_counts_only(): void
+    public function test_tracked_by_service_returns_counts_only(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create([
@@ -26,16 +26,12 @@ class TrackedByTest extends TestCase
             'created_at' => now()->subDays(5),
         ]);
 
-        $this->actingAs($user)
-            ->get(route('dashboard'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
-                ->where('trackedBy.count', 1)
-                ->has('trackedBy.since')
-                ->missing('trackedBy.watchers')
-                ->missing('trackedBy.users')
-            );
+        $payload = app(TrackedByService::class)->forUser($user);
+
+        $this->assertSame(1, $payload['count'] ?? null);
+        $this->assertArrayHasKey('since', $payload);
+        $this->assertArrayNotHasKey('watchers', $payload);
+        $this->assertArrayNotHasKey('users', $payload);
 
         $source = file_get_contents(resource_path('js/components/dashboard/TrackedBySection.vue'));
         $this->assertIsString($source);
@@ -47,7 +43,19 @@ class TrackedByTest extends TestCase
         $this->assertStringNotContainsString('watcher email', $source);
     }
 
-    public function test_dashboard_tracked_by_is_null_when_count_is_zero(): void
+    public function test_tracked_by_service_is_null_when_count_is_zero(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create([
+            'own_handles' => ['instagram' => '@quietbrand'],
+        ]);
+
+        $payload = app(TrackedByService::class)->forUser($user);
+
+        $this->assertNull($payload);
+    }
+
+    public function test_curated_dashboard_does_not_expose_tracked_by_prop(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create([
@@ -57,9 +65,10 @@ class TrackedByTest extends TestCase
         $this->actingAs($user)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn ($page) => $page
                 ->component('Dashboard')
-                ->where('trackedBy', null)
+                ->has('panels')
+                ->missing('trackedBy')
             );
     }
 }

@@ -6,6 +6,7 @@ use App\Models\BrandProfile;
 use App\Models\FeatureSuggestion;
 use App\Models\FeatureVote;
 use App\Models\User;
+use App\Services\Features\FeatureSuggestionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -26,7 +27,7 @@ class FeatureSuggestionsTest extends TestCase
         ], $titles);
     }
 
-    public function test_dashboard_lists_suggestions_sorted_by_votes(): void
+    public function test_suggestions_are_sorted_by_votes_for_listing(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -43,15 +44,19 @@ class FeatureSuggestionsTest extends TestCase
         FeatureVote::factory()->count(3)->create(['suggestion_id' => $high->id]);
         FeatureVote::factory()->create(['suggestion_id' => $low->id]);
 
+        $rows = app(FeatureSuggestionService::class)->forDashboard($user);
+
+        $this->assertSame('High votes idea', $rows[0]['title'] ?? null);
+        $this->assertSame(3, $rows[0]['votes_count'] ?? null);
+        $this->assertFalse($rows[0]['voted'] ?? true);
+
         $this->actingAs($user)
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
-                ->has('featureSuggestions')
-                ->where('featureSuggestions.0.title', 'High votes idea')
-                ->where('featureSuggestions.0.votes_count', 3)
-                ->where('featureSuggestions.0.voted', false)
+                ->has('panels')
+                ->missing('featureSuggestions')
             );
     }
 

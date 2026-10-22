@@ -25,14 +25,14 @@ class WinnersTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_winners_index_redirects_to_growth(): void
+    public function test_winners_index_redirects_to_dashboard(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
 
         $this->actingAs($user)
             ->get(route('winners.index'))
-            ->assertRedirect(route('growth.index'));
+            ->assertRedirect(route('dashboard'));
     }
 
     public function test_winner_scorer_still_persists_matching_posts(): void

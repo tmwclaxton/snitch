@@ -15,11 +15,19 @@ use Database\Seeders\AnalysisTermSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Concerns\WithoutRetiredPageRedirects;
 use Tests\TestCase;
 
 class ExploreMixTest extends TestCase
 {
     use RefreshDatabase;
+    use WithoutRetiredPageRedirects;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpWithoutRetiredPageRedirects();
+    }
 
     #[Test]
     public function explore_surfaces_strong_posts_before_weak_score_outliers(): void

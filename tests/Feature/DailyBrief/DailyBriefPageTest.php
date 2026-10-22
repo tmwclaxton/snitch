@@ -8,15 +8,18 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\WithoutRetiredPageRedirects;
 use Tests\TestCase;
 
 class DailyBriefPageTest extends TestCase
 {
     use RefreshDatabase;
+    use WithoutRetiredPageRedirects;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpWithoutRetiredPageRedirects();
 
         config([
             'snitch.admin_emails' => ['admin@snitch.test'],

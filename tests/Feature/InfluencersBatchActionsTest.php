@@ -11,13 +11,21 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\WithoutRetiredPageRedirects;
 use Tests\Concerns\WithPlatformBilling;
 use Tests\TestCase;
 
 class InfluencersBatchActionsTest extends TestCase
 {
     use RefreshDatabase;
+    use WithoutRetiredPageRedirects;
     use WithPlatformBilling;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpWithoutRetiredPageRedirects();
+    }
 
     public function test_keep_many_creates_accounts_and_marks_decisions(): void
     {

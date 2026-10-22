@@ -12,13 +12,21 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\WithoutRetiredPageRedirects;
 use Tests\Concerns\WithPlatformBilling;
 use Tests\TestCase;
 
 class InfluencersFindTest extends TestCase
 {
     use RefreshDatabase;
+    use WithoutRetiredPageRedirects;
     use WithPlatformBilling;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpWithoutRetiredPageRedirects();
+    }
 
     public function test_guest_cannot_open_influencers_page(): void
     {

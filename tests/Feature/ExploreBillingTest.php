@@ -16,17 +16,20 @@ use App\Services\Billing\UsageBillingService;
 use Database\Seeders\AnalysisTermSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\WithoutRetiredPageRedirects;
 use Tests\TestCase;
 
 class ExploreBillingTest extends TestCase
 {
     use RefreshDatabase;
+    use WithoutRetiredPageRedirects;
 
     private UsageBillingService $billing;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpWithoutRetiredPageRedirects();
 
         config([
             'billing.min_run_balance_pence' => 20,

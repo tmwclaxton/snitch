@@ -179,19 +179,15 @@ class ExecutiveDashboardTest extends TestCase
         $this->assertStringContainsString('PanelChart', $dashboard);
         $this->assertStringContainsString('PanelRankedList', $dashboard);
         $this->assertStringContainsString('PanelNote', $dashboard);
-        $this->assertStringContainsString('id="vote"', $dashboard);
-        $this->assertStringContainsString('id="tracked-by"', $dashboard);
+        $this->assertStringContainsString('Your canvas', $dashboard);
+        $this->assertStringContainsString('panels', $dashboard);
+        $this->assertStringNotContainsString('id="vote"', $dashboard);
+        $this->assertStringNotContainsString('id="tracked-by"', $dashboard);
         $this->assertStringNotContainsString('id="what-to-post"', $dashboard);
         $this->assertStringNotContainsString('ExecStatTile', $dashboard);
         $this->assertStringNotContainsString('CaptionPanels', $dashboard);
         $this->assertStringNotContainsString('InsightList', $dashboard);
         $this->assertStringNotContainsString('CompareTable', $dashboard);
         $this->assertStringNotContainsString('line-clamp-', $dashboard);
-
-        $winnerThumb = file_get_contents(resource_path('js/components/dashboard/ExecWinnerThumb.vue'));
-        $this->assertIsString($winnerThumb);
-        $this->assertDoesNotMatchRegularExpression('/\\btruncate\\b/', $winnerThumb);
-        $this->assertStringNotContainsString('whitespace-nowrap', $winnerThumb);
-        $this->assertStringContainsString('feedShow.url(post.id)', $winnerThumb);
     }
 }
