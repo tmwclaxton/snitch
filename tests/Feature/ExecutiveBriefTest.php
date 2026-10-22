@@ -266,13 +266,11 @@ class ExecutiveBriefTest extends TestCase
         $this->assertFalse($memo['empty']);
         $this->assertSame('21 days quiet while rivals posted 13 times.', $memo['headline']);
         $this->assertStringContainsString('quiet for 21 days', (string) $memo['summary']);
+        // Agent memos use interpretive own/competitor prose, not the per-handle stats inventory.
         $this->assertCount(1, $memo['own_activity']);
-        $this->assertStringContainsString('0 posts in the last 7 days', $memo['own_activity'][0]['text']);
-        $this->assertTrue(collect($memo['competitor_activity'])->contains(
-            fn (array $row): bool => str_contains($row['text'], '@quietclub')
-                && str_contains($row['text'], '@emptyclub')
-                && str_contains($row['text'], 'posted 0 times'),
-        ));
+        $this->assertStringContainsString('quiet for 21 days', $memo['own_activity'][0]['text']);
+        $this->assertCount(1, $memo['competitor_activity']);
+        $this->assertStringContainsString('Competitors published 13 posts', $memo['competitor_activity'][0]['text']);
         $this->assertFalse(collect($memo['suggestions'])->contains(
             fn (array $row): bool => str_contains(mb_strtolower($row['title']), 'post this next'),
         ));
