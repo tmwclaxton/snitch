@@ -153,6 +153,7 @@ class McpConnectionGuide
                 'get_brand', 'update_brand', 'start_brand_autofill', 'autofill_status',
                 'list_competitors', 'list_trackers', 'get_account_summary', 'get_competitor_posts',
                 'get_top_posts', 'get_posting_times', 'get_format_mix', 'get_gaps', 'get_growth_series',
+                'list_users', 'get_panels', 'set_panels', 'rollback_panels',
                 'add_competitor', 'remove_competitor', 'sync_competitor',
                 'suggest_competitors', 'suggest_competitors_status', 'confirm_competitor_suggestions', 'dismiss_competitor_suggestions',
                 'generate_influencer_brief', 'find_influencers', 'influencer_search_status', 'list_influencers', 'keep_influencer', 'discard_influencer', 'dismiss_influencer_suggestions', 'remove_influencer',
