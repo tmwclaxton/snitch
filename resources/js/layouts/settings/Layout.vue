@@ -54,7 +54,7 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
                         class="inline-flex items-center gap-2 border-l-2 px-3 py-2 text-sm transition-colors"
                         :class="
                             isCurrentOrParentUrl(item.href)
-                                ? 'border-snitch-spot font-medium text-snitch-ink'
+                                ? 'border-snitch-ink font-medium text-snitch-ink'
                                 : 'border-transparent text-snitch-ink/70 hover:text-snitch-ink'
                         "
                     >

@@ -17,7 +17,7 @@ defineProps<{
         :href="post.url"
         target="_blank"
         rel="noopener noreferrer"
-        class="my-3 flex overflow-hidden rounded-lg border border-snitch-ink/10 bg-snitch-lift transition hover:border-snitch-spot/50"
+        class="my-3 flex overflow-hidden rounded-lg border border-snitch-ink/10 bg-snitch-lift transition hover:border-snitch-ink/30"
     >
         <div class="h-24 w-24 shrink-0 bg-snitch-fog">
             <img

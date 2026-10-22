@@ -353,7 +353,7 @@ function openTranscript(): void {
                     <Link
                         v-if="profileHref && !profileIsExternal && post.tracked_account"
                         :href="profileHref"
-                        class="font-medium text-snitch-ink underline decoration-snitch-ink/20 underline-offset-4 transition hover:decoration-snitch-spot"
+                        class="font-medium text-snitch-ink underline decoration-snitch-ink/20 underline-offset-4 transition hover:decoration-snitch-ink/35"
                     >
                         @{{ post.tracked_account.handle }}
                     </Link>
@@ -362,7 +362,7 @@ function openTranscript(): void {
                         :href="profileHref"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="font-medium text-snitch-ink underline decoration-snitch-ink/20 underline-offset-4 transition hover:decoration-snitch-spot"
+                        class="font-medium text-snitch-ink underline decoration-snitch-ink/20 underline-offset-4 transition hover:decoration-snitch-ink/35"
                     >
                         @{{ post.tracked_account.handle }}
                     </a>

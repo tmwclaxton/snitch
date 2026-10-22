@@ -23,9 +23,11 @@ The **logged-in app follows Appearance**. Do not pin authenticated pages with `s
 - Flip `--snitch-paper`, `--snitch-ink`, `--snitch-fog`, `--snitch-spot`, and related grade / halftone / washi under `.dark` so `snitch-*` utilities and `text-snitch-ink` / `bg-snitch-paper` / `bg-snitch-lift` work everywhere without per-page `dark:` classes.
 - Prefer `bg-snitch-lift` / `bg-snitch-paper` / `border-snitch-ink/10` over hard-coded `#0E0E10`, `#141416`, `border-white/10`, or `bg-black` on logged-in surfaces (header, chat, sidebar, modals, dropdowns, toasts, mobile drawer).
 - Keep `--snitch-on-spot` near-black for text on yellow fills. Never leave fog/cream type on a yellow face.
-- Use `.snitch-choice` / `.snitch-choice-active` and `.snitch-seg` for pills (grey selected in dark; ink selected in light - never yellow). Yellow stays on headlines, primary buttons, and the one active sidebar item.
+- **Light mode: never use `#FCD700` / `snitch-spot` as text, icon, or border colour on cream or white.** Yellow is only a fill behind near-black text (`.snitch-highlight`, primary buttons, selected sidebar link). Use ink for accent figures (`.snitch-stat-accent`), format tags, link underlines, and icons on paper. Yellow type/underlines are fine on night paper (`.dark`).
+- Pink alert badges (`#FF3D8B`) use near-black type, not white (white on that pink fails contrast).
+- Use `.snitch-choice` / `.snitch-choice-active` and `.snitch-seg` for pills (grey selected in dark; ink selected in light - never yellow). Yellow stays on headline highlight blocks, primary buttons, and the one active sidebar item.
 - App header (`AppSidebarHeader`) uses `bg-snitch-paper` + `border-snitch-ink/10` so it matches the page in both modes.
-- Chart series read live CSS vars (`snitchTheme.ts`). ApexCharts use `snitchApexTheme()`.
+- Chart series read live CSS vars (`snitchTheme.ts`). ApexCharts use `snitchApexTheme()`. Light chart series stay on ink / teal / warm AA hues - not spot yellow.
 
 ## Sidebar spacing
 

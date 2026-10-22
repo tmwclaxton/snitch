@@ -657,7 +657,8 @@ html.dark [data-sidebar='menu-button']:active:not([data-active='true']):not(.sni
         display: inline-flex;
         align-items: center;
         background: var(--snitch-alert);
-        color: #ffffff;
+        /* Near-black on pink fill: white on #FF3D8B fails AA on cream UI. */
+        color: #0e0e10;
         font-family: var(--font-mono);
         font-size: 0.75rem;
         font-weight: 700;
@@ -671,11 +672,19 @@ html.dark [data-sidebar='menu-button']:active:not([data-active='true']):not(.sni
     .snitch-app-chrome .snitch-alert-badge,
     .snitch-gap-lower {
         background: #ff3d8b;
-        color: #ffffff;
+        color: #0e0e10;
     }
 
+    /*
+     * Accent figures: ink on cream (yellow type on paper is illegible).
+     * Yellow type is only for dark paper / night chrome.
+     */
     .snitch-stat-accent {
-        color: #fcd700;
+        color: var(--snitch-ink);
+    }
+
+    .dark .snitch-stat-accent {
+        color: var(--snitch-spot);
     }
 
     .snitch-caution-band {
@@ -1032,7 +1041,7 @@ html.dark [data-sidebar='menu-button']:active:not([data-active='true']):not(.sni
         border-color: color-mix(in oklab, var(--snitch-ink) 25%, transparent);
     }
 
-    /* Format tags (REEL / CAROUSEL) - landing small-label: mono, yellow type, no slab */
+    /* Format tags: mono ink on cream; yellow type only on night paper. */
     .snitch-format-tag {
         display: inline-flex;
         width: fit-content;
@@ -1046,7 +1055,7 @@ html.dark [data-sidebar='menu-button']:active:not([data-active='true']):not(.sni
         letter-spacing: 0.12em;
         text-transform: uppercase;
         background: transparent;
-        color: var(--snitch-spot);
+        color: var(--snitch-ink);
     }
 
     .dark .snitch-format-tag {
@@ -2488,13 +2497,22 @@ html.dark [data-sidebar='menu-button']:active:not([data-active='true']):not(.sni
         letter-spacing: 0.01em;
         color: var(--snitch-ink);
         text-decoration: underline;
-        text-decoration-color: color-mix(in oklab, var(--snitch-spot) 70%, transparent);
+        text-decoration-color: color-mix(in oklab, var(--snitch-ink) 35%, transparent);
         text-decoration-thickness: 2px;
         text-underline-offset: 3px;
         text-transform: none;
     }
 
     .snitch-glance-account-link:hover {
+        color: var(--snitch-ink);
+        text-decoration-color: color-mix(in oklab, var(--snitch-ink) 55%, transparent);
+    }
+
+    .dark .snitch-glance-account-link {
+        text-decoration-color: color-mix(in oklab, var(--snitch-spot) 70%, transparent);
+    }
+
+    .dark .snitch-glance-account-link:hover {
         color: color-mix(in oklab, var(--snitch-ink) 82%, var(--snitch-spot));
         text-decoration-color: var(--snitch-spot);
     }
@@ -2905,8 +2923,12 @@ html.dark [data-sidebar='menu-button']:active:not([data-active='true']):not(.sni
     .snitch-md a {
         color: var(--snitch-ink);
         text-decoration: underline;
-        text-decoration-color: color-mix(in oklab, var(--snitch-spot) 70%, transparent);
+        text-decoration-color: color-mix(in oklab, var(--snitch-ink) 35%, transparent);
         text-underline-offset: 0.15em;
+    }
+
+    .dark .snitch-md a {
+        text-decoration-color: color-mix(in oklab, var(--snitch-spot) 70%, transparent);
     }
 
     .snitch-chat-md-body.snitch-md {
@@ -2916,14 +2938,15 @@ html.dark [data-sidebar='menu-button']:active:not([data-active='true']):not(.sni
     }
 
     .snitch-chat-md-body.snitch-md a {
-        color: color-mix(in oklab, var(--snitch-ink) 85%, var(--snitch-spot));
+        color: var(--snitch-ink);
         text-decoration: underline;
-        text-decoration-color: var(--snitch-spot);
+        text-decoration-color: color-mix(in oklab, var(--snitch-ink) 40%, transparent);
         text-underline-offset: 2px;
     }
 
     .dark .snitch-chat-md-body.snitch-md a {
         color: #fcd700;
+        text-decoration-color: var(--snitch-spot);
     }
 
     .snitch-md-table-wrap {

@@ -192,7 +192,7 @@ function paginationLabel(label: string): string {
                 </div>
                 <Link
                     :href="billingIndex()"
-                    class="text-sm underline decoration-snitch-spot underline-offset-4"
+                    class="text-sm underline decoration-snitch-ink/35 underline-offset-4"
                 >
                     Back to billing
                 </Link>
@@ -342,7 +342,7 @@ function paginationLabel(label: string): string {
                                     <Link
                                         v-if="rowLinkHref(row)"
                                         :href="rowLinkHref(row)"
-                                        class="mt-0.5 block text-xs text-snitch-ink/55 underline decoration-snitch-spot/80 underline-offset-2 hover:text-snitch-ink"
+                                        class="mt-0.5 block text-xs text-snitch-ink/55 underline decoration-snitch-ink/30 underline-offset-2 hover:text-snitch-ink"
                                     >
                                         {{ row.link?.label }}
                                     </Link>

@@ -160,7 +160,7 @@ function vendorAccent(key: SpendVendorKey): string {
                 </div>
                 <Link
                     :href="pricing()"
-                    class="text-sm underline decoration-snitch-spot underline-offset-4"
+                    class="text-sm underline decoration-snitch-ink/35 underline-offset-4"
                 >
                     View public pricing
                 </Link>
@@ -350,7 +350,7 @@ function vendorAccent(key: SpendVendorKey): string {
                         <h2 class="snitch-display text-2xl text-snitch-ink">Recent charges</h2>
                         <Link
                             :href="billingCharges()"
-                            class="text-sm underline decoration-snitch-spot underline-offset-4"
+                            class="text-sm underline decoration-snitch-ink/35 underline-offset-4"
                             data-test="billing-charges-link"
                         >
                             {{ usage.recent_has_more ? 'View all charges' : 'Charge breakdown' }}
@@ -381,7 +381,7 @@ function vendorAccent(key: SpendVendorKey): string {
                                     <Link
                                         v-if="rowLinkHref(row)"
                                         :href="rowLinkHref(row)"
-                                        class="mt-0.5 block text-xs text-snitch-ink/55 underline decoration-snitch-spot/80 underline-offset-2 hover:text-snitch-ink"
+                                        class="mt-0.5 block text-xs text-snitch-ink/55 underline decoration-snitch-ink/30 underline-offset-2 hover:text-snitch-ink"
                                     >
                                         {{ row.link?.label }}
                                     </Link>
@@ -408,7 +408,7 @@ function vendorAccent(key: SpendVendorKey): string {
                                     <Link
                                         v-if="rowLinkHref(row)"
                                         :href="rowLinkHref(row)"
-                                        class="mt-0.5 block text-xs text-snitch-ink/55 underline decoration-snitch-spot/80 underline-offset-2 hover:text-snitch-ink"
+                                        class="mt-0.5 block text-xs text-snitch-ink/55 underline decoration-snitch-ink/30 underline-offset-2 hover:text-snitch-ink"
                                     >
                                         {{ row.link?.label }}
                                     </Link>

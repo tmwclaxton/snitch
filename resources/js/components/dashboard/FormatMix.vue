@@ -2,7 +2,15 @@
 import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
-import { snitchApexTheme, snitchAxisLabel, snitchAxisMuted, snitchInk, snitchSpot } from '@/lib/snitchTheme';
+import {
+    snitchApexTheme,
+    snitchAxisLabel,
+    snitchAxisMuted,
+    snitchInk,
+    snitchIsDark,
+    snitchRivalColours,
+    snitchYouSeries,
+} from '@/lib/snitchTheme';
 
 type Row = {
     handle: string;
@@ -18,7 +26,13 @@ const props = defineProps<{
 }>();
 
 const formats = ['Reel', 'Carousel', 'Image', 'Video'] as const;
-const colours = [snitchSpot('#fcd700'), '#4fc3f7', '#7cffb2', '#ff8a3d'];
+const colours = computed(() => {
+    if (snitchIsDark()) {
+        return [snitchYouSeries(), ...snitchRivalColours().slice(0, 3)];
+    }
+
+    return [snitchInk('#0e0e10'), '#3A5F6B', '#C45C26', '#2F6B4F'];
+});
 
 const categories = computed(() =>
     (props.rows ?? []).map((row) => (row.is_own_account ? 'You' : `@${row.handle}`)),
@@ -34,7 +48,7 @@ const chartSeries = computed(() =>
 const options = computed(() => ({
     chart: { type: 'bar' as const, stacked: true, stackType: '100%' as const, height: 180, toolbar: { show: false }, fontFamily: 'inherit', background: 'transparent' },
     theme: snitchApexTheme(),
-    colors: colours,
+    colors: colours.value,
     plotOptions: { bar: { horizontal: true, barHeight: '55%' } },
     dataLabels: { enabled: false },
     xaxis: { categories: categories.value, labels: { style: { colors: snitchAxisLabel(), fontSize: '14px' } } },

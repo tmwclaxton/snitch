@@ -416,7 +416,7 @@ function followerLabel(count: number | null): string {
                                 Good thing you're here
                             </p>
                             <span
-                                class="rounded-full bg-[#FF3D8B] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white"
+                                class="rounded-full bg-[#FF3D8B] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#0E0E10]"
                             >
                                 Watched
                             </span>
@@ -445,7 +445,7 @@ function followerLabel(count: number | null): string {
                     />
                     <div class="relative z-10 space-y-2">
                         <span
-                            class="inline-flex rounded-full bg-[#FF3D8B] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white"
+                            class="inline-flex rounded-full bg-[#FF3D8B] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#0E0E10]"
                         >
                             Clear
                         </span>

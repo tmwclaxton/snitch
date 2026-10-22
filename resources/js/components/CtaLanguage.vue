@@ -85,7 +85,7 @@ function toggle(row: CtaGroup): void {
                 <Link
                     v-if="line.post_id"
                     :href="feedShow.url(line.post_id)"
-                    class="underline decoration-snitch-ink/20 underline-offset-4 transition hover:decoration-snitch-spot"
+                    class="underline decoration-snitch-ink/20 underline-offset-4 transition hover:decoration-snitch-ink/35"
                 >
                     {{ line.text }}
                 </Link>

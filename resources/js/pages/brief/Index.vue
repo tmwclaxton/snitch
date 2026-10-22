@@ -295,7 +295,7 @@ function regenerate(): void {
                             v-for="source in idea.inspired_by"
                             :key="source.id"
                             :href="feedShow.url(source.id)"
-                            class="flex items-center gap-2 rounded border border-snitch-ink/10 bg-snitch-paper/60 p-1.5 hover:border-snitch-spot"
+                            class="flex items-center gap-2 rounded border border-snitch-ink/10 bg-snitch-paper/60 p-1.5 hover:border-snitch-ink/35"
                         >
                             <img
                                 v-if="source.thumbnail_url"
