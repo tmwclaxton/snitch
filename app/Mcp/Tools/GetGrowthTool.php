@@ -6,7 +6,7 @@ use App\Mcp\Support\McpAppUrls;
 use App\Mcp\Support\McpAuth;
 use App\Models\TrackedAccount;
 use App\Services\Billing\PlanEntitlementService;
-use App\Services\Growth\GrowthMetricsBuilder;
+use App\Services\Mcp\McpReadService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Mcp\Request;
@@ -21,7 +21,7 @@ class GetGrowthTool extends Tool
 {
     public function handle(
         Request $request,
-        GrowthMetricsBuilder $growth,
+        McpReadService $reads,
         PlanEntitlementService $entitlements,
     ): Response {
         $user = McpAuth::user($request);
@@ -66,7 +66,7 @@ class GetGrowthTool extends Tool
 
         return Response::json([
             'period' => $period,
-            'metrics' => $growth->build($user, $period, $selected),
+            ...$reads->growthSeries($user, $period, $selected),
             'account_options' => $options,
             'selected_accounts' => $selected,
             'app_url' => McpAppUrls::growth($period),

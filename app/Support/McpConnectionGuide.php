@@ -22,6 +22,7 @@ class McpConnectionGuide
         return [
             'mcp_url' => $mcpUrl,
             'register_url' => $registerUrl,
+            // Prefer www. Apex→www must be HTTP 308 so POST /mcp keeps its body.
             'clients' => [
                 [
                     'id' => 'cursor',

@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_competitor_posts')]
-#[Description('Competitor posts from stored data. Filter by handle, format (Reel/Carousel/Image), or since (Y-m-d). Sorted by times-usual descending. Curator tokens may pass user_id. Does not scrape.')]
+#[Description('Competitor posts from stored data. Excludes own-account trackers unless include_own=true. Filter by handle, format (Reel/Carousel/Image), or since (Y-m-d). Sorted by times-usual descending. Curator tokens may pass user_id. Does not scrape.')]
 #[IsReadOnly]
 class GetCompetitorPostsTool extends Tool
 {
@@ -30,6 +30,7 @@ class GetCompetitorPostsTool extends Tool
             'format' => ['nullable', 'string', 'in:Reel,Carousel,Image,Story'],
             'since' => ['nullable', 'date_format:Y-m-d'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'include_own' => ['nullable', 'boolean'],
             'user_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
@@ -44,12 +45,14 @@ class GetCompetitorPostsTool extends Tool
 
         return Response::json([
             'user_id' => (int) $user->id,
+            'include_own' => (bool) ($data['include_own'] ?? false),
             'posts' => $reads->competitorPosts($user, [
                 'handle' => $data['handle'] ?? null,
                 'format' => $data['format'] ?? null,
                 'since' => $data['since'] ?? null,
                 'limit' => $data['limit'] ?? 20,
                 'sort' => 'times_usual',
+                'include_own' => (bool) ($data['include_own'] ?? false),
             ]),
         ]);
     }
@@ -62,6 +65,9 @@ class GetCompetitorPostsTool extends Tool
             'format' => $schema->string()->enum(['Reel', 'Carousel', 'Image', 'Story'])->nullable(),
             'since' => $schema->string()->description('Only posts on or after this Y-m-d (Europe/London).')->nullable(),
             'limit' => $schema->integer()->description('Max posts (1-50). Default 20.')->nullable(),
+            'include_own' => $schema->boolean()
+                ->description('Include the user\'s own-account posts. Default false.')
+                ->nullable(),
             'user_id' => $schema->integer()->description('Curator only: another user id.')->nullable(),
         ];
     }

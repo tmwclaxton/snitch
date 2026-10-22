@@ -68,6 +68,15 @@ class TrackedAccountFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'kind' => TrackedAccountKind::Competitor,
+            'is_own_account' => false,
+        ]);
+    }
+
+    public function own(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'kind' => TrackedAccountKind::Own,
+            'is_own_account' => true,
         ]);
     }
 

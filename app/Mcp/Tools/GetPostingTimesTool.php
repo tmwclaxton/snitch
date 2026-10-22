@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_posting_times')]
-#[Description('Best posting-time slots from stored posts (Europe/London day-of-week + hour counts). Curator tokens may pass user_id. Does not scrape.')]
+#[Description('Best posting-time slots from stored posts (Europe/London day-of-week + hour). Each slot includes post count and average times-usual so agents can pick high-performing times. Curator tokens may pass user_id. Does not scrape.')]
 #[IsReadOnly]
 class GetPostingTimesTool extends Tool
 {

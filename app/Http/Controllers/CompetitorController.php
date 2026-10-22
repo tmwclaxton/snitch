@@ -146,7 +146,9 @@ class CompetitorController extends Controller
                 'handle' => $handle,
             ],
             [
-                'kind' => TrackedAccountKind::Competitor,
+                'kind' => (bool) ($data['is_own_account'] ?? false)
+                    ? TrackedAccountKind::Own
+                    : TrackedAccountKind::Competitor,
                 'url' => $this->defaultUrl($platform, $handle),
                 'display_name' => $data['display_name'] ?? $handle,
                 'is_own_account' => (bool) ($data['is_own_account'] ?? false),
@@ -360,7 +362,10 @@ class CompetitorController extends Controller
     {
         $this->authorize('update', $trackedAccount);
 
-        $trackedAccount->forceFill(['is_own_account' => true])->save();
+        $trackedAccount->forceFill([
+            'is_own_account' => true,
+            'kind' => TrackedAccountKind::Own,
+        ])->save();
         $this->clearOtherOwnAccounts($request->user(), $trackedAccount);
 
         return redirect()->back(fallback: route('competitors.index'));
@@ -370,7 +375,10 @@ class CompetitorController extends Controller
     {
         $this->authorize('update', $trackedAccount);
 
-        $trackedAccount->forceFill(['is_own_account' => false])->save();
+        $trackedAccount->forceFill([
+            'is_own_account' => false,
+            'kind' => TrackedAccountKind::Competitor,
+        ])->save();
 
         return redirect()->back(fallback: route('competitors.index'));
     }
@@ -490,7 +498,10 @@ class CompetitorController extends Controller
             ->where('user_id', $user->id)
             ->whereKeyNot($keep->id)
             ->where('is_own_account', true)
-            ->update(['is_own_account' => false]);
+            ->update([
+                'is_own_account' => false,
+                'kind' => TrackedAccountKind::Competitor,
+            ]);
     }
 
     private function queueSyncIfBillable(User $user, TrackedAccount $account): void

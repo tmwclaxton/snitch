@@ -23,7 +23,7 @@ class DefaultDashboardPanels
         $position = 0;
 
         $summary = $this->reads->accountSummary($user);
-        if ($summary !== null && isset($summary['followers_now']) && is_numeric($summary['followers_now'])) {
+        if (isset($summary['followers_now']) && is_numeric($summary['followers_now'])) {
             $panels[] = $this->row($position++, DashboardPanel::TYPE_BIG_NUMBER, 'Followers', [
                 'label' => 'Followers',
                 'value' => number_format((int) $summary['followers_now']),

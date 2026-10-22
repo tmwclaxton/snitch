@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_account_summary')]
-#[Description('Followers now, growth over 1/7/30 days, and last post for a tracked account. Omit handle for the own account. Curator tokens may pass user_id. Stored data only.')]
+#[Description('Followers now, growth over 1/7/30 days plus since_first_snapshot (change and from_date), and last post for a tracked account. Omit handle for the own account; returns structured JSON with has_own_account when none is marked. Curator tokens may pass user_id. Stored data only.')]
 #[IsReadOnly]
 class GetAccountSummaryTool extends Tool
 {
@@ -40,9 +40,6 @@ class GetAccountSummaryTool extends Tool
         }
 
         $summary = $reads->accountSummary($user, $data['handle'] ?? null);
-        if ($summary === null) {
-            return Response::error('No tracked account found for that handle.');
-        }
 
         return Response::json([
             'user_id' => (int) $user->id,

@@ -82,6 +82,23 @@ class SyncAccountsCommand extends Command
 
                     if (! $billingCache[$userId]) {
                         $billingSkipped++;
+                        // Still inherit posts/status from a shared corpus when another
+                        // user's sync already filled this social account.
+                        if ($account->inheritCorpusSyncState()) {
+                            continue;
+                        }
+
+                        // Record why sync did not run so last_sync_status is not left null
+                        // while daily follower refresh keeps updating the followers column.
+                        if ($account->last_synced_at === null
+                            || $account->last_sync_status === 'running'
+                            || $account->last_sync_status === null
+                        ) {
+                            $account->fill([
+                                'last_sync_status' => 'skipped_balance',
+                                'last_sync_error' => 'Sync skipped: credit balance too low.',
+                            ])->save();
+                        }
 
                         continue;
                     }
@@ -115,6 +132,8 @@ class SyncAccountsCommand extends Command
             return false;
         }
 
-        return $account->is_own_account || $account->kind === TrackedAccountKind::Competitor;
+        return $account->is_own_account
+            || $account->kind === TrackedAccountKind::Own
+            || $account->kind === TrackedAccountKind::Competitor;
     }
 }

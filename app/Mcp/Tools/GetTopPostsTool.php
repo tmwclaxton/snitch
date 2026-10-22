@@ -14,7 +14,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_top_posts')]
-#[Description('Highest times-usual competitor posts in a window (7, 30, or 90 days). Curator tokens may pass user_id. Stored data only.')]
+#[Description('Highest times-usual competitor posts in a window (7, 30, or 90 days). Excludes own-account trackers unless include_own=true. Curator tokens may pass user_id. Stored data only.')]
 #[IsReadOnly]
 class GetTopPostsTool extends Tool
 {
@@ -28,6 +28,7 @@ class GetTopPostsTool extends Tool
         $data = $request->validate([
             'days' => ['nullable', 'integer', 'in:7,30,90'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'include_own' => ['nullable', 'boolean'],
             'user_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
@@ -42,11 +43,13 @@ class GetTopPostsTool extends Tool
 
         $days = (int) ($data['days'] ?? 30);
         $limit = (int) ($data['limit'] ?? 10);
+        $includeOwn = (bool) ($data['include_own'] ?? false);
 
         return Response::json([
             'user_id' => (int) $user->id,
             'days' => $days,
-            'posts' => $reads->topPosts($user, $days, $limit),
+            'include_own' => $includeOwn,
+            'posts' => $reads->topPosts($user, $days, $limit, $includeOwn),
         ]);
     }
 
@@ -56,6 +59,9 @@ class GetTopPostsTool extends Tool
         return [
             'days' => $schema->integer()->description('Window: 7, 30, or 90. Default 30.')->nullable(),
             'limit' => $schema->integer()->description('Max posts (1-50). Default 10.')->nullable(),
+            'include_own' => $schema->boolean()
+                ->description('Include the user\'s own-account posts. Default false.')
+                ->nullable(),
             'user_id' => $schema->integer()->description('Curator only: another user id.')->nullable(),
         ];
     }

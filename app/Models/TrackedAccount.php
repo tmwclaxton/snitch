@@ -64,6 +64,20 @@ class TrackedAccount extends Model
 
     protected static function booted(): void
     {
+        static::saving(function (TrackedAccount $account): void {
+            // is_own_account is the product flag; kind must stay aligned so MCP
+            // and competitor scopes never treat the brand account as a rival.
+            if ($account->is_own_account) {
+                $account->kind = TrackedAccountKind::Own;
+
+                return;
+            }
+
+            if ($account->kind === TrackedAccountKind::Own) {
+                $account->kind = TrackedAccountKind::Competitor;
+            }
+        });
+
         static::creating(function (TrackedAccount $account): void {
             if ($account->social_account_id !== null) {
                 if ($account->followers === null) {
@@ -163,7 +177,11 @@ class TrackedAccount extends Model
      */
     public function scopeCompetitors(Builder $query): Builder
     {
-        return $query->where('kind', TrackedAccountKind::Competitor);
+        // Competitors index also lists the brand's own account (kind=own).
+        return $query->whereIn('kind', [
+            TrackedAccountKind::Competitor,
+            TrackedAccountKind::Own,
+        ]);
     }
 
     /**
@@ -232,13 +250,58 @@ class TrackedAccount extends Model
             return true;
         }
 
-        if ($this->last_sync_status === 'failed') {
+        if ($this->last_sync_status === 'failed' || $this->last_sync_status === 'skipped_balance') {
             return true;
         }
 
         $days = max(1, $minIntervalDays ?? (int) config('snitch.sync.min_interval_days', 7));
 
         return $this->last_synced_at->lte(now()->subDays($days));
+    }
+
+    /**
+     * Copy corpus sync freshness from a sibling tracker (or mark success when
+     * posts already exist on the shared social account) without scraping.
+     */
+    public function inheritCorpusSyncState(): bool
+    {
+        if ($this->social_account_id === null) {
+            return false;
+        }
+
+        $donor = static::query()
+            ->where('social_account_id', $this->social_account_id)
+            ->whereKeyNot($this->id)
+            ->whereIn('last_sync_status', ['success', 'empty'])
+            ->whereNotNull('last_synced_at')
+            ->orderByDesc('last_synced_at')
+            ->first();
+
+        if ($donor !== null) {
+            $this->fill([
+                'last_synced_at' => $donor->last_synced_at,
+                'last_sync_status' => $donor->last_sync_status,
+                'last_sync_error' => null,
+            ])->save();
+
+            return true;
+        }
+
+        $hasPosts = Post::query()
+            ->where('social_account_id', $this->social_account_id)
+            ->exists();
+
+        if (! $hasPosts) {
+            return false;
+        }
+
+        $this->fill([
+            'last_synced_at' => $this->last_synced_at ?? now(),
+            'last_sync_status' => 'success',
+            'last_sync_error' => null,
+        ])->save();
+
+        return true;
     }
 
     /**

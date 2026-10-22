@@ -20,7 +20,7 @@ Canonical host for Snitch production is **`https://www.snitchsocial.net`**.
 Zone `snitchsocial.net` should keep:
 
 1. **Always Use HTTPS** = on (HTTP → HTTPS)
-2. **Single Redirect** (dynamic redirect phase): apex `snitchsocial.net` → `https://www.snitchsocial.net` with path + query preserved (301)
+2. **Single Redirect** (dynamic redirect phase): apex `snitchsocial.net` → `https://www.snitchsocial.net` with path + query preserved (**308**, not 301). A 301 can rewrite `POST /mcp` to GET and drop the JSON-RPC body. Deploy runs `scripts/ensure-cloudflare-apex-mcp-redirect.sh` when `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ZONE_ID` are set.
 
 Do not reverse this to apex-canonical without updating `APP_URL`, WorkOS redirects, and the Cloudflare rule together.
 

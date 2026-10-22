@@ -86,7 +86,10 @@ class McpReadToolsScopingTest extends TestCase
 
         SnitchServer::tool(GetAccountSummaryTool::class, [
             'handle' => 'foreignclub',
-        ])->assertHasErrors();
+        ])
+            ->assertOk()
+            ->assertSee('"tracker":null')
+            ->assertSee('No tracked account found for that handle');
     }
 
     public function test_get_competitor_posts_is_scoped_to_token_user(): void

@@ -132,6 +132,7 @@ class ChatToolRunner
                     'since' => $arguments['since'] ?? null,
                     'sort' => $arguments['sort'] ?? 'times_usual',
                     'limit' => isset($arguments['limit']) ? (int) $arguments['limit'] : 20,
+                    'include_own' => (bool) ($arguments['include_own'] ?? false),
                 ]),
             ],
             'get_top_posts' => [
@@ -139,6 +140,7 @@ class ChatToolRunner
                     $user,
                     isset($arguments['days']) ? (int) $arguments['days'] : 30,
                     isset($arguments['limit']) ? (int) $arguments['limit'] : 10,
+                    (bool) ($arguments['include_own'] ?? false),
                 ),
             ],
             'get_posting_times' => $this->reads->postingTimes(

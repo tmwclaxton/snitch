@@ -559,6 +559,17 @@ jobs:
           path: ops-login-url.txt
           retention-days: 1
 
+      # Apex 301 drops POST /mcp bodies; keep the Single Redirect on HTTP 308.
+      - name: Ensure Cloudflare apex→www uses HTTP 308
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_REDIRECT_RULESET_ID: ${{ secrets.CLOUDFLARE_REDIRECT_RULESET_ID }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/ensure-cloudflare-apex-mcp-redirect.sh
+          ./scripts/ensure-cloudflare-apex-mcp-redirect.sh
+
       - name: Close SSH master connection
         if: always()
         run: ssh -O exit ${{ env.DEPLOY_HOST }} || true

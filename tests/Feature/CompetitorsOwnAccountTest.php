@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\Platform;
+use App\Enums\TrackedAccountKind;
 use App\Jobs\SyncTrackedAccountJob;
 use App\Models\BrandProfile;
 use App\Models\TrackedAccount;
@@ -37,6 +38,7 @@ class CompetitorsOwnAccountTest extends TestCase
             'handle' => 'mybrand',
             'platform' => Platform::Instagram->value,
             'is_own_account' => true,
+            'kind' => TrackedAccountKind::Own->value,
         ]);
 
         Queue::assertPushed(SyncTrackedAccountJob::class);
@@ -47,13 +49,17 @@ class CompetitorsOwnAccountTest extends TestCase
             ->delete(route('competitors.unown', $account))
             ->assertRedirect();
 
-        $this->assertFalse($account->fresh()->is_own_account);
+        $account->refresh();
+        $this->assertFalse($account->is_own_account);
+        $this->assertSame(TrackedAccountKind::Competitor, $account->kind);
 
         $this->actingAs($user)
             ->post(route('competitors.own', $account))
             ->assertRedirect();
 
-        $this->assertTrue($account->fresh()->is_own_account);
+        $account->refresh();
+        $this->assertTrue($account->is_own_account);
+        $this->assertSame(TrackedAccountKind::Own, $account->kind);
     }
 
     public function test_marking_own_clears_the_previous_own_account(): void
@@ -77,7 +83,11 @@ class CompetitorsOwnAccountTest extends TestCase
             ->post(route('competitors.own', $second))
             ->assertRedirect();
 
-        $this->assertFalse($first->fresh()->is_own_account);
-        $this->assertTrue($second->fresh()->is_own_account);
+        $first->refresh();
+        $second->refresh();
+        $this->assertFalse($first->is_own_account);
+        $this->assertSame(TrackedAccountKind::Competitor, $first->kind);
+        $this->assertTrue($second->is_own_account);
+        $this->assertSame(TrackedAccountKind::Own, $second->kind);
     }
 }

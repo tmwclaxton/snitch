@@ -36,13 +36,26 @@ class McpReadService
     }
 
     /**
-     * @return array<string, mixed>|null
+     * @return array<string, mixed>
      */
-    public function accountSummary(User $user, ?string $handle = null): ?array
+    public function accountSummary(User $user, ?string $handle = null): array
     {
-        $account = $this->resolveAccount($user, $handle);
+        $hasOwnAccount = $user->trackedAccounts()
+            ->where('is_own_account', true)
+            ->exists();
+
+        $account = $this->resolveAccount($user, $handle, requireOwnWhenOmittingHandle: true);
         if ($account === null) {
-            return null;
+            return [
+                'has_own_account' => $hasOwnAccount,
+                'tracker' => null,
+                'followers_now' => null,
+                'growth' => null,
+                'last_post' => null,
+                'message' => $handle !== null && trim($handle) !== ''
+                    ? 'No tracked account found for that handle.'
+                    : 'No own account marked. Pass handle or mark an account as own.',
+            ];
         }
 
         $socialId = (int) ($account->social_account_id ?? 0);
@@ -53,6 +66,7 @@ class McpReadService
             '1d' => $this->followerDelta($socialId, $now->subDay(), $followersNow),
             '7d' => $this->followerDelta($socialId, $now->subDays(7), $followersNow),
             '30d' => $this->followerDelta($socialId, $now->subDays(30), $followersNow),
+            'since_first_snapshot' => $this->sinceFirstSnapshot($socialId, $followersNow),
         ];
 
         $lastPost = null;
@@ -71,6 +85,7 @@ class McpReadService
         }
 
         return [
+            'has_own_account' => $hasOwnAccount,
             'tracker' => $this->trackerRow($account),
             'followers_now' => $followersNow,
             'growth' => $growth,
@@ -79,12 +94,13 @@ class McpReadService
     }
 
     /**
-     * @param  array{handle?: string|null, format?: string|null, since?: string|null, sort?: string|null, limit?: int|null}  $filters
+     * @param  array{handle?: string|null, format?: string|null, since?: string|null, sort?: string|null, limit?: int|null, include_own?: bool|null}  $filters
      * @return list<array<string, mixed>>
      */
     public function competitorPosts(User $user, array $filters = []): array
     {
         $limit = max(1, min(50, (int) ($filters['limit'] ?? 20)));
+        $includeOwn = (bool) ($filters['include_own'] ?? false);
         $handle = isset($filters['handle']) ? $this->normaliseHandle((string) $filters['handle']) : null;
         $format = isset($filters['format']) ? trim((string) $filters['format']) : null;
         $since = null;
@@ -93,7 +109,8 @@ class McpReadService
         }
 
         $accounts = $user->trackedAccounts()
-            ->where('kind', TrackedAccountKind::Competitor)
+            ->whereIn('kind', [TrackedAccountKind::Competitor, TrackedAccountKind::Own])
+            ->when(! $includeOwn, fn ($q) => $q->where('is_own_account', false))
             ->when($handle !== null && $handle !== '', fn ($q) => $q->whereRaw('LOWER(handle) = ?', [$handle]))
             ->get()
             ->keyBy('social_account_id');
@@ -144,7 +161,7 @@ class McpReadService
     /**
      * @return list<array<string, mixed>>
      */
-    public function topPosts(User $user, int $days = 30, int $limit = 10): array
+    public function topPosts(User $user, int $days = 30, int $limit = 10, bool $includeOwn = false): array
     {
         $days = in_array($days, [7, 30, 90], true) ? $days : 30;
         $limit = max(1, min(50, $limit));
@@ -154,11 +171,12 @@ class McpReadService
             'since' => $since->toDateString(),
             'limit' => $limit,
             'sort' => 'times_usual',
+            'include_own' => $includeOwn,
         ]);
     }
 
     /**
-     * @return array{slots: list<array{label: string, dow: int, hour: int, count: int}>, timezone: string}
+     * @return array{slots: list<array{label: string, dow: int, hour: int, count: int, avg_times_usual: float|null}>, timezone: string, days: int}
      */
     public function postingTimes(User $user, int $days = 30): array
     {
@@ -167,12 +185,17 @@ class McpReadService
         $socialIds = $this->socialIdsForUser($user);
 
         $counts = [];
+        $timesUsualSums = [];
+        $timesUsualNs = [];
+
         if ($socialIds !== []) {
             $posts = Post::query()
                 ->whereIn('social_account_id', $socialIds)
                 ->whereNotNull('posted_at')
                 ->where('posted_at', '>=', $since)
-                ->get(['id', 'posted_at']);
+                ->get();
+
+            $histories = $this->historiesForSocialIds($socialIds);
 
             foreach ($posts as $post) {
                 $bucket = $this->math->londonBucket($post->posted_at);
@@ -186,23 +209,43 @@ class McpReadService
                 }
                 $key = $dow.'|'.$hour;
                 $counts[$key] = ($counts[$key] ?? 0) + 1;
+
+                $history = $histories->get((int) $post->social_account_id, collect());
+                $pi = $this->math->performanceIndex($post, $history)['pi'] ?? null;
+                if (is_numeric($pi)) {
+                    $timesUsualSums[$key] = ($timesUsualSums[$key] ?? 0.0) + (float) $pi;
+                    $timesUsualNs[$key] = ($timesUsualNs[$key] ?? 0) + 1;
+                }
             }
         }
 
         $slots = collect($counts)
-            ->map(function (int $count, string $key): array {
+            ->map(function (int $count, string $key) use ($timesUsualSums, $timesUsualNs): array {
                 [$dow, $hour] = array_map('intval', explode('|', $key));
                 // londonBucket dow is ISO weekday minus 1 (Mon=0 … Sun=6).
                 $dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                $n = (int) ($timesUsualNs[$key] ?? 0);
+                $avg = $n > 0
+                    ? $this->math->round1(($timesUsualSums[$key] ?? 0.0) / $n)
+                    : null;
 
                 return [
                     'label' => ($dayNames[$dow] ?? 'Day').' '.sprintf('%02d:00', $hour),
                     'dow' => $dow,
                     'hour' => $hour,
                     'count' => $count,
+                    'avg_times_usual' => $avg,
                 ];
             })
-            ->sortByDesc('count')
+            ->sort(function (array $a, array $b): int {
+                $aAvg = is_numeric($a['avg_times_usual'] ?? null) ? (float) $a['avg_times_usual'] : -1.0;
+                $bAvg = is_numeric($b['avg_times_usual'] ?? null) ? (float) $b['avg_times_usual'] : -1.0;
+                if ($aAvg !== $bAvg) {
+                    return $bAvg <=> $aAvg;
+                }
+
+                return ((int) $b['count']) <=> ((int) $a['count']);
+            })
             ->values()
             ->take(12)
             ->all();
@@ -317,15 +360,37 @@ class McpReadService
     public function growthSeries(User $user, string $period = '30d', array $accountIds = []): array
     {
         $period = in_array($period, ['30d', '90d', 'all'], true) ? $period : '30d';
+        $metrics = $this->growth->build($user, $period, $accountIds);
+        $trackers = $user->trackedAccounts()->get()->keyBy('id');
+
+        $accounts = collect($metrics['accounts'] ?? [])->map(function (array $row) use ($trackers): array {
+            $trackedId = (int) ($row['tracked_account_id'] ?? $row['id'] ?? 0);
+            /** @var TrackedAccount|null $account */
+            $account = $trackedId > 0 ? $trackers->get($trackedId) : null;
+            $socialId = (int) ($account?->social_account_id ?? 0);
+            $summaryFollowers = $row['summary']['followers'] ?? null;
+            $followersNow = is_numeric($summaryFollowers)
+                ? (int) $summaryFollowers
+                : ($account?->followers !== null ? (int) $account->followers : null);
+
+            $row['since_first_snapshot'] = $this->sinceFirstSnapshot($socialId, $followersNow);
+
+            return $row;
+        })->all();
+
+        $metrics['accounts'] = $accounts;
 
         return [
             'period' => $period,
-            'metrics' => $this->growth->build($user, $period, $accountIds),
+            'metrics' => $metrics,
         ];
     }
 
-    private function resolveAccount(User $user, ?string $handle): ?TrackedAccount
-    {
+    private function resolveAccount(
+        User $user,
+        ?string $handle,
+        bool $requireOwnWhenOmittingHandle = false,
+    ): ?TrackedAccount {
         $query = $user->trackedAccounts()->orderByDesc('is_own_account')->orderBy('id');
 
         if ($handle !== null && trim($handle) !== '') {
@@ -334,8 +399,16 @@ class McpReadService
             return (clone $query)->whereRaw('LOWER(handle) = ?', [$normalised])->first();
         }
 
-        return $query->where('is_own_account', true)->first()
-            ?? $query->first();
+        $own = (clone $query)->where('is_own_account', true)->first();
+        if ($own !== null) {
+            return $own;
+        }
+
+        if ($requireOwnWhenOmittingHandle) {
+            return null;
+        }
+
+        return $query->first();
     }
 
     /**
@@ -422,6 +495,48 @@ class McpReadService
             'change' => ($fromInt !== null && $to !== null) ? ($to - $fromInt) : null,
             'from' => $fromInt,
             'to' => $to,
+        ];
+    }
+
+    /**
+     * @return array{change: int|null, from: int|null, to: int|null, from_date: string|null}
+     */
+    private function sinceFirstSnapshot(int $socialId, ?int $followersNow): array
+    {
+        if ($socialId < 1) {
+            return ['change' => null, 'from' => null, 'to' => $followersNow, 'from_date' => null];
+        }
+
+        $first = FollowerSnapshot::query()
+            ->where('social_account_id', $socialId)
+            ->orderBy('captured_on')
+            ->orderBy('id')
+            ->first(['captured_on', 'followers']);
+
+        if ($first === null) {
+            return ['change' => null, 'from' => null, 'to' => $followersNow, 'from_date' => null];
+        }
+
+        $fromInt = (int) $first->followers;
+        $to = $followersNow;
+        if ($to === null) {
+            $latest = FollowerSnapshot::query()
+                ->where('social_account_id', $socialId)
+                ->orderByDesc('captured_on')
+                ->orderByDesc('id')
+                ->value('followers');
+            $to = $latest !== null ? (int) $latest : null;
+        }
+
+        $fromDate = $first->captured_on instanceof \DateTimeInterface
+            ? CarbonImmutable::parse($first->captured_on)->toDateString()
+            : (string) $first->captured_on;
+
+        return [
+            'change' => $to !== null ? ($to - $fromInt) : null,
+            'from' => $fromInt,
+            'to' => $to,
+            'from_date' => $fromDate !== '' ? $fromDate : null,
         ];
     }
 

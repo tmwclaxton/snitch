@@ -24,7 +24,7 @@ class GenerateDailyBriefsCommand extends Command
         {--fallback : Skip the LLM and write the checked deterministic template (implies force)}
         {--sanitize : Re-run deterministic copy sanitizers on the stored brief without regenerating}';
 
-    protected $description = 'Generate the daily executive summary for opted-in users';
+    protected $description = 'Generate the daily executive summary for every user with trackers';
 
     public function handle(
         DailyBriefGenerator $generator,
@@ -41,7 +41,7 @@ class GenerateDailyBriefsCommand extends Command
             : $generator->briefDate();
 
         $users = User::query()
-            ->where('daily_brief_enabled', true)
+            ->whereHas('trackedAccounts')
             ->when(is_numeric($userFilter), fn ($query) => $query->where('id', (int) $userFilter))
             ->orderBy('id')
             ->get();
