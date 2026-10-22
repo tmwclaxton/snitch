@@ -336,21 +336,26 @@ class WeeklyBriefGenerationTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_dashboard_hides_brief_panel_without_brief(): void
+    public function test_dashboard_teaser_hides_brief_panel_without_brief(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
+
+        $teaser = app(WeeklyBriefGenerator::class)->dashboardTeaser($user);
+
+        $this->assertNull($teaser);
 
         $this->actingAs($user)
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
-                ->where('weekly_brief', null)
+                ->has('panels')
+                ->missing('weekly_brief')
             );
     }
 
-    public function test_dashboard_shows_brief_panel_when_ready(): void
+    public function test_dashboard_teaser_shows_brief_when_ready(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -372,20 +377,17 @@ class WeeklyBriefGenerationTest extends TestCase
             'why' => 'Because',
         ]);
 
-        $this->actingAs($user)
-            ->get(route('dashboard'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard')
-                ->where('weekly_brief.id', $brief->id)
-                ->where('weekly_brief.hook', 'Open on proof')
-                ->where('weekly_brief.ideas.0.format', 'Reel')
-                ->where('weekly_brief.ideas.0.hook', 'Open on proof')
-                ->where('weekly_brief.ideas.0.slot', 'Mon 09:00')
-                ->where('weekly_brief.ideas.0.visual', 'Film the counter at open')
-                ->where('weekly_brief.ideas.0.caption_angle', 'Angle')
-                ->where('weekly_brief.ideas.0.cta', 'CTA')
-            );
+        $teaser = app(WeeklyBriefGenerator::class)->dashboardTeaser($user);
+
+        $this->assertIsArray($teaser);
+        $this->assertSame($brief->id, $teaser['id'] ?? null);
+        $this->assertSame('Open on proof', $teaser['hook'] ?? null);
+        $this->assertSame('Reel', $teaser['ideas'][0]['format'] ?? null);
+        $this->assertSame('Open on proof', $teaser['ideas'][0]['hook'] ?? null);
+        $this->assertSame('Mon 09:00', $teaser['ideas'][0]['slot'] ?? null);
+        $this->assertSame('Film the counter at open', $teaser['ideas'][0]['visual'] ?? null);
+        $this->assertSame('Angle', $teaser['ideas'][0]['caption_angle'] ?? null);
+        $this->assertSame('CTA', $teaser['ideas'][0]['cta'] ?? null);
     }
 
     public function test_mark_idea_used_toggles(): void

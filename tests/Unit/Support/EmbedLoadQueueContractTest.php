@@ -160,23 +160,11 @@ class EmbedLoadQueueContractTest extends TestCase
 
         $dashboard = file_get_contents(base_path('resources/js/pages/Dashboard.vue'));
         $this->assertIsString($dashboard);
-        $this->assertStringContainsString('px-2 py-2 sm:px-3', $dashboard);
-        $this->assertStringContainsString('ExecWinnerThumb', $dashboard);
+        $this->assertStringContainsString('PanelBigNumber', $dashboard);
+        $this->assertStringContainsString('PanelPostCard', $dashboard);
         $this->assertStringNotContainsString('id="recent_posts"', $dashboard);
         $this->assertStringNotContainsString('Latest posts', $dashboard);
-        $this->assertStringContainsString('id="format_mix"', $dashboard);
-        $this->assertStringContainsString('id="activity"', $dashboard);
-        $this->assertStringContainsString('id="caption_intel"', $dashboard);
-        $this->assertStringContainsString('snitch-heatmap--dash', $dashboard);
-        $this->assertStringContainsString('visibleKpiCards', $dashboard);
-        $this->assertStringContainsString('Best posting times', $dashboard);
-        $this->assertStringContainsString('ExecTakeaways', $dashboard);
-        $this->assertStringContainsString('ExecWhatWorks', $dashboard);
         $this->assertStringNotContainsString('FollowerHistoryChart', $dashboard);
-        $this->assertStringNotContainsString('showFollowerNote', $dashboard);
-        $this->assertStringContainsString('ExecWinnerThumb', $dashboard);
-        $this->assertStringContainsString('id="winners"', $dashboard);
-        $this->assertStringContainsString('id="insights"', $dashboard);
         $winnerThumb = file_get_contents(base_path('resources/js/components/dashboard/ExecWinnerThumb.vue'));
         $this->assertIsString($winnerThumb);
         $this->assertStringContainsString('× usual', $winnerThumb);
@@ -213,8 +201,7 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('competitorShow.url(id)', $insightList);
         $this->assertStringContainsString('collapsedCount: 5', $insightList);
         $this->assertStringNotContainsString('fitHeight', $insightList);
-        $this->assertStringContainsString('xl:grid-cols-4', $dashboard);
-        $this->assertStringContainsString('lg:grid-cols-6', $dashboard);
+        $this->assertStringContainsString('sm:grid-cols-2 xl:grid-cols-3', $dashboard);
         $this->assertStringNotContainsString('CaptionPanels', $dashboard);
         $this->assertStringNotContainsString('DataNotes', $dashboard);
         $this->assertStringNotContainsString('Length vs PI', $captions);

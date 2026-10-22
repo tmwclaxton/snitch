@@ -25,19 +25,14 @@ class WinnersTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_winners_index_redirects_to_dashboard_performance(): void
+    public function test_winners_index_redirects_to_growth(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
 
         $this->actingAs($user)
             ->get(route('winners.index'))
-            ->assertRedirect(route('dashboard').'#performance');
-
-        $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
-        $this->assertIsString($dashboard);
-        $this->assertStringContainsString('id="performance"', $dashboard);
-        $this->assertStringContainsString('id="winners"', $dashboard);
+            ->assertRedirect(route('growth.index'));
     }
 
     public function test_winner_scorer_still_persists_matching_posts(): void

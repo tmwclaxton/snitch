@@ -19,6 +19,7 @@ use App\Models\Post;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Billing\UsageBillingService;
+use App\Services\Dashboard\DashboardMetrics;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Cashier\Subscription;
@@ -249,12 +250,14 @@ class BillingPaywallTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('subscription.paywall.blocked', false)
-                ->where('rivals.0.handle', 'visible-rival')
-                ->where('rivals.0.posts_count', 1)
-                ->loadDeferredProps('panel', fn (Assert $panel) => $panel
-                    ->where('leaderboard.status', 'ok')
-                )
+                ->has('panels')
+                ->where('panels_source', 'default')
             );
+
+        $metrics = app(DashboardMetrics::class)->forUser($user, [], 30);
+        $this->assertSame('visible-rival', $metrics['rivals'][0]['handle'] ?? null);
+        $this->assertSame(1, $metrics['rivals'][0]['posts_count'] ?? null);
+        $this->assertSame('ok', $metrics['leaderboard']['status'] ?? null);
 
         $this->actingAs($user)
             ->get(route('competitors.show', $account))

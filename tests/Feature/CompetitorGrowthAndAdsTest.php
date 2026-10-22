@@ -33,8 +33,8 @@ class CompetitorGrowthAndAdsTest extends TestCase
         $this->assertStringNotContainsString('not in this build', $dashboard);
         $this->assertStringNotContainsString('Not click-through', $dashboard);
         $this->assertStringNotContainsString('Not conversion', $show);
-        $this->assertStringContainsString('ExecTakeaways', $dashboard);
-        $this->assertStringContainsString('Winning posts', $dashboard);
+        $this->assertStringContainsString('PanelBigNumber', $dashboard);
+        $this->assertStringContainsString('Curated panels', $dashboard);
         $this->assertStringContainsString('Posts with an ask', $show);
         $this->assertStringNotContainsString('CTA clicks', $dashboard);
         $this->assertStringNotContainsString('CTA clicks', $show);

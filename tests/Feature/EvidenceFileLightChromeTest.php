@@ -20,9 +20,9 @@ class EvidenceFileLightChromeTest extends TestCase
         $this->assertNotFalse($formatMix);
         $this->assertNotFalse($phrase);
 
-        $this->assertStringContainsString('SnitchHighlightedText', $dashboard);
+        $this->assertStringContainsString('PanelBigNumber', $dashboard);
         $this->assertStringNotContainsString('peer-checked:bg-snitch-ink', $dashboard);
-        $this->assertStringContainsString('snitch-caution-band', $dashboard);
+        $this->assertStringContainsString('snitch-btn-spot', $dashboard);
         $this->assertStringContainsString('snitch-choice', $whatWorks);
         $this->assertStringContainsString('snitch-highlight', $whatWorks);
         $this->assertStringNotContainsString('bg-snitch-spot/40', $whatWorks);

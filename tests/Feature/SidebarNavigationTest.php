@@ -145,7 +145,7 @@ class SidebarNavigationTest extends TestCase
 
             $this->actingAs($user)
                 ->get(route('winners.index'))
-                ->assertRedirect(route('dashboard').'#performance');
+                ->assertRedirect(route('growth.index'));
 
             // Standalone Ad Library stays behind config('features.ad_library'); default off → dashboard.
             $this->actingAs($user)

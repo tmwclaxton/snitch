@@ -12,7 +12,7 @@ class WinnerController extends Controller
 {
     public function index(): RedirectResponse
     {
-        return redirect()->to(route('dashboard').'#performance');
+        return redirect()->route('growth.index');
     }
 
     public function rescore(Request $request): RedirectResponse

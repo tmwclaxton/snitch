@@ -13,6 +13,7 @@ use App\Models\PostAnalysis;
 use App\Models\SocialAccount;
 use App\Models\TrackedAccount;
 use App\Models\User;
+use App\Services\Dashboard\DashboardMetrics;
 use App\Services\Tracking\FollowerCountRefresher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -82,13 +83,16 @@ class TrackedAccountSoftDeleteTest extends TestCase
                 )
             );
 
+        $metrics = app(DashboardMetrics::class)->forUser($user, [], 30);
+        $this->assertCount(1, $metrics['rivals'] ?? []);
+        $this->assertSame('still_here', $metrics['rivals'][0]['handle'] ?? null);
+
         $this->actingAs($user)
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
-                ->has('rivals', 1)
-                ->where('rivals.0.handle', 'still_here')
+                ->has('panels')
             );
 
         $this->actingAs($user)
