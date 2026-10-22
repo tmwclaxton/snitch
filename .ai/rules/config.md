@@ -1,9 +1,16 @@
 ---
 paths:
   - config/snitch.php
+  - app/Services/Chat/**
+  - app/Http/Controllers/ChatController.php
+  - resources/js/pages/chat/**
+  - routes/web.php
 ---
 
 # Config
+
+## In-app chat uses stored MCP reads and a daily cap
+`/chat` calls the same stored-data tools as MCP (`ChatToolRunner` / `McpReadService`) under the logged-in user. Never trigger Apify/TikHub from chat. Cap with `snitch.chat.daily_message_cap` (`SNITCH_CHAT_DAILY_CAP`, Europe/London day). When capped, stream a plain message plus Connect your AI (`/settings/mcp`). Model: `snitch.chat.model`.
 
 ## Sync and analyze stay inside the recency cost cap
 Import only posts within the scrape window: weekly `snitch.sync.recency_days` (default 30) / `posts_limit` (12), or first-sync `first_sync_recency_days` (90) / `first_sync_posts_limit` (50). Analysis eligibility uses `SyncOptions::analysisRecencyDays()` = max of those windows so backfilled posts remain analyzable without widening every future scrape. Manual UI and MCP sync_competitor may override via posts_limit / recency_days (capped by posts_limit_max / recency_days_max). Do not scrape deep archives during vetting or probes. Documented via SNITCH_SYNC_* env vars.

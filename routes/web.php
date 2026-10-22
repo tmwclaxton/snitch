@@ -13,6 +13,7 @@ use App\Http\Controllers\BacklogController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\BrandProfileController;
 use App\Http\Controllers\BriefController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CompetitorController;
 use App\Http\Controllers\DailyBriefController;
 use App\Http\Controllers\DashboardController;
@@ -143,6 +144,10 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::post('dashboard/watching', WatchingYouController::class)
             ->middleware('throttle:30,1')
             ->name('dashboard.watching');
+        Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
+        Route::post('/chat/stream', [ChatController::class, 'stream'])
+            ->middleware('throttle:60,1')
+            ->name('chat.stream');
         Route::post('/features', [FeatureSuggestionController::class, 'store'])
             ->middleware('throttle:20,1')
             ->name('features.store');

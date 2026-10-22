@@ -504,6 +504,28 @@ jobs:
           rm -f /tmp/snitch-check-daily-brief.php
           REMOTE
 
+      # One-shot ops hook: commit message containing [create-curator-token] mints a
+      # curator Sanctum token and writes it to /opt/snitch/curator-token.txt (chmod 600).
+      - name: Create curator token file when tagged
+        if: contains(github.event.head_commit.message, '[create-curator-token]')
+        run: |
+          set -euo pipefail
+          ssh ${{ env.DEPLOY_HOST }} bash -s <<'REMOTE'
+          set -euo pipefail
+          SLOT="$(cat /opt/snitch/.deploy-slot)"
+          APP="snitch-app-${SLOT}"
+          echo "LIVE_SLOT=${SLOT}"
+          docker exec "$APP" php artisan snitch:curator-token create --write=/tmp/curator-token.txt
+          docker cp "$APP:/tmp/curator-token.txt" /opt/snitch/curator-token.txt
+          docker exec "$APP" rm -f /tmp/curator-token.txt
+          chmod 600 /opt/snitch/curator-token.txt
+          if id gunnergrant >/dev/null 2>&1; then
+            chown gunnergrant:gunnergrant /opt/snitch/curator-token.txt
+          fi
+          ls -la /opt/snitch/curator-token.txt
+          echo "curator_token_path=/opt/snitch/curator-token.txt"
+          REMOTE
+
       - name: Close SSH master connection
         if: always()
         run: ssh -O exit ${{ env.DEPLOY_HOST }} || true

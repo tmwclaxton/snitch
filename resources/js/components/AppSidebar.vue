@@ -49,6 +49,7 @@ import { index as adminCuratorTokensIndex } from '@/routes/admin/curator-tokens'
 import { index as adminFeaturesIndex } from '@/routes/admin/features';
 import { index as adminUsersIndex } from '@/routes/admin/users';
 import { edit as billing } from '@/routes/billing';
+import { index as chatIndex } from '@/routes/chat';
 import { edit as editProfile } from '@/routes/profile';
 import type { NavItem } from '@/types';
 
@@ -118,6 +119,11 @@ const mainNavItems: NavItem[] = [
         title: 'Today',
         href: today(),
         icon: Sun,
+    },
+    {
+        title: 'Chat',
+        href: chatIndex(),
+        icon: MessageSquare,
     },
     {
         title: 'Brand',

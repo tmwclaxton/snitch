@@ -27,6 +27,14 @@ class NanoGptClient
             $payload['response_format'] = $options['response_format'];
         }
 
+        if (isset($options['tools']) && is_array($options['tools'])) {
+            $payload['tools'] = $options['tools'];
+        }
+
+        if (isset($options['tool_choice'])) {
+            $payload['tool_choice'] = $options['tool_choice'];
+        }
+
         $tries = max(1, (int) ($options['tries'] ?? 1));
         $response = null;
 

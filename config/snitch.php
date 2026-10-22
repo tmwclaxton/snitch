@@ -40,6 +40,18 @@ return [
     ],
 
     /*
+    | In-app /chat. Same stored-data tools as MCP, capped per user per London day.
+    */
+    'chat' => [
+        'daily_message_cap' => (int) env('SNITCH_CHAT_DAILY_CAP', 40),
+        'model' => env('SNITCH_CHAT_MODEL', env('SNITCH_CTA_ESSENCE_MODEL', 'deepseek/deepseek-v4-flash')),
+        'temperature' => (float) env('SNITCH_CHAT_TEMPERATURE', 0.3),
+        'max_tokens' => (int) env('SNITCH_CHAT_MAX_TOKENS', 2048),
+        'max_tool_rounds' => (int) env('SNITCH_CHAT_MAX_TOOL_ROUNDS', 4),
+        'timeout' => (int) env('SNITCH_CHAT_TIMEOUT', 120),
+    ],
+
+    /*
     | Dashboard CTA chips. A cheap chat model names the ask; the original
     | analysed lines stay attached to that type. force is for tests only.
     */
