@@ -21,6 +21,7 @@ defineProps<{
         cursor_background_composer_id: string | null;
         cost_notes: string | null;
         error: string | null;
+        result_meta: Record<string, unknown> | null;
         has_token: boolean;
         started_at: string | null;
         finished_at: string | null;
@@ -137,6 +138,17 @@ defineProps<{
                             >
                                 {{ run.error }}
                             </p>
+                            <ul
+                                v-if="Array.isArray(run.result_meta?.validation_errors) && run.result_meta.validation_errors.length > 0"
+                                class="list-disc pl-5 text-snitch-ink/70"
+                            >
+                                <li
+                                    v-for="(err, idx) in run.result_meta.validation_errors"
+                                    :key="`ve-${run.id}-${idx}`"
+                                >
+                                    {{ err }}
+                                </li>
+                            </ul>
                         </div>
                         <Form
                             v-if="run.has_token || run.status === 'queued' || run.status === 'running'"

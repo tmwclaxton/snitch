@@ -168,8 +168,8 @@ const hasSignals = computed(() => {
     <div>
         <Head title="Executive Brief" />
 
-        <div class="flex flex-1 flex-col px-4 py-6 sm:px-6 md:px-8 md:py-8 lg:px-10">
-            <article class="mx-auto w-full max-w-[1280px] text-base leading-[1.6] text-snitch-ink">
+        <div class="flex flex-1 flex-col px-4 py-6 sm:px-5 md:px-6 md:py-8 lg:px-8">
+            <article class="w-full max-w-none text-base leading-[1.6] text-snitch-ink">
                 <header class="space-y-4 border-b border-snitch-ink/15 pb-8">
                     <p class="text-sm font-semibold uppercase tracking-wide text-snitch-ink/75">
                         Executive Brief
@@ -209,12 +209,18 @@ const hasSignals = computed(() => {
                                 >
                                     <span
                                         class="block w-full rounded-sm"
-                                        :class="day.posted ? 'h-8 bg-snitch-ink' : 'h-3 bg-snitch-ink/15'"
+                                        :class="day.posted ? 'h-8 bg-snitch-ink' : 'h-3 bg-snitch-ink/20'"
                                         :title="day.posted ? `${day.label}: posted` : `${day.label}: quiet`"
                                     />
                                     <span class="text-xs font-medium text-snitch-ink/70">{{ day.label }}</span>
                                 </div>
                             </div>
+                            <p
+                                v-if="signals.own_posts_7d === 0"
+                                class="text-sm text-snitch-ink/75"
+                            >
+                                Quiet week - no posts on any of the last 7 days.
+                            </p>
                         </div>
                         <div
                             v-if="signals.format_mix.length > 0"

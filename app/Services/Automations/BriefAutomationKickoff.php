@@ -116,8 +116,8 @@ Call whoami, get_daily_brief, get_executive_brief, then evidence tools (list_tra
 Never trust a user_id argument for scope - the token is already bound to one user and one run.
 Draft like a sharp consultant: concrete headline with a real number/gap, interpretive summary (no repeated rivals-published filler), optional own/competitors sections, 3-5 suggestions with title+why+evidence_post_ids.
 Bake format and posting time into the suggestion title when grounded. Each why must cite one real post (handle + date or Nx).
-Save with save_executive_brief. Every number and handle must cite stored data. If you cannot ground a claim, omit it. No em dashes.
-When finished, the save tool closes the run and revokes the token.
+Save with save_executive_brief. If validation returns errors, revise and save again (token stays open until ok=true). Every number and handle must cite stored data. If you cannot ground a claim, omit it. No em dashes. No ellipsis.
+When save returns ok=true, the run closes and the token is revoked.
 PROMPT;
     }
 

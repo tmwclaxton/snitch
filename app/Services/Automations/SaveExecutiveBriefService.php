@@ -63,12 +63,11 @@ class SaveExecutiveBriefService
 
         if (! ($result['ok'] ?? false)) {
             $errors = array_values(array_map('strval', $result['errors'] ?? ['validation failed']));
-            $this->tokens->complete(
-                $run,
-                AutomationRun::STATUS_FAILED,
-                ['validation_errors' => $errors],
-                'Brief validation failed; kept the current generated brief.',
-            );
+            // Keep the run open and the token alive so the agent can fix and resubmit.
+            $meta = is_array($run->result_meta) ? $run->result_meta : [];
+            $meta['validation_errors'] = $errors;
+            $meta['validation_attempts'] = (int) ($meta['validation_attempts'] ?? 0) + 1;
+            $run->forceFill(['result_meta' => $meta])->save();
 
             return [
                 'ok' => false,

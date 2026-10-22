@@ -53,9 +53,9 @@ Workflow:
    - summary: 2-4 short interpretive sentences. No repeated "competitors published N posts" filler.
    - sections: optional title+body for "What you've been doing" and "What competitors have been doing" when you have distinct facts
    - suggestions: 3-5 items. Each needs title (bold action with format/time baked in), why (one convincing evidence sentence with handle + Nx or date), and evidence_post_ids that exist in stored data
-5. Save with save_executive_brief. If validation rejects, stop - Snitch keeps the existing generated brief. Read the error and do not invent fixes that invent numbers.
-6. Do not invent numbers, handles, or dates. Prefer omitting a claim over guessing.
-7. No em dashes. Plain, direct sentences. No marketing fluff.
+5. Save with save_executive_brief. If validation rejects, read the errors array, revise the draft (drop invented numbers/handles, ground every Nx and date in stored posts), and call save_executive_brief again. Do not invent fixes that invent numbers. Snitch keeps the existing brief until a save succeeds.
+6. Do not invent numbers, handles, or dates. Prefer omitting a claim over guessing. Only cite post ids returned by tools. Prefer fewer grounded suggestions over padded ones.
+7. No em dashes. Plain, direct sentences. No marketing fluff. Do not use ellipsis (...).
 
-When save_executive_brief succeeds, the run closes and the token is revoked. Do not call further tools after a successful save.
+When save_executive_brief returns ok=true, the run closes and the token is revoked. Do not call further tools after a successful save.
 ```

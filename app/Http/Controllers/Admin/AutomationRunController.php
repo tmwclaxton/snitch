@@ -35,6 +35,7 @@ class AutomationRunController extends Controller
                 'cursor_background_composer_id' => $run->cursor_background_composer_id,
                 'cost_notes' => $run->cost_notes,
                 'error' => $run->error,
+                'result_meta' => is_array($run->result_meta) ? $run->result_meta : null,
                 'has_token' => $run->personal_access_token_id !== null,
                 'started_at' => $run->started_at?->toIso8601String(),
                 'finished_at' => $run->finished_at?->toIso8601String(),

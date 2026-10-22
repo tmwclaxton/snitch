@@ -201,7 +201,7 @@ class EmbedLoadQueueContractTest extends TestCase
         $this->assertStringContainsString('competitorShow.url(id)', $insightList);
         $this->assertStringContainsString('collapsedCount: 5', $insightList);
         $this->assertStringNotContainsString('fitHeight', $insightList);
-        $this->assertStringContainsString('max-w-[1280px]', $dashboard);
+        $this->assertStringContainsString('max-w-none', $dashboard);
         $this->assertStringNotContainsString('CaptionPanels', $dashboard);
         $this->assertStringNotContainsString('DataNotes', $dashboard);
         $this->assertStringNotContainsString('Length vs PI', $captions);

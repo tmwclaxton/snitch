@@ -555,6 +555,19 @@ jobs:
           echo "curator_token_path=/opt/snitch/curator-token.txt"
           REMOTE
 
+      # Ops hook: [dump-brief-runs] prints recent automation_runs (status + validation errors).
+      - name: Dump recent brief automation runs when tagged
+        if: contains(github.event.head_commit.message, '[dump-brief-runs]') || contains(github.event.head_commit.message, '[kickoff-brief-1-6]')
+        run: |
+          set -euo pipefail
+          ssh ${{ env.DEPLOY_HOST }} bash -s <<'REMOTE'
+          set -euo pipefail
+          SLOT="$(cat /opt/snitch/.deploy-slot)"
+          APP="snitch-app-${SLOT}"
+          echo "LIVE_SLOT=${SLOT}"
+          docker exec "$APP" php artisan tinker --execute 'echo App\Models\AutomationRun::query()->where("type","brief")->orderByDesc("id")->limit(6)->get(["id","user_id","status","uuid","error","result_meta","created_at","finished_at"])->toJson(JSON_PRETTY_PRINT).PHP_EOL;'
+          REMOTE
+
       # Ops hook: [kickoff-brief-1-6] triggers Cursor Automations brief webhooks
       # for Toby (1) and Dan (6) with --force (bypasses the 180s trigger guard).
       - name: Kick off brief automations for users 1 and 6 when tagged
@@ -568,7 +581,7 @@ jobs:
           echo "LIVE_SLOT=${SLOT}"
           docker exec "$APP" php artisan snitch:automation-brief 1 --force
           docker exec "$APP" php artisan snitch:automation-brief 6 --force
-          docker exec "$APP" php artisan tinker --execute 'echo App\Models\AutomationRun::query()->where("type","brief")->orderByDesc("id")->limit(4)->get(["id","user_id","status","uuid","error","created_at"])->toJson(JSON_PRETTY_PRINT).PHP_EOL;'
+          docker exec "$APP" php artisan tinker --execute 'echo App\Models\AutomationRun::query()->where("type","brief")->orderByDesc("id")->limit(4)->get(["id","user_id","status","uuid","error","result_meta","created_at"])->toJson(JSON_PRETTY_PRINT).PHP_EOL;'
           REMOTE
 
       # Ops screenshot helper: [ops-login-url] mints short-lived signed logins for
