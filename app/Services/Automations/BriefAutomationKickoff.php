@@ -115,12 +115,12 @@ You likely only have Memories as a Cursor tool - call Snitch MCP yourself via HT
 Call whoami, get_daily_brief, get_executive_brief, then evidence tools (list_trackers, get_competitor_posts, get_top_posts, get_posting_times, get_format_mix) as needed. Read captions/hooks so you can name the idea that worked.
 Never trust a user_id argument for scope - the token is already bound to one user and one run.
 Required fields for save_executive_brief:
-- headline: short yellow-block line (one breath). Concrete gap or insight. Keep it short so it wraps. Format + Nx must match the narrative lead story.
+- headline: plain-English sentence-case takeaway. No @handles. No Nx / times-usual multipliers. Server rejects both.
 - narrative: REQUIRED 80-140 words. One lead story for THIS account + what to do first. At most 4 numbers. At most 2 sentences starting with @handle. Server rejects inventory dumps.
 - summary: up to 3 interpretive sentences. Must not restate the narrative.
 - sections: REQUIRED. Include "What happened this week" covering DIFFERENT ground from the narrative (other rivals, follower growth, format winners). One or two sentences per point. Server rejects overlap with the narrative.
-- suggestions: exactly 3, all POSITIVE (server rejects titles starting with Do not / Don't / Skip / Avoid). Prefer (1) post, (2) comment, (3) positive Carousel test or collab grounded in a strong rival hit the narrative did not already use. End titles with a period. Each why + evidence_post_ids[0] cite the same post. Never praise a sub-1.2x post as a model.
-Save with save_executive_brief. If validation returns errors, revise tone, grounding, and overlap, then save again (token stays open until ok=true). Every number and handle must cite stored data. If you cannot ground a claim, omit it. No em dashes. No ellipsis.
+- suggestions: exactly 3, all POSITIVE (server rejects titles starting with Do not / Don't / Skip / Avoid). Prefer (1) post, (2) comment, (3) strongest unused rival hit (e.g. a 12.6x Carousel when it fits). End titles with a period. Each why leads with the IDEA then cites evidence in plain words - never open with "@handle's X reached N times". evidence_post_ids[0] matches that why. Never praise a sub-1.2x post as a model.
+Save with save_executive_brief. If validation returns errors, revise tone, grounding, headline, why phrasing, and overlap, then save again (token stays open until ok=true). Every number and handle must cite stored data. If you cannot ground a claim, omit it. No em dashes. No ellipsis.
 When save returns ok=true, the run closes and the token is revoked.
 PROMPT;
     }

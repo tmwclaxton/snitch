@@ -54,6 +54,7 @@ class ExecutiveBriefTest extends TestCase
         $this->assertStringContainsString('Key figures', $page);
         $this->assertStringContainsString('narrativeText', $page);
         $this->assertStringContainsString('awaitingNarrative', $page);
+        $this->assertStringContainsString('snitch-memo-headline', $page);
         $this->assertStringContainsString('break-words', $page);
         $this->assertStringNotContainsString('v-if="brief.headline_detail"', $page);
         $this->assertStringNotContainsString('PanelBigNumber', $page);
@@ -322,18 +323,34 @@ class ExecutiveBriefTest extends TestCase
                 ],
                 'own_summary' => 'You are at 104 followers after 21 quiet days.',
                 'competitor_summary' => '',
-                'actions' => [
-                    ['title' => 'Post a Reel tonight.', 'why' => 'Break silence.', 'related_post_ids' => [], 'inspiration' => []],
-                    ['title' => 'Comment on a rival.', 'why' => 'Show up.', 'related_post_ids' => [], 'inspiration' => []],
-                    ['title' => 'Test a Carousel.', 'why' => 'Try slides.', 'related_post_ids' => [], 'inspiration' => []],
-                ],
                 'own_last_7_days' => [
                     ['post_id' => 11, 'handle' => 'ownclub', 'format' => 'Carousel', 'times_usual' => 1.0, 'times_usual_label' => '1.0x'],
+                ],
+                'actions' => [
+                    [
+                        'title' => 'Post a Reel tonight.',
+                        'why' => 'Break the quiet streak with a meet-new-people angle.',
+                        'related_post_ids' => [24],
+                        'inspiration' => [],
+                    ],
+                    [
+                        'title' => 'Comment on a rival.',
+                        'why' => 'Show up while the thread is still warm.',
+                        'related_post_ids' => [],
+                        'inspiration' => [],
+                    ],
+                    [
+                        'title' => 'Test a Carousel.',
+                        'why' => 'Borrow the mission layout that is already working.',
+                        'related_post_ids' => [21],
+                        'inspiration' => [],
+                    ],
                 ],
                 'competitor_moves' => [
                     ['post_id' => 21, 'handle' => 'goodgym', 'format' => 'Carousel', 'times_usual' => 12.6, 'times_usual_label' => '12.6 times their usual'],
                     ['post_id' => 22, 'handle' => 'goodgym', 'format' => 'Reel', 'times_usual' => 11.0, 'times_usual_label' => '11.0 times their usual'],
                     ['post_id' => 23, 'handle' => 'sobersocial_', 'format' => 'Reel', 'times_usual' => 2.0, 'times_usual_label' => '2.0 times their usual'],
+                    ['post_id' => 24, 'handle' => 'onehousesocialclub', 'format' => 'Reel', 'times_usual' => 3.2, 'times_usual_label' => '3.2 times their usual'],
                 ],
                 'data_freshness' => [],
             ],
@@ -367,6 +384,9 @@ class ExecutiveBriefTest extends TestCase
             ->all();
         $this->assertLessThanOrEqual(2, count($handles));
         $this->assertSame($handles, array_values(array_unique($handles)), 'evidence thumbs should not repeat the same handle');
+        $this->assertNotContains('onehousesocialclub', $handles, 'narrative-cited lead post must not appear under What happened');
+        $this->assertNotContains('goodgym', $handles, 'action-cited evidence must not appear under What happened');
+        $this->assertContains('sobersocial_', $handles);
     }
 
     public function test_presenter_dedupes_repeated_competitor_volume_in_summary(): void

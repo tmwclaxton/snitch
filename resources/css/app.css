@@ -512,6 +512,14 @@ html.dark [data-sidebar='menu-button']:active:not([data-active='true']):not(.sni
         line-height: 1.05;
     }
 
+    /* Executive Brief memo takeaway: sentence case, not shouty uppercase. */
+    .snitch-app-chrome .snitch-memo-headline,
+    .snitch-app-chrome .snitch-memo-headline.snitch-hero-display {
+        text-transform: none;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+    }
+
     .snitch-app-chrome .snitch-scrap,
     .snitch-app-chrome .snitch-doc,
     .snitch-app-chrome .snitch-contact-sheet,
@@ -776,6 +784,13 @@ html.dark [data-sidebar='menu-button']:active:not([data-active='true']):not(.sni
         letter-spacing: 0.01em;
         text-transform: uppercase;
         line-height: 1.05;
+    }
+
+    .snitch-memo-headline,
+    .snitch-memo-headline.snitch-hero-display {
+        text-transform: none;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
     }
 
     /*

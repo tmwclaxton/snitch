@@ -195,7 +195,7 @@ function competitorTextWithoutHandle(item: CompetitorItem): string {
                             · {{ dateLabel }}
                         </template>
                     </p>
-                    <h1 class="snitch-hero-display max-w-[70ch] text-2xl leading-[1.2] text-snitch-ink sm:text-3xl">
+                    <h1 class="snitch-memo-headline snitch-hero-display max-w-[70ch] text-2xl leading-[1.2] text-snitch-ink sm:text-3xl">
                         <span class="snitch-highlight inline box-decoration-clone break-words [overflow-wrap:anywhere]">{{ headlineText }}</span>
                     </h1>
                 </header>

@@ -136,13 +136,13 @@ class SaveExecutiveBriefRetryTest extends TestCase
         $run = $issued['run'];
 
         $result = app(SaveExecutiveBriefService::class)->save($user, $run, [
-            'headline' => 'Quiet week while @rivalhit posted a Reel.',
+            'headline' => 'Quiet week while rivals keep earning attention.',
             'narrative' => '@alignclub has been quiet with 0 posts this week and about 5 days since the last post, while @rivalhit shipped a Reel from 17 Oct that reached 3.2 times their usual. That gap is the story: rivals are earning attention and the brand is absent. Ship one Reel in an evening block first so the quiet streak ends, then leave a real comment on that rival hit so you show up where people already stopped scrolling. Skip copying weak posts under the standout line. Keep the plan short and move today before silence becomes the weekly narrative for the account.',
             'summary' => '@alignclub is quiet. @rivalhit has the week\'s strongest Reel.',
             'suggestions' => [
                 [
                     'title' => 'Post a Reel today at 20:00.',
-                    'why' => '@rivalhit\'s Reel from 17 Oct reached 0.8 times their usual.',
+                    'why' => 'The meet-new-people angle is working - that Reel from 17 Oct sat at 0.8 times their usual.',
                     'evidence_post_ids' => [42],
                 ],
                 [
@@ -152,7 +152,7 @@ class SaveExecutiveBriefRetryTest extends TestCase
                 ],
                 [
                     'title' => 'Break the quiet streak today.',
-                    'why' => '@alignclub has 0 posts in 7 days.',
+                    'why' => 'Silence is the story until one post lands.',
                     'evidence_post_ids' => [42],
                 ],
             ],

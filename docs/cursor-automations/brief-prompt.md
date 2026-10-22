@@ -56,19 +56,21 @@ Workflow:
 2. Read get_daily_brief and get_executive_brief.
 3. Pull evidence with list_trackers, get_competitor_posts, get_top_posts, get_posting_times, get_format_mix, get_account_summary as needed. Read captions/hooks so you can name the idea that worked, not only the Nx.
 4. Draft the memo:
-   - headline: short yellow-block line (one breath). Concrete gap or insight. Keep it short so it wraps. The format word and Nx in the headline MUST match the lead story in the narrative (do not headline a Carousel at 2.1x if the narrative leads on a Reel at 3.2x).
+   - headline: REQUIRED. Plain-English takeaway in sentence case (one breath). No @handles. No Nx / "times their usual" multipliers. Example shape: "Three weeks quiet while rivals win with meet-new-people Reels." Server rejects @ and multipliers in the headline.
    - narrative: REQUIRED. 80-140 words. What is happening, why it matters for this account, what to do first. At most 4 numbers. At most 2 sentences starting with @handle. Pick ONE lead story (the main comeback / main hit) - do not inventory the whole set here.
    - summary: up to 3 short interpretive sentences (fallback fuel only). Must NOT restate the narrative.
    - sections: REQUIRED. Include one section titled "What happened this week" whose body covers DIFFERENT ground from the narrative:
      - Other competitors and patterns the narrative did not use (e.g. a different handle's outlier Carousel, a follower-growth story, which formats are winning across the set).
      - One or two sentences per point. Name the idea when you cite a post.
-     - Drop crowded-room / mansion / Halloween (or whatever the narrative already argued) - the server rejects overlap.
+     - Drop facts the narrative already used - the server rejects overlap.
    - suggestions: exactly 3, all POSITIVE actions (server rejects titles starting with Do not / Don't / Skip / Avoid):
-     - (1) one post action, (2) one engagement/comment action, (3) a positive third action such as a Carousel test or collab idea grounded in a strong rival hit the narrative did not already use (e.g. a 12.6x Carousel from another handle).
-     - title ends with a period; why explains why it will work for THIS audience with idea + handle + Nx/date; evidence_post_ids has that ONE post.
+     - (1) one post action grounded in the narrative lead, (2) one engagement/comment action, (3) the strongest unused positive evidence available (prefer the highest Nx rival hit the narrative did not already use - e.g. a 12.6x Carousel when that fits).
+     - title ends with a period.
+     - why: lead with the IDEA for THIS audience, then cite the evidence once in plain words. Do NOT open why with "@handle's X reached N times their usual". Vary the phrasing across the three actions. Server rejects whys that start with @handle.
+     - evidence_post_ids has that ONE post.
    - Never sell a post under 1.2x as a model. Prefer real hits (>= 1.2 times their usual).
    - Prefer time blocks (evening 19:00-21:00, midday) over a rival's exact minute.
-5. Save with save_executive_brief (headline, narrative, summary, sections, suggestions). If validation rejects, read errors, revise tone/grounding/overlap, and save again. The run stays open on validation failure.
+5. Save with save_executive_brief (headline, narrative, summary, sections, suggestions). If validation rejects, read errors, revise tone/grounding/overlap/headline/why, and save again. The run stays open on validation failure.
 6. Do not invent numbers, handles, or dates. Prefer omitting a claim over guessing. Only cite post ids returned by tools.
 7. No em dashes. Plain, direct sentences. No marketing fluff. Do not use ellipsis (...).
 

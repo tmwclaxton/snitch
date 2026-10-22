@@ -945,28 +945,69 @@ class ExecutiveBriefPresenter
         }
         $candidates = array_values($byId);
 
+        $citedIds = [];
+        $actionsBlob = '';
+        foreach (is_array($payload['actions'] ?? null) ? $payload['actions'] : [] as $action) {
+            if (! is_array($action)) {
+                continue;
+            }
+            $actionsBlob .= ' '.mb_strtolower(trim((string) ($action['title'] ?? '')));
+            $actionsBlob .= ' '.mb_strtolower(trim((string) ($action['why'] ?? '')));
+            $actionsBlob .= ' '.mb_strtolower(trim((string) ($action['how'] ?? '')));
+            foreach ($action['related_post_ids'] ?? [] as $id) {
+                $citedIds[(int) $id] = true;
+            }
+        }
+        $citedHandles = [];
+        foreach ($candidates as $post) {
+            $id = (int) ($post['post_id'] ?? 0);
+            if ($id > 0 && isset($citedIds[$id])) {
+                $handle = mb_strtolower(ltrim((string) ($post['handle'] ?? ''), '@'));
+                if ($handle !== '') {
+                    $citedHandles[$handle] = true;
+                }
+            }
+        }
+        $citedProse = trim($narrativeLower.' '.$actionsBlob);
+
         $candidates = array_values(array_filter(
             $candidates,
-            function (array $post) use ($narrativeLower): bool {
-                $handle = mb_strtolower(ltrim((string) ($post['handle'] ?? ''), '@'));
-                $format = mb_strtolower((string) ($post['format'] ?? ''));
-                if ($handle === '' || $narrativeLower === '') {
-                    return true;
-                }
-                // Drop posts the opening narrative already argued from (same handle + format or Nx).
-                $nx = isset($post['times_usual'])
-                    ? rtrim(rtrim(number_format((float) $post['times_usual'], 1), '0'), '.')
-                    : '';
-                $mentionsHandle = str_contains($narrativeLower, '@'.$handle)
-                    || str_contains($narrativeLower, $handle);
-                if (! $mentionsHandle) {
-                    return true;
-                }
-                if ($format !== '' && str_contains($narrativeLower, $format) && $nx !== '' && str_contains($narrativeLower, $nx)) {
+            function (array $post) use ($citedProse, $citedIds, $citedHandles): bool {
+                $id = (int) ($post['post_id'] ?? 0);
+                if ($id > 0 && isset($citedIds[$id])) {
                     return false;
                 }
 
-                return ! ($nx !== '' && str_contains($narrativeLower, $nx));
+                $handle = mb_strtolower(ltrim((string) ($post['handle'] ?? ''), '@'));
+                if ($handle !== '' && isset($citedHandles[$handle])) {
+                    return false;
+                }
+
+                if ($citedProse === '') {
+                    return true;
+                }
+
+                // Drop posts the narrative or actions already cite (handle, brand-ish name, or Nx).
+                if ($handle !== '' && (
+                    str_contains($citedProse, '@'.$handle)
+                    || str_contains($citedProse, $handle)
+                    || $this->proseMentionsHandleBrand($citedProse, $handle)
+                )) {
+                    return false;
+                }
+
+                // Keep one decimal so "2.0" does not collapse to "2" and false-match "3.2" / "21".
+                $nx = isset($post['times_usual'])
+                    ? number_format((float) $post['times_usual'], 1, '.', '')
+                    : '';
+                if ($nx !== '' && (
+                    preg_match('/\b'.preg_quote($nx, '/').'\s*x\b/u', $citedProse) === 1
+                    || preg_match('/\b'.preg_quote($nx, '/').'\s+times\b/u', $citedProse) === 1
+                )) {
+                    return false;
+                }
+
+                return true;
             },
         ));
 
@@ -1019,6 +1060,40 @@ class ExecutiveBriefPresenter
         }
 
         return $this->enrichPosts($picked);
+    }
+
+    /**
+     * Match "One House" style brand language derived from a handle like onehousesocialclub.
+     */
+    private function proseMentionsHandleBrand(string $proseLower, string $handle): bool
+    {
+        $handle = mb_strtolower(ltrim($handle, '@'));
+        if ($handle === '' || mb_strlen($handle) < 6) {
+            return false;
+        }
+
+        // Split glued handle tokens on common brand words so "onehousesocialclub" → "one house".
+        $spaced = preg_replace(
+            '/(one|house|social|club|gym|friend|friendship|sober|offline|great|fuss|london|yellow|zest)/u',
+            ' $1 ',
+            $handle,
+        ) ?? $handle;
+        $spaced = trim(preg_replace('/\s+/u', ' ', $spaced) ?? $spaced);
+        if ($spaced === '' || $spaced === $handle) {
+            return false;
+        }
+
+        $parts = array_values(array_filter(
+            explode(' ', $spaced),
+            fn (string $part): bool => mb_strlen($part) >= 3 && ! in_array($part, ['the', 'and', 'for'], true),
+        ));
+        if (count($parts) < 2) {
+            return false;
+        }
+
+        $phrase = implode(' ', array_slice($parts, 0, 2));
+
+        return str_contains($proseLower, $phrase);
     }
 
     /**

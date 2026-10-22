@@ -15,7 +15,7 @@ The **logged-in app follows Appearance**. Do not pin authenticated pages with `s
 
 - **Light (logged-in):** paper `#EDEAE2`, ink `#0E0E10`, panels white / fog `#E4E0D6`, spot `#FCD700`, pink alerts `#FF3D8B`, thin ink/12 borders. Sidebar cream paper; hover grey `#E0DDD4`; selected item full yellow `#FCD700` + black text. Primary buttons yellow with black type. Pills / segs / filters: grey selected states with dark or cream text - never yellow.
 - **Dark (logged-in / public):** paper `#0E0E10`, fog type `#EDEAE2`, panels `#141416`, spot `#FCD700`, pink `#FF3D8B`, thin `white/10` borders. Sidebar black; hover grey `#1E1E22`; selected yellow `#FCD700` + black text.
-- Fonts: Inter (body), Archivo Black (`font-hero` / `.snitch-hero-display` uppercase headlines), Space Mono (small labels and stats only).
+- Fonts: Inter (body), Archivo Black (`font-hero` / `.snitch-hero-display` uppercase headlines), Space Mono (small labels and stats only). Executive Brief memo takeaway uses `.snitch-memo-headline` (sentence case, `text-transform: none`) so long headlines are not forced uppercase.
 - Highlight **one** key word or number per headline with `.snitch-highlight` (`#FCD700` block, `#0E0E10` text).
 
 ## Token rules
