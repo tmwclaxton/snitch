@@ -552,8 +552,8 @@ jobs:
           echo "curator_token_path=/opt/snitch/curator-token.txt"
           REMOTE
 
-      # Ops screenshot helper: [ops-login-url] mints a short-lived signed login for user 1
-      # and uploads it as a private Actions artifact (not printed in the job summary).
+      # Ops screenshot helper: [ops-login-url] mints short-lived signed logins for
+      # user 1 (Toby) and user 6 (Dan), one URL per line in the private artifact.
       - name: Mint ops login URL artifact when tagged
         if: contains(github.event.head_commit.message, '[ops-login-url]')
         id: ops_login
@@ -564,8 +564,10 @@ jobs:
           SLOT="$(cat /opt/snitch/.deploy-slot)"
           APP="snitch-app-${SLOT}"
           docker exec "$APP" php artisan snitch:signed-login-url 1 --minutes=30 --plain
+          docker exec "$APP" php artisan snitch:signed-login-url 6 --minutes=30 --plain
           REMOTE
           test -s ops-login-url.txt
+          test "$(wc -l < ops-login-url.txt)" -ge 2
 
       - name: Upload ops login URL artifact
         if: contains(github.event.head_commit.message, '[ops-login-url]')

@@ -1777,8 +1777,12 @@ html.dark [data-sidebar='menu-button']:active:not([data-active='true']):not(.sni
     .snitch-blog-prose :where(a) {
         color: var(--snitch-ink);
         text-decoration: underline;
-        text-decoration-color: color-mix(in oklab, var(--snitch-spot) 70%, transparent);
+        text-decoration-color: color-mix(in oklab, var(--snitch-ink) 40%, transparent);
         text-underline-offset: 2px;
+    }
+
+    .dark .snitch-blog-prose :where(a) {
+        text-decoration-color: color-mix(in oklab, var(--snitch-spot) 70%, transparent);
     }
 
     .snitch-blog-prose :where(strong) {
@@ -2334,9 +2338,13 @@ html.dark [data-sidebar='menu-button']:active:not([data-active='true']):not(.sni
 
     .snitch-contact-cell:hover .snitch-glance-title {
         text-decoration: underline;
-        text-decoration-color: color-mix(in oklab, var(--snitch-spot) 75%, transparent);
+        text-decoration-color: color-mix(in oklab, var(--snitch-ink) 45%, transparent);
         text-decoration-thickness: 2px;
         text-underline-offset: 2px;
+    }
+
+    .dark .snitch-contact-cell:hover .snitch-glance-title {
+        text-decoration-color: color-mix(in oklab, var(--snitch-spot) 75%, transparent);
     }
 
     .snitch-glance-metrics {
@@ -2973,6 +2981,10 @@ html.dark [data-sidebar='menu-button']:active:not([data-active='true']):not(.sni
     }
 
     .snitch-md a:hover {
+        text-decoration-color: color-mix(in oklab, var(--snitch-ink) 55%, transparent);
+    }
+
+    .dark .snitch-md a:hover {
         text-decoration-color: var(--snitch-spot);
     }
 
