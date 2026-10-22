@@ -67,6 +67,15 @@ class DailyBriefValidator
             foreach ($this->narrativeToneErrors($narrative) as $toneError) {
                 $errors[] = $toneError;
             }
+
+            foreach (['own_summary' => $ownSummary, 'competitor_summary' => $competitorSummary] as $field => $section) {
+                if ($section === '') {
+                    continue;
+                }
+                foreach ($this->narrativeSectionOverlapErrors($narrative, $section, $field) as $overlapError) {
+                    $errors[] = $overlapError;
+                }
+            }
         }
 
         if (! is_array($actions)) {
@@ -113,6 +122,8 @@ class DailyBriefValidator
 
             if ($title === '') {
                 $errors[] = 'action '.($index + 1).' is missing a title';
+            } elseif (preg_match('/^(do not|don\'t|dont|skip|avoid)\b/iu', $title) === 1) {
+                $errors[] = 'action '.($index + 1).' must be a positive action (not skip / avoid / do not)';
             }
 
             if ($this->containsEllipsis($title.$why.$how.$hook.$expected)) {
@@ -825,6 +836,75 @@ class DailyBriefValidator
         }
 
         return $errors;
+    }
+
+    /**
+     * "What happened" / own summary must cover different ground from the opening narrative.
+     *
+     * @return list<string>
+     */
+    public function narrativeSectionOverlapErrors(string $narrative, string $section, string $field): array
+    {
+        $errors = [];
+        $narrativeNorm = $this->normaliseProseForOverlap($narrative);
+        $sectionNorm = $this->normaliseProseForOverlap($section);
+
+        if ($narrativeNorm === '' || $sectionNorm === '') {
+            return [];
+        }
+
+        // Near-duplicate whole section (summary defaulted into both fields).
+        similar_text($narrativeNorm, $sectionNorm, $percent);
+        if ($percent >= 55) {
+            $errors[] = $field.' repeats the narrative ('.$this->formatOverlapPercent($percent).'% similar) - cover other competitors and patterns instead';
+        }
+
+        $shared = $this->sharedDistinctivePhrases($narrativeNorm, $sectionNorm);
+        if (count($shared) >= 2) {
+            $errors[] = $field.' reuses narrative phrases ('.implode('; ', array_slice($shared, 0, 3)).') - drop facts the narrative already used';
+        }
+
+        return $errors;
+    }
+
+    private function normaliseProseForOverlap(string $text): string
+    {
+        $text = mb_strtolower($text);
+        $text = preg_replace('/@[a-z0-9._]+/u', ' ', $text) ?? $text;
+        $text = preg_replace('/\d[\d,.]*x?/u', ' ', $text) ?? $text;
+        $text = preg_replace('/[^a-z\s]/u', ' ', $text) ?? $text;
+        $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
+
+        return trim($text);
+    }
+
+    private function formatOverlapPercent(float $percent): string
+    {
+        return (string) (int) round($percent);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function sharedDistinctivePhrases(string $narrativeNorm, string $sectionNorm): array
+    {
+        $stop = ['that', 'this', 'with', 'from', 'their', 'your', 'have', 'been', 'were', 'then', 'than', 'into', 'about', 'after', 'before', 'while', 'where', 'which', 'what', 'when', 'will', 'would', 'could', 'should', 'make', 'made', 'post', 'posts', 'reel', 'reels', 'times', 'usual', 'week', 'days', 'last', 'first', 'next', 'still', 'also', 'them', 'they', 'just', 'over', 'under', 'more', 'most', 'only'];
+        $words = preg_split('/\s+/u', $narrativeNorm, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $shared = [];
+
+        for ($i = 0; $i < count($words) - 3; $i++) {
+            $gram = array_slice($words, $i, 4);
+            $content = array_values(array_filter($gram, fn (string $w): bool => mb_strlen($w) >= 4 && ! in_array($w, $stop, true)));
+            if (count($content) < 2) {
+                continue;
+            }
+            $phrase = implode(' ', $gram);
+            if (str_contains($sectionNorm, $phrase)) {
+                $shared[$phrase] = $phrase;
+            }
+        }
+
+        return array_values($shared);
     }
 
     /**

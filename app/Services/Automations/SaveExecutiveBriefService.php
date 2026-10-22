@@ -139,8 +139,9 @@ class SaveExecutiveBriefService
     private function toNarrativeShape(array $input): array
     {
         $summary = trim((string) ($input['summary'] ?? ''));
-        $ownSummary = $summary;
-        $competitorSummary = $summary;
+        // Do not copy summary into own/competitor - that made "What happened" repeat the narrative.
+        $ownSummary = '';
+        $competitorSummary = '';
 
         $sections = is_array($input['sections'] ?? null) ? $input['sections'] : [];
         foreach ($sections as $section) {
@@ -152,9 +153,14 @@ class SaveExecutiveBriefService
             if ($body === '') {
                 continue;
             }
-            if (str_contains($title, 'own') || str_contains($title, 'you')) {
+            if (str_contains($title, 'own') || str_contains($title, 'you\'ve') || str_contains($title, 'you have')) {
                 $ownSummary = $body;
-            } elseif (str_contains($title, 'competitor') || str_contains($title, 'rival')) {
+            } elseif (
+                str_contains($title, 'competitor')
+                || str_contains($title, 'rival')
+                || str_contains($title, 'happened')
+                || str_contains($title, 'this week')
+            ) {
                 $competitorSummary = $body;
             }
         }

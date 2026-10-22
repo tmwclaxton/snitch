@@ -26,7 +26,7 @@ class NarrativeValidationTest extends TestCase
         $actions = [
             ['title' => 'Post today.', 'why' => 'Quiet week.', 'how' => 'Ship one.', 'related_handles' => [], 'related_post_ids' => []],
             ['title' => 'Comment today.', 'why' => 'Show up.', 'how' => 'Leave one.', 'related_handles' => [], 'related_post_ids' => []],
-            ['title' => 'Skip weak posts.', 'why' => 'Stay sharp.', 'how' => 'Ignore fluff.', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Test a Carousel this week.', 'why' => 'Try a layout.', 'how' => 'Draft slides.', 'related_handles' => [], 'related_post_ids' => []],
         ];
 
         $short = $validator->validate([
@@ -80,7 +80,7 @@ class NarrativeValidationTest extends TestCase
         $actions = [
             ['title' => 'Post today.', 'why' => 'Quiet week.', 'how' => 'Ship one.', 'related_handles' => [], 'related_post_ids' => []],
             ['title' => 'Comment today.', 'why' => 'Show up.', 'how' => 'Leave one.', 'related_handles' => [], 'related_post_ids' => []],
-            ['title' => 'Skip weak posts.', 'why' => 'Stay sharp.', 'how' => 'Ignore fluff.', 'related_handles' => [], 'related_post_ids' => []],
+            ['title' => 'Test a Carousel this week.', 'why' => 'Try a layout.', 'how' => 'Draft slides.', 'related_handles' => [], 'related_post_ids' => []],
         ];
 
         $dump = '@ownclub has 0 posts in 21 days. @rivala posted 4 times. @rivalb posted 3 times. @rivalc posted 2 times. Followers sit at 104 with little change while rivals keep shipping.';
@@ -128,7 +128,7 @@ class NarrativeValidationTest extends TestCase
             'actions' => [
                 ['title' => 'Post today.', 'why' => 'Quiet week.', 'how' => 'Ship one.', 'related_handles' => [], 'related_post_ids' => []],
                 ['title' => 'Comment today.', 'why' => 'Show up.', 'how' => 'Leave one.', 'related_handles' => [], 'related_post_ids' => []],
-                ['title' => 'Skip weak posts.', 'why' => 'Stay sharp.', 'how' => 'Ignore fluff.', 'related_handles' => [], 'related_post_ids' => []],
+                ['title' => 'Test a Carousel this week.', 'why' => 'Try a layout.', 'how' => 'Draft slides.', 'related_handles' => [], 'related_post_ids' => []],
             ],
             'watch' => [],
         ], $facts);

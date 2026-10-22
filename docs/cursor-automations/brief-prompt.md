@@ -56,19 +56,19 @@ Workflow:
 2. Read get_daily_brief and get_executive_brief.
 3. Pull evidence with list_trackers, get_competitor_posts, get_top_posts, get_posting_times, get_format_mix, get_account_summary as needed. Read captions/hooks so you can name the idea that worked, not only the Nx.
 4. Draft the memo:
-   - headline: short yellow-block line the founder can skim (about one breath). Concrete gap or insight. Not "Brief" / "Today's plan" / "stored posts". Keep it short enough to wrap cleanly - do not write a paragraph as the headline.
-   - narrative: REQUIRED. 80-140 words of flowing prose. What is happening, why it matters for this account's audience, what to do first. At most 4 numbers. At most 2 sentences starting with @handle. Server rejects inventory dumps.
-   - summary: up to 3 short interpretive sentences (fallback fuel only). No "competitors published N posts" filler.
-   - sections: optional. For "What happened this week", write tight prose per competitor (or a short interpretive list) - never a card of stats. Name the idea that worked when you cite a post.
-   - suggestions: exactly 3 preferred. Each is spoken advice, not a stat label:
-     - title: what to make (format + timing baked in), ending with a period
-     - why: why it will work for THIS audience, grounded in one evidence post (handle + idea + Nx or date) - not "because 3.2x" alone
-     - expected: optional one-line outcome
-     - evidence_post_ids: ONE post id matching the title/why
+   - headline: short yellow-block line (one breath). Concrete gap or insight. Keep it short so it wraps.
+   - narrative: REQUIRED. 80-140 words. What is happening, why it matters for this account, what to do first. At most 4 numbers. At most 2 sentences starting with @handle. Pick ONE lead story (the main comeback / main hit) - do not inventory the whole set here.
+   - summary: up to 3 short interpretive sentences (fallback fuel only). Must NOT restate the narrative.
+   - sections: REQUIRED. Include one section titled "What happened this week" whose body covers DIFFERENT ground from the narrative:
+     - Other competitors and patterns the narrative did not use (e.g. a different handle's outlier Carousel, a follower-growth story, which formats are winning across the set).
+     - One or two sentences per point. Name the idea when you cite a post.
+     - Drop crowded-room / mansion / Halloween (or whatever the narrative already argued) - the server rejects overlap.
+   - suggestions: exactly 3, all POSITIVE actions (server rejects titles starting with Do not / Don't / Skip / Avoid):
+     - (1) one post action, (2) one engagement/comment action, (3) a positive third action such as a Carousel test or collab idea grounded in a strong rival hit the narrative did not already use (e.g. a 12.6x Carousel from another handle).
+     - title ends with a period; why explains why it will work for THIS audience with idea + handle + Nx/date; evidence_post_ids has that ONE post.
    - Never sell a post under 1.2x as a model. Prefer real hits (>= 1.2 times their usual).
-   - Suggestions must not overlap: (1) one post action, (2) one engagement/comment action, (3) optional study or a single avoid.
    - Prefer time blocks (evening 19:00-21:00, midday) over a rival's exact minute.
-5. Save with save_executive_brief (headline, narrative, summary, suggestions). If validation rejects, read errors, revise tone and grounding, and save again. The run stays open on validation failure. Snitch keeps the existing brief until a save succeeds - and the page will NOT show deterministic fact-dump prose as the narrative.
+5. Save with save_executive_brief (headline, narrative, summary, sections, suggestions). If validation rejects, read errors, revise tone/grounding/overlap, and save again. The run stays open on validation failure.
 6. Do not invent numbers, handles, or dates. Prefer omitting a claim over guessing. Only cite post ids returned by tools.
 7. No em dashes. Plain, direct sentences. No marketing fluff. Do not use ellipsis (...).
 
