@@ -32,7 +32,7 @@ class ExecutiveBriefPresenter
      *     own_activity: list<array{text: string, posts: list<array<string, mixed>>}>,
      *     competitor_activity: list<array{text: string, handle: string|null, posts: list<array<string, mixed>>}>,
      *     suggestions: list<array{number: int, title: string, why: string, evidence: list<array<string, mixed>>}>,
-     *     freshness: list<array{handle: string|null, last_synced_at: string|null, label: string}>,
+     *     freshness: array{line: string|null, failed_handles: list<string>},
      *     chat_url: string,
      *     competitors_url: string,
      *     curator_overrides: array{summary: bool, suggestions: bool, updated_at: string|null},
@@ -84,7 +84,7 @@ class ExecutiveBriefPresenter
             ? $payload['curator_overrides']
             : [];
 
-        $summary = $this->resolveSummary($payload, $overrides);
+        $summary = $this->resolveSummary($payload, $overrides, $facts);
         $ownActivity = $this->ownActivityBullets($payload, $facts);
         $competitorActivity = $this->competitorActivity($payload);
         $suggestions = $this->resolveSuggestions($payload, $overrides, $facts);
@@ -96,12 +96,12 @@ class ExecutiveBriefPresenter
             'empty_reason' => null,
             'brief_date' => $brief->brief_date?->toDateString(),
             'generated_at' => $brief->generated_at?->timezone(DashboardMath::TIMEZONE)->toIso8601String(),
-            'headline' => is_string($payload['headline'] ?? null) ? $payload['headline'] : null,
+            'headline' => $this->resolveHeadline($payload, $facts),
             'summary' => $summary,
             'own_activity' => $ownActivity,
             'competitor_activity' => $competitorActivity,
             'suggestions' => $suggestions,
-            'freshness' => $this->freshnessRows($payload),
+            'freshness' => $this->freshnessSummary($payload),
             'chat_url' => rtrim((string) config('app.url'), '/').'/chat',
             'competitors_url' => rtrim((string) config('app.url'), '/').'/competitors',
             'curator_overrides' => [
@@ -131,7 +131,10 @@ class ExecutiveBriefPresenter
             'own_activity' => [],
             'competitor_activity' => [],
             'suggestions' => [],
-            'freshness' => [],
+            'freshness' => [
+                'line' => null,
+                'failed_handles' => [],
+            ],
             'chat_url' => rtrim((string) config('app.url'), '/').'/chat',
             'competitors_url' => rtrim((string) config('app.url'), '/').'/competitors',
             'curator_overrides' => [
@@ -146,31 +149,67 @@ class ExecutiveBriefPresenter
 
     /**
      * @param  array<string, mixed>  $payload
-     * @param  array<string, mixed>  $overrides
+     * @param  array<string, mixed>  $facts
      */
-    private function resolveSummary(array $payload, array $overrides): ?string
+    private function resolveHeadline(array $payload, array $facts): ?string
+    {
+        $headline = is_string($payload['headline'] ?? null) ? trim($payload['headline']) : '';
+        if ($headline !== '' && ! preg_match('/^here is today\'s plan\.?$/i', $headline)) {
+            return $headline;
+        }
+
+        $own = is_array($facts['own'] ?? null) ? $facts['own'] : null;
+        $daysSince = is_array($own) ? $own['days_since_last_post'] : null;
+        $comp7 = (int) ($facts['format_mix']['competitor_posts_7d'] ?? 0);
+        if ($daysSince !== null && (int) $daysSince >= 3 && $comp7 > 0) {
+            return (int) $daysSince.' days quiet while rivals posted '.$this->pluralise($comp7, 'time').'.';
+        }
+
+        return $headline !== '' ? $headline : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $overrides
+     * @param  array<string, mixed>  $facts
+     */
+    private function resolveSummary(array $payload, array $overrides, array $facts): ?string
     {
         if (filled($overrides['summary'] ?? null) && is_string($overrides['summary'])) {
             return trim($overrides['summary']);
+        }
+
+        $ownSummary = is_string($payload['own_summary'] ?? null) ? trim($payload['own_summary']) : '';
+        $competitorSummary = is_string($payload['competitor_summary'] ?? null)
+            ? trim($payload['competitor_summary'])
+            : '';
+
+        // Prefer own_summary (interpretation) plus the rival clause that names the move.
+        $parts = array_values(array_filter([$ownSummary, $competitorSummary], fn (string $part): bool => $part !== ''));
+        if ($parts !== []) {
+            return implode(' ', array_slice($parts, 0, 2));
         }
 
         if (filled($payload['summary'] ?? null) && is_string($payload['summary'])) {
             return trim($payload['summary']);
         }
 
-        $parts = array_values(array_filter([
-            is_string($payload['own_summary'] ?? null) ? trim($payload['own_summary']) : null,
-            is_string($payload['competitor_summary'] ?? null) ? trim($payload['competitor_summary']) : null,
-        ], fn (?string $part): bool => $part !== null && $part !== ''));
+        $own = is_array($facts['own'] ?? null) ? $facts['own'] : null;
+        $daysSince = is_array($own) ? $own['days_since_last_post'] : null;
+        $comp7 = (int) ($facts['format_mix']['competitor_posts_7d'] ?? 0);
+        if ($daysSince !== null && (int) $daysSince >= 3 && $comp7 > 0) {
+            $handle = (string) ($own['handle'] ?? 'your account');
 
-        if ($parts === []) {
-            return null;
+            return '@'.$handle.' has been quiet for '.$this->pluralise((int) $daysSince, 'day')
+                .' while rivals published '.$this->pluralise($comp7, 'post').' this week.';
         }
 
-        return implode(' ', array_slice($parts, 0, 2));
+        return null;
     }
 
     /**
+     * Facts-only own section with post thumbnails. Interpretation lives in summary.
+     *
      * @param  array<string, mixed>  $payload
      * @param  array<string, mixed>  $facts
      * @return list<array{text: string, posts: list<array<string, mixed>>}>
@@ -178,80 +217,41 @@ class ExecutiveBriefPresenter
     private function ownActivityBullets(array $payload, array $facts): array
     {
         $own = is_array($facts['own'] ?? null) ? $facts['own'] : null;
-        $bullets = [];
+        $recentPosts = $this->enrichPosts(
+            array_slice(is_array($payload['own_last_7_days'] ?? null) ? $payload['own_last_7_days'] : [], 0, 4),
+        );
 
-        if (! is_array($own)) {
-            $posts = is_array($payload['own_last_7_days'] ?? null) ? $payload['own_last_7_days'] : [];
-            if ($posts === []) {
-                return [[
-                    'text' => 'Not enough of your own posts are stored yet to describe recent activity.',
-                    'posts' => [],
-                ]];
-            }
+        if (! is_array($own) && $recentPosts === []) {
+            return [[
+                'text' => 'Not enough of your own posts are stored yet.',
+                'posts' => [],
+            ]];
         }
 
         $handle = is_array($own) ? (string) ($own['handle'] ?? 'your account') : 'your account';
         $posts7 = is_array($own) ? (int) ($own['posts_last_7d_count'] ?? 0) : count($payload['own_last_7_days'] ?? []);
         $format7 = is_array($own) ? ($own['posts_last_7d_by_format'] ?? []) : [];
-        $format30 = is_array($own) ? ($own['posts_last_30d_by_format'] ?? []) : [];
-        $posts30 = is_array($format30) ? array_sum(array_map('intval', $format30)) : 0;
-
         $formatBit7 = $this->formatMixPhrase(is_array($format7) ? $format7 : []);
-        $formatBit30 = $this->formatMixPhrase(is_array($format30) ? $format30 : []);
-
-        $volumeText = '@'.$handle.' posted '.$this->pluralise($posts7, 'time').' in the last 7 days'
-            .($formatBit7 !== '' ? ' ('.$formatBit7.')' : '')
-            .' and '.$this->pluralise($posts30, 'time').' in the last 30 days'
-            .($formatBit30 !== '' ? ' ('.$formatBit30.')' : '').'.';
-
-        $recentPosts = $this->enrichPosts(
-            array_slice(is_array($payload['own_last_7_days'] ?? null) ? $payload['own_last_7_days'] : [], 0, 4),
-        );
-        $bullets[] = [
-            'text' => $volumeText,
-            'posts' => $recentPosts,
-        ];
-
-        if ($recentPosts !== []) {
-            $perfParts = [];
-            foreach (array_slice($recentPosts, 0, 3) as $post) {
-                $label = (string) ($post['times_usual_label'] ?? '');
-                $format = (string) ($post['format'] ?? 'post');
-                $when = (string) ($post['posted_label'] ?? 'recently');
-                if ($label !== '' && str_contains(strtolower($label), 'times')) {
-                    $perfParts[] = $format.' from '.$when.' at '.$label;
-                } else {
-                    $perfParts[] = $format.' from '.$when
-                        .($label !== '' ? ' ('.$label.')' : '');
-                }
-            }
-            $bullets[] = [
-                'text' => 'Recent posts versus your usual: '.implode('; ', $perfParts).'.',
-                'posts' => $recentPosts,
-            ];
-        }
-
-        $change7 = is_array($own) ? ($own['followers_change_7d'] ?? null) : null;
         $followers = is_array($own) ? $own['followers_now'] : null;
-        if ($followers !== null) {
-            $changeLabel = is_array($change7) ? trim((string) ($change7['label'] ?? '')) : '';
-            $bullets[] = [
-                'text' => 'Followers: '.$followers
-                    .($changeLabel !== '' ? ' ('.$changeLabel.')' : '.')
-                    .($changeLabel !== '' && ! str_ends_with($changeLabel, '.') ? '.' : ''),
-                'posts' => [],
-            ];
-        }
-
+        $change7 = is_array($own) ? ($own['followers_change_7d'] ?? null) : null;
+        $changeLabel = is_array($change7) ? trim((string) ($change7['label'] ?? '')) : '';
         $daysSince = is_array($own) ? $own['days_since_last_post'] : null;
-        if ($daysSince !== null && (int) $daysSince >= 2) {
-            $bullets[] = [
-                'text' => 'Quiet days: last post was '.$this->pluralise((int) $daysSince, 'day').' ago.',
-                'posts' => [],
-            ];
+
+        $bits = ['@'.$handle];
+        $bits[] = $this->pluralise($posts7, 'post').' in the last 7 days'
+            .($formatBit7 !== '' ? ' ('.$formatBit7.')' : '');
+        if ($followers !== null) {
+            $bits[] = 'followers '.$followers
+                .($changeLabel !== '' ? ' ('.$changeLabel.')' : '');
+        }
+        if ($daysSince !== null) {
+            $bits[] = 'last post '.$this->pluralise((int) $daysSince, 'day').' ago';
         }
 
-        return $bullets;
+        return [[
+            'text' => implode(' · ', $bits).'.',
+            'posts' => $recentPosts,
+        ]];
     }
 
     /**
@@ -262,6 +262,7 @@ class ExecutiveBriefPresenter
     {
         $moves = is_array($payload['competitor_moves'] ?? null) ? $payload['competitor_moves'] : [];
         $items = [];
+        $zeroHandles = [];
 
         foreach ($moves as $row) {
             if (! is_array($row)) {
@@ -283,23 +284,13 @@ class ExecutiveBriefPresenter
                 continue;
             }
 
-            if ($row['sync_empty'] ?? false) {
-                $items[] = [
-                    'text' => '@'.$handle.' returned no posts. Check the handle or swap in a more active account.',
-                    'handle' => $handle,
-                    'posts' => [],
-                ];
+            $count7 = (int) ($row['posts_last_7d_count'] ?? 0);
+            $isZero = ($row['sync_empty'] ?? false)
+                || ($row['quiet'] ?? false)
+                || $count7 === 0;
 
-                continue;
-            }
-
-            if ($row['quiet'] ?? false) {
-                $days = (int) ($row['days_since_last_post'] ?? 14);
-                $items[] = [
-                    'text' => '@'.$handle.' has been quiet for '.$this->pluralise($days, 'day').'.',
-                    'handle' => $handle,
-                    'posts' => [],
-                ];
+            if ($isZero) {
+                $zeroHandles[] = '@'.$handle;
 
                 continue;
             }
@@ -307,7 +298,6 @@ class ExecutiveBriefPresenter
             $standouts = is_array($row['standout_winners'] ?? null) ? $row['standout_winners'] : [];
             $recent = is_array($row['posts_last_7d'] ?? null) ? $row['posts_last_7d'] : [];
             $posts = $this->enrichPosts(array_slice($standouts !== [] ? $standouts : $recent, 0, 3));
-            $count7 = (int) ($row['posts_last_7d_count'] ?? count($recent));
             $change = is_array($row['followers_change_7d'] ?? null)
                 ? trim((string) ($row['followers_change_7d']['label'] ?? ''))
                 : '';
@@ -329,6 +319,14 @@ class ExecutiveBriefPresenter
                 'text' => $text,
                 'handle' => $handle,
                 'posts' => $posts,
+            ];
+        }
+
+        if ($zeroHandles !== []) {
+            $items[] = [
+                'text' => implode(', ', $zeroHandles).' posted 0 times in the last 7 days.',
+                'handle' => null,
+                'posts' => [],
             ];
         }
 
@@ -354,7 +352,7 @@ class ExecutiveBriefPresenter
         if (is_array($overrides['suggestions'] ?? null)) {
             $out = [];
             foreach (array_values($overrides['suggestions']) as $index => $row) {
-                if (! is_array($row)) {
+                if (! is_array($row) || $this->isUnusedWeeklyIdeaSuggestion($row)) {
                     continue;
                 }
                 $title = trim((string) ($row['title'] ?? ''));
@@ -366,7 +364,7 @@ class ExecutiveBriefPresenter
                     ? $row['related_post_ids']
                     : [];
                 $out[] = [
-                    'number' => $index + 1,
+                    'number' => count($out) + 1,
                     'title' => $title,
                     'why' => $why,
                     'evidence' => $this->evidencePosts($facts, $payload, $evidenceIds),
@@ -379,8 +377,8 @@ class ExecutiveBriefPresenter
         $actions = is_array($payload['actions'] ?? null) ? $payload['actions'] : [];
         $out = [];
 
-        foreach (array_values($actions) as $index => $action) {
-            if (! is_array($action)) {
+        foreach (array_values($actions) as $action) {
+            if (! is_array($action) || $this->isUnusedWeeklyIdeaSuggestion($action)) {
                 continue;
             }
             $title = trim((string) ($action['title'] ?? ''));
@@ -400,7 +398,7 @@ class ExecutiveBriefPresenter
             }
 
             $out[] = [
-                'number' => $index + 1,
+                'number' => count($out) + 1,
                 'title' => $title,
                 'why' => $why,
                 'evidence' => $evidence,
@@ -420,37 +418,74 @@ class ExecutiveBriefPresenter
     }
 
     /**
-     * @param  array<string, mixed>  $payload
-     * @return list<array{handle: string|null, last_synced_at: string|null, label: string}>
+     * @param  array<string, mixed>  $row
      */
-    private function freshnessRows(array $payload): array
+    private function isUnusedWeeklyIdeaSuggestion(array $row): bool
     {
-        $rows = [];
-        foreach ($payload['data_freshness'] ?? [] as $row) {
+        $blob = mb_strtolower(implode(' ', [
+            (string) ($row['title'] ?? ''),
+            (string) ($row['why'] ?? ''),
+            (string) ($row['how'] ?? ''),
+        ]));
+
+        return str_contains($blob, 'post this next')
+            || (str_contains($blob, 'unused') && str_contains($blob, 'idea'));
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array{line: string|null, failed_handles: list<string>}
+     */
+    private function freshnessSummary(array $payload): array
+    {
+        $rows = is_array($payload['data_freshness'] ?? null) ? $payload['data_freshness'] : [];
+        $latest = null;
+        $failed = [];
+
+        foreach ($rows as $row) {
             if (! is_array($row)) {
                 continue;
             }
-            $handle = isset($row['handle']) ? (string) $row['handle'] : null;
-            $synced = isset($row['last_synced_at']) ? (string) $row['last_synced_at'] : null;
-            $status = (string) ($row['sync_status'] ?? '');
-            $label = $synced !== null && $synced !== ''
-                ? 'Last synced '.$synced
-                : 'Sync time unknown';
+
+            $handle = isset($row['handle']) ? (string) $row['handle'] : '';
             if ($row['sync_failed'] ?? false) {
-                $label = 'Refresh failed';
-            } elseif ($row['sync_empty'] ?? false) {
-                $label = 'Synced empty';
-            } elseif ($status !== '') {
-                $label .= ' ('.$status.')';
+                if ($handle !== '') {
+                    $failed[] = '@'.$handle;
+                }
+
+                continue;
             }
-            $rows[] = [
-                'handle' => $handle,
-                'last_synced_at' => $synced,
-                'label' => $label,
-            ];
+
+            $synced = isset($row['last_synced_at']) ? (string) $row['last_synced_at'] : '';
+            if ($synced === '') {
+                continue;
+            }
+
+            try {
+                $at = CarbonImmutable::parse($synced)->timezone(DashboardMath::TIMEZONE);
+            } catch (\Throwable) {
+                continue;
+            }
+
+            if ($latest === null || $at->greaterThan($latest)) {
+                $latest = $at;
+            }
         }
 
-        return $rows;
+        $line = null;
+        if ($latest !== null) {
+            $line = 'Data last updated '.$latest->format('j M, H:i');
+        }
+
+        if ($failed !== []) {
+            $failedBit = 'Refresh failed for '.implode(', ', array_values(array_unique($failed))).'.';
+            $line = $line !== null ? $line.'. '.$failedBit : $failedBit;
+        }
+
+        return [
+            'line' => $line,
+            'failed_handles' => array_values(array_unique($failed)),
+        ];
     }
 
     /**

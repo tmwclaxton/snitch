@@ -241,6 +241,8 @@ Rules:
 - standout_winners and top_competitor_hit may look back 30 days. For any "best post this week" or "last 7 days" claim, only use posts_last_7d, best_post_7d, or top_competitor_hit_7d. Never call a 14/30-day standout_winners post a "this week" standout or hit.
 - Do not say the brand has the longest posting gap unless facts.cadence_gaps.own_is_longest is true. If you mention a longest gap, use cadence_gaps.longest_handle.
 - If sync_failed is true, say the refresh failed. Do not say the account is quiet or has not posted recently.
+- Never mention unused weekly ideas, "Post this next", or weekly idea numbers. Ground every action in stored posts, format mix, best times (include sample_count when citing a slot), or cadence figures from the facts.
+- own_summary is the interpretation (what the gap means), not a restatement of raw post counts. competitor_summary names the rival moves that matter. headline is one concrete sentence suitable for a yellow highlight block.
 PROMPT;
 
         if ($violations === null || $violations === []) {
@@ -396,43 +398,47 @@ PROMPT;
         $change7 = is_array($own) ? ($own['followers_change_7d']['change'] ?? null) : null;
         $changeLabel = is_array($own) ? (string) ($own['followers_change_7d']['label'] ?? '') : '';
 
-        $postFormat = $cite['format'] ?? 'Reel';
-        $headline = 'Your next move is a '.$postFormat.' today.';
-        if ($cite !== null) {
-            $headline = '@'.$cite['handle'].' '.$cite['format']
-                .($cite['date_short'] !== null ? ' from '.$cite['date_short'] : '')
-                .' at '.$cite['multiplier_short'].'. Post a '.$cite['format'].' today at '.$when.'.';
-        } elseif (is_numeric($change7) && (int) $change7 !== 0 && $reels7 > 0) {
-            $changeNote = $changeLabel !== ''
-                ? $changeLabel
-                : ((int) $change7 > 0 ? 'up '.(int) $change7 : (string) (int) $change7).' followers';
-            $headline = 'You are '.$changeNote.' but competitors posted '.$this->pluralise($reels7, 'Reel').'. Post one Reel today.';
-        } elseif ($daysSince !== null && (int) $daysSince >= 3) {
-            $headline = 'It has been '.$this->pluralise((int) $daysSince, 'day').' since you posted. Put out a Reel today at '.$when.'.';
-        }
-
-        $actions = [];
         $hitHandle = $cite['handle'] ?? '';
         $hitFormat = $cite['format'] ?? 'Reel';
         $hitLabel = $cite['multiplier_label'] ?? 'their best recent post';
         $hitDate = $cite['date_short'] ?? null;
-        $hitComments = (int) ($cite['comments'] ?? 0);
         $hitPostId = $cite['post_id'] ?? null;
+        $sampleCount = is_array($slot) ? (int) ($slot['sample_count'] ?? 0) : 0;
+        $slotEarly = is_array($slot) && ($slot['early_signal'] ?? false);
 
-        $why = $hitHandle !== ''
+        $headline = 'Your next move is a '.$hitFormat.' today at '.$when.'.';
+        if ($daysSince !== null && (int) $daysSince >= 3 && $comp7 > 0) {
+            $headline = (int) $daysSince.' days quiet while rivals posted '.$this->pluralise($comp7, 'time').'.';
+        } elseif ($cite !== null) {
+            $headline = '@'.$cite['handle'].' '.$cite['format']
+                .($cite['date_short'] !== null ? ' from '.$cite['date_short'] : '')
+                .' at '.$cite['multiplier_short'].'. Post a '.$cite['format'].' today.';
+        } elseif (is_numeric($change7) && (int) $change7 !== 0 && $reels7 > 0) {
+            $changeNote = $changeLabel !== ''
+                ? $changeLabel
+                : ((int) $change7 > 0 ? 'up '.(int) $change7 : (string) (int) $change7).' followers';
+            $headline = 'You are '.$changeNote.' but competitors posted '.$this->pluralise($reels7, 'Reel').'.';
+        }
+
+        $actions = [];
+
+        $formatWhy = $hitHandle !== ''
             ? '@'.$hitHandle.'\'s '.$hitFormat
                 .($hitDate !== null ? ' from '.$hitDate : '')
-                .' got '.$hitLabel.'.'
-            : 'Competitors posted '.$this->pluralise($reels7, 'Reel').' in the last 7 days.';
-        $how = 'Keep it under 30 seconds. Open with a first-person line. Ask people to comment or DM.';
-        if ($hitHandle !== '' && $hitPostId !== null) {
-            $how = 'Comment on their '.$hitFormat.'.';
+                .' got '.$hitLabel.'. Match that format today.'
+            : 'Competitors posted '.$this->pluralise($reels7 > 0 ? $reels7 : $comp7, $reels7 > 0 ? 'Reel' : 'post').' in the last 7 days.';
+        $ownFormats = is_array($own) ? ($own['posts_last_30d_by_format'] ?? []) : [];
+        $ownFormatBit = $this->formatMixShort(is_array($ownFormats) ? $ownFormats : []);
+        if ($ownFormatBit !== '' && $hitHandle !== '') {
+            $formatWhy .= ' Your last 30 days were '.$ownFormatBit.'.';
         }
 
         $actions[] = [
             'title' => 'Post a '.$hitFormat.' today at '.$when.'.',
-            'why' => $why,
-            'how' => $how,
+            'why' => $formatWhy,
+            'how' => $hitHandle !== '' && $hitPostId !== null
+                ? 'Study their '.$hitFormat.', then publish your own version today.'
+                : 'Keep it under 30 seconds. Open with a first-person line. Ask people to comment or DM.',
             'when' => $when,
             'format' => $hitFormat,
             'hook' => $cite['hook'] ?? null,
@@ -440,17 +446,44 @@ PROMPT;
             'related_post_ids' => $hitPostId !== null ? [$hitPostId] : [],
         ];
 
+        $timeWhy = is_array($slot)
+            ? 'Stored posting data peaks at '.$when
+                .($sampleCount > 0 ? ' across '.$this->pluralise($sampleCount, 'post') : '')
+                .($slotEarly ? ' (early signal, under 3 posts in that slot)' : '')
+                .'.'
+            : 'Weekday evenings 19:00-21:00 are the stored peak block when the sample is still thin.';
+        $actions[] = [
+            'title' => 'Schedule today\'s post for '.$when.'.',
+            'why' => $timeWhy,
+            'how' => 'Queue the '.$hitFormat.' for '.$when.' London time, then engage for 10 minutes after it goes live.',
+            'when' => $when,
+            'format' => $hitFormat,
+            'hook' => null,
+            'related_handles' => $handle !== 'your account' ? [$handle] : [],
+            'related_post_ids' => [],
+        ];
+
+        if ($daysSince !== null && (int) $daysSince >= 2) {
+            $actions[] = [
+                'title' => 'Break the '.$this->pluralise((int) $daysSince, 'day').' quiet streak today.',
+                'why' => 'You last posted '.$this->pluralise((int) $daysSince, 'day').' ago while competitors published '.$this->pluralise($comp7, 'post').' in the last 7 days.',
+                'how' => 'Ship one '.$hitFormat.' today rather than waiting for a perfect idea.',
+                'when' => $when,
+                'format' => $hitFormat,
+                'hook' => null,
+                'related_handles' => $handle !== 'your account' ? [$handle] : [],
+                'related_post_ids' => [],
+            ];
+        }
+
         $failed = [];
-        $quiet = [];
         foreach ($facts['competitors'] ?? [] as $row) {
             if ($row['sync_failed'] ?? false) {
                 $failed[] = $row;
-            } elseif (($row['quiet'] ?? false) || ($row['sync_empty'] ?? false)) {
-                $quiet[] = $row;
             }
         }
 
-        if ($failed !== []) {
+        if (count($actions) < 3 && $failed !== []) {
             $firstFailed = $failed[0];
             $fHandle = (string) ($firstFailed['handle'] ?? '');
             $actions[] = [
@@ -461,38 +494,6 @@ PROMPT;
                 'format' => 'Engage',
                 'hook' => null,
                 'related_handles' => $fHandle !== '' ? [$fHandle] : [],
-                'related_post_ids' => [],
-            ];
-        } elseif ($quiet !== []) {
-            $firstQuiet = $quiet[0];
-            $qHandle = (string) ($firstQuiet['handle'] ?? '');
-            $actions[] = [
-                'title' => ($firstQuiet['sync_empty'] ?? false)
-                    ? 'Check the @'.$qHandle.' handle, or swap this competitor.'
-                    : 'Review @'.$qHandle.', quiet for '.((int) ($firstQuiet['days_since_last_post'] ?? 14)).' days.',
-                'why' => ($firstQuiet['sync_empty'] ?? false)
-                    ? '@'.$qHandle.' returned no posts. The handle may be wrong or private.'
-                    : '@'.$qHandle.' has gone quiet. An active London club will teach you more.',
-                'how' => 'Open the competitor page and confirm the account is public, or replace it.',
-                'when' => null,
-                'format' => 'Engage',
-                'hook' => null,
-                'related_handles' => $qHandle !== '' ? [$qHandle] : [],
-                'related_post_ids' => [],
-            ];
-        }
-
-        $ideas = $facts['unused_weekly_ideas'] ?? [];
-        if ($ideas !== []) {
-            $idea = $ideas[0];
-            $actions[] = [
-                'title' => 'Use unused Post this next idea '.(int) ($idea['position'] ?? 1).'.',
-                'why' => 'This week\'s brief still has unused ideas you already paid time to write.',
-                'how' => (string) ($idea['caption_angle'] ?? $idea['hook'] ?? 'Post the unused idea today.'),
-                'when' => $when,
-                'format' => $idea['format'] ?? 'Reel',
-                'hook' => $idea['hook'] ?? null,
-                'related_handles' => [$handle],
                 'related_post_ids' => [],
             ];
         }
@@ -526,48 +527,14 @@ PROMPT;
             }
         }
 
-        if (count($actions) < 3) {
-            $ownLast = is_array($own) ? ($own['posts_last_7d'][0] ?? null) : null;
-            $ownComments = is_array($ownLast) ? (int) ($ownLast['comments'] ?? 0) : 0;
-            $ownPostId = is_array($ownLast) && isset($ownLast['post_id']) ? (int) $ownLast['post_id'] : null;
-            if ($ownComments > 0 && $ownPostId !== null) {
-                $actions[] = [
-                    'title' => 'Reply to two comments on your last post.',
-                    'why' => '@'.$handle.' posted '.$this->pluralise($posts7, 'time').' in the last 7 days.',
-                    'how' => 'Reply in the comments, then share the post to your Story.',
-                    'when' => null,
-                    'format' => 'Engage',
-                    'hook' => null,
-                    'related_handles' => $handle !== 'your account' ? [$handle] : [],
-                    'related_post_ids' => [$ownPostId],
-                ];
-            } else {
-                $actions[] = [
-                    'title' => 'Share your last post to Stories with a prompt.',
-                    'why' => '@'.$handle.' posted '.$this->pluralise($posts7, 'time').' in the last 7 days.',
-                    'how' => 'Ask people to comment or DM on the post.',
-                    'when' => null,
-                    'format' => 'Engage',
-                    'hook' => null,
-                    'related_handles' => $handle !== 'your account' ? [$handle] : [],
-                    'related_post_ids' => $ownPostId !== null ? [$ownPostId] : [],
-                ];
-            }
-        }
+        $actions = array_values(array_filter(
+            $actions,
+            fn (array $action): bool => ! $this->isUnusedWeeklyIdeaAction($action),
+        ));
 
-        $ownSummary = $followers === null
-            ? 'Follower history is still thin for @'.$handle.'.'
-            : '@'.$handle.' has '.$followers.' followers and posted '.$this->pluralise($posts7, 'time').' in the last 7 days.';
-        if ($changeLabel !== '' && is_numeric($change7)) {
-            $ownSummary .= ' Follower change: '.$changeLabel.'.';
-        }
-        if ($daysSince !== null) {
-            $ownSummary .= ' Last post was '.$this->pluralise((int) $daysSince, 'day').' ago.';
-        }
-
+        $ownSummary = $this->interpretiveOwnSummary($handle, $followers, $posts7, $daysSince, $change7, $changeLabel, $comp7);
         $competitorSummary = 'Competitors published '.$this->pluralise($comp7, 'post').' in the last 7 days, including '.$this->pluralise($comp24, 'post').' in the last 24 hours.';
         if ($cite !== null) {
-            // Avoid the word "hit" so standout softening does not strip the clause.
             $competitorSummary .= ' Strongest recent post: @'.$cite['handle'].' '.$cite['format']
                 .($cite['date_short'] !== null ? ' from '.$cite['date_short'] : '')
                 .' at '.$cite['multiplier_label'].'.';
@@ -575,11 +542,76 @@ PROMPT;
 
         return [
             'headline' => $headline,
-            'actions' => $actions,
+            'actions' => array_slice($actions, 0, 5),
             'own_summary' => $ownSummary,
             'competitor_summary' => $competitorSummary,
             'watch' => $this->deterministicWatch($facts, $whenNote),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $action
+     */
+    private function isUnusedWeeklyIdeaAction(array $action): bool
+    {
+        $blob = mb_strtolower(implode(' ', [
+            (string) ($action['title'] ?? ''),
+            (string) ($action['why'] ?? ''),
+            (string) ($action['how'] ?? ''),
+        ]));
+
+        return str_contains($blob, 'post this next')
+            || (str_contains($blob, 'unused') && str_contains($blob, 'idea'));
+    }
+
+    /**
+     * @param  array<string, int|string>  $mix
+     */
+    private function formatMixShort(array $mix): string
+    {
+        $parts = [];
+        foreach ($mix as $format => $count) {
+            $n = (int) $count;
+            if ($n <= 0) {
+                continue;
+            }
+            $parts[] = $n.' '.$format;
+        }
+
+        return implode(', ', $parts);
+    }
+
+    private function interpretiveOwnSummary(
+        string $handle,
+        mixed $followers,
+        int $posts7,
+        mixed $daysSince,
+        mixed $change7,
+        string $changeLabel,
+        int $comp7,
+    ): string {
+        if ($daysSince !== null && (int) $daysSince >= 3 && $comp7 > 0) {
+            $summary = '@'.$handle.' has been quiet for '.$this->pluralise((int) $daysSince, 'day')
+                .' while rivals published '.$this->pluralise($comp7, 'post').' this week.';
+            if ($changeLabel !== '' && is_numeric($change7)) {
+                $summary .= ' Followers are '.$changeLabel.' despite the silence.';
+            }
+
+            return $summary;
+        }
+
+        if ($posts7 === 0 && $comp7 > 0) {
+            return '@'.$handle.' posted nothing in the last 7 days while competitors published '.$this->pluralise($comp7, 'post').'.';
+        }
+
+        $summary = $followers === null
+            ? 'Follower history is still thin for @'.$handle.'.'
+            : '@'.$handle.' is holding '.$followers.' followers with '.$this->pluralise($posts7, 'post').' in the last 7 days.';
+        if ($changeLabel !== '' && is_numeric($change7)) {
+            $summary .= ' Follower change: '.$changeLabel.'.';
+        }
+
+        return $summary;
     }
 
     /**
@@ -637,7 +669,7 @@ PROMPT;
         $actions = [];
 
         foreach (array_values($llm['actions'] ?? []) as $index => $action) {
-            if (! is_array($action)) {
+            if (! is_array($action) || $this->isUnusedWeeklyIdeaAction($action)) {
                 continue;
             }
 

@@ -297,8 +297,9 @@ jobs:
           REMOTE
 
       # One-shot ops hook: commit message containing [regen-brief-user-1] regenerates
-      # today's brief for user 1 after deploy and prints the escape-room multiplier check.
-      - name: Regenerate user 1 daily brief when tagged
+      # today's brief for every user with trackers (fallback template), then prints the
+      # escape-room multiplier check for user 1.
+      - name: Regenerate daily briefs when tagged
         if: contains(github.event.head_commit.message, '[regen-brief-user-1]')
         run: |
           set -euo pipefail
@@ -308,7 +309,9 @@ jobs:
           APP="snitch-app-${SLOT}"
           echo "LIVE_SLOT=${SLOT}"
           # Template-only so the cite fix is visible even when the LLM path would succeed.
-          docker exec "$APP" php artisan snitch:generate-daily-briefs --user=1 --force --sync --fallback
+          # Audience is every user with at least one tracker (not only daily_brief_enabled).
+          docker exec "$APP" php artisan snitch:generate-daily-briefs --force --sync --fallback
+          docker exec "$APP" php artisan tinker --execute 'echo App\Models\DailyBrief::query()->whereDate("brief_date", now("Europe/London")->toDateString())->where("status","ready")->pluck("user_id")->sort()->values()->implode(",").PHP_EOL;'
           cat > /tmp/snitch-check-daily-brief.php <<'PHP'
           <?php
 

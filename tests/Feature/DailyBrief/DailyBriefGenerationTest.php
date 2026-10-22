@@ -1626,10 +1626,61 @@ class DailyBriefGenerationTest extends TestCase
             'competitors' => [],
         ]);
 
-        $this->assertStringContainsString('posted 1 time in the last 7 days', $narrative['own_summary']);
-        $this->assertStringNotContainsString('posted 1 times', $narrative['own_summary']);
-        $this->assertStringContainsString('Last post was 1 day ago', $narrative['own_summary']);
+        $this->assertStringContainsString('1 post in the last 7 days', $narrative['own_summary']);
+        $this->assertStringNotContainsString('1 posts in the last 7 days', $narrative['own_summary']);
         $this->assertStringContainsString('published 1 post in the last 7 days, including 1 post in the last 24 hours', $narrative['competitor_summary']);
+    }
+
+    public function test_fallback_never_suggests_unused_weekly_idea_template(): void
+    {
+        $narrative = app(DailyBriefGenerator::class)->deterministicNarrative([
+            'own' => [
+                'handle' => 'letsgosocialuk',
+                'followers_now' => 104,
+                'posts_last_7d_count' => 0,
+                'days_since_last_post' => 21,
+                'posts_last_30d_by_format' => ['Reel' => 1],
+            ],
+            'format_mix' => [
+                'competitor_posts_24h' => 2,
+                'competitor_posts_7d' => 13,
+                'competitors_7d' => ['Carousel' => 8, 'Reel' => 5],
+            ],
+            'best_times' => [
+                'today_slot' => [
+                    'hour' => 20,
+                    'label' => 'Wed 20:00',
+                    'sample_count' => 12,
+                    'early_signal' => false,
+                ],
+                'weekday_evening_block' => null,
+            ],
+            'competitors' => [],
+            'unused_weekly_ideas' => [
+                ['position' => 1, 'hook' => 'Do not show this', 'format' => 'Reel', 'caption_angle' => 'unused'],
+            ],
+            'top_competitor_hit_7d' => [
+                'handle' => 'goodgym',
+                'post_id' => 501,
+                'times_usual' => 12.6,
+                'times_usual_label' => '12.6 times their usual',
+                'format' => 'Carousel',
+                'posted_label' => '18 Oct',
+                'hook' => 'Parkrun Saturday',
+                'url' => 'https://www.instagram.com/p/abc/',
+            ],
+        ]);
+
+        $titles = collect($narrative['actions'])->pluck('title')->implode(' ');
+        $this->assertStringNotContainsString('Post this next', $titles);
+        $this->assertStringNotContainsString('unused', mb_strtolower($titles));
+        $this->assertStringContainsString('21 days quiet', $narrative['headline']);
+        $this->assertGreaterThanOrEqual(3, count($narrative['actions']));
+        $this->assertTrue(collect($narrative['actions'])->contains(
+            fn (array $action): bool => str_contains((string) $action['why'], 'sample')
+                || str_contains((string) $action['why'], '12 posts')
+                || str_contains((string) $action['why'], '20:00'),
+        ));
     }
 
     public function test_fallback_omits_below_usual_posts_as_hits_or_inspiration(): void

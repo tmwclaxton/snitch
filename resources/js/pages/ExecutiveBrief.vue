@@ -43,9 +43,8 @@ type Suggestion = {
 };
 
 type Freshness = {
-    handle: string | null;
-    last_synced_at: string | null;
-    label: string;
+    line: string | null;
+    failed_handles: string[];
 };
 
 type Brief = {
@@ -58,7 +57,7 @@ type Brief = {
     own_activity: OwnBullet[];
     competitor_activity: CompetitorItem[];
     suggestions: Suggestion[];
-    freshness: Freshness[];
+    freshness: Freshness;
     chat_url: string;
     competitors_url: string;
     curator_overrides: {
@@ -79,6 +78,16 @@ const dateLabel = computed(() => {
     }
 
     return formatAppDate(props.brief.brief_date);
+});
+
+const headlineText = computed(() => {
+    const headline = props.brief.headline?.trim();
+
+    if (headline) {
+        return headline;
+    }
+
+    return 'Nothing sharp enough for a headline yet.';
 });
 
 function postHref(post: BriefPost): string | null {
@@ -112,8 +121,10 @@ function competitorTextWithoutHandle(item: CompetitorItem): string {
                     <p class="font-mono text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
                         Executive Brief
                     </p>
-                    <h1 class="snitch-hero-display text-3xl text-snitch-ink sm:text-4xl">
-                        <span class="snitch-highlight">Brief</span>
+                    <h1
+                        class="snitch-hero-display text-2xl leading-snug text-snitch-ink sm:text-3xl"
+                    >
+                        <span class="snitch-highlight">{{ headlineText }}</span>
                     </h1>
                     <p
                         v-if="dateLabel"
@@ -343,15 +354,8 @@ function competitorTextWithoutHandle(item: CompetitorItem): string {
                         <p v-if="dateLabel">
                             Brief date: {{ dateLabel }}
                         </p>
-                        <p v-if="brief.freshness.length > 0">
-                            Freshness:
-                            <span
-                                v-for="(row, index) in brief.freshness"
-                                :key="`fresh-${index}`"
-                            >
-                                <template v-if="index > 0">; </template>
-                                <span v-if="row.handle">@{{ row.handle }}: </span>{{ row.label }}
-                            </span>
+                        <p v-if="brief.freshness?.line">
+                            {{ brief.freshness.line }}
                         </p>
                         <p>
                             Ask follow-ups in
