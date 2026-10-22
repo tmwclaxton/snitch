@@ -8,6 +8,7 @@ import {
     CreditCard,
     FileText,
     HelpCircle,
+    KeyRound,
     Lightbulb,
     Megaphone,
     MessageSquare,
@@ -44,6 +45,7 @@ import {
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard, home } from '@/routes';
 import { overview as adminOverview, activity as adminActivity } from '@/routes/admin';
+import { index as adminCuratorTokensIndex } from '@/routes/admin/curator-tokens';
 import { index as adminFeaturesIndex } from '@/routes/admin/features';
 import { index as adminUsersIndex } from '@/routes/admin/users';
 import { edit as billing } from '@/routes/billing';
@@ -182,6 +184,11 @@ const adminNavItems = computed<NavItem[]>(() => {
             title: 'Features',
             href: adminFeaturesIndex(),
             icon: Lightbulb,
+        },
+        {
+            title: 'Curator tokens',
+            href: adminCuratorTokensIndex(),
+            icon: KeyRound,
         },
     ];
 });

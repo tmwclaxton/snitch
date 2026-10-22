@@ -14,19 +14,15 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_competitor_posts')]
-#[Description('Competitor posts from stored data. Filter by handle, format (Reel/Carousel/Image), or since (Y-m-d). Sorted by times-usual descending. Does not scrape.')]
+#[Description('Competitor posts from stored data. Filter by handle, format (Reel/Carousel/Image), or since (Y-m-d). Sorted by times-usual descending. Curator tokens may pass user_id. Does not scrape.')]
 #[IsReadOnly]
 class GetCompetitorPostsTool extends Tool
 {
     public function handle(Request $request, McpReadService $reads): Response
     {
-        $user = McpAuth::user($request);
-        if ($user instanceof Response) {
-            return $user;
-        }
-
-        if ($blocked = McpAuth::requireProductAccess($user)) {
-            return $blocked;
+        $actor = McpAuth::user($request);
+        if ($actor instanceof Response) {
+            return $actor;
         }
 
         $data = $request->validate([
@@ -34,9 +30,20 @@ class GetCompetitorPostsTool extends Tool
             'format' => ['nullable', 'string', 'in:Reel,Carousel,Image,Story'],
             'since' => ['nullable', 'date_format:Y-m-d'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'user_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
+        $user = McpAuth::subjectUser($actor, isset($data['user_id']) ? (int) $data['user_id'] : null);
+        if ($user instanceof Response) {
+            return $user;
+        }
+
+        if ($blocked = McpAuth::requireProductAccess($user, $actor)) {
+            return $blocked;
+        }
+
         return Response::json([
+            'user_id' => (int) $user->id,
             'posts' => $reads->competitorPosts($user, [
                 'handle' => $data['handle'] ?? null,
                 'format' => $data['format'] ?? null,
@@ -55,6 +62,7 @@ class GetCompetitorPostsTool extends Tool
             'format' => $schema->string()->enum(['Reel', 'Carousel', 'Image', 'Story'])->nullable(),
             'since' => $schema->string()->description('Only posts on or after this Y-m-d (Europe/London).')->nullable(),
             'limit' => $schema->integer()->description('Max posts (1-50). Default 20.')->nullable(),
+            'user_id' => $schema->integer()->description('Curator only: another user id.')->nullable(),
         ];
     }
 }

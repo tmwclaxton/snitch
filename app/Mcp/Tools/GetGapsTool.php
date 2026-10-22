@@ -14,22 +14,32 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_gaps')]
-#[Description('Days since each tracked account last posted, plus quiet / empty flags. Stored data only.')]
+#[Description('Days since each tracked account last posted, plus quiet / empty flags. Curator tokens may pass user_id. Stored data only.')]
 #[IsReadOnly]
 class GetGapsTool extends Tool
 {
     public function handle(Request $request, McpReadService $reads): Response
     {
-        $user = McpAuth::user($request);
+        $actor = McpAuth::user($request);
+        if ($actor instanceof Response) {
+            return $actor;
+        }
+
+        $data = $request->validate([
+            'user_id' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $user = McpAuth::subjectUser($actor, isset($data['user_id']) ? (int) $data['user_id'] : null);
         if ($user instanceof Response) {
             return $user;
         }
 
-        if ($blocked = McpAuth::requireProductAccess($user)) {
+        if ($blocked = McpAuth::requireProductAccess($user, $actor)) {
             return $blocked;
         }
 
         return Response::json([
+            'user_id' => (int) $user->id,
             'gaps' => $reads->gaps($user),
         ]);
     }
@@ -37,6 +47,8 @@ class GetGapsTool extends Tool
     /** @return array<string, Type> */
     public function schema(JsonSchema $schema): array
     {
-        return [];
+        return [
+            'user_id' => $schema->integer()->description('Curator only: another user id.')->nullable(),
+        ];
     }
 }

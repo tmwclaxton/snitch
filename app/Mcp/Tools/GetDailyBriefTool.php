@@ -15,25 +15,33 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
+use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_daily_brief')]
-#[Description('Read the daily executive summary at /today: headline, numbers, today\'s actions, competitor moves, and things to watch. Omit date for today in Europe/London. Read-only; does not regenerate.')]
+#[Description('Read the daily executive summary at /today: headline, numbers, today\'s actions, competitor moves, and things to watch. Omit date for today in Europe/London. Curator tokens may pass user_id. Read-only; does not regenerate.')]
+#[IsReadOnly]
 class GetDailyBriefTool extends Tool
 {
     public function handle(Request $request, DailyBriefGenerator $generator, DailyBriefPresenter $presenter): Response
     {
-        $user = McpAuth::user($request);
-        if ($user instanceof Response) {
-            return $user;
-        }
-
-        if ($blocked = McpAuth::requireProductAccess($user)) {
-            return $blocked;
+        $actor = McpAuth::user($request);
+        if ($actor instanceof Response) {
+            return $actor;
         }
 
         $data = $request->validate([
             'date' => ['nullable', 'date_format:Y-m-d'],
+            'user_id' => ['nullable', 'integer', 'min:1'],
         ]);
+
+        $user = McpAuth::subjectUser($actor, isset($data['user_id']) ? (int) $data['user_id'] : null);
+        if ($user instanceof Response) {
+            return $user;
+        }
+
+        if ($blocked = McpAuth::requireProductAccess($user, $actor)) {
+            return $blocked;
+        }
 
         $date = isset($data['date'])
             ? CarbonImmutable::parse($data['date'], 'Europe/London')->startOfDay()
@@ -43,6 +51,7 @@ class GetDailyBriefTool extends Tool
         $payload = $brief === null ? null : $presenter->payload($brief);
 
         return Response::json([
+            'user_id' => (int) $user->id,
             'date' => $date->toDateString(),
             'brief' => $payload,
             'history' => $generator->history($user),
@@ -60,6 +69,9 @@ class GetDailyBriefTool extends Tool
         return [
             'date' => $schema->string()
                 ->description('Brief date as Y-m-d in Europe/London. Omit for today.')
+                ->nullable(),
+            'user_id' => $schema->integer()
+                ->description('Curator only: another user id.')
                 ->nullable(),
         ];
     }

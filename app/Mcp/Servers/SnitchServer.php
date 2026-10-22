@@ -27,6 +27,7 @@ use App\Mcp\Tools\GetGapsTool;
 use App\Mcp\Tools\GetGrowthSeriesTool;
 use App\Mcp\Tools\GetGrowthTool;
 use App\Mcp\Tools\GetMonthlyReportTool;
+use App\Mcp\Tools\GetPanelsTool;
 use App\Mcp\Tools\GetPostingTimesTool;
 use App\Mcp\Tools\GetPostTool;
 use App\Mcp\Tools\GetTopPostsTool;
@@ -37,6 +38,7 @@ use App\Mcp\Tools\ListCompetitorsTool;
 use App\Mcp\Tools\ListFeedTool;
 use App\Mcp\Tools\ListInfluencersTool;
 use App\Mcp\Tools\ListTrackersTool;
+use App\Mcp\Tools\ListUsersTool;
 use App\Mcp\Tools\ListWinnersTool;
 use App\Mcp\Tools\MarkWeeklyBriefIdeaUsedTool;
 use App\Mcp\Tools\RemoveCompetitorTool;
@@ -44,7 +46,9 @@ use App\Mcp\Tools\RemoveInfluencerTool;
 use App\Mcp\Tools\RescoreWinnersStatusTool;
 use App\Mcp\Tools\RescoreWinnersTool;
 use App\Mcp\Tools\RevokeMonthlyReportTool;
+use App\Mcp\Tools\RollbackPanelsTool;
 use App\Mcp\Tools\RotateTokenTool;
+use App\Mcp\Tools\SetPanelsTool;
 use App\Mcp\Tools\ShareMonthlyReportTool;
 use App\Mcp\Tools\StartBrandAutofillTool;
 use App\Mcp\Tools\SuggestCompetitorsStatusTool;
@@ -88,6 +92,10 @@ class SnitchServer extends Server
         GetFormatMixTool::class,
         GetGapsTool::class,
         GetGrowthSeriesTool::class,
+        ListUsersTool::class,
+        GetPanelsTool::class,
+        SetPanelsTool::class,
+        RollbackPanelsTool::class,
         AddCompetitorTool::class,
         RemoveCompetitorTool::class,
         SyncCompetitorTool::class,

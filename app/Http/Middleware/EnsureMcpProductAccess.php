@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Mcp\Support\McpAuth;
+use App\Models\User;
 use App\Services\Billing\UsageBillingService;
 use Closure;
 use Illuminate\Http\Request;
@@ -35,6 +37,10 @@ class EnsureMcpProductAccess
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
+
+        if ($user instanceof User && McpAuth::isCurator($user)) {
+            return $next($request);
+        }
 
         if ($user === null || $this->usage->canAccessProduct($user)) {
             return $next($request);

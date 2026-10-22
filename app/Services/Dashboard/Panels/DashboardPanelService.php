@@ -3,6 +3,7 @@
 namespace App\Services\Dashboard\Panels;
 
 use App\Models\DashboardPanel;
+use App\Models\DashboardPanelVersion;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -73,18 +74,41 @@ class DashboardPanelService
     }
 
     /**
-     * Replace a user's panel set after schema validation.
+     * @return list<array<string, mixed>>
+     */
+    public function listVersions(User $user, int $limit = 20): array
+    {
+        return DashboardPanelVersion::query()
+            ->where('user_id', $user->id)
+            ->orderByDesc('version')
+            ->limit(max(1, min(50, $limit)))
+            ->get()
+            ->map(fn (DashboardPanelVersion $row): array => [
+                'version' => (int) $row->version,
+                'source' => (string) $row->source,
+                'panel_count' => is_array($row->panels) ? count($row->panels) : 0,
+                'created_at' => $row->created_at?->toIso8601String(),
+                'created_by_user_id' => $row->created_by_user_id,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Replace a user's panel set after schema validation, snapshotting the prior set.
      *
      * @param  list<array<string, mixed>>  $panels
      * @return list<array<string, mixed>>
      *
      * @throws ValidationException
      */
-    public function setForUser(User $user, array $panels, string $source = 'curator'): array
+    public function setForUser(User $user, array $panels, string $source = 'curator', ?User $actor = null): array
     {
         $validated = $this->schema->validateMany($panels);
 
-        DB::transaction(function () use ($user, $validated, $source): void {
+        DB::transaction(function () use ($user, $validated, $source, $actor): void {
+            $this->snapshotCurrent($user, $source, $actor);
+
             DashboardPanel::query()
                 ->where('user_id', $user->id)
                 ->delete();
@@ -102,6 +126,55 @@ class DashboardPanelService
         });
 
         return $this->listForUser($user);
+    }
+
+    /**
+     * Restore a prior panel set by version number.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function rollbackForUser(User $user, int $version, ?User $actor = null): array
+    {
+        $row = DashboardPanelVersion::query()
+            ->where('user_id', $user->id)
+            ->where('version', $version)
+            ->first();
+
+        if ($row === null) {
+            throw ValidationException::withMessages([
+                'version' => 'Panel version not found for this user.',
+            ]);
+        }
+
+        $panels = is_array($row->panels) ? $row->panels : [];
+
+        return $this->setForUser($user, $panels, 'rollback', $actor);
+    }
+
+    private function snapshotCurrent(User $user, string $source, ?User $actor): void
+    {
+        $current = $this->listForUser($user);
+        if ($current === []) {
+            return;
+        }
+
+        $nextVersion = ((int) DashboardPanelVersion::query()
+            ->where('user_id', $user->id)
+            ->max('version')) + 1;
+
+        DashboardPanelVersion::query()->create([
+            'user_id' => $user->id,
+            'version' => $nextVersion,
+            'panels' => array_map(fn (array $panel): array => [
+                'position' => $panel['position'],
+                'type' => $panel['type'],
+                'title' => $panel['title'],
+                'payload' => $panel['payload'],
+                'source' => $panel['source'],
+            ], $current),
+            'source' => $source,
+            'created_by_user_id' => $actor?->id,
+        ]);
     }
 
     /**

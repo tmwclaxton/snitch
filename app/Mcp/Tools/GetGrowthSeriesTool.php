@@ -14,37 +14,46 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_growth_series')]
-#[Description('Follower and engagement growth series from stored snapshots (30d, 90d, or all). Does not scrape.')]
+#[Description('Follower and engagement growth series from stored snapshots (30d, 90d, or all). Curator tokens may pass user_id. Does not scrape.')]
 #[IsReadOnly]
 class GetGrowthSeriesTool extends Tool
 {
     public function handle(Request $request, McpReadService $reads): Response
     {
-        $user = McpAuth::user($request);
-        if ($user instanceof Response) {
-            return $user;
-        }
-
-        if ($blocked = McpAuth::requireProductAccess($user)) {
-            return $blocked;
+        $actor = McpAuth::user($request);
+        if ($actor instanceof Response) {
+            return $actor;
         }
 
         $data = $request->validate([
             'period' => ['nullable', 'string', 'in:30d,90d,all'],
             'accounts' => ['nullable', 'array', 'max:50'],
             'accounts.*' => ['integer'],
+            'user_id' => ['nullable', 'integer', 'min:1'],
         ]);
+
+        $user = McpAuth::subjectUser($actor, isset($data['user_id']) ? (int) $data['user_id'] : null);
+        if ($user instanceof Response) {
+            return $user;
+        }
+
+        if ($blocked = McpAuth::requireProductAccess($user, $actor)) {
+            return $blocked;
+        }
 
         $selected = array_values(array_filter(array_map(
             static fn (mixed $id): int => (int) $id,
             is_array($data['accounts'] ?? null) ? $data['accounts'] : [],
         ), static fn (int $id): bool => $id > 0));
 
-        return Response::json($reads->growthSeries(
-            $user,
-            $data['period'] ?? '30d',
-            $selected,
-        ));
+        return Response::json([
+            'user_id' => (int) $user->id,
+            ...$reads->growthSeries(
+                $user,
+                $data['period'] ?? '30d',
+                $selected,
+            ),
+        ]);
     }
 
     /** @return array<string, Type> */
@@ -55,6 +64,7 @@ class GetGrowthSeriesTool extends Tool
             'accounts' => $schema->array()
                 ->description('Optional tracked account ids to narrow the series.')
                 ->nullable(),
+            'user_id' => $schema->integer()->description('Curator only: another user id.')->nullable(),
         ];
     }
 }

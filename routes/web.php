@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminActivityController;
 use App\Http\Controllers\Admin\AdminOverviewController;
 use App\Http\Controllers\Admin\AdminReferralController;
 use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\CuratorTokenController;
 use App\Http\Controllers\Admin\FeatureSuggestionController as AdminFeatureSuggestionController;
 use App\Http\Controllers\AdsController;
 use App\Http\Controllers\AgentsController;
@@ -127,6 +128,10 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
         Route::get('/features', [AdminFeatureSuggestionController::class, 'index'])->name('features.index');
         Route::patch('/features/{suggestion}', [AdminFeatureSuggestionController::class, 'update'])->name('features.update');
+        Route::get('/curator-tokens', [CuratorTokenController::class, 'index'])->name('curator-tokens.index');
+        Route::delete('/curator-tokens/{token}', [CuratorTokenController::class, 'destroy'])
+            ->middleware('throttle:20,1')
+            ->name('curator-tokens.destroy');
         Route::get('/referrals', [AdminReferralController::class, 'index'])->name('referrals.index');
         Route::post('/referrals', [AdminReferralController::class, 'store'])->name('referrals.store');
         Route::get('/referrals/{referral}', [AdminReferralController::class, 'show'])->name('referrals.show');

@@ -14,30 +14,37 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_top_posts')]
-#[Description('Highest times-usual competitor posts in a window (7, 30, or 90 days). Stored data only.')]
+#[Description('Highest times-usual competitor posts in a window (7, 30, or 90 days). Curator tokens may pass user_id. Stored data only.')]
 #[IsReadOnly]
 class GetTopPostsTool extends Tool
 {
     public function handle(Request $request, McpReadService $reads): Response
     {
-        $user = McpAuth::user($request);
-        if ($user instanceof Response) {
-            return $user;
-        }
-
-        if ($blocked = McpAuth::requireProductAccess($user)) {
-            return $blocked;
+        $actor = McpAuth::user($request);
+        if ($actor instanceof Response) {
+            return $actor;
         }
 
         $data = $request->validate([
             'days' => ['nullable', 'integer', 'in:7,30,90'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'user_id' => ['nullable', 'integer', 'min:1'],
         ]);
+
+        $user = McpAuth::subjectUser($actor, isset($data['user_id']) ? (int) $data['user_id'] : null);
+        if ($user instanceof Response) {
+            return $user;
+        }
+
+        if ($blocked = McpAuth::requireProductAccess($user, $actor)) {
+            return $blocked;
+        }
 
         $days = (int) ($data['days'] ?? 30);
         $limit = (int) ($data['limit'] ?? 10);
 
         return Response::json([
+            'user_id' => (int) $user->id,
             'days' => $days,
             'posts' => $reads->topPosts($user, $days, $limit),
         ]);
@@ -49,6 +56,7 @@ class GetTopPostsTool extends Tool
         return [
             'days' => $schema->integer()->description('Window: 7, 30, or 90. Default 30.')->nullable(),
             'limit' => $schema->integer()->description('Max posts (1-50). Default 10.')->nullable(),
+            'user_id' => $schema->integer()->description('Curator only: another user id.')->nullable(),
         ];
     }
 }

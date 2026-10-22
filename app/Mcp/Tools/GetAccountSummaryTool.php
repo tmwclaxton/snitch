@@ -14,31 +14,40 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_account_summary')]
-#[Description('Followers now, growth over 1/7/30 days, and last post for a tracked account. Omit handle for the own account. Stored data only.')]
+#[Description('Followers now, growth over 1/7/30 days, and last post for a tracked account. Omit handle for the own account. Curator tokens may pass user_id. Stored data only.')]
 #[IsReadOnly]
 class GetAccountSummaryTool extends Tool
 {
     public function handle(Request $request, McpReadService $reads): Response
     {
-        $user = McpAuth::user($request);
-        if ($user instanceof Response) {
-            return $user;
-        }
-
-        if ($blocked = McpAuth::requireProductAccess($user)) {
-            return $blocked;
+        $actor = McpAuth::user($request);
+        if ($actor instanceof Response) {
+            return $actor;
         }
 
         $data = $request->validate([
             'handle' => ['nullable', 'string', 'max:100'],
+            'user_id' => ['nullable', 'integer', 'min:1'],
         ]);
+
+        $user = McpAuth::subjectUser($actor, isset($data['user_id']) ? (int) $data['user_id'] : null);
+        if ($user instanceof Response) {
+            return $user;
+        }
+
+        if ($blocked = McpAuth::requireProductAccess($user, $actor)) {
+            return $blocked;
+        }
 
         $summary = $reads->accountSummary($user, $data['handle'] ?? null);
         if ($summary === null) {
             return Response::error('No tracked account found for that handle.');
         }
 
-        return Response::json($summary);
+        return Response::json([
+            'user_id' => (int) $user->id,
+            ...$summary,
+        ]);
     }
 
     /** @return array<string, Type> */
@@ -47,6 +56,9 @@ class GetAccountSummaryTool extends Tool
         return [
             'handle' => $schema->string()
                 ->description('Tracked handle. Omit for the own account.')
+                ->nullable(),
+            'user_id' => $schema->integer()
+                ->description('Curator only: read another user\'s account.')
                 ->nullable(),
         ];
     }
