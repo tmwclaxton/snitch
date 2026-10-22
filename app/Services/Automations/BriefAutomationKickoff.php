@@ -115,7 +115,7 @@ You likely only have Memories as a Cursor tool - call Snitch MCP yourself via HT
 Call whoami, get_daily_brief, get_executive_brief, then evidence tools (list_trackers, get_competitor_posts, get_top_posts, get_posting_times, get_format_mix) as needed. Read captions/hooks so you can name the idea that worked.
 Never trust a user_id argument for scope - the token is already bound to one user and one run.
 Required fields for save_executive_brief:
-- headline: short yellow-block line (one breath). Concrete gap or insight. Keep it short so it wraps.
+- headline: short yellow-block line (one breath). Concrete gap or insight. Keep it short so it wraps. Format + Nx must match the narrative lead story.
 - narrative: REQUIRED 80-140 words. One lead story for THIS account + what to do first. At most 4 numbers. At most 2 sentences starting with @handle. Server rejects inventory dumps.
 - summary: up to 3 interpretive sentences. Must not restate the narrative.
 - sections: REQUIRED. Include "What happened this week" covering DIFFERENT ground from the narrative (other rivals, follower growth, format winners). One or two sentences per point. Server rejects overlap with the narrative.
