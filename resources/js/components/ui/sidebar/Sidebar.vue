@@ -61,12 +61,13 @@ const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
     :data-side="side"
   >
     <!--
-      In-flow column stretches with main content so full-page screenshots never
-      show a short sidebar stump. Inner shell is sticky + viewport-tall for scroll.
+      Peer flex item already stretches with main content. Rail must be h-full
+      (flex align-self utilities are a no-op under a block parent) so bg-sidebar
+      paints the full page height. Inner shell stays sticky + viewport-tall.
     -->
     <div
       :class="cn(
-        'relative hidden self-stretch bg-sidebar transition-[width] duration-200 ease-linear md:flex',
+        'relative hidden h-full min-h-svh bg-sidebar transition-[width] duration-200 ease-linear md:flex',
         'w-(--sidebar-width)',
         'group-data-[collapsible=offcanvas]:w-0 group-data-[collapsible=offcanvas]:overflow-hidden',
         variant === 'floating' || variant === 'inset'

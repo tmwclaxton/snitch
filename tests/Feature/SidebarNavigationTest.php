@@ -20,10 +20,11 @@ class SidebarNavigationTest extends TestCase
         $sidebar = file_get_contents(resource_path('js/components/ui/sidebar/Sidebar.vue'));
 
         $this->assertNotFalse($sidebar);
-        $this->assertStringContainsString('self-stretch', $sidebar);
+        $this->assertStringContainsString('h-full min-h-svh', $sidebar);
         $this->assertStringContainsString('sticky top-0', $sidebar);
         $this->assertStringContainsString('h-svh', $sidebar);
         $this->assertStringNotContainsString('fixed inset-y-0', $sidebar);
+        $this->assertStringNotContainsString('self-stretch', $sidebar);
     }
 
     public function test_sidebar_lists_simplified_product_pages(): void

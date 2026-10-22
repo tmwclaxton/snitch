@@ -1768,6 +1768,8 @@ class DailyBriefGenerationTest extends TestCase
             '@yellowzest\'s Reel from 18 Oct is at 3.2 times their usual.',
             (string) ($aligned['actions'][0]['why'] ?? ''),
         );
+        $this->assertStringNotContainsString('Reelfrom', (string) ($aligned['actions'][0]['why'] ?? ''));
+        $this->assertStringNotContainsString('Reelfrom', (string) ($aligned['actions'][0]['title'] ?? ''));
         $this->assertSame([9001], $aligned['actions'][0]['related_post_ids']);
     }
 

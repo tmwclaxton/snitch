@@ -457,9 +457,11 @@ PROMPT;
         );
 
         // Standalone "Reel from 16 Oct" cite (not "Post a Reel today").
+        // Keep the leading space in $dateBit (" from 16 Oct") so we never glue
+        // format+from into "Reelfrom".
         $prose = (string) preg_replace(
             '/(?<!Post a )\b'.$format.'\s+from\s+\d{1,2}\s+[A-Za-z]{3,9}\b/u',
-            $cite['format'].ltrim($dateBit),
+            $cite['format'].$dateBit,
             $prose,
         );
 
