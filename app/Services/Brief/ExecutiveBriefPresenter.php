@@ -216,6 +216,19 @@ class ExecutiveBriefPresenter
             $slotLabel = $label ?: (($start && $end) ? $start.'-'.$end : null);
         }
 
+        if ($posts7 === null && $cadenceDays !== []) {
+            $anyPosted = false;
+            foreach ($cadenceDays as $day) {
+                if (! empty($day['posted'])) {
+                    $anyPosted = true;
+                    break;
+                }
+            }
+            if (! $anyPosted) {
+                $posts7 = 0;
+            }
+        }
+
         return [
             'cadence_days' => $cadenceDays,
             'own_posts_7d' => $posts7,

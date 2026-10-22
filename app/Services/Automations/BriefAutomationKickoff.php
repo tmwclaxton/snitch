@@ -114,8 +114,8 @@ Write today's Executive Brief for this Snitch user from stored MCP data only.
 You likely only have Memories as a Cursor tool - call Snitch MCP yourself via HTTPS JSON-RPC POST to mcp_url with Authorization: Bearer <scoped_token>, Content-Type application/json, body {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"TOOL","arguments":{}}}.
 Call whoami, get_daily_brief, get_executive_brief, then evidence tools (list_trackers, get_competitor_posts, get_top_posts, get_posting_times, get_format_mix) as needed.
 Never trust a user_id argument for scope - the token is already bound to one user and one run.
-Draft like a sharp consultant: concrete headline with a real number/gap, interpretive summary (no repeated rivals-published filler), optional own/competitors sections, 3-5 suggestions with title+why+evidence_post_ids.
-Bake format and posting time into the suggestion title when grounded. Each why must cite one real post (handle + date or Nx).
+Draft like a sharp consultant: concrete headline with a real number/gap (never "stored posts" jargon), interpretive summary (no repeated rivals-published filler), optional own/competitors sections, 3-5 suggestions with title+why+evidence_post_ids.
+Bake format and posting time into the suggestion title when grounded. Each suggestion cites ONE post - title, why, and evidence_post_ids[0] must agree (same handle, date, Nx). Never praise a sub-1.2x post as a model.
 Save with save_executive_brief. If validation returns errors, revise and save again (token stays open until ok=true). Every number and handle must cite stored data. If you cannot ground a claim, omit it. No em dashes. No ellipsis.
 When save returns ok=true, the run closes and the token is revoked.
 PROMPT;

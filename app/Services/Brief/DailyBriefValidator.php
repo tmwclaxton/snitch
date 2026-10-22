@@ -1839,8 +1839,21 @@ class DailyBriefValidator
                 }
 
                 foreach ($this->distinctivePostPhrases($post) as $phrase) {
+                    $phraseNorm = mb_strtolower(trim($phrase, " \t\n\r\0\x0B#@.,!?"));
+                    // Ignore phrases that are just the handle (or the handle with trivial noise).
+                    // Otherwise "@goodgym … 2.1x" falsely binds the handle token as a caption hook.
+                    if ($phraseNorm === '' || $phraseNorm === $handle || str_contains($handle, $phraseNorm)) {
+                        continue;
+                    }
+
                     $pos = mb_stripos($lower, mb_strtolower($phrase));
                     if ($pos === false) {
+                        continue;
+                    }
+
+                    // Skip matches that are only the @handle token itself.
+                    $atHandlePos = mb_stripos($lower, '@'.$handle);
+                    if ($atHandlePos !== false && $pos === $atHandlePos + 1 && mb_strlen($phraseNorm) === mb_strlen($handle)) {
                         continue;
                     }
 
@@ -1904,6 +1917,8 @@ class DailyBriefValidator
             $words = preg_split('/\s+/u', $value) ?: [];
             $words = array_values(array_filter($words, fn (string $word): bool => mb_strlen(trim($word, " \t\n\r\0\x0B#@.,!?")) >= 3));
 
+            // Multi-word phrases only. Single words (Yellow, London, goodgym) collide with
+            // @handles and ordinary prose and false-fail times-usual binding.
             if (count($words) >= 2) {
                 $phrases[] = trim($words[0].' '.$words[1], " \t\n\r\0\x0B#@.,!?");
             }
@@ -1911,18 +1926,11 @@ class DailyBriefValidator
             if (count($words) >= 3) {
                 $phrases[] = trim($words[0].' '.$words[1].' '.$words[2], " \t\n\r\0\x0B#@.,!?");
             }
-
-            foreach ($words as $word) {
-                $clean = trim($word, " \t\n\r\0\x0B#@.,!?");
-                if (mb_strlen($clean) >= 6) {
-                    $phrases[] = $clean;
-                }
-            }
         }
 
         return array_values(array_unique(array_filter(
             $phrases,
-            fn (string $phrase): bool => mb_strlen($phrase) >= 6,
+            fn (string $phrase): bool => mb_strlen($phrase) >= 6 && str_contains($phrase, ' '),
         )));
     }
 

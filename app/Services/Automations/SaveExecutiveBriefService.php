@@ -59,6 +59,8 @@ class SaveExecutiveBriefService
 
         $facts = is_array($brief->facts) ? $brief->facts : [];
         $narrative = $this->toNarrativeShape($input);
+        // Rebind every action's title/why to related_post_ids[0] so evidence chips match the prose.
+        $narrative = $this->generator->alignActionCitations($narrative, $facts);
         $result = $this->validator->validate($narrative, $facts);
 
         if (! ($result['ok'] ?? false)) {
