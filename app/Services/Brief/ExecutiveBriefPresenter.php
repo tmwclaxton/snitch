@@ -809,9 +809,15 @@ class ExecutiveBriefPresenter
             return [];
         }
 
-        $posts = $this->enrichPosts(
-            array_slice(is_array($payload['own_last_7_days'] ?? null) ? $payload['own_last_7_days'] : [], 0, 2),
-        );
+        // Quiet-week own summaries are prose only - do not bolt on stale grid thumbs
+        // that compete with the labelled evidence under What happened.
+        $posts7 = (int) ($facts['own']['posts_last_7d_count'] ?? 0);
+        $posts = [];
+        if ($posts7 > 0) {
+            $posts = $this->enrichPosts(
+                array_slice(is_array($payload['own_last_7_days'] ?? null) ? $payload['own_last_7_days'] : [], 0, 2),
+            );
+        }
 
         return [[
             'text' => $text,
@@ -828,11 +834,41 @@ class ExecutiveBriefPresenter
      */
     private function interpretiveCompetitorActivity(array $payload, array $facts, ?string $narrative): array
     {
-        $items = [];
         $automation = is_array($payload['automation_overrides'] ?? null)
             ? $payload['automation_overrides']
             : [];
         $sections = is_array($automation['sections'] ?? null) ? $automation['sections'] : [];
+
+        // One "What happened" block only - multiple matching section titles used to
+        // repeat the same outlier thumbs under every paragraph.
+        $body = $this->bestWhatHappenedSectionBody($sections);
+        if ($body === '') {
+            $body = is_string($payload['competitor_summary'] ?? null)
+                ? trim($payload['competitor_summary'])
+                : '';
+        }
+
+        if ($body === '') {
+            return [];
+        }
+
+        return [[
+            'text' => $body,
+            'handle' => null,
+            'posts' => $this->topCompetitorEvidenceThumbs($payload, $facts, $narrative, $body),
+        ]];
+    }
+
+    /**
+     * Prefer an explicit "What happened" section; otherwise the longest rival/week body.
+     *
+     * @param  list<mixed>  $sections
+     */
+    private function bestWhatHappenedSectionBody(array $sections): string
+    {
+        $bestHappened = '';
+        $bestOther = '';
+
         foreach ($sections as $section) {
             if (! is_array($section)) {
                 continue;
@@ -842,34 +878,25 @@ class ExecutiveBriefPresenter
             if ($body === '') {
                 continue;
             }
+            if (str_contains($title, 'happened')) {
+                if (mb_strlen($body) > mb_strlen($bestHappened)) {
+                    $bestHappened = $body;
+                }
+
+                continue;
+            }
             if (
                 str_contains($title, 'competitor')
                 || str_contains($title, 'rival')
-                || str_contains($title, 'happened')
                 || str_contains($title, 'this week')
             ) {
-                $items[] = [
-                    'text' => $body,
-                    'handle' => null,
-                    'posts' => $this->topCompetitorEvidenceThumbs($payload, $facts, $narrative, $body),
-                ];
+                if (mb_strlen($body) > mb_strlen($bestOther)) {
+                    $bestOther = $body;
+                }
             }
         }
 
-        if ($items === []) {
-            $text = is_string($payload['competitor_summary'] ?? null)
-                ? trim($payload['competitor_summary'])
-                : '';
-            if ($text !== '') {
-                $items[] = [
-                    'text' => $text,
-                    'handle' => null,
-                    'posts' => $this->topCompetitorEvidenceThumbs($payload, $facts, $narrative, $text),
-                ];
-            }
-        }
-
-        return $items;
+        return $bestHappened !== '' ? $bestHappened : $bestOther;
     }
 
     /**
@@ -904,6 +931,19 @@ class ExecutiveBriefPresenter
 
         $narrativeLower = mb_strtolower((string) $narrative);
         $sectionLower = mb_strtolower($sectionBody);
+
+        $byId = [];
+        foreach ($candidates as $post) {
+            $id = (int) ($post['post_id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $existing = $byId[$id] ?? null;
+            if ($existing === null || (float) ($post['times_usual'] ?? 0) > (float) ($existing['times_usual'] ?? 0)) {
+                $byId[$id] = $post;
+            }
+        }
+        $candidates = array_values($byId);
 
         $candidates = array_values(array_filter(
             $candidates,
@@ -942,7 +982,43 @@ class ExecutiveBriefPresenter
             return ((float) $b['times_usual']) <=> ((float) $a['times_usual']);
         });
 
-        return $this->enrichPosts(array_slice($candidates, 0, 2));
+        // Prefer two different handles so the row does not look like the same post twice.
+        $picked = [];
+        $seenHandles = [];
+        foreach ($candidates as $post) {
+            $handle = mb_strtolower(ltrim((string) ($post['handle'] ?? ''), '@'));
+            if ($handle !== '' && isset($seenHandles[$handle]) && count($picked) > 0) {
+                continue;
+            }
+            $picked[] = $post;
+            if ($handle !== '') {
+                $seenHandles[$handle] = true;
+            }
+            if (count($picked) >= 2) {
+                break;
+            }
+        }
+        if (count($picked) < 2) {
+            foreach ($candidates as $post) {
+                $id = (int) ($post['post_id'] ?? 0);
+                $already = false;
+                foreach ($picked as $row) {
+                    if ((int) ($row['post_id'] ?? 0) === $id) {
+                        $already = true;
+                        break;
+                    }
+                }
+                if ($already) {
+                    continue;
+                }
+                $picked[] = $post;
+                if (count($picked) >= 2) {
+                    break;
+                }
+            }
+        }
+
+        return $this->enrichPosts($picked);
     }
 
     /**

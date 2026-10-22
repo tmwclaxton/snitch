@@ -280,6 +280,95 @@ class ExecutiveBriefTest extends TestCase
         $this->assertStringContainsString('@badhandle', (string) $memo['freshness']['line']);
     }
 
+    public function test_what_happened_keeps_one_section_and_diverse_thumbs(): void
+    {
+        $user = User::factory()->create();
+        BrandProfile::factory()->for($user)->create();
+        TrackedAccount::factory()->for($user)->create([
+            'platform' => Platform::Instagram,
+            'handle' => 'ownclub',
+            'is_own_account' => true,
+        ]);
+
+        $narrative = implode(' ', [
+            'You have been quiet for three weeks, so the first job is a post, not a rebrand.',
+            'One House said the awkward part out loud on a Reel about leaving a crowded room without a real conversation.',
+            'That Reel reached 3.2 times their usual.',
+            'Film a weekday evening Reel around who someone will actually talk to.',
+            implode(' ', array_fill(0, 40, 'word')),
+        ]);
+
+        DailyBrief::query()->create([
+            'user_id' => $user->id,
+            'brief_date' => now('Europe/London')->toDateString(),
+            'status' => 'ready',
+            'headline' => 'Quiet week while rivals keep posting.',
+            'payload' => [
+                'headline' => 'Quiet week while rivals keep posting.',
+                'narrative' => $narrative,
+                'automation_overrides' => [
+                    'updated_at' => now()->toIso8601String(),
+                    'run_uuid' => 'thumbs-run',
+                    'sections' => [
+                        [
+                            'title' => 'What happened this week',
+                            'body' => 'Sober Social added 56 followers. GoodGym hit 12.6 times their usual on a Carousel. Great Friendship stayed near usual.',
+                        ],
+                        [
+                            'title' => 'Rival patterns this week',
+                            'body' => 'Duplicate section that should not render a second thumb row.',
+                        ],
+                    ],
+                ],
+                'own_summary' => 'You are at 104 followers after 21 quiet days.',
+                'competitor_summary' => '',
+                'actions' => [
+                    ['title' => 'Post a Reel tonight.', 'why' => 'Break silence.', 'related_post_ids' => [], 'inspiration' => []],
+                    ['title' => 'Comment on a rival.', 'why' => 'Show up.', 'related_post_ids' => [], 'inspiration' => []],
+                    ['title' => 'Test a Carousel.', 'why' => 'Try slides.', 'related_post_ids' => [], 'inspiration' => []],
+                ],
+                'own_last_7_days' => [
+                    ['post_id' => 11, 'handle' => 'ownclub', 'format' => 'Carousel', 'times_usual' => 1.0, 'times_usual_label' => '1.0x'],
+                ],
+                'competitor_moves' => [
+                    ['post_id' => 21, 'handle' => 'goodgym', 'format' => 'Carousel', 'times_usual' => 12.6, 'times_usual_label' => '12.6 times their usual'],
+                    ['post_id' => 22, 'handle' => 'goodgym', 'format' => 'Reel', 'times_usual' => 11.0, 'times_usual_label' => '11.0 times their usual'],
+                    ['post_id' => 23, 'handle' => 'sobersocial_', 'format' => 'Reel', 'times_usual' => 2.0, 'times_usual_label' => '2.0 times their usual'],
+                ],
+                'data_freshness' => [],
+            ],
+            'facts' => [
+                'own' => [
+                    'handle' => 'ownclub',
+                    'followers_now' => 104,
+                    'posts_last_7d_count' => 0,
+                    'days_since_last_post' => 21,
+                ],
+                'format_mix' => ['competitor_posts_7d' => 5],
+                'competitors' => [],
+                'top_competitor_hit_7d' => null,
+            ],
+            'model' => 'automation',
+            'llm_attempts' => 1,
+            'was_free' => true,
+            'generated_at' => now(),
+        ]);
+
+        $memo = app(ExecutiveBriefPresenter::class)->forUser($user);
+
+        $this->assertCount(1, $memo['competitor_activity']);
+        $this->assertStringContainsString('Sober Social added 56', $memo['competitor_activity'][0]['text']);
+        $this->assertStringNotContainsString('Duplicate section', $memo['competitor_activity'][0]['text']);
+        $this->assertCount(0, $memo['own_activity'][0]['posts'] ?? []);
+        $handles = collect($memo['competitor_activity'][0]['posts'] ?? [])
+            ->map(fn (array $post): string => (string) ($post['handle'] ?? ''))
+            ->filter()
+            ->values()
+            ->all();
+        $this->assertLessThanOrEqual(2, count($handles));
+        $this->assertSame($handles, array_values(array_unique($handles)), 'evidence thumbs should not repeat the same handle');
+    }
+
     public function test_presenter_dedupes_repeated_competitor_volume_in_summary(): void
     {
         $user = User::factory()->create();

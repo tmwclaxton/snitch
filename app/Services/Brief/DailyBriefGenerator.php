@@ -679,6 +679,25 @@ PROMPT;
             }
         }
 
+        // Always keep 3 positive actions so validation and the memo stay complete
+        // even when quiet-streak / sync-failed fillers do not apply.
+        if (count($actions) < 3) {
+            $actions[] = [
+                'title' => 'Test a Carousel this week at midday.',
+                'why' => $hitHandle !== ''
+                    ? '@'.$hitHandle.'\'s '.$hitFormat
+                        .($hitDate !== null ? ' from '.$hitDate : '')
+                        .' got '.$hitLabel.'. Try that idea in Carousel form.'
+                    : 'Rivals published '.$this->pluralise($comp7, 'post').' in the last 7 days - borrow a format that is already working.',
+                'how' => 'Draft 5-7 slides around one concrete scene, then publish at midday.',
+                'when' => null,
+                'format' => 'Carousel',
+                'hook' => null,
+                'related_handles' => $hitHandle !== '' ? [$hitHandle] : [],
+                'related_post_ids' => $hitPostId !== null ? [$hitPostId] : [],
+            ];
+        }
+
         $actions = array_values(array_filter(
             $actions,
             fn (array $action): bool => ! $this->isUnusedWeeklyIdeaAction($action),

@@ -56,7 +56,7 @@ Workflow:
 2. Read get_daily_brief and get_executive_brief.
 3. Pull evidence with list_trackers, get_competitor_posts, get_top_posts, get_posting_times, get_format_mix, get_account_summary as needed. Read captions/hooks so you can name the idea that worked, not only the Nx.
 4. Draft the memo:
-   - headline: short yellow-block line (one breath). Concrete gap or insight. Keep it short so it wraps.
+   - headline: short yellow-block line (one breath). Concrete gap or insight. Keep it short so it wraps. The format word and Nx in the headline MUST match the lead story in the narrative (do not headline a Carousel at 2.1x if the narrative leads on a Reel at 3.2x).
    - narrative: REQUIRED. 80-140 words. What is happening, why it matters for this account, what to do first. At most 4 numbers. At most 2 sentences starting with @handle. Pick ONE lead story (the main comeback / main hit) - do not inventory the whole set here.
    - summary: up to 3 short interpretive sentences (fallback fuel only). Must NOT restate the narrative.
    - sections: REQUIRED. Include one section titled "What happened this week" whose body covers DIFFERENT ground from the narrative:
