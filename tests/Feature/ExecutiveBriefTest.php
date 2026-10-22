@@ -47,14 +47,15 @@ class ExecutiveBriefTest extends TestCase
         $this->assertNotFalse($page);
         $this->assertStringContainsString("title: 'Executive Brief'", $sidebar);
         $this->assertStringNotContainsString("title: 'Dashboard'", $sidebar);
-        $this->assertStringContainsString('max-w-none', $page);
-        $this->assertStringContainsString('Quiet week', $page);
-        $this->assertStringContainsString("What you've been doing", $page);
-        $this->assertStringContainsString('Our suggestions', $page);
-        $this->assertStringContainsString('Your 7-day cadence', $page);
-        $this->assertStringContainsString('timesUsualPct', $page);
+        $this->assertStringContainsString('max-w-[1100px]', $page);
+        $this->assertStringContainsString('max-w-[70ch]', $page);
+        $this->assertStringContainsString('What to do', $page);
+        $this->assertStringContainsString('What happened this week', $page);
+        $this->assertStringContainsString('Key figures', $page);
+        $this->assertStringContainsString('narrativeText', $page);
         $this->assertStringNotContainsString('PanelBigNumber', $page);
         $this->assertStringNotContainsString('text-snitch-spot', $page);
+        $this->assertStringNotContainsString('rounded border border-snitch-ink/12 bg-snitch-lift', $page);
     }
 
     public function test_executive_brief_renders_ready_daily_brief_memo(): void
@@ -79,6 +80,7 @@ class ExecutiveBriefTest extends TestCase
             'headline' => 'Post a Reel today.',
             'payload' => [
                 'headline' => 'Post a Reel today.',
+                'narrative' => 'Own club is steady this week with one Reel already shipped, while rivals posted more Reels across the stored window. The gap is cadence and format focus rather than audience size: followers sit near 1500 with a modest lift. Start by posting another Reel in a proven evening block so you stay visible where attention already sits. Then leave one grounded comment on a rival hit above 1.2 times their usual instead of copying weak posts. Keep the brief short and ship something concrete before the week drifts quiet again.',
                 'summary' => 'Own club is steady. Rivals posted more Reels this week.',
                 'own_summary' => 'Own club is steady.',
                 'competitor_summary' => 'Rivals posted more Reels this week.',
@@ -122,6 +124,8 @@ class ExecutiveBriefTest extends TestCase
                 ->component('ExecutiveBrief')
                 ->where('brief.empty', false)
                 ->where('brief.summary', 'Own club is steady. Rivals posted more Reels this week.')
+                ->has('brief.narrative')
+                ->has('brief.key_figures')
                 ->has('brief.own_activity')
                 ->has('brief.suggestions', 1)
                 ->where('brief.suggestions.0.why', 'Reels average 2.1 times your usual vs 0.8 for carousels over 30 days, n=12.')

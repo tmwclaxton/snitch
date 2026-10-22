@@ -48,6 +48,7 @@ class DailyBriefValidator
         $errors = [];
 
         $headline = trim((string) ($output['headline'] ?? ''));
+        $narrative = trim((string) ($output['narrative'] ?? ''));
         $actions = $output['actions'] ?? null;
         $ownSummary = trim((string) ($output['own_summary'] ?? ''));
         $competitorSummary = trim((string) ($output['competitor_summary'] ?? ''));
@@ -55,6 +56,13 @@ class DailyBriefValidator
 
         if ($headline === '') {
             $errors[] = 'headline is empty';
+        }
+
+        if ($narrative !== '') {
+            $wordCount = str_word_count($narrative);
+            if ($wordCount < 80 || $wordCount > 140) {
+                $errors[] = 'narrative must be 80 to 140 words, got '.$wordCount;
+            }
         }
 
         if (! is_array($actions)) {
@@ -72,7 +80,7 @@ class DailyBriefValidator
         $postIds = $this->allowedPostIds($facts);
         $allowedNumbers = $this->allowedNumbers($facts);
 
-        $texts = [$headline, $ownSummary, $competitorSummary];
+        $texts = [$headline, $narrative, $ownSummary, $competitorSummary];
 
         foreach ($watch as $item) {
             if (is_string($item)) {
@@ -97,12 +105,13 @@ class DailyBriefValidator
             $why = trim((string) ($action['why'] ?? ''));
             $how = trim((string) ($action['how'] ?? ''));
             $hook = trim((string) ($action['hook'] ?? ''));
+            $expected = trim((string) ($action['expected'] ?? ''));
 
             if ($title === '') {
                 $errors[] = 'action '.($index + 1).' is missing a title';
             }
 
-            if ($this->containsEllipsis($title.$why.$how.$hook)) {
+            if ($this->containsEllipsis($title.$why.$how.$hook.$expected)) {
                 $errors[] = 'action '.($index + 1).' truncates with ...';
             }
 
@@ -139,6 +148,7 @@ class DailyBriefValidator
             $texts[] = $why;
             $texts[] = $how;
             $texts[] = $hook;
+            $texts[] = $expected;
             $texts[] = (string) ($action['when'] ?? '');
         }
 
@@ -239,6 +249,7 @@ class DailyBriefValidator
         }
 
         $output['headline'] = $headline;
+        $output['narrative'] = $narrative;
         $output['actions'] = array_values(array_filter($actions, fn (mixed $action): bool => is_array($action)));
         $output['own_summary'] = $ownSummary;
         $output['competitor_summary'] = $competitorSummary;
@@ -270,6 +281,7 @@ class DailyBriefValidator
             $probe = $output;
             $probe['actions'] = [$action];
             $probe['headline'] = $output['headline'] ?? '';
+            $probe['narrative'] = '';
             $probe['own_summary'] = '';
             $probe['competitor_summary'] = '';
             $probe['watch'] = [];
@@ -278,7 +290,8 @@ class DailyBriefValidator
             $actionOnlyErrors = array_values(array_filter(
                 $result['errors'],
                 fn (string $error): bool => ! str_contains($error, 'need 3 to 5')
-                    && $error !== 'headline is empty',
+                    && $error !== 'headline is empty'
+                    && ! str_starts_with($error, 'narrative must be'),
             ));
 
             if ($actionOnlyErrors === []) {
@@ -302,7 +315,7 @@ class DailyBriefValidator
      */
     public function clearInvalidProse(array $output, array $facts): array
     {
-        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+        foreach (['headline', 'narrative', 'own_summary', 'competitor_summary'] as $field) {
             $probe = $this->proseProbe($field, $output[$field] ?? '', []);
             $result = $this->validate($probe, $facts);
             if (! $result['ok']) {
@@ -383,7 +396,7 @@ class DailyBriefValidator
      */
     public function rewriteInternalPostIds(array $output, array $facts): array
     {
-        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+        foreach (['headline', 'narrative', 'own_summary', 'competitor_summary'] as $field) {
             if (isset($output[$field]) && is_string($output[$field])) {
                 $output[$field] = $this->rewriteInternalPostIdsInText($output[$field], $facts);
             }
@@ -796,6 +809,7 @@ class DailyBriefValidator
 
         return [
             'headline' => $field === 'headline' ? (string) $value : 'Plan for today',
+            'narrative' => $field === 'narrative' ? (string) $value : '',
             'actions' => $safeActions,
             'own_summary' => $field === 'own_summary' ? (string) $value : '',
             'competitor_summary' => $field === 'competitor_summary' ? (string) $value : '',
@@ -870,7 +884,7 @@ class DailyBriefValidator
      */
     public function rewriteUnsupportedDailyClaims(array $output, array $facts): array
     {
-        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+        foreach (['headline', 'narrative', 'own_summary', 'competitor_summary'] as $field) {
             if (isset($output[$field]) && is_string($output[$field])) {
                 $output[$field] = $this->rewriteUnsupportedDailyClaimsInText($output[$field], $facts);
             }
@@ -949,7 +963,7 @@ class DailyBriefValidator
             return $output;
         }
 
-        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+        foreach (['headline', 'narrative', 'own_summary', 'competitor_summary'] as $field) {
             if (isset($output[$field]) && is_string($output[$field])) {
                 $output[$field] = $this->rewriteLongestGapQualificationInText($output[$field]);
             }
@@ -1116,7 +1130,7 @@ class DailyBriefValidator
      */
     public function rewriteUnsupportedHandleTimesUsualClaims(array $output, array $facts): array
     {
-        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+        foreach (['headline', 'narrative', 'own_summary', 'competitor_summary'] as $field) {
             if (isset($output[$field]) && is_string($output[$field])) {
                 $output[$field] = $this->rewriteUnsupportedHandleTimesUsualClaimsInText($output[$field], $facts);
             }
@@ -1656,7 +1670,7 @@ class DailyBriefValidator
      */
     private function mapNarrativeText(array $output, callable $mapper): array
     {
-        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+        foreach (['headline', 'narrative', 'own_summary', 'competitor_summary'] as $field) {
             if (isset($output[$field]) && is_string($output[$field])) {
                 $output[$field] = $mapper($output[$field]);
             }
@@ -1682,7 +1696,7 @@ class DailyBriefValidator
                     continue;
                 }
 
-                foreach (['title', 'why', 'how', 'hook'] as $field) {
+                foreach (['title', 'why', 'how', 'hook', 'expected'] as $field) {
                     if (isset($action[$field]) && is_string($action[$field])) {
                         $action[$field] = $mapper($action[$field]);
                     }
@@ -2407,7 +2421,7 @@ class DailyBriefValidator
      */
     public function rewriteUnsupportedWeekBestClaims(array $output, array $facts): array
     {
-        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+        foreach (['headline', 'narrative', 'own_summary', 'competitor_summary'] as $field) {
             if (isset($output[$field]) && is_string($output[$field])) {
                 $output[$field] = $this->rewriteUnsupportedWeekBestClaimsInText($output[$field], $facts);
             }
@@ -3328,7 +3342,7 @@ class DailyBriefValidator
             return $output;
         }
 
-        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+        foreach (['headline', 'narrative', 'own_summary', 'competitor_summary'] as $field) {
             if (isset($output[$field]) && is_string($output[$field])) {
                 $output[$field] = $this->borrowedNames->rewriteText($output[$field], $names);
             }
@@ -3372,7 +3386,7 @@ class DailyBriefValidator
      */
     public function rewriteUnsupportedStandoutClaims(array $output, array $facts): array
     {
-        foreach (['headline', 'own_summary', 'competitor_summary'] as $field) {
+        foreach (['headline', 'narrative', 'own_summary', 'competitor_summary'] as $field) {
             if (isset($output[$field]) && is_string($output[$field])) {
                 $output[$field] = $this->rewriteUnsupportedStandoutClaimsInText($output[$field], $facts);
             }

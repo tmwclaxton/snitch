@@ -56,6 +56,7 @@ class SaveExecutiveBriefRetryTest extends TestCase
 
         $result = app(SaveExecutiveBriefService::class)->save($user, $run, [
             'headline' => 'Invented 9999x spike with no data.',
+            'narrative' => 'This invented narrative claims a 9999x spike with no grounding in stored facts at all and pads itself out with filler sentences so the word count clears the eighty word floor while still inventing numbers the validator must reject on save. More filler follows here to keep the paragraph long enough for the narrative length check without becoming a real memo about the brand. Extra words continue so the count stays above eighty while the invented multiplier remains the failure mode under test for this retry path.',
             'summary' => 'Rivals hit 9999x with zero grounding.',
             'suggestions' => [
                 ['title' => 'Post something', 'why' => 'Because 9999x', 'evidence_post_ids' => [999999]],
@@ -136,6 +137,7 @@ class SaveExecutiveBriefRetryTest extends TestCase
 
         $result = app(SaveExecutiveBriefService::class)->save($user, $run, [
             'headline' => 'Quiet week while @rivalhit posted a Reel.',
+            'narrative' => '@alignclub has been quiet with 0 posts this week and about 5 days since the last post, while @rivalhit shipped a Reel from 17 Oct that reached 3.2 times their usual. That gap is the story: rivals are earning attention and the brand is absent. Ship one Reel in an evening block first so the quiet streak ends, then leave a real comment on that rival hit so you show up where people already stopped scrolling. Skip copying weak posts under the standout line. Keep the plan short and move today before silence becomes the weekly narrative for the account.',
             'summary' => '@alignclub is quiet. @rivalhit has the week\'s strongest Reel.',
             'suggestions' => [
                 [
