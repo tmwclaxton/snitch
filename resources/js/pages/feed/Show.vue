@@ -22,15 +22,10 @@ import PlatformEmbed from '@/components/PlatformEmbed.vue';
 import TranscriptModal from '@/components/TranscriptModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { analysisDimensionIcon, exploreHrefForTerm } from '@/lib/analysisTerms';
-import { formatAppDate } from '@/lib/dates';
 import { metricIcon } from '@/lib/metricIcons';
 import { metricPairs } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
-import {
-    openOnPlatformLabel,
-    platformIconSrc,
-    productPlatformLabel,
-} from '@/lib/platforms';
+import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import {
     glanceTermChips,
     postPrimaryTitle,
@@ -66,7 +61,6 @@ const props = defineProps<{
         url: string;
         caption: string | null;
         media_url: string | null;
-        cover_url?: string | null;
         media_availability?: string | null;
         unavailable_reason?: string | null;
         posted_at?: string | null;
@@ -76,7 +70,6 @@ const props = defineProps<{
             id?: number;
             handle: string;
             display_name: string | null;
-            url?: string | null;
         };
         analysis?: Analysis | null;
         winner_insight?: {
@@ -197,23 +190,23 @@ const spotifyEmbedUrl = computed(() => {
     return `https://open.spotify.com/embed/track/${spotifyTrackId.value}?utm_source=snitch`;
 });
 
-const postedLabel = computed(() => formatAppDate(props.post.posted_at));
-
-const profileHref = computed(() => {
-    const account = props.post.tracked_account;
-
-    if (account?.id != null) {
-        return competitorShow.url(account.id);
+const postedLabel = computed(() => {
+    if (!props.post.posted_at) {
+        return null;
     }
 
-    const url = account?.url?.trim();
-
-    return url ? url : null;
+    return new Date(props.post.posted_at).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+    });
 });
 
-const profileIsExternal = computed(
-    () => props.post.tracked_account?.id == null && profileHref.value != null,
-);
+const profileHref = computed(() => {
+    const id = props.post.tracked_account?.id;
+
+    return id != null ? competitorShow.url(id) : null;
+});
 
 const completedHook = computed(() =>
     analysisDone.value ? props.post.analysis?.hook?.trim() || null : null,
@@ -278,12 +271,12 @@ function openTranscript(): void {
 </script>
 
 <template>
-    <div class="snitch-app-shell snitch-post-fit relative min-h-full px-2 py-3 sm:px-3">
+    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
         <Head :title="primaryTitle" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="snitch-app-canvas">
-            <div class="flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div class="relative z-10 mx-auto max-w-5xl">
+            <div class="flex flex-wrap items-center justify-between gap-3">
                 <Link
                     :href="feedIndex.url()"
                     class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
@@ -310,7 +303,7 @@ function openTranscript(): void {
                         class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
                     >
                         <ExternalLink class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
-                        <span class="relative z-10">{{ openOnPlatformLabel(post.platform) }}</span>
+                        <span class="relative z-10">Open on {{ platformLabel(post.platform) }}</span>
                     </a>
                 </div>
             </div>
@@ -321,7 +314,7 @@ function openTranscript(): void {
                 :warning="transcriptWarning"
             />
 
-            <header class="mt-2 shrink-0 border-b border-snitch-ink/10 pb-2">
+            <header class="mt-5 border-b border-snitch-ink/10 pb-5">
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
                     <p class="snitch-ink-label inline-flex flex-wrap items-center gap-1.5">
                         <img
@@ -331,12 +324,12 @@ function openTranscript(): void {
                             width="14"
                             height="14"
                         >
-                        {{ productPlatformLabel(post.platform) }} · {{ postTypeLabel(post.type) }}
+                        {{ platformLabel(post.platform) }} · {{ postTypeLabel(post.type) }}
                         <span v-if="postedLabel"> · {{ postedLabel }}</span>
                     </p>
                     <span
                         v-if="post.winner_insight"
-                        class="snitch-highlight inline-flex items-center gap-1 px-1.5 py-0.5 text-sm font-semibold uppercase tracking-[0.14em]"
+                        class="inline-flex items-center gap-1 bg-snitch-spot/30 px-1.5 py-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-snitch-ink"
                         :title="`Winner score ${post.winner_insight.score.toFixed(1)}`"
                     >
                         <Trophy
@@ -346,26 +339,17 @@ function openTranscript(): void {
                         Winner
                     </span>
                 </div>
-                <h1 class="snitch-hero-display mt-1 text-2xl text-snitch-ink sm:text-3xl">
+                <h1 class="snitch-display mt-2 text-3xl text-snitch-ink sm:text-4xl">
                     {{ primaryTitle }}
                 </h1>
-                <p class="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-snitch-ink/65">
+                <p class="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-snitch-ink/65">
                     <Link
-                        v-if="profileHref && !profileIsExternal && post.tracked_account"
+                        v-if="profileHref && post.tracked_account"
                         :href="profileHref"
-                        class="font-medium text-snitch-ink underline decoration-snitch-ink/20 underline-offset-4 transition hover:decoration-snitch-ink/35"
+                        class="font-medium text-snitch-ink underline decoration-snitch-ink/20 underline-offset-4 transition hover:decoration-snitch-spot"
                     >
                         @{{ post.tracked_account.handle }}
                     </Link>
-                    <a
-                        v-else-if="profileHref && post.tracked_account"
-                        :href="profileHref"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="font-medium text-snitch-ink underline decoration-snitch-ink/20 underline-offset-4 transition hover:decoration-snitch-ink/35"
-                    >
-                        @{{ post.tracked_account.handle }}
-                    </a>
                     <span v-else-if="post.tracked_account">
                         @{{ post.tracked_account.handle }}
                     </span>
@@ -378,7 +362,7 @@ function openTranscript(): void {
                 </p>
                 <div
                     v-if="termChips.length"
-                    class="snitch-topic-row mt-2"
+                    class="snitch-topic-row mt-3"
                 >
                     <AnalysisTermChip
                         v-for="chip in termChips"
@@ -392,23 +376,28 @@ function openTranscript(): void {
                 </div>
             </header>
 
-            <div class="snitch-post-stage mt-3 min-h-0">
-                <div class="grid items-start gap-3 lg:contents">
-                    <div class="snitch-post-media">
-                        <div class="snitch-post-player">
-                            <PlatformEmbed
-                                :embed="post.embed"
-                                :cover-url="post.cover_url"
-                                :media-url="post.media_url"
-                                :post-url="post.url"
-                                :platform="post.platform"
-                                interactive
-                            />
+            <div class="mt-6 space-y-6">
+                <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] lg:gap-8">
+                    <div>
+                        <div
+                            class="snitch-polaroid relative w-full"
+                            style="--snitch-tilt: -0.6deg"
+                        >
+                            <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
+                            <div class="snitch-polaroid-frame !aspect-auto overflow-hidden">
+                                <PlatformEmbed
+                                    :embed="post.embed"
+                                    :media-url="post.media_url"
+                                    :post-url="post.url"
+                                    :platform="post.platform"
+                                    :lazy="false"
+                                />
+                            </div>
                         </div>
 
                         <div
                             v-if="metrics.length"
-                            class="snitch-metrics-strip shrink-0"
+                            class="snitch-metrics-strip mt-5"
                         >
                             <div
                                 v-for="metric in metrics"
@@ -429,25 +418,25 @@ function openTranscript(): void {
 
                         <div
                             v-if="post.caption"
-                            class="snitch-post-caption snitch-scrap relative p-3"
+                            class="snitch-scrap relative mt-5 p-4"
                         >
                             <p class="snitch-ink-label">Caption</p>
-                            <p class="relative z-10 mt-1.5 whitespace-pre-wrap text-sm leading-snug text-snitch-ink/80">
+                            <p class="relative z-10 mt-3 whitespace-pre-wrap text-sm leading-relaxed text-snitch-ink/80">
                                 {{ post.caption }}
                             </p>
                         </div>
                     </div>
 
-                    <div class="snitch-post-notes space-y-2">
+                    <div class="space-y-4">
                         <template v-if="analysisDone && post.analysis">
                             <div
                                 v-if="post.analysis.concept"
                                 class="snitch-sticker"
                             >
-                                <p class="snitch-annotation flex items-center gap-2 text-base font-bold">
+                                <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
                                     <component
                                         :is="analysisDimensionIcon('concept')"
-                                        class="size-4 shrink-0 opacity-80"
+                                        class="size-5 shrink-0 opacity-80"
                                         aria-hidden="true"
                                     />
                                     Concept
@@ -455,14 +444,11 @@ function openTranscript(): void {
                                 <p class="mt-1 text-snitch-ink">{{ post.analysis.concept }}</p>
                             </div>
 
-                            <div
-                                v-if="post.analysis.hook"
-                                class="snitch-sticker"
-                            >
-                                <p class="snitch-annotation flex items-center gap-2 text-base font-bold">
+                            <div class="snitch-sticker">
+                                <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
                                     <component
                                         :is="analysisDimensionIcon('hook_type')"
-                                        class="size-4 shrink-0 opacity-80"
+                                        class="size-5 shrink-0 opacity-80"
                                         aria-hidden="true"
                                     />
                                     Hook
@@ -480,9 +466,9 @@ function openTranscript(): void {
                                 v-if="post.analysis.idea"
                                 class="snitch-sticker"
                             >
-                                <p class="snitch-annotation flex items-center gap-2 text-base font-bold">
+                                <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
                                     <Sparkles
-                                        class="size-4 shrink-0 opacity-80"
+                                        class="size-5 shrink-0 opacity-80"
                                         aria-hidden="true"
                                     />
                                     Why it engages
@@ -494,10 +480,10 @@ function openTranscript(): void {
                                 v-if="post.analysis.visual_summary"
                                 class="snitch-sticker"
                             >
-                                <p class="snitch-annotation flex items-center gap-2 text-base font-bold">
+                                <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
                                     <component
                                         :is="analysisDimensionIcon('visual_craft')"
-                                        class="size-4 shrink-0 opacity-80"
+                                        class="size-5 shrink-0 opacity-80"
                                         aria-hidden="true"
                                     />
                                     Visual craft
@@ -511,9 +497,9 @@ function openTranscript(): void {
                                 v-if="musicLine || post.analysis.sfx?.length"
                                 class="snitch-sticker"
                             >
-                                <p class="snitch-annotation flex items-center gap-2 text-base font-bold">
+                                <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
                                     <Music
-                                        class="size-4 shrink-0 opacity-80"
+                                        class="size-5 shrink-0 opacity-80"
                                         aria-hidden="true"
                                     />
                                     Music / SFX
@@ -598,9 +584,9 @@ function openTranscript(): void {
                                 v-if="post.analysis.how_to_copy || post.analysis.how_to_copy_html"
                                 class="snitch-sticker"
                             >
-                                <p class="snitch-annotation flex items-center gap-2 text-base font-bold">
+                                <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
                                     <WandSparkles
-                                        class="size-4 shrink-0 opacity-80"
+                                        class="size-5 shrink-0 opacity-80"
                                         aria-hidden="true"
                                     />
                                     How to remake
@@ -616,9 +602,9 @@ function openTranscript(): void {
                                 v-if="post.analysis.cta"
                                 class="snitch-sticker"
                             >
-                                <p class="snitch-annotation flex items-center gap-2 text-base font-bold">
+                                <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
                                     <Megaphone
-                                        class="size-4 shrink-0 opacity-80"
+                                        class="size-5 shrink-0 opacity-80"
                                         aria-hidden="true"
                                     />
                                     CTA
@@ -633,9 +619,9 @@ function openTranscript(): void {
                             v-else-if="isUnavailable"
                             class="snitch-sticker"
                         >
-                            <p class="snitch-annotation flex items-center gap-2 text-base font-bold">
+                            <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
                                 <Ban
-                                    class="size-4 shrink-0 opacity-80"
+                                    class="size-5 shrink-0 opacity-80"
                                     aria-hidden="true"
                                 />
                                 Unavailable
@@ -653,15 +639,15 @@ function openTranscript(): void {
                             v-else-if="isFailed"
                             class="snitch-sticker"
                         >
-                            <p class="snitch-annotation flex items-center gap-2 text-base font-bold">
+                            <p class="snitch-annotation flex items-center gap-2 text-xl font-bold">
                                 <AlertCircle
-                                    class="size-4 shrink-0 opacity-80"
+                                    class="size-5 shrink-0 opacity-80"
                                     aria-hidden="true"
                                 />
                                 Analysis failed
                             </p>
                             <p class="mt-2 text-sm text-snitch-ink/70">
-                                {{ post.analysis?.error_message || 'We could not finish analysing this post.' }}
+                                {{ post.analysis?.error_message || 'We could not finish analysing this reel.' }}
                             </p>
                         </div>
 

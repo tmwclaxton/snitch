@@ -62,29 +62,7 @@ export function useCurrentUrl(): UseCurrentUrlReturn {
         urlToCheck: NonNullable<InertiaLinkProps['href']>,
         currentUrl?: string,
     ) {
-        const urlToCompare = currentUrl ?? currentUrlReactive.value;
-        const urlString = toUrl(urlToCheck);
-
-        const path = (() => {
-            if (!urlString.startsWith('http')) {
-                return urlString;
-            }
-
-            try {
-                return new URL(urlString).pathname;
-            } catch {
-                return urlString;
-            }
-        })();
-
-        if (path === '' || path === '/') {
-            return urlToCompare === '/';
-        }
-
-        return (
-            urlToCompare === path
-            || urlToCompare.startsWith(path.endsWith('/') ? path : `${path}/`)
-        );
+        return isCurrentUrl(urlToCheck, currentUrl, true);
     }
 
     function whenCurrentUrl(

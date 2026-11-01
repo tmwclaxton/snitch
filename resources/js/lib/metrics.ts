@@ -3,23 +3,10 @@ export type PostMetrics = {
     likes?: number | null;
     comments?: number | null;
     shares?: number | null;
-    like_count_hidden?: boolean;
-    [key: string]: number | boolean | null | undefined;
+    [key: string]: number | null | undefined;
 };
 
 const METRIC_ORDER = ['views', 'likes', 'comments', 'shares'] as const;
-
-export function formatFollowers(value: number | null | undefined): string {
-    if (value == null) {
-        return 'Not yet known';
-    }
-
-    if (value <= 0) {
-        return '0';
-    }
-
-    return formatCompactCount(value) || String(value);
-}
 
 export function formatCompactCount(value: number): string {
     if (!Number.isFinite(value) || value <= 0) {
@@ -47,16 +34,6 @@ export function metricPairs(
     const pairs: Array<{ key: string; label: string; value: string }> = [];
 
     for (const key of METRIC_ORDER) {
-        if (key === 'likes' && metrics.like_count_hidden === true) {
-            pairs.push({
-                key: 'likes',
-                label: 'Likes',
-                value: 'hidden',
-            });
-
-            continue;
-        }
-
         const raw = metrics[key];
 
         if (typeof raw !== 'number' || raw <= 0) {

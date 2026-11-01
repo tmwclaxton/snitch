@@ -93,7 +93,6 @@ const props = defineProps<{
         id: number;
         post_id: number | null;
         platform: string | null;
-        error_label: string;
         error_message: string | null;
         analyzed_at: string | null;
         created_at: string | null;
@@ -530,7 +529,7 @@ function formatGbpAxis(value: number): string {
         <header class="flex flex-wrap items-end justify-between gap-4">
             <div>
                 <p class="snitch-ink-label">Internal</p>
-                <h1 class="snitch-hero-display text-3xl text-snitch-ink">Admin <span class="snitch-highlight">overview</span></h1>
+                <h1 class="font-display text-3xl text-snitch-ink">Admin overview</h1>
                 <p class="mt-1 max-w-xl text-sm text-snitch-ink/65">
                     Platform-wide usage, spend, profit (COGS vs charge), MCP tools, and failed reels.
                     {{ from }} → {{ to }}.
@@ -592,8 +591,6 @@ function formatGbpAxis(value: number): string {
             <WeeklyVolumeChart
                 :weeks="usersSeries"
                 title="New users"
-                y-axis-label="Users"
-                :period-grain="grain"
                 :subtitle="`${usersSeries.reduce((sum, row) => sum + row.count, 0)} · ${periodLabel}`"
                 :dense-labels="grain === 'month' || grain === 'week'"
             />
@@ -952,12 +949,7 @@ function formatGbpAxis(value: number): string {
                                 <span v-else>-</span>
                             </td>
                             <td class="py-2 pr-3">{{ row.platform || '-' }}</td>
-                            <td
-                                class="py-2 text-snitch-ink/70"
-                                :title="row.error_message || undefined"
-                            >
-                                {{ row.error_label || row.error_message || 'Failed' }}
-                            </td>
+                            <td class="py-2 text-snitch-ink/70">{{ row.error_message || 'Failed' }}</td>
                         </tr>
                         <tr v-if="!failedAnalyses.length">
                             <td colspan="3" class="py-3 text-snitch-ink/55">No failed analyses.</td>

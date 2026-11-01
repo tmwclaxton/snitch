@@ -6,7 +6,6 @@ import {
     autofillStatus,
     startAutofill,
 } from '@/actions/App/Http/Controllers/OnboardingController';
-import { csrfHeaders } from '@/lib/csrf';
 import { useToastStore } from '@/stores/toastStore';
 
 export type BrandOwnHandles = {
@@ -115,6 +114,10 @@ onUnmounted(() => {
     clearPoll();
 });
 
+function csrfToken(): string {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+}
+
 function filled(value: string | null | undefined): value is string {
     return typeof value === 'string' && value.trim() !== '';
 }
@@ -213,8 +216,8 @@ async function requestAutofill(): Promise<void> {
             headers: {
                 Accept: 'application/json',
                 'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken(),
                 'X-Requested-With': 'XMLHttpRequest',
-                ...csrfHeaders(),
             },
             credentials: 'same-origin',
             body: JSON.stringify({ website }),

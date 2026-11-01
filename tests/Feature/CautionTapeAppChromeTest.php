@@ -33,7 +33,7 @@ class CautionTapeAppChromeTest extends TestCase
         $this->assertStringNotContainsString('data-app-night=', $blade);
         $this->assertStringNotContainsString('appNight', $theme);
         $this->assertStringContainsString("classList.contains('dark')", $charts);
-        $this->assertStringContainsString('bg-sidebar', $sidebar);
+        $this->assertStringContainsString('bg-snitch-paper', $sidebar);
         $this->assertStringNotContainsString('bg-black', $sidebar);
         $this->assertStringContainsString('bg-snitch-paper', $header);
         $this->assertStringContainsString('border-snitch-ink/10', $header);
@@ -51,10 +51,8 @@ class CautionTapeAppChromeTest extends TestCase
         $this->assertNotFalse($css);
         $this->assertNotFalse($settings);
 
-        $this->assertStringContainsString('html:has(.snitch-public-shell)', $css);
-        $this->assertStringContainsString('.snitch-caution-band', $css);
-        $this->assertStringContainsString('--sidebar-background: #1c1915;', $css);
-        $this->assertStringContainsString('height: 2.75rem;', $css);
+        $this->assertStringContainsString('--snitch-paper: #efe6d8;', $css);
+        $this->assertStringContainsString('--snitch-spot: #f0c400;', $css);
         $this->assertStringContainsString('Appearance', $settings);
         $this->assertFileExists(resource_path('js/pages/settings/Appearance.vue'));
         $this->assertFileExists(resource_path('js/components/AppearanceTabs.vue'));

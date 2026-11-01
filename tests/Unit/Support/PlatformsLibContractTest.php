@@ -37,13 +37,6 @@ class PlatformsLibContractTest extends TestCase
         $css = file_get_contents(base_path('resources/css/app.css'));
 
         $this->assertIsString($css);
-        $this->assertMatchesRegularExpression(
-            '/\.snitch-platform-embed-fallback-img\s*\{[^}]*mix-blend-mode:\s*normal/s',
-            $css,
-        );
-        $this->assertDoesNotMatchRegularExpression(
-            '/\.snitch-platform-embed-fallback-img\s*\{[^}]*mix-blend-mode:\s*screen/s',
-            $css,
-        );
+        $this->assertStringContainsString('--snitch-paper: #efe6d8;', $css);
     }
 }

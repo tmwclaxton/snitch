@@ -2,7 +2,6 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { LoaderCircle, RefreshCw, SlidersHorizontal, Trophy } from '@lucide/vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { show as competitorShow, index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import {
     rescore,
@@ -39,7 +38,6 @@ type RescoreStatusResponse = {
 type Winner = {
     id: number;
     score: number;
-    performance_multiplier?: number | null;
     why: string;
     how_to_copy: string;
     how_to_copy_html?: string | null;
@@ -47,11 +45,10 @@ type Winner = {
         id: number;
         url: string | null;
         media_url: string | null;
-        cover_url?: string | null;
         platform: string;
         metrics?: PostMetrics | null;
         embed?: EmbedConfig | null;
-        tracked_account?: { id?: number; handle: string; is_own_account?: boolean };
+        tracked_account?: { handle: string };
         analysis?: {
             hook: string | null;
             concept?: string | null;
@@ -60,16 +57,8 @@ type Winner = {
     };
 };
 
-type AccountOption = {
-    id: number;
-    handle: string;
-    is_own_account: boolean;
-};
-
 const props = defineProps<{
     winners?: Winner[] | null;
-    accounts?: AccountOption[];
-    filters?: { account: number | null };
     rule: WinnerRuleFormData;
     presets: Record<string, WinnerRulePreset>;
     rescoreRun?: RescoreRun | null;
@@ -77,25 +66,6 @@ const props = defineProps<{
 
 const winnersList = computed<Winner[]>(() => props.winners ?? []);
 const winnersLoaded = computed(() => Array.isArray(props.winners));
-const accountOptions = computed(() => props.accounts ?? []);
-
-function multiplierLabel(winner: Winner): string {
-    const value = winner.performance_multiplier ?? (winner.score > 0 ? winner.score / 10 : null);
-
-    if (value == null || !Number.isFinite(value)) {
-        return 'Winner';
-    }
-
-    return `${value.toFixed(1)}× usual`;
-}
-
-function onAccountFilter(value: string): void {
-    router.get(
-        '/winners',
-        { account: value === 'all' ? undefined : Number(value) },
-        { preserveState: true, preserveScroll: true },
-    );
-}
 
 defineOptions({
     layout: AppLayout,
@@ -240,41 +210,22 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-2 py-6 sm:px-3 sm:py-8">
+    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
         <Head title="Winners" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="snitch-app-canvas">
+        <div class="relative z-10 mx-auto max-w-6xl">
             <div class="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <h1 class="snitch-hero-display text-3xl text-snitch-ink sm:text-4xl">
+                    <h1 class="snitch-display text-3xl text-snitch-ink sm:text-4xl">
                         Winners
                     </h1>
                     <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
-                        At least {{ Number(rule.min_multiplier ?? 2).toFixed(1) }}× each account's usual
+                        Preset {{ rule.preset }} · min {{ rule.min_views }} views /
+                        {{ rule.min_likes }} likes
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <label
-                        v-if="accountOptions.length"
-                        class="inline-flex items-center gap-2 text-sm text-snitch-ink/70"
-                    >
-                        <span class="sr-only">Filter by account</span>
-                        <select
-                            class="snitch-field py-1.5 text-sm"
-                            :value="filters?.account ?? 'all'"
-                            @change="onAccountFilter(($event.target as HTMLSelectElement).value)"
-                        >
-                            <option value="all">All accounts</option>
-                            <option
-                                v-for="account in accountOptions"
-                                :key="account.id"
-                                :value="account.id"
-                            >
-                                {{ account.is_own_account ? 'You' : `@${account.handle}` }}
-                            </option>
-                        </select>
-                    </label>
                     <button
                         type="button"
                         class="snitch-btn snitch-btn-ghost"
@@ -342,14 +293,8 @@ onUnmounted(() => {
                     <article
                         v-for="(winner, index) in winnersList"
                         :key="winner.id"
-                        class="snitch-tear-row border-b border-dashed border-snitch-ink/15 pb-5 last:border-b-0 last:pb-0 sm:pb-6"
+                        class="snitch-tear-row relative border-b border-dashed border-snitch-ink/15 pb-5 last:border-b-0 last:pb-0 sm:pb-6"
                     >
-                        <Link
-                            :href="feedShow.url(winner.post.id)"
-                            class="snitch-tear-row-hit"
-                        >
-                            <span class="sr-only">Open winner on Feed</span>
-                        </Link>
                         <div class="snitch-tear-row-media">
                             <div
                                 class="snitch-polaroid relative w-full"
@@ -362,10 +307,10 @@ onUnmounted(() => {
                                     :class="index % 2 === 0 ? 'left-4' : 'right-4'"
                                     aria-hidden="true"
                                 />
-                                <div class="snitch-polaroid-frame overflow-hidden">
+                                <div class="snitch-polaroid-frame !aspect-auto overflow-hidden">
                                     <PlatformEmbed
                                         :embed="winner.post.embed"
-                                        :cover-url="winner.post.cover_url"
+                                        :media-url="winner.post.media_url"
                                         :post-url="winner.post.url"
                                         :platform="winner.post.platform"
                                         compact
@@ -374,28 +319,17 @@ onUnmounted(() => {
                             </div>
                         </div>
 
-                        <div class="snitch-tear-row-body space-y-2.5">
+                        <Link
+                            :href="feedShow.url(winner.post.id)"
+                            class="snitch-tear-row-body relative z-10 block space-y-2.5"
+                        >
                             <p class="text-xs uppercase tracking-wide text-snitch-ink/50">
-                                <Link
-                                    v-if="winner.post.tracked_account?.id"
-                                    :href="competitorShow.url(winner.post.tracked_account.id)"
-                                    class="snitch-glance-account-link"
-                                >
-                                    <template v-if="winner.post.tracked_account.is_own_account">You</template>
-                                    <template v-else>@{{ winner.post.tracked_account.handle }}</template>
-                                </Link>
-                                <span v-else-if="winner.post.tracked_account">
-                                    <template v-if="winner.post.tracked_account.is_own_account">You</template>
-                                    <template v-else>@{{ winner.post.tracked_account.handle }}</template>
-                                </span>
-                                <span> · {{ platformLabel(winner.post.platform) }}</span>
+                                @{{ winner.post.tracked_account?.handle }} ·
+                                {{ platformLabel(winner.post.platform) }}
                             </p>
                             <div class="snitch-topic-row">
-                                <span class="snitch-topic-chip font-semibold">
-                                    {{ multiplierLabel(winner) }}
-                                </span>
                                 <span
-                                    v-for="pill in winnerStatPills(winner.score, winner.post.metrics).filter((p) => p.key !== 'score')"
+                                    v-for="pill in winnerStatPills(winner.score, winner.post.metrics)"
                                     :key="pill.key"
                                     class="snitch-topic-chip"
                                 >{{ pill.label }}</span>
@@ -433,7 +367,7 @@ onUnmounted(() => {
                                     :source="winner.how_to_copy"
                                 />
                             </div>
-                        </div>
+                        </Link>
                     </article>
                 </div>
 
@@ -453,25 +387,15 @@ onUnmounted(() => {
                                 : 'Sync posts, wait for analysis, or loosen your rules.'
                         }}
                     </p>
-                    <div
+                    <button
                         v-if="!isRescoring"
-                        class="mt-5 flex flex-wrap items-center justify-center gap-2"
+                        type="button"
+                        class="snitch-btn snitch-btn-ghost mt-5"
+                        @click="rulesOpen = true"
                     >
-                        <button
-                            type="button"
-                            class="snitch-btn snitch-btn-ghost"
-                            @click="rulesOpen = true"
-                        >
-                            <SlidersHorizontal class="relative z-10 size-4 shrink-0" aria-hidden="true" />
-                            <span class="relative z-10">Edit rules</span>
-                        </button>
-                        <Link
-                            :href="competitors.url()"
-                            class="snitch-btn snitch-btn-spot"
-                        >
-                            <span class="relative z-10">Go to Tracking</span>
-                        </Link>
-                    </div>
+                        <SlidersHorizontal class="relative z-10 size-4 shrink-0" aria-hidden="true" />
+                        <span class="relative z-10">Edit rules</span>
+                    </button>
                 </div>
             </div>
         </div>

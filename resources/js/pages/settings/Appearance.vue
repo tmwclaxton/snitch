@@ -19,19 +19,17 @@ defineOptions({
     <div>
         <Head title="Appearance settings" />
 
-        <div class="relative rounded border border-snitch-ink/10 bg-snitch-lift p-5 sm:p-6">
-            <h2 class="snitch-hero-display text-2xl text-snitch-ink">
+        <div class="snitch-doc relative p-5 sm:p-6">
+            <span class="snitch-tape left-5 -top-2" aria-hidden="true" />
+            <h2 class="snitch-display relative z-10 text-2xl text-snitch-ink">
                 Appearance
             </h2>
-            <p class="mt-1.5 text-sm text-snitch-ink/70">
-                Light uses cream paper with yellow highlights. Dark uses the Caution Tape night shell. System follows your device. Default is system.
+            <p class="relative z-10 mt-1.5 text-sm text-snitch-ink/65">
+                Pick light, dark, or follow the system. Paper grade stays warm either way.
             </p>
-            <div class="mt-5">
+            <div class="relative z-10 mt-5">
                 <AppearanceTabs />
             </div>
-            <p class="mt-4 text-sm text-snitch-ink/55">
-                Find this anytime under Settings → Appearance.
-            </p>
         </div>
     </div>
 </template>

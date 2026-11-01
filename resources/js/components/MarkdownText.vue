@@ -18,7 +18,7 @@ const rendered = computed(() => {
         return props.html;
     }
 
-    return renderMarkdown(props.source, { coerceSteps: true });
+    return renderMarkdown(props.source);
 });
 </script>
 

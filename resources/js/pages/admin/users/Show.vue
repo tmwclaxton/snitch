@@ -114,7 +114,7 @@ function typeLabel(type: string): string {
         <header class="flex flex-wrap items-end justify-between gap-4">
             <div>
                 <p class="snitch-ink-label">Internal</p>
-                <h1 class="snitch-hero-display text-3xl text-snitch-ink">{{ user.email }}</h1>
+                <h1 class="font-display text-3xl text-snitch-ink">{{ user.email }}</h1>
                 <p class="mt-1 text-sm text-snitch-ink/65">
                     {{ user.name || 'No name' }}
                     · joined {{ formatWhen(user.created_at) }}
@@ -189,8 +189,6 @@ function typeLabel(type: string): string {
                 <WeeklyVolumeChart
                     :weeks="ledgerSeries"
                     title="Ledger entries"
-                    y-axis-label="Entries"
-                    :period-grain="grain"
                     :subtitle="`${ledgerSeries.reduce((sum, row) => sum + row.count, 0)} · ${periodLabel}`"
                     :dense-labels="grain === 'month' || grain === 'week'"
                 />
@@ -199,8 +197,6 @@ function typeLabel(type: string): string {
                 <WeeklyVolumeChart
                     :weeks="mcpSeries"
                     title="MCP calls"
-                    y-axis-label="Calls"
-                    :period-grain="grain"
                     :subtitle="`${mcpSeries.reduce((sum, row) => sum + row.count, 0)} · ${periodLabel}`"
                     :dense-labels="grain === 'month' || grain === 'week'"
                 />

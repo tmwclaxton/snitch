@@ -3,7 +3,6 @@ import { computed } from 'vue';
 import type { HTMLAttributes } from 'vue';
 import { useBrokenImage } from '@/composables/useBrokenImage';
 import { getInitials } from '@/composables/useInitials';
-import { isDurableMediaSrc } from '@/lib/mediaSrc';
 import { cn } from '@/lib/utils';
 
 export type SnitchImageFallback = 'paper' | 'polaroid' | 'initials' | 'none';
@@ -37,9 +36,7 @@ const props = withDefaults(
     },
 );
 
-const durableSrc = computed(() => (isDurableMediaSrc(props.src) ? props.src : null));
-
-const { showImage, onError } = useBrokenImage(() => durableSrc.value);
+const { showImage, onError } = useBrokenImage(() => props.src);
 
 const initials = computed(() => {
     const from = props.initialsFrom?.trim();
@@ -79,13 +76,12 @@ const showFallback = computed(() => !showImage.value && props.fallback !== 'none
     >
         <img
             v-if="showImage"
-            :src="durableSrc!"
+            :src="src!"
             :alt="alt"
             :width="width"
             :height="height"
             :loading="loading"
             :decoding="decoding"
-            referrerpolicy="no-referrer"
             :class="cn('snitch-image-img', imgClass)"
             v-bind="$attrs"
             @error="onError"

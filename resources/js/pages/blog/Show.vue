@@ -71,41 +71,45 @@ function shareHref(key: string): string {
 </script>
 
 <template>
-    <div class="px-4 py-14 sm:px-8 sm:py-20">
+    <div class="px-5 py-14 sm:px-8 sm:py-20">
         <div class="mx-auto max-w-3xl">
             <Link
                 :href="blogIndex()"
-                class="inline-flex items-center gap-1.5 text-sm font-medium text-snitch-caution-fog/75 hover:text-snitch-caution-yellow"
+                class="inline-flex items-center gap-1.5 text-sm font-medium text-snitch-ink/70 hover:text-snitch-ink"
                 prefetch
             >
                 <ArrowLeft class="size-4" aria-hidden="true" />
                 Back to blog
             </Link>
 
-            <article class="mt-6">
+            <article class="snitch-doc relative mt-6 px-6 py-10 sm:px-10">
                 <div
                     v-if="post.tags.length > 0"
-                    class="flex flex-wrap gap-2"
+                    class="relative z-10 flex flex-wrap gap-2"
                 >
                     <span
                         v-for="tag in post.tags.slice(0, 5)"
                         :key="tag"
-                        class="font-mono text-sm uppercase tracking-wide text-snitch-caution-fog/70"
+                        class="snitch-ink-label text-[0.65rem]"
                     >
                         {{ tag }}
                     </span>
                 </div>
 
-                <h1 class="mt-4 text-3xl font-semibold tracking-tight text-snitch-caution-fog sm:text-4xl">
+                <h1
+                    class="snitch-display relative z-10 mt-4 text-3xl text-snitch-ink sm:text-4xl"
+                >
                     {{ post.title }}
                 </h1>
 
-                <p class="mt-4 text-lg leading-relaxed text-snitch-caution-fog/80">
+                <p
+                    class="relative z-10 mt-4 text-lg leading-relaxed text-snitch-ink/80"
+                >
                     {{ post.excerpt }}
                 </p>
 
                 <div
-                    class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-snitch-caution-fog/70"
+                    class="relative z-10 mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-snitch-ink/60"
                 >
                     <span class="inline-flex items-center gap-1.5">
                         <CalendarDays class="size-4" aria-hidden="true" />
@@ -125,27 +129,27 @@ function shareHref(key: string): string {
                     :alt="post.title"
                     aspect-ratio="16 / 9"
                     loading="eager"
-                    class="mt-8 block w-full border border-snitch-ink/15"
+                    class="relative z-10 mt-8 block w-full border-2 border-snitch-ink/20"
                     img-class="w-full object-cover"
                     fallback="paper"
                 />
 
                 <div
-                    class="snitch-blog-prose mt-8 text-base leading-relaxed text-snitch-caution-fog/85"
+                    class="snitch-blog-prose relative z-10 mt-8 text-base leading-relaxed text-snitch-ink/85"
                     v-html="post.body_html"
                 />
             </article>
 
             <div
                 v-if="post.sources.length > 0"
-                class="mt-8 border border-snitch-ink/15 bg-snitch-lift p-6 sm:p-8"
+                class="snitch-scrap relative mt-8 p-6 sm:p-8"
             >
-                <h2 class="font-mono text-sm uppercase tracking-wide text-snitch-caution-fog/70">Sources</h2>
-                <ul class="mt-4 space-y-3">
+                <h2 class="snitch-ink-label">Sources</h2>
+                <ul class="relative z-10 mt-4 space-y-3">
                     <li v-for="source in post.sources" :key="source.url">
                         <a
                             :href="source.url"
-                            class="font-medium text-snitch-caution-fog underline decoration-snitch-caution-yellow/70 underline-offset-2 hover:decoration-snitch-caution-yellow"
+                            class="font-medium text-snitch-ink underline decoration-snitch-spot/60 underline-offset-2 hover:decoration-snitch-spot"
                             target="_blank"
                             rel="noopener noreferrer"
                         >
@@ -153,7 +157,7 @@ function shareHref(key: string): string {
                         </a>
                         <p
                             v-if="source.description"
-                            class="mt-0.5 text-sm text-snitch-caution-fog/75"
+                            class="mt-0.5 text-sm text-snitch-ink/70"
                         >
                             {{ source.description }}
                         </p>
@@ -166,30 +170,34 @@ function shareHref(key: string): string {
                     v-for="item in shareItems"
                     :key="item.key"
                     :href="shareHref(item.key)"
-                    class="inline-flex border border-snitch-ink/20 px-3 py-2 text-sm font-medium text-snitch-caution-fog/85 hover:border-snitch-caution-yellow hover:text-snitch-caution-fog"
+                    class="snitch-btn snitch-btn-ghost text-sm"
                     target="_blank"
                     rel="noopener noreferrer"
                 >
-                    {{ item.label }}
+                    <span class="relative z-10">{{ item.label }}</span>
                 </a>
             </div>
 
             <section v-if="more_posts.length > 0" class="mt-14">
-                <h2 class="text-2xl font-semibold tracking-tight text-snitch-caution-fog">
-                    More posts
+                <h2 class="snitch-display text-2xl text-snitch-ink">
+                    More on the board
                 </h2>
                 <div class="mt-6 grid gap-4 sm:grid-cols-3">
                     <Link
                         v-for="related in more_posts"
                         :key="related.id"
                         :href="show(related.slug)"
-                        class="block border border-snitch-ink/15 bg-snitch-lift p-4 transition hover:-translate-y-0.5 hover:border-snitch-caution-yellow/60"
+                        class="snitch-scrap relative block p-4 transition hover:-translate-y-0.5"
                         prefetch
                     >
-                        <h3 class="text-lg font-semibold tracking-tight text-snitch-caution-fog">
+                        <h3
+                            class="snitch-display relative z-10 text-lg text-snitch-ink"
+                        >
                             {{ related.title }}
                         </h3>
-                        <p class="mt-2 text-sm text-snitch-caution-fog/75">
+                        <p
+                            class="relative z-10 mt-2 line-clamp-3 text-sm text-snitch-ink/70"
+                        >
                             {{ related.excerpt }}
                         </p>
                     </Link>

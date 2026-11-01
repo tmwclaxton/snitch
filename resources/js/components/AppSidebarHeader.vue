@@ -15,7 +15,7 @@ withDefaults(
 
 <template>
     <header
-        class="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b border-snitch-ink/10 bg-snitch-paper text-snitch-ink px-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 sm:px-3"
+        class="flex h-16 shrink-0 items-center gap-2 border-b border-snitch-ink/10 bg-snitch-paper/60 px-6 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4"
     >
         <div class="flex items-center gap-2">
             <SidebarTrigger class="-ml-1" />

@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { ChevronDown } from '@lucide/vue';
-import { ref, watch } from 'vue';
 import {
     SidebarGroup,
     SidebarGroupLabel,
@@ -10,135 +8,28 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
-import { activateDashboardSection, activeDashboardSection } from '@/composables/useDashboardScrollSpy';
-import { scrollToDashboardAnchor } from '@/lib/dashboardAnchors';
-import { toUrl } from '@/lib/utils';
 import type { NavItem } from '@/types';
 
-const props = withDefaults(
-    defineProps<{
-        items: NavItem[];
-        label?: string;
-        collapsible?: boolean;
-        defaultOpen?: boolean;
-        tight?: boolean;
-    }>(),
-    {
-        label: 'Platform',
-        collapsible: false,
-        defaultOpen: false,
-        tight: false,
-    },
-);
+defineProps<{
+    items: NavItem[];
+}>();
 
-const open = ref(!props.collapsible || props.defaultOpen);
-
-watch(
-    () => props.defaultOpen,
-    (value) => {
-        if (props.collapsible) {
-            open.value = value;
-        }
-    },
-);
-
-const { isCurrentOrParentUrl, isCurrentUrl, currentUrl } = useCurrentUrl();
-
-function itemIsActive(item: NavItem): boolean {
-    if (item.section) {
-        if (
-            currentUrl.value !== '/executive-brief'
-            && ! currentUrl.value.startsWith('/executive-brief?')
-            && currentUrl.value !== '/dashboard'
-            && ! currentUrl.value.startsWith('/dashboard?')
-        ) {
-            return false;
-        }
-
-        return activeDashboardSection.value === item.section;
-    }
-
-    if (item.exact) {
-        return isCurrentUrl(item.href);
-    }
-
-    return isCurrentOrParentUrl(item.href);
-}
-
-function onNavClick(event: MouseEvent, item: NavItem): void {
-    if (! item.section) {
-        return;
-    }
-
-    const onDashboard = currentUrl.value === '/executive-brief'
-        || currentUrl.value.startsWith('/executive-brief?')
-        || currentUrl.value === '/dashboard'
-        || currentUrl.value.startsWith('/dashboard?');
-
-    if (! onDashboard) {
-        return;
-    }
-
-    event.preventDefault();
-    activateDashboardSection(item.section);
-    window.history.replaceState(null, '', `#${item.section}`);
-    void scrollToDashboardAnchor(item.section);
-}
-
-function hrefFor(item: NavItem): string {
-    return toUrl(item.href);
-}
-
-function toggleGroup(): void {
-    if (! props.collapsible) {
-        return;
-    }
-
-    open.value = ! open.value;
-}
+const { isCurrentUrl } = useCurrentUrl();
 </script>
 
 <template>
-    <SidebarGroup class="px-2 pb-1 pt-4 first:pt-3">
-        <SidebarGroupLabel
-            class="mb-2 h-4 gap-1 px-2 text-sm leading-none"
-            :class="collapsible ? 'cursor-pointer select-none' : ''"
-            :as="collapsible ? 'button' : undefined"
-            :aria-expanded="collapsible ? open : undefined"
-            @click="toggleGroup"
-        >
-            <span>{{ label }}</span>
-            <ChevronDown
-                v-if="collapsible"
-                class="ml-auto size-3.5"
-                :class="open ? '' : '-rotate-90'"
-            />
-        </SidebarGroupLabel>
-        <SidebarMenu
-            v-if="!collapsible || open"
-            class="gap-1"
-        >
-            <SidebarMenuItem
-                v-for="item in items"
-                :key="item.title"
-            >
+    <SidebarGroup class="px-2 py-0">
+        <SidebarGroupLabel>Platform</SidebarGroupLabel>
+        <SidebarMenu>
+            <SidebarMenuItem v-for="item in items" :key="item.title">
                 <SidebarMenuButton
                     as-child
-                    size="sm"
-                    :is-active="itemIsActive(item)"
-                    :class="itemIsActive(item) ? 'snitch-nav-current' : ''"
+                    :is-active="isCurrentUrl(item.href)"
                     :tooltip="item.title"
                 >
-                    <Link
-                        :href="hrefFor(item)"
-                        :class="itemIsActive(item) ? 'snitch-nav-current' : ''"
-                        :prefetch="item.section ? false : 'hover'"
-                        @click="(event) => onNavClick(event, item)"
-                    >
+                    <Link :href="item.href" prefetch="hover">
                         <component :is="item.icon" />
-                        <span class="min-w-0 flex-1">
-                            <span class="snitch-nav-label">{{ item.title }}</span>
-                        </span>
+                        <span>{{ item.title }}</span>
                     </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>

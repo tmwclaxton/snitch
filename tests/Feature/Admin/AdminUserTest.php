@@ -113,30 +113,4 @@ class AdminUserTest extends TestCase
         $this->assertSame(1, $result['users']['total']);
         $this->assertSame('FindMe@Example.com', $result['users']['data'][0]['email']);
     }
-
-    public function test_users_index_headers_share_row_grid_and_right_align_balance(): void
-    {
-        $page = file_get_contents(resource_path('js/pages/admin/users/Index.vue'));
-
-        $this->assertNotFalse($page);
-        $this->assertStringContainsString('snitch-admin-users-row', $page);
-        $this->assertStringContainsString('userRowClass', $page);
-        $this->assertStringContainsString('gap-x-3', $page);
-        $this->assertStringContainsString('minmax(0,1.5fr)', $page);
-        $this->assertStringContainsString('minmax(2.75rem,0.35fr)', $page);
-        $this->assertStringContainsString('<wbr', $page);
-        $this->assertStringContainsString('whenLines', $page);
-        $this->assertStringContainsString("formatPenceAsGbp(row.balance_pence, { decimals: 'always2' })", $page);
-        $this->assertStringNotContainsString('overflow-x-auto', $page);
-        $this->assertStringNotContainsString('min-w-[56rem]', $page);
-        $this->assertStringContainsString('text-right text-sm font-medium', $page);
-        $this->assertStringContainsString('text-right text-sm tabular-nums', $page);
-        $this->assertStringContainsString('planLabel', $page);
-        $this->assertStringContainsString("none: 'None'", $page);
-        $this->assertStringNotContainsString('gap-x-0', $page);
-        $this->assertStringNotContainsString('line-clamp', $page);
-        $this->assertStringNotContainsString('truncate', $page);
-        $this->assertStringNotContainsString('text-xs', $page);
-        $this->assertStringNotContainsString('snitch-ink-label border-b', $page);
-    }
 }

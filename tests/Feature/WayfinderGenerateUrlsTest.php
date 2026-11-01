@@ -33,7 +33,7 @@ class WayfinderGenerateUrlsTest extends TestCase
 
             $routes = File::get($output.'/routes/index.ts');
 
-            $this->assertStringContainsString("url: '/executive-brief'", $routes);
+            $this->assertStringContainsString("url: '/dashboard'", $routes);
             $this->assertStringNotContainsString('http://localhost', $routes);
             $this->assertStringNotContainsString('https://www.snitchsocial.net', $routes);
         } finally {

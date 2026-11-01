@@ -84,7 +84,7 @@ class GrowthPageTest extends TestCase
         $this->assertStringNotContainsString('RIVAL_COLOURS', $index);
         $this->assertStringNotContainsString('rivalIndex', $chart);
         $this->assertStringContainsString("type: 'datetime' as const", $chart);
-        $this->assertStringContainsString("style.colorScheme = dark ? 'dark' : 'light'", $appearance);
+        $this->assertStringContainsString('updateTheme', $appearance);
     }
 
     public function test_own_account_weekly_metrics_null_out_empty_weeks_but_keep_posted_weeks(): void

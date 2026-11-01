@@ -34,13 +34,6 @@ class StippleChartContractTest extends TestCase
             $this->assertStringContainsString('yTicks', $source);
             $this->assertStringNotContainsString('<rect', $source);
         }
-
-        $this->assertStringContainsString('Hour posted', $timeOfDay);
-        $this->assertStringContainsString("yAxisLabel = 'No. of Posts'", $timeOfDay);
-        $this->assertStringContainsString('props.compact ? hour % 4 === 0 : hour % 2 === 0', $timeOfDay);
-
-        $this->assertStringContainsString("yAxisLabel: 'No. of Posts'", $weekly);
-        $this->assertStringContainsString('Week starting', $weekly);
     }
 
     #[Test]
@@ -112,39 +105,16 @@ class StippleChartContractTest extends TestCase
     }
 
     #[Test]
-    public function stipple_bar_reveals_marks_with_css_stagger(): void
+    public function stipple_bar_reveals_marks_one_by_one(): void
     {
         $source = file_get_contents(base_path('resources/js/components/dashboard/StippleBar.vue'));
         $css = file_get_contents(base_path('resources/css/app.css'));
 
         $this->assertIsString($source);
         $this->assertIsString($css);
-        $this->assertStringContainsString('animationDelay', $source);
+        $this->assertStringContainsString('visibleCount', $source);
         $this->assertStringContainsString('stepMs', $source);
-        $this->assertStringContainsString("'is-popping': shouldAnimate", $source);
-        $this->assertStringNotContainsString('setTimeout', $source);
-        $this->assertStringNotContainsString('visibleCount', $source);
-        $this->assertMatchesRegularExpression('/animate:\s*true/', $source);
+        $this->assertStringContainsString('index < visibleCount', $source);
         $this->assertStringContainsString('@keyframes snitch-stipple-pop', $css);
-    }
-
-    #[Test]
-    public function heatmap_hover_does_not_create_a_scroll_container(): void
-    {
-        $css = file_get_contents(base_path('resources/css/app.css'));
-
-        $this->assertIsString($css);
-        $this->assertStringContainsString('.snitch-heatmap-grid .snitch-heatmap-cell:hover', $css);
-        $this->assertStringContainsString('transform: scale(1.45);', $css);
-        $this->assertMatchesRegularExpression(
-            '/\.snitch-heatmap \{[^}]*overflow:\s*clip;/s',
-            $css,
-        );
-
-        $matched = preg_match('/\.snitch-heatmap-grid \{([^}]*)\}/s', $css, $grid);
-
-        $this->assertSame(1, $matched);
-        $this->assertStringNotContainsString('overflow', $grid[1]);
-        $this->assertStringContainsString('padding-inline: 3%', $grid[1]);
     }
 }

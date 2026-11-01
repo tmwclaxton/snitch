@@ -28,10 +28,10 @@ class AdsPageTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('ads.index'))
-            ->assertRedirect('/executive-brief');
+            ->assertRedirect('/dashboard');
 
-        $this->get('/ads')->assertRedirect('/executive-brief');
-        $this->assertFileExists(resource_path('js/pages/ad-library/Index.vue'));
+        $this->get('/ads')->assertRedirect('/dashboard');
+        $this->assertFileDoesNotExist(resource_path('js/pages/ad-library/Index.vue'));
         $this->assertFileDoesNotExist(resource_path('js/pages/ads/Index.vue'));
     }
 
@@ -40,7 +40,7 @@ class AdsPageTest extends TestCase
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
 
         $this->assertIsString($sidebar);
-        $this->assertStringContainsString("title: 'Competitors'", $sidebar);
+        $this->assertStringContainsString("title: 'Snitches'", $sidebar);
         $this->assertStringNotContainsString("title: 'Are they running ads?'", $sidebar);
         $this->assertStringNotContainsString("title: 'Ad Library'", $sidebar);
         $this->assertStringNotContainsString('AdsController', $sidebar);

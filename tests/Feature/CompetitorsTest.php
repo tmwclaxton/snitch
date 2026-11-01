@@ -22,30 +22,22 @@ class CompetitorsTest extends TestCase
     use RefreshDatabase;
     use WithPlatformBilling;
 
-    public function test_tracking_urls_and_legacy_paths_redirect(): void
+    public function test_snitches_urls_and_legacy_competitors_redirect(): void
     {
-        $this->assertSame(url('/tracking'), route('competitors.index'));
+        $this->assertSame(url('/snitches'), route('competitors.index'));
 
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
 
         $this->actingAs($user)
-            ->get('/snitches')
-            ->assertRedirect('/tracking');
-
-        $this->actingAs($user)
             ->get('/competitors')
-            ->assertRedirect('/tracking');
+            ->assertRedirect('/snitches');
 
         $account = TrackedAccount::factory()->for($user)->create(['handle' => 'legacyredirect']);
 
         $this->actingAs($user)
-            ->get('/snitches/'.$account->id)
-            ->assertRedirect('/tracking/'.$account->id);
-
-        $this->actingAs($user)
             ->get('/competitors/'.$account->id)
-            ->assertRedirect('/tracking/'.$account->id);
+            ->assertRedirect('/snitches/'.$account->id);
     }
 
     public function test_owner_can_list_and_create_competitors(): void
@@ -292,16 +284,20 @@ class CompetitorsTest extends TestCase
 
         $indexVue = file_get_contents(resource_path('js/pages/competitors/Index.vue'));
         $this->assertIsString($indexVue);
-        $this->assertStringContainsString('Add your account', $indexVue);
-        $this->assertStringContainsString('is_own_account', $indexVue);
-        $this->assertStringContainsString('Last refresh', $indexVue);
-        $this->assertStringContainsString('Mark as my account', $indexVue);
-        $this->assertStringContainsString('Unmark as my account', $indexVue);
-        $this->assertStringContainsString('hasOwnAccount', $indexVue);
-        $this->assertStringNotContainsString('This is my account', $indexVue);
-        $this->assertStringContainsString('Track public Instagram accounts', $indexVue);
+        $this->assertStringContainsString('Sync status', $indexVue);
+        $this->assertStringContainsString('accountSyncStatusLabel', $indexVue);
+        $this->assertStringContainsString('syncAccount', $indexVue);
+        $this->assertStringContainsString('isAccountSyncing', $indexVue);
+        $this->assertStringContainsString('Sync in progress', $indexVue);
+        $this->assertStringContainsString('emptyImportHint', $indexVue);
+        $this->assertStringContainsString('No recent reels found', $indexVue);
+        $this->assertStringContainsString('RemoveCompetitorModal', $indexVue);
+        $this->assertStringContainsString('SyncAccountModal', $indexVue);
+        $this->assertStringContainsString('askRemove', $indexVue);
         $this->assertStringNotContainsString('Auto sync', $indexVue);
         $this->assertStringNotContainsString('nextSyncLabel', $indexVue);
+        $this->assertStringNotContainsString('Sync ok', $indexVue);
+        $this->assertStringNotContainsString('not synced', $indexVue);
     }
 
     public function test_index_exposes_running_sync_status(): void
@@ -325,7 +321,7 @@ class CompetitorsTest extends TestCase
             );
     }
 
-    public function test_index_counts_reel_and_still_analysis_backlog(): void
+    public function test_index_exposes_reel_backlog_and_winner_counts(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -359,7 +355,6 @@ class CompetitorsTest extends TestCase
                 ->missing('accounts')
                 ->loadDeferredProps('default', fn (Assert $page) => $page
                     ->where('accounts.0.reels_count', 2)
-                    ->where('accounts.0.posts_count', 3)
                     ->where('accounts.0.analysis_backlog_count', 2)
                     ->where('accounts.0.winners_count', 1)
                 )

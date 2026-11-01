@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Compass, FilterX, Search, X } from '@lucide/vue';
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { Component } from 'vue';
-import {
-    index as competitors,
-    show as competitorShow,
-} from '@/actions/App/Http/Controllers/CompetitorController';
+import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as exploreIndex } from '@/actions/App/Http/Controllers/ExploreController';
 import FeedContactCell from '@/components/FeedContactCell.vue';
 import PaperSelect from '@/components/PaperSelect.vue';
@@ -56,9 +53,6 @@ const props = defineProps<{
     posts?: {
         data: Post[];
         links: Array<{ url: string | null; label: string; active: boolean }>;
-        current_page: number;
-        per_page: number;
-        total: number;
     } | null;
     filters: {
         q: string | null;
@@ -67,9 +61,7 @@ const props = defineProps<{
         topics: string[];
         visual_crafts: string[];
         platform: string | null;
-        sort: string;
         explore_seed: number;
-        per_page: number;
     };
     terms?: {
         hook_type: AnalysisTermOption[];
@@ -77,7 +69,6 @@ const props = defineProps<{
         visual_craft: AnalysisTermOption[];
     } | null;
     platforms: string[];
-    trackedPlatforms?: string[];
 }>();
 
 defineOptions({
@@ -88,12 +79,6 @@ const searchDraft = ref(props.filters.q ?? '');
 const hookPickerOpen = ref(false);
 const topicPickerOpen = ref(false);
 const craftPickerOpen = ref(false);
-const sheetRef = ref<HTMLElement | null>(null);
-const paginationRef = ref<HTMLElement | null>(null);
-const PER_PAGE_MAX = 96;
-let fitTimer: ReturnType<typeof setTimeout> | null = null;
-let requestedPerPage: number | null = null;
-let fitPasses = 0;
 
 watch(
     () => props.filters.q,
@@ -102,32 +87,16 @@ watch(
     },
 );
 
-const platformOptions = computed(() => {
-    const tracked = new Set(props.trackedPlatforms ?? []);
-    const ordered = [
-        ...props.platforms.filter((platform) => tracked.has(platform)),
-        ...props.platforms.filter((platform) => !tracked.has(platform)),
-    ];
-
-    return [
-        { value: 'all', label: 'All platforms' },
-        ...ordered.map((platform) => ({
-            value: platform,
-            label: platformLabel(platform),
-            iconSrc: platformIconSrc(platform),
-        })),
-    ];
-});
+const platformOptions = computed(() => [
+    { value: 'all', label: 'All platforms' },
+    ...props.platforms.map((platform) => ({
+        value: platform,
+        label: platformLabel(platform),
+        iconSrc: platformIconSrc(platform),
+    })),
+]);
 
 const selectedPlatform = computed(() => props.filters.platform ?? 'all');
-
-const sortOptions = [
-    { value: 'best', label: 'Best' },
-    { value: 'newest', label: 'Newest' },
-    { value: 'views', label: 'Most viewed' },
-];
-
-const selectedSort = computed(() => props.filters.sort ?? 'best');
 
 const termsLoaded = computed(() => props.terms != null);
 const postsLoaded = computed(() => props.posts != null);
@@ -275,7 +244,7 @@ const activeChips = computed(() => {
             key: 'platform',
             label: platformLabel(props.filters.platform),
             icon: analysisDimensionIcon('custom'),
-            clear: () => visitFilters(currentFilters({ platform: 'all' })),
+            clear: () => visitFilters(currentFilters({ platform: null })),
         });
     }
 
@@ -289,68 +258,24 @@ function visitFilters(next: {
     topics: string[];
     visual_crafts: string[];
     platform: string | null;
-    sort: string;
     explore_seed: number;
-    per_page: number;
-}, page = 1): void {
+}): void {
     router.get(
         exploreIndex.url(),
-        exploreQuery(next, page),
+        {
+            q: next.q,
+            custom_tag: next.custom_tag,
+            hook_types: next.hook_types.length > 0 ? next.hook_types : undefined,
+            topics: next.topics.length > 0 ? next.topics : undefined,
+            visual_crafts: next.visual_crafts.length > 0 ? next.visual_crafts : undefined,
+            platform: next.platform,
+            explore_seed: next.explore_seed,
+        },
         {
             preserveState: true,
             preserveScroll: true,
         },
     );
-}
-
-function exploreQuery(next: {
-    q: string | null;
-    custom_tag: string | null;
-    hook_types: string[];
-    topics: string[];
-    visual_crafts: string[];
-    platform: string | null;
-    sort: string;
-    explore_seed: number;
-    per_page: number;
-}, page = 1): Record<string, string | number | string[] | null | undefined> {
-    const query: Record<string, string | number | string[]> = {
-        explore_seed: next.explore_seed,
-        per_page: next.per_page,
-        sort: next.sort || 'best',
-    };
-
-    if (next.q) {
-        query.q = next.q;
-    }
-
-    if (next.custom_tag) {
-        query.custom_tag = next.custom_tag;
-    }
-
-    if (next.hook_types.length > 0) {
-        query.hook_types = next.hook_types;
-    }
-
-    if (next.topics.length > 0) {
-        query.topics = next.topics;
-    }
-
-    if (next.visual_crafts.length > 0) {
-        query.visual_crafts = next.visual_crafts;
-    }
-
-    if (next.platform) {
-        query.platform = next.platform;
-    } else {
-        query.platform = 'all';
-    }
-
-    if (page > 1) {
-        query.page = page;
-    }
-
-    return query;
 }
 
 function currentFilters(overrides: Partial<{
@@ -360,9 +285,7 @@ function currentFilters(overrides: Partial<{
     topics: string[];
     visual_crafts: string[];
     platform: string | null;
-    sort: string;
     explore_seed: number;
-    per_page: number;
 }> = {}) {
     return {
         q: props.filters.q,
@@ -371,9 +294,7 @@ function currentFilters(overrides: Partial<{
         topics: props.filters.topics,
         visual_crafts: props.filters.visual_crafts,
         platform: props.filters.platform,
-        sort: props.filters.sort ?? 'best',
         explore_seed: props.filters.explore_seed,
-        per_page: props.filters.per_page,
         ...overrides,
     };
 }
@@ -384,11 +305,7 @@ function onSearchSubmit(): void {
 }
 
 function onPlatformChange(value: string): void {
-    visitFilters(currentFilters({ platform: value === 'all' ? 'all' : value }));
-}
-
-function onSortChange(value: string): void {
-    visitFilters(currentFilters({ sort: value || 'best' }));
+    visitFilters(currentFilters({ platform: value === 'all' ? null : value }));
 }
 
 function onHookTypesChange(value: string[]): void {
@@ -411,10 +328,8 @@ function clearFilters(): void {
         hook_types: [],
         topics: [],
         visual_crafts: [],
-        platform: 'all',
-        sort: 'best',
+        platform: null,
         explore_seed: props.filters.explore_seed,
-        per_page: props.filters.per_page,
     });
 }
 
@@ -428,162 +343,6 @@ function accountHref(post: Post): string | null {
     return competitorShow.url(id);
 }
 
-function columnCount(sheet: HTMLElement): number {
-    const tracks = getComputedStyle(sheet).gridTemplateColumns;
-
-    if (tracks === '' || tracks === 'none') {
-        return 1;
-    }
-
-    return Math.max(1, tracks.split(' ').filter((track) => track.trim() !== '').length);
-}
-
-function fittedPerPage(sheet: HTMLElement): number | null {
-    const columns = columnCount(sheet);
-    const style = getComputedStyle(sheet);
-    const rowGap = Number.parseFloat(style.rowGap) || 0;
-    const sample = [...sheet.children].find(
-        (child): child is HTMLElement => child instanceof HTMLElement && !child.classList.contains('snitch-contact-sheet-rail'),
-    );
-
-    if (sample == null) {
-        return null;
-    }
-
-    const rowHeight = sample.getBoundingClientRect().height;
-
-    if (rowHeight < 80) {
-        return null;
-    }
-
-    const rail = sheet.querySelector('.snitch-contact-sheet-rail');
-    const railHeight = rail instanceof HTMLElement ? rail.getBoundingClientRect().height + rowGap : 0;
-    const sheetTop = sheet.getBoundingClientRect().top + window.scrollY;
-    const paginationHeight = (paginationRef.value?.offsetHeight ?? 56) + 32;
-    const available = window.innerHeight - sheetTop - railHeight - paginationHeight;
-    const stride = rowHeight + rowGap;
-    const rawRows = available > 0 ? available / stride : 0;
-    let rows = Math.max(4, Math.floor(rawRows));
-
-    if (rawRows - Math.floor(rawRows) >= 0.55) {
-        rows = Math.max(rows, Math.floor(rawRows) + 1);
-    }
-
-    rows = Math.min(8, rows);
-
-    return Math.min(PER_PAGE_MAX, columns * rows);
-}
-
-function currentPageNumber(): number {
-    if (props.posts?.current_page) {
-        return props.posts.current_page;
-    }
-
-    const raw = new URLSearchParams(window.location.search).get('page');
-    const parsed = raw ? Number.parseInt(raw, 10) : 1;
-
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
-}
-
-function applyFittedPageSize(): void {
-    const sheet = sheetRef.value;
-
-    if (!postsLoaded.value || (props.posts?.data.length ?? 0) === 0 || sheet == null) {
-        return;
-    }
-
-    const fitted = fittedPerPage(sheet);
-
-    if (fitted == null || fitted === props.filters.per_page || fitted === requestedPerPage || fitPasses >= 2) {
-        if (fitted === props.filters.per_page) {
-            requestedPerPage = null;
-            fitPasses = 0;
-        }
-
-        return;
-    }
-
-    const firstIndex = (currentPageNumber() - 1) * props.filters.per_page;
-    let page = Math.floor(firstIndex / fitted) + 1;
-    const total = props.posts?.total;
-
-    if (typeof total === 'number') {
-        page = Math.min(page, Math.max(1, Math.ceil(total / fitted)));
-    }
-
-    requestedPerPage = fitted;
-    fitPasses += 1;
-
-    router.get(
-        exploreIndex.url(),
-        exploreQuery(currentFilters({ per_page: fitted }), page),
-        {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-            onFinish: () => {
-                if (props.filters.per_page === requestedPerPage) {
-                    requestedPerPage = null;
-                }
-
-                scheduleFit();
-            },
-        },
-    );
-}
-
-function scheduleFit(): void {
-    if (fitTimer != null) {
-        clearTimeout(fitTimer);
-    }
-
-    fitTimer = setTimeout(() => {
-        fitTimer = null;
-        applyFittedPageSize();
-    }, 150);
-}
-
-watch(sheetRef, (sheet, _previous, onCleanup) => {
-    scheduleFit();
-
-    if (sheet == null) {
-        return;
-    }
-
-    const observer = new ResizeObserver(() => {
-        scheduleFit();
-    });
-    observer.observe(sheet);
-    onCleanup(() => observer.disconnect());
-});
-
-watch(
-    () => props.posts?.data.length,
-    () => {
-        void nextTick(() => {
-            scheduleFit();
-        });
-    },
-);
-
-onMounted(() => {
-    scheduleFit();
-    window.addEventListener('resize', onViewportResize);
-});
-
-onUnmounted(() => {
-    if (fitTimer != null) {
-        clearTimeout(fitTimer);
-    }
-
-    window.removeEventListener('resize', onViewportResize);
-});
-
-function onViewportResize(): void {
-    fitPasses = 0;
-    scheduleFit();
-}
-
 function paginationLabel(label: string): string {
     return label
         .replace(/&laquo;/g, '«')
@@ -594,15 +353,15 @@ function paginationLabel(label: string): string {
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-2 py-6 sm:px-3 sm:py-8">
+    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
         <Head title="Explore" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="snitch-app-canvas">
+        <div class="relative z-10 mx-auto max-w-6xl">
             <header class="border-b border-snitch-ink/10 pb-5">
                 <p class="snitch-ink-label">Snitch / Explore</p>
-                <h1 class="snitch-hero-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
-                    Craft <span class="snitch-highlight">catalogue</span>
+                <h1 class="snitch-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
+                    Craft catalogue
                 </h1>
                 <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">Open a catalogue picker, select multiple hooks, topics, or crafts, then skim the matches.</p>
             </header>
@@ -730,16 +489,6 @@ function paginationLabel(label: string): string {
                         @update:model-value="onPlatformChange"
                     />
                 </label>
-                <label class="snitch-filter-field">
-                    <span>Sort</span>
-                    <PaperSelect
-                        id="explore-filter-sort"
-                        :model-value="selectedSort"
-                        :options="sortOptions"
-                        aria-label="Sort explore results"
-                        @update:model-value="onSortChange"
-                    />
-                </label>
             </form>
 
             <PaperTermPicker
@@ -778,7 +527,7 @@ function paginationLabel(label: string): string {
                     v-for="chip in activeChips"
                     :key="chip.key"
                     type="button"
-                    class="snitch-choice inline-flex items-center gap-1.5 px-2.5 py-1 text-sm font-medium"
+                    class="inline-flex items-center gap-1.5 border border-snitch-ink/15 bg-[color-mix(in_oklab,var(--snitch-spot)_22%,var(--snitch-paper))] px-2.5 py-1 text-xs font-medium text-snitch-ink shadow-[1px_1px_0_color-mix(in_oklab,var(--snitch-spot)_25%,transparent)] transition hover:border-snitch-ink/35"
                     :aria-label="`Remove ${chip.label}`"
                     @click="chip.clear"
                 >
@@ -811,7 +560,7 @@ function paginationLabel(label: string): string {
 
             <div
                 v-if="!postsLoaded"
-                class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill mt-6 grid"
+                class="snitch-contact-sheet mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
                 aria-live="polite"
                 aria-busy="true"
             >
@@ -835,8 +584,7 @@ function paginationLabel(label: string): string {
 
             <div
                 v-else-if="posts && posts.data.length"
-                class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill snitch-contact-reveal mt-6 grid"
-                ref="sheetRef"
+                class="snitch-contact-sheet snitch-contact-reveal mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
             >
                 <div class="snitch-contact-sheet-rail col-span-full">
                     <p>Explore sheet</p>
@@ -879,7 +627,7 @@ function paginationLabel(label: string): string {
                         Try another hook, topic, or craft - or clear the filters.
                     </template>
                     <template v-else>
-                        Track competitors, sync posts, and wait for analysis to fill the catalogue.
+                        Sync snitches and wait for analysis to fill the catalogue.
                     </template>
                 </p>
                 <button
@@ -891,21 +639,17 @@ function paginationLabel(label: string): string {
                     <FilterX class="relative z-10 size-4 shrink-0" aria-hidden="true" />
                     <span class="relative z-10">Clear filters</span>
                 </button>
-                <Link
+                <p
                     v-else
-                    :href="competitors.url()"
-                    class="snitch-btn snitch-btn-spot mt-5"
+                    class="mt-5 inline-flex items-center justify-center gap-2 text-xs uppercase tracking-wide text-snitch-ink/40"
                 >
-                    <span class="relative z-10 inline-flex items-center gap-2">
-                        <Compass class="size-3.5 shrink-0" aria-hidden="true" />
-                        Go to Tracking
-                    </span>
-                </Link>
+                    <Compass class="size-3.5 shrink-0" aria-hidden="true" />
+                    Waiting for analysis
+                </p>
             </div>
 
             <nav
                 v-if="posts && posts.links.length > 3"
-                ref="paginationRef"
                 class="mt-8 flex flex-wrap justify-center gap-2"
                 aria-label="Pagination"
             >

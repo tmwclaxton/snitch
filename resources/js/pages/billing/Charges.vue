@@ -39,7 +39,6 @@ const props = defineProps<{
     vendors: string[];
     actions: string[];
     usage: { balance_pence: number };
-    isAdmin?: boolean;
     creditExpiry: CreditExpiryBreakdownType;
     creditExpiryNote: { title: string; body: string } | null;
     topupExpiryMonths: number;
@@ -48,7 +47,6 @@ const props = defineProps<{
 const chargesLoaded = computed(() => props.charges != null);
 const chargesData = computed<ChargeRow[]>(() => props.charges?.data ?? []);
 const chargesLinks = computed<PaginationLink[]>(() => props.charges?.links ?? []);
-const isAdmin = computed(() => Boolean(props.isAdmin));
 
 defineOptions({
     layout: AppLayout,
@@ -86,7 +84,7 @@ const selectedPeriod = computed(() =>
 
 const hasActiveFilters = computed(
     () =>
-        (isAdmin.value && props.filters.vendor != null) ||
+        props.filters.vendor != null ||
         props.filters.action != null ||
         props.filters.days != null,
 );
@@ -174,16 +172,16 @@ function paginationLabel(label: string): string {
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-2 py-6 sm:px-3 sm:py-8">
+    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
         <Head title="Billing charges" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="snitch-app-canvas">
+        <div class="relative z-10 mx-auto max-w-6xl">
             <header class="flex flex-wrap items-end justify-between gap-4 border-b border-snitch-ink/10 pb-5">
                 <div class="min-w-0">
                     <p class="snitch-ink-label">Account</p>
-                    <h1 class="snitch-hero-display mt-1 text-3xl text-snitch-ink sm:text-4xl">
-                        Charge <span class="snitch-highlight">breakdown</span>
+                    <h1 class="snitch-display mt-1 text-3xl text-snitch-ink sm:text-4xl">
+                        Charge breakdown
                     </h1>
                     <p class="mt-1.5 max-w-2xl text-sm text-snitch-ink/65 sm:text-base">
                         Ledger history for usage charges, top-ups, and bonuses. Balance
@@ -192,17 +190,14 @@ function paginationLabel(label: string): string {
                 </div>
                 <Link
                     :href="billingIndex()"
-                    class="text-sm underline decoration-snitch-ink/35 underline-offset-4"
+                    class="text-sm underline decoration-snitch-spot underline-offset-4"
                 >
                     Back to billing
                 </Link>
             </header>
 
             <div class="snitch-filter-bar mt-6">
-                <label
-                    v-if="isAdmin"
-                    class="snitch-filter-field"
-                >
+                <label class="snitch-filter-field">
                     <span>Vendor</span>
                     <PaperSelect
                         id="billing-filter-vendor"
@@ -250,7 +245,7 @@ function paginationLabel(label: string): string {
 
             <p
                 v-if="creditExpiryNote"
-                class="mt-4 rounded-sm border border-snitch-ink/10 bg-snitch-lift px-3 py-2 text-sm text-snitch-ink/80"
+                class="mt-4 rounded-sm border border-snitch-spot/35 bg-snitch-spot/15 px-3 py-2 text-sm text-snitch-ink/80"
                 data-test="credit-expiry-filter-note"
             >
                 <span class="font-medium text-snitch-ink">{{ creditExpiryNote.title }}:</span>
@@ -296,74 +291,58 @@ function paginationLabel(label: string): string {
                         <thead>
                             <tr class="border-b border-snitch-ink/15 text-xs uppercase tracking-wide text-snitch-ink/50">
                                 <th class="py-2 pr-3 font-medium">When</th>
-                                <th
-                                    v-if="isAdmin"
-                                    class="py-2 pr-3 font-medium"
-                                >
-                                    Vendor
-                                </th>
+                                <th class="py-2 pr-3 font-medium">Vendor</th>
                                 <th class="py-2 pr-3 font-medium">Description</th>
-                                <th class="py-2 pr-3 text-right font-medium">
-                                    {{ isAdmin ? 'Amount' : 'Credits' }}
-                                </th>
-                                <th
-                                    v-if="isAdmin"
-                                    class="py-2 text-right font-medium"
-                                >
-                                    Balance after
-                                </th>
+                                <th class="py-2 pr-3 text-right font-medium">Amount</th>
+                                <th class="py-2 text-right font-medium">Balance after</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-snitch-ink/10">
                             <tr
                                 v-for="row in chargesData"
-                                :key="row.key ?? row.id"
+                                :key="row.id"
                             >
                                 <td class="py-2.5 pr-3 tabular-nums text-snitch-ink/70">
                                     {{ formatWhen(row.created_at) }}
                                 </td>
-                                <td
-                                    v-if="isAdmin"
-                                    class="py-2.5 pr-3"
-                                >
+                                <td class="py-2.5 pr-3">
                                     <span class="snitch-ink-label inline-flex items-center gap-1.5">
                                         <img
-                                            :src="vendorIconSrc(row.vendor ?? '')"
+                                            :src="vendorIconSrc(row.vendor)"
                                             alt=""
                                             class="snitch-platform-logo size-3.5 shrink-0 object-contain"
                                             width="14"
                                             height="14"
                                         >
-                                        {{ vendorLabel(row.vendor ?? '') }}
+                                        {{ vendorLabel(row.vendor) }}
                                     </span>
                                 </td>
                                 <td class="py-2.5 pr-3">
-                                    <span class="text-snitch-ink/90">{{ row.description }}</span>
+                                    <p class="text-snitch-ink/90">
+                                        {{ row.description }}
+                                    </p>
                                     <Link
                                         v-if="rowLinkHref(row)"
                                         :href="rowLinkHref(row)"
-                                        class="mt-0.5 block text-xs text-snitch-ink/55 underline decoration-snitch-ink/30 underline-offset-2 hover:text-snitch-ink"
+                                        class="mt-0.5 inline-block text-xs text-snitch-ink/55 underline decoration-snitch-spot/80 underline-offset-2 hover:text-snitch-ink"
                                     >
                                         {{ row.link?.label }}
                                     </Link>
-                                </td>
-                                <td class="py-2.5 pr-3 text-right tabular-nums text-snitch-ink">
-                                    <template v-if="isAdmin">
-                                        {{ formatMoney(row.amount_pence ?? 0) }}
-                                    </template>
-                                    <template v-else>
-                                        {{ row.credits ?? 0 }}
-                                    </template>
+                                    <p
+                                        v-else
+                                        class="mt-0.5 text-xs text-snitch-ink/40"
+                                    >
+                                        {{ row.action }}
+                                    </p>
                                 </td>
                                 <td
-                                    v-if="isAdmin"
-                                    class="py-2.5 text-right tabular-nums text-snitch-ink/70"
+                                    class="py-2.5 pr-3 text-right tabular-nums text-snitch-ink"
+                                    :class="row.amount_pence > 0 ? 'text-snitch-teal' : ''"
                                 >
-                                    {{
-                                        row.balance_after_pence != null
-                                            ? formatMoney(row.balance_after_pence)
-                                            : '-'
-                                    }}
+                                    {{ formatMoney(row.amount_pence) }}
+                                </td>
+                                <td class="py-2.5 text-right tabular-nums text-snitch-ink/70">
+                                    {{ formatMoney(row.balance_after_pence ?? 0) }}
                                 </td>
                             </tr>
                         </tbody>

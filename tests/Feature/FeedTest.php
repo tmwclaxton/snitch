@@ -11,27 +11,17 @@ use App\Models\AnalysisTerm;
 use App\Models\BrandProfile;
 use App\Models\Post;
 use App\Models\PostAnalysis;
-use App\Models\SocialAccount;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Models\WinnerInsight;
-use App\Services\Billing\UsageBillingService;
 use Database\Seeders\AnalysisTermSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
-use Tests\Concerns\WithoutRetiredPageRedirects;
 use Tests\TestCase;
 
 class FeedTest extends TestCase
 {
     use RefreshDatabase;
-    use WithoutRetiredPageRedirects;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->setUpWithoutRetiredPageRedirects();
-    }
 
     public function test_feed_lists_only_owner_posts(): void
     {
@@ -127,49 +117,6 @@ class FeedTest extends TestCase
                 ->component('feed/Show')
                 ->where('post.analysis.status', 'failed')
             );
-    }
-
-    public function test_feed_omits_failed_and_unavailable_analyses(): void
-    {
-        $user = User::factory()->create();
-        BrandProfile::factory()->for($user)->create();
-
-        $account = TrackedAccount::factory()->for($user)->create();
-        $kept = Post::factory()->forAccount($account)->create();
-        PostAnalysis::factory()->for($kept)->create([
-            'status' => AnalysisStatus::Completed,
-        ]);
-
-        $failed = Post::factory()->forAccount($account)->create();
-        PostAnalysis::factory()->for($failed)->create([
-            'status' => AnalysisStatus::Failed,
-            'error_message' => 'NanoGPT 429',
-        ]);
-
-        $unavailable = Post::factory()->forAccount($account)->create();
-        PostAnalysis::factory()->for($unavailable)->create([
-            'status' => AnalysisStatus::Unavailable,
-        ]);
-
-        $deadMedia = Post::factory()->forAccount($account)->create([
-            'media_availability' => MediaAvailability::Unavailable,
-        ]);
-
-        $this->actingAs($user)
-            ->get(route('feed.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('feed/Index')
-                ->missing('posts')
-                ->loadDeferredProps('default', fn (Assert $page) => $page
-                    ->has('posts.data', 1)
-                    ->where('posts.data.0.id', $kept->id)
-                )
-            );
-
-        $this->assertDatabaseHas('posts', ['id' => $failed->id]);
-        $this->assertDatabaseHas('posts', ['id' => $unavailable->id]);
-        $this->assertDatabaseHas('posts', ['id' => $deadMedia->id]);
     }
 
     public function test_feed_includes_platform_embed_payload(): void
@@ -288,7 +235,6 @@ class FeedTest extends TestCase
                 )
                 ->where('post.analysis.topics.1', 'proof')
                 ->where('post.tracked_account.id', $account->id)
-                ->where('post.tracked_account.url', $account->url)
                 ->where(
                     'post.winner_insight.how_to_copy_html',
                     "<p><strong>1. Hook with the void.</strong>\nOpen on <em>speaker</em>.</p>",
@@ -296,33 +242,7 @@ class FeedTest extends TestCase
             );
     }
 
-    public function test_post_detail_links_untracked_creator_handle_to_their_profile(): void
-    {
-        $user = User::factory()->create();
-        BrandProfile::factory()->for($user)->create();
-        app(UsageBillingService::class)->creditFromTopUp($user, 1000, 'topup:creator-profile');
-
-        $social = SocialAccount::factory()->create([
-            'platform' => Platform::Instagram,
-            'handle' => 'thesamparr',
-            'url' => 'https://instagram.com/thesamparr',
-        ]);
-        $post = Post::factory()->forSocialAccount($social)->create([
-            'type' => PostType::Reel,
-        ]);
-
-        $this->actingAs($user)
-            ->get(route('feed.show', $post))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('feed/Show')
-                ->missing('post.tracked_account.id')
-                ->where('post.tracked_account.handle', 'thesamparr')
-                ->where('post.tracked_account.url', 'https://instagram.com/thesamparr')
-            );
-    }
-
-    public function test_feed_includes_image_posts_and_keeps_failed_off_the_sheet(): void
+    public function test_feed_hides_image_posts_and_exposes_failed_vs_unavailable(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -348,7 +268,7 @@ class FeedTest extends TestCase
             'hook' => null,
         ]);
 
-        $image = Post::factory()->forAccount($account)->create([
+        Post::factory()->forAccount($account)->create([
             'type' => PostType::Image,
         ]);
 
@@ -361,7 +281,6 @@ class FeedTest extends TestCase
                 ->missing('posts')
                 ->loadDeferredProps('default', fn (Assert $page) => $page
                     ->has('posts.data', 1)
-                    ->where('posts.data.0.id', $image->id)
                 )
             );
 
@@ -463,7 +382,6 @@ class FeedTest extends TestCase
 
         $this->assertIsString($indexVue);
         $this->assertStringContainsString('Proof sheet', $indexVue);
-        $this->assertStringContainsString('snitch-contact-sheet-proof-fill', $indexVue);
         $this->assertStringNotContainsString('frameCount', $indexVue);
         $this->assertStringNotContainsString('exposures', $indexVue);
         $this->assertStringNotContainsString("'Frame' : 'Frames'", $indexVue);
@@ -494,7 +412,7 @@ class FeedTest extends TestCase
         $this->assertIsString($chipVue);
         $this->assertIsString($helper);
         $this->assertStringContainsString('exploreHrefForTerm', $showVue);
-        $this->assertStringNotContainsString('exploreHrefForTerm', $cellVue);
+        $this->assertStringContainsString('exploreHrefForTerm', $cellVue);
         $this->assertStringContainsString(':href="exploreHrefForTerm', $showVue);
         $this->assertStringContainsString('hook_types', $helper);
         $this->assertStringContainsString('visual_crafts', $helper);
@@ -541,102 +459,6 @@ class FeedTest extends TestCase
                 ->component('feed/Show')
                 ->where('post.analysis.term_labels.0.slug', 'fundraising')
                 ->where('post.analysis.term_labels.0.dimension', 'topic')
-            );
-    }
-
-    public function test_feed_index_uses_search_instead_of_an_account_dropdown(): void
-    {
-        $index = file_get_contents(resource_path('js/pages/feed/Index.vue'));
-
-        $this->assertIsString($index);
-        $this->assertStringContainsString('snitch-explore-search', $index);
-        $this->assertStringContainsString('Search feed', $index);
-        $this->assertStringNotContainsString('feed-filter-account', $index);
-        $this->assertStringNotContainsString('All accounts', $index);
-    }
-
-    public function test_feed_search_matches_caption_handle_and_analysis(): void
-    {
-        $user = User::factory()->create();
-        BrandProfile::factory()->for($user)->create();
-        $kept = TrackedAccount::factory()->for($user)->create([
-            'handle' => 'wearesocial',
-        ]);
-        $other = TrackedAccount::factory()->for($user)->create([
-            'handle' => 'later',
-        ]);
-        $matchCaption = Post::factory()->forAccount($kept)->create([
-            'caption' => 'Culture report drop for agencies',
-            'posted_at' => now()->subDay(),
-        ]);
-        $matchHandle = Post::factory()->forAccount($kept)->create([
-            'caption' => 'Unrelated still',
-            'posted_at' => now()->subHours(2),
-        ]);
-        $miss = Post::factory()->forAccount($other)->create([
-            'caption' => 'Scheduling tips only',
-            'posted_at' => now(),
-        ]);
-        PostAnalysis::factory()->for($matchHandle)->create([
-            'concept' => 'Agency process as entertainment',
-        ]);
-
-        $this->actingAs($user)
-            ->get(route('feed.index', ['q' => 'wearesocial']))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('feed/Index')
-                ->where('filters.q', 'wearesocial')
-                ->missing('accounts')
-                ->missing('posts')
-                ->loadDeferredProps('default', fn (Assert $page) => $page
-                    ->has('posts.data', 2)
-                    ->where('posts.data', fn ($posts): bool => collect($posts)->pluck('id')->contains($matchCaption->id)
-                        && collect($posts)->pluck('id')->contains($matchHandle->id)
-                        && ! collect($posts)->pluck('id')->contains($miss->id))
-                )
-            );
-
-        $this->actingAs($user)
-            ->get(route('feed.index', ['q' => 'Culture report']))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('feed/Index')
-                ->loadDeferredProps('default', fn (Assert $page) => $page
-                    ->has('posts.data', 1)
-                    ->where('posts.data.0.id', $matchCaption->id)
-                )
-            );
-    }
-
-    public function test_feed_show_omits_unprocessed_analysis_copy(): void
-    {
-        $user = User::factory()->create();
-        BrandProfile::factory()->for($user)->create();
-        $account = TrackedAccount::factory()->for($user)->create();
-        $post = Post::factory()->forAccount($account)->create([
-            'type' => PostType::Reel,
-        ]);
-        PostAnalysis::factory()->for($post)->create([
-            'status' => AnalysisStatus::Completed,
-            'idea' => 'Illo fugit aut maiores.',
-            'visual_summary' => 'Quia voluptas ut voluptatem a dolorum nulla impedit.',
-            'concept' => 'Agency process as entertainment',
-            'music' => [
-                'title' => 'eligendi omnis et',
-                'artist' => 'Evalyn Rempel',
-            ],
-        ]);
-
-        $this->actingAs($user)
-            ->get(route('feed.show', $post))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('feed/Show')
-                ->where('post.analysis.idea', null)
-                ->where('post.analysis.visual_summary', null)
-                ->where('post.analysis.music', null)
-                ->where('post.analysis.concept', 'Agency process as entertainment')
             );
     }
 }

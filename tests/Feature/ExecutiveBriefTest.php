@@ -23,7 +23,7 @@ class ExecutiveBriefTest extends TestCase
         BrandProfile::factory()->for($user)->create();
 
         $this->actingAs($user)
-            ->get(route('dashboard'))
+            ->get(route('executive-brief.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('ExecutiveBrief')
@@ -31,11 +31,12 @@ class ExecutiveBriefTest extends TestCase
                 ->where('brief.empty', true)
             );
 
-        $this->assertSame('/executive-brief', parse_url(route('dashboard'), PHP_URL_PATH));
+        $this->assertSame('/dashboard', parse_url(route('dashboard'), PHP_URL_PATH));
+        $this->assertSame('/executive-brief', parse_url(route('executive-brief.index'), PHP_URL_PATH));
 
         $this->actingAs($user)
             ->get('/dashboard')
-            ->assertRedirect('/executive-brief');
+            ->assertOk();
     }
 
     public function test_sidebar_renames_landing_to_executive_brief(): void
@@ -46,7 +47,7 @@ class ExecutiveBriefTest extends TestCase
         $this->assertNotFalse($sidebar);
         $this->assertNotFalse($page);
         $this->assertStringContainsString("title: 'Executive Brief'", $sidebar);
-        $this->assertStringNotContainsString("title: 'Dashboard'", $sidebar);
+        $this->assertStringContainsString("title: 'Dashboard'", $sidebar);
         $this->assertStringContainsString('max-w-[1100px]', $page);
         $this->assertStringContainsString('max-w-[70ch]', $page);
         $this->assertStringContainsString('What to do', $page);
@@ -127,7 +128,7 @@ class ExecutiveBriefTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('dashboard'))
+            ->get(route('executive-brief.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('ExecutiveBrief')

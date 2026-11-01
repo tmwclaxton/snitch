@@ -1,18 +1,14 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import {
-    Activity,
-    Bot,
-    CreditCard,
-    KeyRound,
-    LayoutDashboard,
-    MessageSquare,
-    Settings,
-    Shield,
-    Users,
-} from '@lucide/vue';
+import { Activity, Bot, CalendarDays, Clapperboard, Compass, CreditCard, LayoutGrid, Link2, MessageSquare, Newspaper, Settings, Shield, Store, Trophy, UserRoundSearch, Users } from '@lucide/vue';
 import { computed } from 'vue';
+import { show as agents } from '@/actions/App/Http/Controllers/AgentsController';
+import { edit as brand } from '@/actions/App/Http/Controllers/BrandProfileController';
 import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
+import { index as explore } from '@/actions/App/Http/Controllers/ExploreController';
+import { index as feed } from '@/actions/App/Http/Controllers/FeedController';
+import { index as influencers } from '@/actions/App/Http/Controllers/InfluencerController';
+import { index as winners } from '@/actions/App/Http/Controllers/WinnerController';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -20,6 +16,8 @@ import {
     Sidebar,
     SidebarContent,
     SidebarFooter,
+    SidebarGroup,
+    SidebarGroupContent,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
@@ -28,28 +26,29 @@ import {
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard, home } from '@/routes';
 import { overview as adminOverview, activity as adminActivity } from '@/routes/admin';
-import { index as adminAutomationRunsIndex } from '@/routes/admin/automation-runs';
-import { index as adminCuratorTokensIndex } from '@/routes/admin/curator-tokens';
+import { index as adminReferrals } from '@/routes/admin/referrals';
 import { index as adminUsersIndex } from '@/routes/admin/users';
+import { edit as appearance } from '@/routes/appearance';
 import { edit as billing } from '@/routes/billing';
+import { index as briefIndex } from '@/routes/brief';
 import { index as chatIndex } from '@/routes/chat';
-import { edit as editProfile } from '@/routes/profile';
-import { show as mcpSettings } from '@/routes/settings/mcp';
+import { index as executiveBrief } from '@/routes/executive-brief';
+import { index as todayIndex } from '@/routes/today';
 import type { NavItem } from '@/types';
 
 const page = usePage();
-const { currentUrl, isCurrentOrParentUrl } = useCurrentUrl();
 const isAdmin = computed(() => Boolean(page.props.auth?.user?.is_admin));
-const adminGroupOpen = computed(
-    () => currentUrl.value === '/admin' || currentUrl.value.startsWith('/admin/'),
-);
 
 const mainNavItems: NavItem[] = [
     {
+        title: 'Dashboard',
+        href: dashboard(),
+        icon: LayoutGrid,
+    },
+    {
         title: 'Executive Brief',
-        href: dashboard.url(),
-        icon: LayoutDashboard,
-        exact: true,
+        href: executiveBrief(),
+        icon: Newspaper,
     },
     {
         title: 'Chat',
@@ -57,80 +56,105 @@ const mainNavItems: NavItem[] = [
         icon: MessageSquare,
     },
     {
-        title: 'Competitors',
+        title: 'Today',
+        href: todayIndex(),
+        icon: CalendarDays,
+    },
+    {
+        title: 'This week',
+        href: briefIndex(),
+        icon: CalendarDays,
+    },
+    {
+        title: 'Brand',
+        href: brand(),
+        icon: Store,
+    },
+    {
+        title: 'Snitches',
         href: competitors(),
         icon: Users,
     },
     {
-        title: 'Connect your AI',
-        href: mcpSettings(),
+        title: 'Feed',
+        href: feed(),
+        icon: Clapperboard,
+    },
+    {
+        title: 'Winners',
+        href: winners(),
+        icon: Trophy,
+    },
+    {
+        title: 'Explore',
+        href: explore(),
+        icon: Compass,
+    },
+    {
+        title: 'Brand Deals',
+        href: influencers(),
+        icon: UserRoundSearch,
+    },
+    {
+        title: 'MCP',
+        href: agents(),
         icon: Bot,
     },
 ];
 
-const adminNavItems = computed<NavItem[]>(() => {
-    if (! isAdmin.value) {
-        return [];
+const accountNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [];
+
+    if (isAdmin.value) {
+        items.push(
+            {
+                title: 'Admin',
+                href: adminOverview(),
+                icon: Shield,
+            },
+            {
+                title: 'Activity',
+                href: adminActivity(),
+                icon: Activity,
+            },
+            {
+                title: 'Users',
+                href: adminUsersIndex(),
+                icon: Users,
+            },
+            {
+                title: 'Referrals',
+                href: adminReferrals(),
+                icon: Link2,
+            },
+        );
     }
 
-    return [
+    items.push(
         {
-            title: 'Admin',
-            href: adminOverview(),
-            icon: Shield,
-            exact: true,
+            title: 'Billing',
+            href: billing(),
+            icon: CreditCard,
         },
         {
-            title: 'Activity',
-            href: adminActivity(),
-            icon: Activity,
+            title: 'Settings',
+            href: appearance(),
+            icon: Settings,
         },
-        {
-            title: 'Users',
-            href: adminUsersIndex(),
-            icon: Users,
-        },
-        {
-            title: 'Curator tokens',
-            href: adminCuratorTokensIndex(),
-            icon: KeyRound,
-        },
-        {
-            title: 'Automation runs',
-            href: adminAutomationRunsIndex(),
-            icon: Bot,
-        },
-    ];
+    );
+
+    return items;
 });
 
-const accountNavItems: NavItem[] = [
-    {
-        title: 'Billing',
-        href: billing(),
-        icon: CreditCard,
-    },
-    {
-        title: 'Settings',
-        href: editProfile(),
-        icon: Settings,
-    },
-];
+const { isCurrentOrParentUrl } = useCurrentUrl();
 </script>
 
 <template>
-    <Sidebar
-        collapsible="icon"
-        variant="sidebar"
-        class="border-r border-sidebar-border bg-sidebar"
-    >
-        <SidebarHeader class="shrink-0 border-b border-sidebar-border px-3 py-3">
+    <Sidebar collapsible="icon" variant="sidebar" class="border-r border-snitch-ink/10 bg-snitch-paper/80">
+        <SidebarHeader>
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton
-                        size="lg"
-                        class="h-12"
-                        as-child
-                    >
+                    <SidebarMenuButton size="lg" as-child>
                         <Link :href="home()">
                             <AppLogo />
                         </Link>
@@ -139,35 +163,33 @@ const accountNavItems: NavItem[] = [
             </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent class="min-h-0 flex-1 gap-1 overflow-y-auto">
-            <NavMain
-                :items="mainNavItems"
-                label="App"
-            />
-            <NavMain
-                v-if="adminNavItems.length"
-                :items="adminNavItems"
-                label="Admin"
-                collapsible
-                :default-open="adminGroupOpen"
-            />
+        <SidebarContent>
+            <NavMain :items="mainNavItems" />
         </SidebarContent>
 
-        <SidebarFooter class="shrink-0 border-t border-sidebar-border px-3 py-3">
-            <div class="flex items-center gap-4 px-2 py-2 text-sm">
-                <Link
-                    v-for="item in accountNavItems"
-                    :key="item.title"
-                    :href="item.href"
-                    class="rounded-sm px-1.5 py-1 hover:text-sidebar-foreground"
-                    :class="isCurrentOrParentUrl(item.href) ? 'snitch-nav-current font-medium text-snitch-on-spot' : 'text-sidebar-foreground/80'"
-                >
-                    {{ item.title }}
-                </Link>
-            </div>
-            <div class="mt-2">
-                <NavUser />
-            </div>
+        <SidebarFooter>
+            <SidebarGroup class="group-data-[collapsible=icon]:p-0">
+                <SidebarGroupContent>
+                    <SidebarMenu>
+                        <SidebarMenuItem
+                            v-for="item in accountNavItems"
+                            :key="item.title"
+                        >
+                            <SidebarMenuButton
+                                as-child
+                                :is-active="isCurrentOrParentUrl(item.href)"
+                                :tooltip="item.title"
+                            >
+                                <Link :href="item.href" prefetch="hover">
+                                    <component :is="item.icon" />
+                                    <span>{{ item.title }}</span>
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarGroupContent>
+            </SidebarGroup>
+            <NavUser />
         </SidebarFooter>
     </Sidebar>
     <slot />

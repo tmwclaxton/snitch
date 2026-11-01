@@ -15,7 +15,7 @@ defineOptions({
                 www.snitchsocial.net.
             </p>
 
-            <h2>
+            <h2 class="snitch-display text-xl text-snitch-ink">
                 Essential cookies
             </h2>
             <p>
@@ -24,7 +24,7 @@ defineOptions({
                 securely.
             </p>
 
-            <h2>
+            <h2 class="snitch-display text-xl text-snitch-ink">
                 Preference cookies
             </h2>
             <p>
@@ -33,7 +33,7 @@ defineOptions({
                 consistent between visits.
             </p>
 
-            <h2>
+            <h2 class="snitch-display text-xl text-snitch-ink">
                 Payments
             </h2>
             <p>
@@ -43,7 +43,7 @@ defineOptions({
                 site.
             </p>
 
-                <h2>
+                <h2 class="snitch-display text-xl text-snitch-ink">
                 Analytics
             </h2>
             <p>
@@ -61,7 +61,7 @@ defineOptions({
                 tracker.
             </p>
 
-            <h2>
+            <h2 class="snitch-display text-xl text-snitch-ink">
                 Referral attribution
             </h2>
             <p>
@@ -74,7 +74,7 @@ defineOptions({
                 tracking.
             </p>
 
-            <h2>
+            <h2 class="snitch-display text-xl text-snitch-ink">
                 Managing cookies
             </h2>
             <p>

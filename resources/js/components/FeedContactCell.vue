@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { AlertCircle, Ban, Hourglass } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import type { Component } from 'vue';
 import { show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
 import AnalysisTermChip from '@/components/AnalysisTermChip.vue';
 import type { EmbedConfig } from '@/components/PlatformEmbed.vue';
 import PlatformEmbed from '@/components/PlatformEmbed.vue';
+import { exploreHrefForTerm } from '@/lib/analysisTerms';
 import { metricPairs } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
-import { platformIconSrc } from '@/lib/platforms';
+import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import {
     glanceTermChips,
     postPrimaryTitle,
@@ -29,12 +30,11 @@ type AnalysisGlance = {
 const props = defineProps<{
     post: {
         id: number;
-        platform?: string | null;
+        platform: string;
         type: string;
         url: string | null;
         caption?: string | null;
         media_url: string | null;
-        cover_url?: string | null;
         media_availability?: string | null;
         metrics?: PostMetrics | null;
         embed?: EmbedConfig | null;
@@ -42,96 +42,17 @@ const props = defineProps<{
             id?: number;
             handle: string;
             display_name?: string | null;
-            platform?: string | null;
-        } | null;
-        social_account?: {
-            platform?: string | null;
-            handle?: string | null;
         } | null;
         analysis?: AnalysisGlance | null;
         winner_insight?: { score: number } | null;
     };
     index: number;
     accountHref?: string | null;
-    compact?: boolean;
 }>();
-
-const platform = computed(
-    () =>
-        props.post.platform
-        || props.post.tracked_account?.platform
-        || props.post.social_account?.platform
-        || null,
-);
 
 const frameIndex = computed(() => String(props.index + 1).padStart(2, '0'));
 const metrics = computed(() => metricPairs(props.post.metrics));
 const analysisCompleted = computed(() => props.post.analysis?.status === 'completed');
-const captionExpanded = ref(false);
-
-const captionSource = computed(() => props.post.caption?.trim() || '');
-
-const completedHook = computed(() => {
-    if (!analysisCompleted.value) {
-        return null;
-    }
-
-    return props.post.analysis?.hook?.trim() || null;
-});
-
-const completedConcept = computed(() => {
-    if (!analysisCompleted.value) {
-        return null;
-    }
-
-    return props.post.analysis?.concept?.trim() || null;
-});
-
-const hookLine = computed(() => {
-    if (!props.post.caption?.trim() || !completedHook.value) {
-        return null;
-    }
-
-    // Hide seed / OCR junk (e.g. a lone "h") from the glance row.
-    const meaningful = completedHook.value.replace(/[^a-z0-9]/gi, '');
-
-    if (meaningful.length < 2) {
-        return null;
-    }
-
-    return completedHook.value;
-});
-
-const displayCaption = computed(() => {
-    if (captionSource.value) {
-        return captionSource.value;
-    }
-
-    // Full hook/concept - never truncate with ellipsis.
-    return postPrimaryTitle({
-        caption: null,
-        hook: completedHook.value,
-        concept: completedConcept.value,
-        type: props.post.type,
-        maxLength: Number.POSITIVE_INFINITY,
-    });
-});
-
-const captionNeedsToggle = computed(() => {
-    const caption = displayCaption.value;
-    const hook = hookLine.value ?? '';
-    const text = [caption, hook].filter(Boolean).join('\n');
-
-    if (!text) {
-        return false;
-    }
-
-    return text.length > 140 || text.split(/\n/).length > 3;
-});
-
-const showHookLine = computed(
-    () => Boolean(hookLine.value) && !props.compact && (captionExpanded.value || !captionNeedsToggle.value),
-);
 
 const tags = computed(() => {
     if (!analysisCompleted.value) {
@@ -170,6 +91,41 @@ const statusStamp = computed((): { label: string; icon: Component } | null => {
     return null;
 });
 
+const completedHook = computed(() => {
+    if (!analysisCompleted.value) {
+        return null;
+    }
+
+    return props.post.analysis?.hook?.trim() || null;
+});
+
+const completedConcept = computed(() => {
+    if (!analysisCompleted.value) {
+        return null;
+    }
+
+    return props.post.analysis?.concept?.trim() || null;
+});
+
+const primaryTitle = computed(() =>
+    postPrimaryTitle({
+        caption: props.post.caption,
+        hook: completedHook.value,
+        concept: completedConcept.value,
+        type: props.post.type,
+        maxLength: 72,
+    }),
+);
+
+const hookLine = computed(() => {
+    // Caption owns the primary line when present; otherwise hook/concept is the title.
+    if (!props.post.caption?.trim() || !completedHook.value) {
+        return null;
+    }
+
+    return completedHook.value;
+});
+
 const winnerScore = computed(() => {
     const score = props.post.winner_insight?.score;
 
@@ -179,27 +135,15 @@ const winnerScore = computed(() => {
 
     return score.toFixed(1);
 });
-
-function toggleCaption(event: Event): void {
-    event.preventDefault();
-    event.stopPropagation();
-    captionExpanded.value = !captionExpanded.value;
-}
 </script>
 
 <template>
     <article class="snitch-contact-cell group">
-        <Link
-            :href="feedShow.url(post.id)"
-            class="snitch-contact-cell-hit"
-        >
-            <span class="sr-only">{{ displayCaption }}</span>
-        </Link>
         <header class="snitch-contact-cell-header">
             <span class="snitch-contact-cell-index">{{ frameIndex }}</span>
             <span class="snitch-contact-cell-platform">
                 <img
-                    :src="platformIconSrc(platform ?? '')"
+                    :src="platformIconSrc(post.platform)"
                     alt=""
                     class="snitch-platform-logo"
                     width="14"
@@ -208,7 +152,7 @@ function toggleCaption(event: Event): void {
                     decoding="async"
                 >
                 <span class="snitch-contact-cell-platform-text">
-                    {{ postTypeLabel(post.type) }}
+                    {{ platformLabel(post.platform) }} · {{ postTypeLabel(post.type) }}
                 </span>
             </span>
             <span
@@ -223,36 +167,22 @@ function toggleCaption(event: Event): void {
             <div class="snitch-contact-cell-frame">
                 <PlatformEmbed
                     :embed="post.embed"
-                    :cover-url="post.cover_url"
+                    :media-url="post.media_url"
                     :post-url="post.url"
-                    :platform="platform ?? undefined"
+                    :platform="post.platform"
                     compact
                 />
             </div>
         </div>
         <div class="snitch-contact-cell-body">
-            <div class="min-w-0">
-                <p
-                    class="snitch-glance-title whitespace-pre-wrap break-words"
-                    :class="!captionExpanded && captionNeedsToggle ? 'snitch-glance-collapsed' : ''"
-                >
-                    {{ displayCaption }}
+            <Link
+                :href="feedShow.url(post.id)"
+                class="snitch-contact-cell-body-link"
+            >
+                <p class="snitch-glance-title line-clamp-2">
+                    {{ primaryTitle }}
                 </p>
-                <p
-                    v-if="showHookLine"
-                    class="snitch-glance-hook whitespace-pre-wrap break-words"
-                >
-                    {{ hookLine }}
-                </p>
-                <button
-                    v-if="captionNeedsToggle"
-                    type="button"
-                    class="relative z-10 mt-0.5 text-sm font-medium text-snitch-ink/55 underline-offset-2 hover:text-snitch-ink hover:underline"
-                    @click="toggleCaption"
-                >
-                    {{ captionExpanded ? 'Show less' : 'Show more' }}
-                </button>
-            </div>
+            </Link>
             <ul
                 v-if="metrics.length"
                 class="snitch-glance-metrics"
@@ -261,19 +191,19 @@ function toggleCaption(event: Event): void {
                     v-for="metric in metrics"
                     :key="metric.key"
                     class="snitch-glance-metric"
-                    :title="metric.value === 'hidden' ? 'Like count hidden on Instagram' : `${metric.value} ${metric.label}`"
                 >
-                    <template v-if="metric.value === 'hidden'">
-                        <span class="snitch-glance-metric-value text-snitch-ink/45">likes hidden</span>
-                    </template>
-                    <template v-else>
-                        <span class="snitch-glance-metric-value tabular-nums">{{ metric.value }}</span>
-                        <span class="snitch-glance-metric-label">{{ metric.label }}</span>
-                    </template>
+                    <span class="snitch-glance-metric-value tabular-nums">{{ metric.value }}</span>
+                    <span class="snitch-glance-metric-label">{{ metric.label }}</span>
                 </li>
             </ul>
             <p
-                v-if="statusStamp"
+                v-if="hookLine"
+                class="snitch-glance-hook line-clamp-2"
+            >
+                {{ hookLine }}
+            </p>
+            <p
+                v-else-if="statusStamp"
                 class="snitch-glance-status"
             >
                 <component
@@ -309,6 +239,7 @@ function toggleCaption(event: Event): void {
                         :dimension="tag.dimension"
                         :section="tag.section"
                         :slug="tag.slug"
+                        :href="exploreHrefForTerm(tag)"
                     />
                 </div>
             </div>

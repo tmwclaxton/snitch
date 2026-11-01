@@ -25,8 +25,8 @@ class DashboardQuestionSectionsTest extends TestCase
 
         $this->assertStringContainsString("title: 'Executive Brief'", $sidebar);
         $this->assertStringContainsString("title: 'Chat'", $sidebar);
-        $this->assertStringContainsString("title: 'Competitors'", $sidebar);
-        $this->assertStringContainsString("title: 'Connect your AI'", $sidebar);
+        $this->assertStringContainsString("title: 'Snitches'", $sidebar);
+        $this->assertStringContainsString("title: 'MCP'", $sidebar);
         $this->assertStringNotContainsString("title: 'Canvas'", $sidebar);
         $this->assertStringNotContainsString("title: 'What should we post?'", $sidebar);
         $this->assertStringNotContainsString("title: 'Vote on features'", $sidebar);

@@ -3,10 +3,6 @@ import PublicFooter from '@/components/marketing/PublicFooter.vue';
 import PublicNav from '@/components/marketing/PublicNav.vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
 
-/**
- * Public pages follow the same light and dark appearance as the app.
- * Snitch paper and ink tokens flip with the `dark` class on the document.
- */
 withDefaults(
     defineProps<{
         minimal?: boolean;
@@ -18,8 +14,9 @@ withDefaults(
 </script>
 
 <template>
-    <div class="snitch-public-shell relative min-h-screen w-full bg-snitch-paper text-snitch-ink">
+    <div class="snitch-surface relative min-h-screen w-full">
         <SeoHead />
+        <div class="snitch-grain" aria-hidden="true" />
         <div class="relative z-10 flex min-h-screen w-full flex-col">
             <PublicNav :minimal="minimal" />
             <main class="w-full flex-1">

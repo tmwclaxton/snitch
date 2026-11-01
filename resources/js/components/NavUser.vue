@@ -10,21 +10,14 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    useSidebar,
 } from '@/components/ui/sidebar';
 import UserInfo from '@/components/UserInfo.vue';
 import UserMenuContent from '@/components/UserMenuContent.vue';
 
-withDefaults(
-    defineProps<{
-        compact?: boolean;
-    }>(),
-    {
-        compact: false,
-    },
-);
-
 const page = usePage();
 const user = page.props.auth?.user ?? null;
+const { isMobile, state } = useSidebar();
 </script>
 
 <template>
@@ -35,19 +28,23 @@ const user = page.props.auth?.user ?? null;
                     <SidebarMenuButton
                         size="lg"
                         class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                        :class="compact ? 'h-10' : 'h-12'"
                         data-test="sidebar-menu-button"
                     >
-                        <UserInfo :user="user" />
+                        <UserInfo :user="user" :show-email="true" />
                         <ChevronsUpDown class="ml-auto size-4" />
                     </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                     class="w-(--reka-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-                    side="right"
+                    :side="
+                        isMobile
+                            ? 'bottom'
+                            : state === 'collapsed'
+                              ? 'left'
+                              : 'bottom'
+                    "
                     align="end"
-                    :side-offset="12"
-                    :collision-padding="16"
+                    :side-offset="4"
                 >
                     <UserMenuContent :user="user" />
                 </DropdownMenuContent>

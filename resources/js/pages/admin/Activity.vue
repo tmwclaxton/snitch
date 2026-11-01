@@ -97,7 +97,7 @@ function typeLabel(type: string): string {
         <header class="flex flex-wrap items-end justify-between gap-4">
             <div>
                 <p class="snitch-ink-label">Internal</p>
-                <h1 class="snitch-hero-display text-3xl text-snitch-ink">Platform <span class="snitch-highlight">activity</span></h1>
+                <h1 class="font-display text-3xl text-snitch-ink">Platform activity</h1>
                 <p class="mt-1 max-w-xl text-sm text-snitch-ink/65">
                     Signups, ledger entries, MCP calls, and analyses from existing first-party tables.
                     {{ from }} → {{ to }}.
@@ -152,8 +152,6 @@ function typeLabel(type: string): string {
                 <WeeklyVolumeChart
                     :weeks="signupsSeries"
                     title="Signups"
-                    y-axis-label="Users"
-                    :period-grain="grain"
                     :subtitle="`${signupsSeries.reduce((sum, row) => sum + row.count, 0)} · ${periodLabel}`"
                     :dense-labels="grain === 'month' || grain === 'week'"
                 />
@@ -162,8 +160,6 @@ function typeLabel(type: string): string {
                 <WeeklyVolumeChart
                     :weeks="ledgerSeries"
                     title="Ledger entries"
-                    y-axis-label="Entries"
-                    :period-grain="grain"
                     :subtitle="`${ledgerSeries.reduce((sum, row) => sum + row.count, 0)} · ${periodLabel}`"
                     :dense-labels="grain === 'month' || grain === 'week'"
                 />
@@ -172,8 +168,6 @@ function typeLabel(type: string): string {
                 <WeeklyVolumeChart
                     :weeks="mcpSeries"
                     title="MCP tool calls"
-                    y-axis-label="Calls"
-                    :period-grain="grain"
                     :subtitle="`${mcpSeries.reduce((sum, row) => sum + row.count, 0)} · ${periodLabel}`"
                     :dense-labels="grain === 'month' || grain === 'week'"
                 />
@@ -182,8 +176,6 @@ function typeLabel(type: string): string {
                 <WeeklyVolumeChart
                     :weeks="analysesSeries"
                     title="Post analyses"
-                    y-axis-label="Analyses"
-                    :period-grain="grain"
                     :subtitle="`${analysesSeries.reduce((sum, row) => sum + row.count, 0)} · ${periodLabel}`"
                     :dense-labels="grain === 'month' || grain === 'week'"
                 />
@@ -228,7 +220,7 @@ function typeLabel(type: string): string {
                                 >
                                     {{ row.user_email || `#${row.user_id}` }}
                                 </Link>
-                                <span v-else class="text-snitch-ink/45">System</span>
+                                <span v-else class="text-snitch-ink/45">-</span>
                             </td>
                         </tr>
                         <tr v-if="!recentEvents.length">

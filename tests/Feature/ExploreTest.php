@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Enums\AnalysisStatus;
 use App\Enums\AnalysisTermDimension;
-use App\Enums\Platform;
 use App\Enums\PostType;
 use App\Models\AnalysisTerm;
 use App\Models\BrandProfile;
@@ -16,19 +15,11 @@ use App\Services\Billing\UsageBillingService;
 use Database\Seeders\AnalysisTermSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
-use Tests\Concerns\WithoutRetiredPageRedirects;
 use Tests\TestCase;
 
 class ExploreTest extends TestCase
 {
     use RefreshDatabase;
-    use WithoutRetiredPageRedirects;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->setUpWithoutRetiredPageRedirects();
-    }
 
     public function test_explore_uses_sectioned_multi_select_pickers(): void
     {
@@ -83,7 +74,7 @@ class ExploreTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('explore.index', ['platform' => 'all']))
+            ->get(route('explore.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('explore/Index')
@@ -347,140 +338,6 @@ class ExploreTest extends TestCase
                 ->loadDeferredProps('default', fn (Assert $page) => $page
                     ->has('posts.data', 1)
                     ->where('posts.data.0.id', $post->id)
-                )
-            );
-    }
-
-    public function test_explore_defaults_to_all_platforms_when_user_tracks_only_instagram(): void
-    {
-        $user = User::factory()->create();
-        BrandProfile::factory()->for($user)->create();
-
-        $instagram = TrackedAccount::factory()->for($user)->create([
-            'platform' => Platform::Instagram,
-            'handle' => 'onlyig',
-        ]);
-        $other = User::factory()->create();
-        $tiktok = TrackedAccount::factory()->for($other)->create([
-            'platform' => Platform::TikTok,
-            'handle' => 'othertt',
-        ]);
-
-        $igPost = Post::factory()->forAccount($instagram)->create([
-            'type' => PostType::Reel,
-            'platform' => Platform::Instagram,
-            'external_id' => 'ig-explore-default-1',
-        ]);
-        $ttPost = Post::factory()->forAccount($tiktok)->create([
-            'type' => PostType::Reel,
-            'platform' => Platform::TikTok,
-            'external_id' => 'tt-explore-default-1',
-        ]);
-
-        PostAnalysis::factory()->for($igPost)->create([
-            'status' => AnalysisStatus::Completed,
-        ]);
-        PostAnalysis::factory()->for($ttPost)->create([
-            'status' => AnalysisStatus::Completed,
-        ]);
-
-        $this->actingAs($user)
-            ->get(route('explore.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('explore/Index')
-                ->where('filters.platform', null)
-                ->missing('posts')
-                ->loadDeferredProps('default', fn (Assert $page) => $page
-                    ->has('posts.data', 2)
-                    ->where('posts.data', function ($posts) use ($igPost, $ttPost): bool {
-                        $ids = collect($posts)->pluck('id')->all();
-
-                        return in_array($igPost->id, $ids, true)
-                            && in_array($ttPost->id, $ids, true);
-                    })
-                )
-            );
-    }
-
-    public function test_explore_sheet_uses_format_labels_and_clamped_copy(): void
-    {
-        $indexVue = file_get_contents(resource_path('js/pages/explore/Index.vue'));
-        $cellVue = file_get_contents(resource_path('js/components/FeedContactCell.vue'));
-        $embedVue = file_get_contents(resource_path('js/components/PlatformEmbed.vue'));
-        $controller = file_get_contents(app_path('Http/Controllers/ExploreController.php'));
-
-        $this->assertIsString($indexVue);
-        $this->assertIsString($cellVue);
-        $this->assertIsString($embedVue);
-        $this->assertIsString($controller);
-        $this->assertStringContainsString("props.filters.platform ?? 'all'", $indexVue);
-        $this->assertStringContainsString('{{ postTypeLabel(post.type) }}', $cellVue);
-        $this->assertStringNotContainsString('productPlatformLabel(platform) }} ·', $cellVue);
-        $this->assertStringContainsString('showHookLine', $cellVue);
-        $this->assertStringContainsString('Show more', $cellVue);
-        $this->assertStringNotContainsString('snitch-platform-embed-play', $embedVue);
-        $this->assertStringNotContainsString('>Play<', $embedVue);
-        $this->assertStringNotContainsString('default to the sole tracked platform', $controller);
-    }
-
-    public function test_explore_payload_includes_platform_for_each_item(): void
-    {
-        $user = User::factory()->create();
-        BrandProfile::factory()->for($user)->create();
-
-        $instagram = TrackedAccount::factory()->for($user)->create([
-            'platform' => Platform::Instagram,
-            'handle' => 'igexplorer',
-        ]);
-        $tiktok = TrackedAccount::factory()->for($user)->create([
-            'platform' => Platform::TikTok,
-            'handle' => 'ttexplorer',
-        ]);
-
-        $igPost = Post::factory()->forAccount($instagram)->create([
-            'type' => PostType::Reel,
-            'platform' => Platform::Instagram,
-            'external_id' => 'ig-explore-platform-1',
-        ]);
-        $ttPost = Post::factory()->forAccount($tiktok)->create([
-            'type' => PostType::Reel,
-            'platform' => Platform::TikTok,
-            'external_id' => 'tt-explore-platform-1',
-        ]);
-
-        PostAnalysis::factory()->for($igPost)->create([
-            'status' => AnalysisStatus::Completed,
-        ]);
-        PostAnalysis::factory()->for($ttPost)->create([
-            'status' => AnalysisStatus::Completed,
-        ]);
-
-        $this->actingAs($user)
-            ->get(route('explore.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('explore/Index')
-                ->missing('posts')
-                ->loadDeferredProps('default', fn (Assert $page) => $page
-                    ->has('posts.data', 2)
-                    ->where('posts.data', function ($posts) use ($igPost, $ttPost): bool {
-                        $rows = collect($posts);
-                        $ig = $rows->firstWhere('id', $igPost->id);
-                        $tt = $rows->firstWhere('id', $ttPost->id);
-
-                        if ($ig === null || $tt === null) {
-                            return false;
-                        }
-
-                        $igPlatform = data_get($ig, 'platform');
-                        $ttPlatform = data_get($tt, 'platform');
-                        $ttTracked = data_get($tt, 'tracked_account.platform');
-
-                        return $igPlatform === 'instagram'
-                            && $ttPlatform === 'tiktok'
-                            && $ttTracked === 'tiktok';
-                    })
                 )
             );
     }

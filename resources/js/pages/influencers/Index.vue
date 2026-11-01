@@ -29,7 +29,6 @@ import RemoveCompetitorModal from '@/components/RemoveCompetitorModal.vue';
 import SnitchAvatar from '@/components/SnitchAvatar.vue';
 import SnitchSkeleton from '@/components/SnitchSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { csrfHeaders } from '@/lib/csrf';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import { useToastStore } from '@/stores/toastStore';
 
@@ -269,12 +268,18 @@ function formatFollowers(value: number | null | undefined): string {
     return String(value);
 }
 
+function csrfToken(): string {
+    return (
+        (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? ''
+    );
+}
+
 function jsonHeaders(): Record<string, string> {
     return {
         Accept: 'application/json',
         'Content-Type': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
-        ...csrfHeaders(),
+        'X-CSRF-TOKEN': csrfToken(),
     };
 }
 
@@ -742,18 +747,18 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full min-w-0 px-2 py-6 sm:px-3 sm:py-8">
+    <div class="snitch-app-shell relative min-h-full min-w-0 px-5 py-6 sm:px-8 sm:py-8">
         <Head title="Find Influencers" />
         <div class="snitch-grain" aria-hidden="true" />
 
         <div
-            class="snitch-app-canvas min-w-0"
+            class="relative z-10 mx-auto w-full min-w-0 max-w-6xl"
             :class="{ 'pb-28': showAnyBulkBar }"
         >
             <header>
                 <p class="snitch-ink-label">Brand deals</p>
-                <h1 class="snitch-hero-display mt-2 text-3xl text-snitch-ink sm:text-4xl">
-                    Find <span class="snitch-highlight">influencers</span>
+                <h1 class="snitch-display mt-2 text-3xl text-snitch-ink sm:text-4xl">
+                    Find influencers
                 </h1>
                 <p v-if="brand?.name" class="snitch-annotation mt-2 text-xl text-snitch-ink/80">
                     For {{ brand.name }}
@@ -914,7 +919,7 @@ onUnmounted(() => {
                         class="snitch-cutout flex cursor-pointer flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-start sm:justify-between"
                         :class="
                             selectedReview[suggestionKey(item)]
-                                ? 'ring-2 ring-snitch-ink/40 dark:ring-snitch-spot/70'
+                                ? 'ring-2 ring-snitch-spot/70'
                                 : ''
                         "
                         @click="toggleReview(item)"
@@ -1039,7 +1044,7 @@ onUnmounted(() => {
                         v-for="account in keptAccountsList"
                         :key="account.id"
                         class="snitch-cutout flex cursor-pointer flex-col gap-3 bg-snitch-paper/70 px-5 py-3.5 sm:flex-row sm:items-start sm:justify-between"
-                        :class="selectedKept[account.id] ? 'ring-2 ring-snitch-ink/40 dark:ring-snitch-spot/70' : ''"
+                        :class="selectedKept[account.id] ? 'ring-2 ring-snitch-spot/70' : ''"
                         @click="toggleKept(account)"
                     >
                         <div class="flex min-w-0 items-start gap-3">

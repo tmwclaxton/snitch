@@ -40,8 +40,8 @@ class AdminReferralTest extends TestCase
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
 
         $this->assertIsString($sidebar);
-        $this->assertStringNotContainsString('Referrals', $sidebar);
-        $this->assertStringNotContainsString('admin/referrals', $sidebar);
+        $this->assertStringContainsString('Referrals', $sidebar);
+        $this->assertStringContainsString('admin/referrals', $sidebar);
 
         $this->actingAs($admin)->get(route('admin.referrals.index'))->assertNotFound();
         $this->actingAs($admin)->post(route('admin.referrals.store'), [

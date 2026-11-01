@@ -269,7 +269,7 @@ function countBarY(count: number, max: number): number {
         <header class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <p class="snitch-ink-label">Referral</p>
-                <h1 class="snitch-hero-display text-3xl text-snitch-ink">{{ referral.name }}</h1>
+                <h1 class="font-display text-3xl text-snitch-ink">{{ referral.name }}</h1>
                 <p class="mt-1 font-mono text-sm text-snitch-ink/70">{{ referral.code }}</p>
                 <p class="mt-2 max-w-xl text-sm text-snitch-ink/65">
                     {{ from }} → {{ to }}. First-touch attribution only.
@@ -369,8 +369,6 @@ function countBarY(count: number, max: number): number {
             <WeeklyVolumeChart
                 :weeks="signupsSeries"
                 title="Referred signups"
-                y-axis-label="Users"
-                :period-grain="grain"
                 :subtitle="`${signupsSeries.reduce((sum, row) => sum + row.count, 0)} · ${periodLabel}`"
                 :dense-labels="grain === 'month' || grain === 'week'"
             />
@@ -600,7 +598,7 @@ function countBarY(count: number, max: number): number {
                     :key="page"
                     :href="detailHref({ page: page === 1 ? undefined : page })"
                     class="px-2 py-1 text-xs tabular-nums"
-                    :class="page === users.current_page ? 'snitch-choice-active px-2 py-1' : 'text-snitch-ink/60 hover:text-snitch-ink'"
+                    :class="page === users.current_page ? 'bg-snitch-spot/30 text-snitch-ink' : 'text-snitch-ink/60 hover:text-snitch-ink'"
                     preserve-scroll
                 >
                     {{ page }}

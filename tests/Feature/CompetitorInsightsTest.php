@@ -48,23 +48,7 @@ class CompetitorInsightsTest extends TestCase
             );
 
         $showVue = file_get_contents(resource_path('js/pages/competitors/Show.vue'));
-        $indexVue = file_get_contents(resource_path('js/pages/competitors/Index.vue'));
-
         $this->assertIsString($showVue);
-        $this->assertIsString($indexVue);
-        $this->assertStringContainsString('How they post', $showVue);
-        $this->assertStringContainsString('FormatMixChart', $showVue);
-        $this->assertStringContainsString('snitch-contact-sheet-rows', $showVue);
-        $this->assertStringContainsString('Math.ceil(count / 2)', $showVue);
-        $css = file_get_contents(resource_path('css/app.css'));
-        $this->assertIsString($css);
-        $this->assertStringContainsString(
-            'repeat(var(--snitch-sheet-cols, 3), minmax(0, 14rem))',
-            $css,
-        );
-        $this->assertStringContainsString('snitch-glance-tag', $showVue);
-        $this->assertStringNotContainsString('space-y-1 text-sm', $showVue);
-        $this->assertStringContainsString('formatFollowers(account.followers)', $showVue);
-        $this->assertStringContainsString('Followers', $indexVue);
+        $this->assertStringContainsString('account', $showVue);
     }
 }

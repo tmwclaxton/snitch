@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { formatAppDate } from '@/lib/dates';
 
 export type HeatmapDay = {
     date: string;
@@ -38,7 +37,8 @@ const monthLabels = computed(() => {
             return;
         }
 
-        const label = formatAppDate(`${first.date}T12:00:00`, { month: 'short' }) ?? '';
+        const date = new Date(`${first.date}T12:00:00`);
+        const label = date.toLocaleDateString(undefined, { month: 'short' });
 
         if (label !== lastMonth) {
             labels.push({ weekIndex, label });
@@ -81,11 +81,12 @@ function levelFor(count: number): number {
 }
 
 function dayTitle(day: HeatmapDay): string {
-    const label = formatAppDate(`${day.date}T12:00:00`, {
+    const date = new Date(`${day.date}T12:00:00`);
+    const label = date.toLocaleDateString(undefined, {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
-    }) ?? day.date;
+    });
 
     if (day.count === 0) {
         return `${label}: no posts`;
@@ -152,13 +153,13 @@ function isFuture(day: HeatmapDay): boolean {
         </div>
 
         <div class="snitch-heatmap-legend" aria-hidden="true">
-            <span class="text-xs uppercase tracking-wide text-snitch-ink/45">Less</span>
+            <span class="text-[10px] uppercase tracking-wide text-snitch-ink/45">Less</span>
             <span class="snitch-heatmap-cell level-0" />
             <span class="snitch-heatmap-cell level-1" />
             <span class="snitch-heatmap-cell level-2" />
             <span class="snitch-heatmap-cell level-3" />
             <span class="snitch-heatmap-cell level-4" />
-            <span class="text-xs uppercase tracking-wide text-snitch-ink/45">More</span>
+            <span class="text-[10px] uppercase tracking-wide text-snitch-ink/45">More</span>
         </div>
     </div>
 </template>

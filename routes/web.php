@@ -6,7 +6,6 @@ use App\Http\Controllers\Admin\AdminReferralController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AutomationRunController;
 use App\Http\Controllers\Admin\CuratorTokenController;
-use App\Http\Controllers\AdsController;
 use App\Http\Controllers\AgentsController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\BacklogController;
@@ -17,6 +16,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CompetitorController;
 use App\Http\Controllers\DailyBriefController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExecutiveBriefController;
 use App\Http\Controllers\ExploreController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\GrowthController;
@@ -32,7 +32,6 @@ use App\Http\Controllers\WinnerController;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureBrandProfile;
 use App\Http\Middleware\EnsureProductAccess;
-use App\Http\Middleware\RedirectRetiredProductPages;
 use App\Http\Middleware\ValidateSessionWithWorkOS;
 use App\Models\User;
 use App\Support\Seo;
@@ -60,7 +59,7 @@ Route::inertia('/cookies', 'marketing/Cookies')->name('cookies');
 // Special Calendly landing page (shared PublicLayout chrome; stays out of the sitemap).
 Route::inertia('/beta', 'marketing/Beta')->name('beta');
 Route::view('/pitch', 'pitch')->name('pitch');
-Route::get('/ads', fn () => redirect('/executive-brief', 301))->name('ads.legacy');
+Route::get('/ads', fn () => redirect('/dashboard', 301))->name('ads.legacy');
 
 Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
 Route::get('/analytics.json', [AnalyticsController::class, 'json'])->name('analytics.json');
@@ -135,61 +134,58 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
     });
 
     Route::middleware([EnsureBrandProfile::class, EnsureProductAccess::class])->group(function () {
-        Route::get('executive-brief', DashboardController::class)->name('dashboard');
-        Route::permanentRedirect('dashboard', '/executive-brief');
+        Route::get('dashboard', DashboardController::class)->name('dashboard');
+        Route::get('executive-brief', ExecutiveBriefController::class)->name('executive-brief.index');
         Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
         Route::post('/chat/stream', [ChatController::class, 'stream'])
             ->middleware('throttle:60,1')
             ->name('chat.stream');
 
-        Route::get('/tracking', [CompetitorController::class, 'index'])->name('competitors.index');
-        Route::post('/tracking', [CompetitorController::class, 'store'])->name('competitors.store');
-        Route::post('/tracking/suggest', [CompetitorController::class, 'suggest'])
+        Route::get('/snitches', [CompetitorController::class, 'index'])->name('competitors.index');
+        Route::post('/snitches', [CompetitorController::class, 'store'])->name('competitors.store');
+        Route::post('/snitches/suggest', [CompetitorController::class, 'suggest'])
             ->middleware('throttle:10,1')
             ->name('competitors.suggest');
-        Route::get('/tracking/suggest/{suggestId}', [CompetitorController::class, 'suggestStatus'])
+        Route::get('/snitches/suggest/{suggestId}', [CompetitorController::class, 'suggestStatus'])
             ->name('competitors.suggest.status');
-        Route::post('/tracking/brief', [CompetitorController::class, 'generateBrief'])
+        Route::post('/snitches/brief', [CompetitorController::class, 'generateBrief'])
             ->middleware('throttle:20,1')
             ->name('competitors.brief');
-        Route::patch('/tracking/brief', [CompetitorController::class, 'updateBrief'])
+        Route::patch('/snitches/brief', [CompetitorController::class, 'updateBrief'])
             ->name('competitors.brief.update');
-        Route::post('/tracking/confirm-suggestions', [CompetitorController::class, 'confirmSuggestions'])->name('competitors.confirm-suggestions');
-        Route::post('/tracking/dismiss-suggestions', [CompetitorController::class, 'dismissSuggestions'])->name('competitors.dismiss-suggestions');
-        Route::post('/tracking/batch-sync', [CompetitorController::class, 'batchSync'])->name('competitors.batch-sync');
-        Route::post('/tracking/batch-destroy', [CompetitorController::class, 'batchDestroy'])->name('competitors.batch-destroy');
-        Route::get('/tracking/{trackedAccount}', [CompetitorController::class, 'show'])->name('competitors.show');
-        Route::delete('/tracking/{trackedAccount}', [CompetitorController::class, 'destroy'])->name('competitors.destroy');
-        Route::post('/tracking/{trackedAccount}/sync', [CompetitorController::class, 'sync'])->name('competitors.sync');
-        Route::post('/tracking/{trackedAccount}/own', [CompetitorController::class, 'markOwn'])->name('competitors.own');
-        Route::delete('/tracking/{trackedAccount}/own', [CompetitorController::class, 'unmarkOwn'])->name('competitors.unown');
+        Route::post('/snitches/confirm-suggestions', [CompetitorController::class, 'confirmSuggestions'])->name('competitors.confirm-suggestions');
+        Route::post('/snitches/dismiss-suggestions', [CompetitorController::class, 'dismissSuggestions'])->name('competitors.dismiss-suggestions');
+        Route::post('/snitches/batch-sync', [CompetitorController::class, 'batchSync'])->name('competitors.batch-sync');
+        Route::post('/snitches/batch-destroy', [CompetitorController::class, 'batchDestroy'])->name('competitors.batch-destroy');
+        Route::get('/snitches/{trackedAccount}', [CompetitorController::class, 'show'])->name('competitors.show');
+        Route::delete('/snitches/{trackedAccount}', [CompetitorController::class, 'destroy'])->name('competitors.destroy');
+        Route::post('/snitches/{trackedAccount}/sync', [CompetitorController::class, 'sync'])->name('competitors.sync');
+        Route::post('/snitches/{trackedAccount}/own', [CompetitorController::class, 'markOwn'])->name('competitors.own');
+        Route::delete('/snitches/{trackedAccount}/own', [CompetitorController::class, 'unmarkOwn'])->name('competitors.unown');
 
-        Route::permanentRedirect('/snitches', '/tracking');
-        Route::get('/snitches/{path}', function (string $path) {
-            return redirect('/tracking/'.$path, 301);
+        Route::permanentRedirect('/tracking', '/snitches');
+        Route::get('/tracking/{path}', function (string $path) {
+            return redirect('/snitches/'.$path, 301);
         })->where('path', '.*');
 
-        Route::permanentRedirect('/competitors', '/tracking');
+        Route::permanentRedirect('/competitors', '/snitches');
         Route::get('/competitors/{path}', function (string $path) {
-            return redirect('/tracking/'.$path, 301);
+            return redirect('/snitches/'.$path, 301);
         })->where('path', '.*')->name('competitors.legacy-redirect');
 
-        // Controllers stay wired for Wayfinder + rollback; safe GETs redirect to the canvas.
-        Route::middleware(RedirectRetiredProductPages::class)->group(function () {
-            Route::get('/ad-library', [AdsController::class, 'index'])->name('ads.index');
-            Route::get('/influencers', [InfluencerController::class, 'index'])->name('influencers.index');
-            Route::get('/feed', [FeedController::class, 'index'])->name('feed.index');
-            Route::get('/feed/{post}', [FeedController::class, 'show'])->name('feed.show');
-            Route::get('/backlog', [BacklogController::class, 'index'])->name('backlog.index');
-            Route::get('/explore', [ExploreController::class, 'index'])->name('explore.index');
-            Route::get('/today', [DailyBriefController::class, 'index'])->name('today.index');
-            Route::get('/brief', [BriefController::class, 'index'])->name('brief.index');
-            Route::get('/growth', [GrowthController::class, 'index'])->name('growth.index');
-            Route::get('/growth/report', [MonthlyReportController::class, 'show'])->name('growth.report');
-            Route::get('/growth/report/{report}/pdf', [MonthlyReportController::class, 'pdf'])->name('growth.report.pdf');
-            Route::get('/winners', [WinnerController::class, 'index'])->name('winners.index');
-            Route::get('/brand', [BrandProfileController::class, 'edit'])->name('brand.edit');
-        });
+        Route::get('/ad-library', fn () => redirect('/dashboard', 301))->name('ads.index');
+        Route::get('/influencers', [InfluencerController::class, 'index'])->name('influencers.index');
+        Route::get('/feed', [FeedController::class, 'index'])->name('feed.index');
+        Route::get('/feed/{post}', [FeedController::class, 'show'])->name('feed.show');
+        Route::get('/backlog', [BacklogController::class, 'index'])->name('backlog.index');
+        Route::get('/explore', [ExploreController::class, 'index'])->name('explore.index');
+        Route::get('/today', [DailyBriefController::class, 'index'])->name('today.index');
+        Route::get('/brief', [BriefController::class, 'index'])->name('brief.index');
+        Route::get('/growth', [GrowthController::class, 'index'])->name('growth.index');
+        Route::get('/growth/report', [MonthlyReportController::class, 'show'])->name('growth.report');
+        Route::get('/growth/report/{report}/pdf', [MonthlyReportController::class, 'pdf'])->name('growth.report.pdf');
+        Route::get('/winners', [WinnerController::class, 'index'])->name('winners.index');
+        Route::get('/brand', [BrandProfileController::class, 'edit'])->name('brand.edit');
 
         Route::post('/influencers/brief', [InfluencerController::class, 'generateBrief'])
             ->middleware('throttle:10,1')

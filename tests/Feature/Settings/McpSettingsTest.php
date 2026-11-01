@@ -68,8 +68,6 @@ class McpSettingsTest extends TestCase
 
         $this->assertIsString($settings);
         $this->assertIsString($sidebar);
-        $this->assertStringContainsString("title: 'Connect your AI'", $settings);
-        $this->assertStringContainsString("title: 'Connect your AI'", $sidebar);
-        $this->assertStringNotContainsString("title: 'MCP'", $sidebar);
+        $this->assertStringContainsString("title: 'MCP'", $sidebar);
     }
 }

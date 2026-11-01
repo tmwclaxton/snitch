@@ -14,15 +14,19 @@ export function updateTheme(value: Appearance): void {
         return;
     }
 
-    let dark = value === 'dark';
-
     if (value === 'system') {
-        const mediaQueryList = window.matchMedia('(prefers-color-scheme: dark)');
-        dark = mediaQueryList.matches;
-    }
+        const mediaQueryList = window.matchMedia(
+            '(prefers-color-scheme: dark)',
+        );
+        const systemTheme = mediaQueryList.matches ? 'dark' : 'light';
 
-    document.documentElement.classList.toggle('dark', dark);
-    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        document.documentElement.classList.toggle(
+            'dark',
+            systemTheme === 'dark',
+        );
+    } else {
+        document.documentElement.classList.toggle('dark', value === 'dark');
+    }
 }
 
 const setCookie = (name: string, value: string, days = 365) => {
@@ -62,9 +66,11 @@ export function initializeTheme(): void {
         return;
     }
 
+    // Initialize theme from saved preference or default to system...
     const savedAppearance = getStoredAppearance();
     updateTheme(savedAppearance || 'system');
 
+    // Set up system theme change listener...
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
 }
 
@@ -72,7 +78,9 @@ const appearance = ref<Appearance>('system');
 
 export function useAppearance(): UseAppearanceReturn {
     onMounted(() => {
-        const savedAppearance = localStorage.getItem('appearance') as Appearance | null;
+        const savedAppearance = localStorage.getItem(
+            'appearance',
+        ) as Appearance | null;
 
         if (savedAppearance) {
             appearance.value = savedAppearance;
@@ -82,8 +90,10 @@ export function useAppearance(): UseAppearanceReturn {
     function updateAppearance(value: Appearance) {
         appearance.value = value;
 
+        // Store in localStorage for client-side persistence...
         localStorage.setItem('appearance', value);
 
+        // Store in cookie for SSR...
         setCookie('appearance', value);
 
         updateTheme(value);

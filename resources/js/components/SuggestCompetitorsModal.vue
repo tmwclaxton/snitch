@@ -12,7 +12,6 @@ import {
     DialogDescription,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { csrfHeaders } from '@/lib/csrf';
 import { platformIconSrc, platformLabel } from '@/lib/platforms';
 import { useToastStore } from '@/stores/toastStore';
 
@@ -64,12 +63,18 @@ function setOpen(value: boolean): void {
     emit('update:open', value);
 }
 
+function csrfToken(): string {
+    return (
+        (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? ''
+    );
+}
+
 function jsonHeaders(): Record<string, string> {
     return {
         Accept: 'application/json',
         'Content-Type': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
-        ...csrfHeaders(),
+        'X-CSRF-TOKEN': csrfToken(),
     };
 }
 
@@ -192,7 +197,7 @@ function onKickOff(): void {
                     <div>
                         <DialogTitle class="snitch-display flex items-center gap-2 text-2xl text-snitch-ink">
                             <Sparkles class="size-5 shrink-0 text-snitch-ink/55" aria-hidden="true" />
-                            Suggest accounts
+                            Suggest snitches
                         </DialogTitle>
                         <DialogDescription class="mt-1.5 text-sm text-snitch-ink/65">
                             Steer niche and platforms before we scrape the web for accounts worth tracking.
@@ -235,7 +240,7 @@ function onKickOff(): void {
                             </button>
                         </div>
                         <p class="mt-1.5 text-xs text-snitch-ink/55">
-                            Pick Instagram when you want reel-like posts in the feed.
+                            Pick TikTok / Instagram when you want reel-like posts in the feed.
                         </p>
                     </div>
 
@@ -265,7 +270,7 @@ function onKickOff(): void {
                             v-model="briefText"
                             rows="4"
                             class="snitch-field mt-2 w-full resize-y text-sm"
-                            placeholder="Describe who to track - rivals or creators whose style you want to copy. e.g. social listening SaaS on Instagram."
+                            placeholder="Describe who to track - rivals or creators whose style you want to copy. e.g. social listening SaaS on TikTok and Instagram."
                             :disabled="busy || generatingBrief"
                             @input="scheduleBriefSave"
                         />

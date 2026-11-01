@@ -1,215 +1,667 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
-import { onMounted, onUnmounted, ref } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import { ArrowRight, LayoutGrid, LogIn, UserPlus } from '@lucide/vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
-import { login } from '@/routes';
+import { agents, dashboard, login } from '@/routes';
 
 defineOptions({
     layout: PublicLayout,
 });
 
-const CTA_TEXT = 'Start your 7-day free trial';
+const page = usePage();
+const isAuthenticated = computed(() => Boolean(page.props.auth?.user));
+const primaryCta = computed(() => {
+    if (isAuthenticated.value) {
+        return {
+            href: dashboard(),
+            label: 'Open dashboard',
+        };
+    }
 
-const scrolled = ref(false);
+    return {
+        href: login(),
+        label: 'Get started',
+    };
+});
 
-function onScroll(): void {
-    scrolled.value = window.scrollY > 400;
+/** Hero wall + marquee layers are large; hide until decoded to avoid progressive paint strips. */
+const heroBackdropSources = [
+    '/images/marketing/hero/bg.jpg',
+    '/images/marketing/hero/platforms-back.png',
+    '/images/marketing/hero/platforms-mid.png',
+    '/images/marketing/hero/platforms-front.png',
+] as const;
+
+const heroBackdropReady = ref(false);
+const desktopHeroArt = ref(false);
+const mobileHeroEl = ref<HTMLElement | null>(null);
+
+function preloadHeroImage(src: string): Promise<void> {
+    return new Promise((resolve) => {
+        const image = new Image();
+        image.decoding = 'async';
+        image.onload = () => {
+            if (typeof image.decode === 'function') {
+                void image
+                    .decode()
+                    .then(() => resolve())
+                    .catch(() => resolve());
+
+                return;
+            }
+
+            resolve();
+        };
+        image.onerror = () => resolve();
+        image.src = src;
+    });
+}
+
+/**
+ * Mobile browser chrome makes 100dvh unreliable. Measure once and lock - do
+ * not follow visualViewport/URL-bar changes while scrolling (that resizes the
+ * poster mid-scroll and feels jarring).
+ */
+function measureVisibleViewportHeight(): number {
+    const visualHeight = window.visualViewport?.height;
+    const layoutHeight = window.innerHeight;
+
+    if (typeof visualHeight === 'number' && visualHeight > 0) {
+        return Math.round(Math.min(visualHeight, layoutHeight));
+    }
+
+    return Math.round(layoutHeight);
 }
 
 onMounted(() => {
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
+    const desktopQuery = window.matchMedia('(min-width: 768px)');
+    let lockedMobileHeroHeight = 0;
+    let lastViewportWidth = window.innerWidth;
+
+    const syncDesktopHero = (): void => {
+        if (!desktopQuery.matches) {
+            return;
+        }
+
+        desktopHeroArt.value = true;
+
+        if (heroBackdropReady.value) {
+            return;
+        }
+
+        void Promise.all(
+            heroBackdropSources.map((src) => preloadHeroImage(src)),
+        ).then(() => {
+            heroBackdropReady.value = true;
+        });
+    };
+
+    const applyMobileHeroHeight = (force = false): void => {
+        const el = mobileHeroEl.value;
+
+        if (!el || desktopQuery.matches) {
+            el?.style.removeProperty('--snitch-mobile-hero-height');
+            lockedMobileHeroHeight = 0;
+
+            return;
+        }
+
+        if (!force && lockedMobileHeroHeight > 0) {
+            return;
+        }
+
+        const height = measureVisibleViewportHeight();
+
+        if (height <= 0) {
+            return;
+        }
+
+        lockedMobileHeroHeight = height;
+        el.style.setProperty('--snitch-mobile-hero-height', `${height}px`);
+    };
+
+    const onBreakpointChange = (): void => {
+        applyMobileHeroHeight(true);
+    };
+
+    const onViewportWidthChange = (): void => {
+        const width = window.innerWidth;
+
+        // Ignore height-only resizes from mobile browser chrome show/hide.
+        if (Math.abs(width - lastViewportWidth) < 2) {
+            return;
+        }
+
+        lastViewportWidth = width;
+        applyMobileHeroHeight(true);
+    };
+
+    const onOrientationChange = (): void => {
+        window.setTimeout(() => {
+            lastViewportWidth = window.innerWidth;
+            applyMobileHeroHeight(true);
+        }, 250);
+    };
+
+    syncDesktopHero();
+    applyMobileHeroHeight(true);
+
+    desktopQuery.addEventListener('change', syncDesktopHero);
+    desktopQuery.addEventListener('change', onBreakpointChange);
+    window.addEventListener('resize', onViewportWidthChange);
+    window.addEventListener('orientationchange', onOrientationChange);
+
+    onUnmounted(() => {
+        desktopQuery.removeEventListener('change', syncDesktopHero);
+        desktopQuery.removeEventListener('change', onBreakpointChange);
+        window.removeEventListener('resize', onViewportWidthChange);
+        window.removeEventListener('orientationchange', onOrientationChange);
+        mobileHeroEl.value?.style.removeProperty('--snitch-mobile-hero-height');
+    });
 });
 
-onUnmounted(() => {
-    window.removeEventListener('scroll', onScroll);
-});
+const platforms = [
+    { name: 'TikTok', slug: 'tiktok' },
+    { name: 'Instagram', slug: 'instagram' },
+    { name: 'YouTube', slug: 'youtube' },
+    { name: 'Facebook', slug: 'facebook' },
+    { name: 'LinkedIn', slug: 'linkedin' },
+] as const;
 
-const benefits = [
+const steps = [
     {
-        title: "Know what's working before your competitors do",
-        body: 'See which posts, formats and topics are driving engagement across your market. Every week, without opening Instagram once.',
+        stamp: '01',
+        title: 'Track',
+        copy: 'Add snitch accounts. Snitch pulls recent public posts into one contact sheet.',
     },
     {
-        title: 'Stop guessing when to post',
-        body: 'A heatmap of when competitors actually post, so you know exactly when is working best.',
+        stamp: '02',
+        title: 'Analyse',
+        copy: 'Full-video analysis surfaces the hook, visuals, SFX, and the idea behind each post.',
     },
     {
-        title: 'Spot growth (and decline) early',
-        body: 'Follower trends, posting cadence and engagement. Tracked weekly so shifts in your market surface before they are obvious.',
-    },
-    {
-        title: 'See their ad spend in action',
-        body: 'Track which posts they are boosting, what the creative looks like, and how long each campaign runs before you spend a penny.',
-    },
-];
-
-const faqs = [
-    {
-        q: 'Do I need to connect my Instagram account?',
-        a: 'No. Snitch only reads public Instagram data on the competitors you add. Your own account is never connected, logged into or posted from.',
-    },
-    {
-        q: 'How does the free trial work?',
-        a: 'Start with a 7-day free trial. A card is required to begin, and you can cancel before the trial ends if Snitch is not for you.',
-    },
-    {
-        q: 'How often does the data refresh?',
-        a: 'Every week, automatically. Add a competitor and they will be pulled in the next weekly refresh.',
-    },
-    {
-        q: 'How long does setup take?',
-        a: 'About 60 seconds. Start your 7-day free trial, paste the Instagram handles you want to watch, and you are done. Your first report lands after the next weekly pull.',
+        stamp: '03',
+        title: 'Win',
+        copy: 'Your rules score Winners - posts worth remaking, with notes on how to copy.',
     },
 ];
 </script>
 
 <template>
-    <div class="bg-snitch-caution-ink text-snitch-caution-fog">
-        <Head title="Better social media performance. Without manual research." />
+    <div>
+        <!--
+          Mobile poster hero (below md): vertical riso print with mascot as
+          the visual anchor. Desktop keeps the wall + title-card composition.
+        -->
+        <section
+            ref="mobileHeroEl"
+            class="snitch-hero-mobile relative w-full overflow-hidden md:hidden"
+            aria-label="Snitch"
+        >
+            <div class="absolute inset-0" aria-hidden="true">
+                <div class="snitch-hero-mobile-wash" />
+                <div class="snitch-grain z-[1] opacity-30" />
+            </div>
 
-        <!-- Caution Tape hero band -->
-        <section class="flex min-h-[calc(100svh-3.5rem)] flex-col border-b border-snitch-ink/15 bg-snitch-caution-ink">
-            <div class="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-4 py-10 text-center sm:py-12">
-                <h1 class="snitch-hero-display text-[clamp(2.1rem,5.2vw,4.25rem)] text-snitch-caution-fog">
-                    <span class="block">Better social media</span>
-                    <span class="block">
-                        <span class="bg-snitch-caution-yellow px-1.5 text-snitch-on-spot">performance.</span>
-                    </span>
-                    <span class="mt-2 block text-[clamp(1.35rem,3.2vw,2.35rem)] tracking-wide text-snitch-caution-fog/90">
-                        Without manual research.
-                    </span>
-                </h1>
-                <p class="mx-auto mt-5 max-w-xl text-base text-snitch-caution-fog/80 md:text-lg">
-                    Track your competitors and see the exact gap between you and them.
-                    What's working, what you're missing, delivered instantly.
+            <!-- Floor over mascot: mustard ink band covers the feet. -->
+            <div class="snitch-hero-mobile-stage" aria-hidden="true">
+                <div class="snitch-hero-mobile-floor" />
+                <div class="snitch-hero-mobile-mascot">
+                    <div class="snitch-hero-mobile-mascot-bob origin-bottom">
+                        <div
+                            class="snitch-hero-mobile-mascot-frame relative mx-auto select-none overflow-hidden"
+                        >
+                            <img
+                                src="/images/marketing/hero/mascot-character.png"
+                                alt=""
+                                draggable="false"
+                                class="snitch-hero-mascot-character absolute inset-0 h-full w-full object-contain object-bottom"
+                                width="280"
+                                height="200"
+                                decoding="async"
+                                fetchpriority="high"
+                            />
+                            <img
+                                src="/images/marketing/hero/mascot-binos.png"
+                                alt=""
+                                draggable="false"
+                                class="snitch-hero-mascot-binos absolute left-1/2"
+                                width="196"
+                                height="130"
+                                decoding="async"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="snitch-hero-mobile-copy relative z-10 px-5">
+                <p
+                    class="snitch-display snitch-hero-mobile-wordmark relative text-[clamp(3.2rem,15vw,4.75rem)] leading-[0.8] tracking-[-0.04em] text-snitch-ink"
+                >
+                    <span
+                        class="snitch-hero-wordmark-misreg pointer-events-none absolute inset-0 select-none"
+                        aria-hidden="true"
+                    >Snitch</span>
+                    <span class="relative">Snitch</span>
                 </p>
-                <div class="mt-8 flex flex-wrap items-center justify-center">
+                <h1
+                    class="snitch-display mt-3 max-w-[16rem] text-[1.15rem] leading-[1.25] tracking-[-0.012em] text-pretty text-snitch-ink"
+                >
+                    See what competitors post. Remake what wins.
+                </h1>
+                <div
+                    class="snitch-hero-mobile-cta mt-5 flex flex-col items-stretch gap-2.5"
+                >
                     <Link
-                        :href="login()"
-                        class="inline-flex items-center justify-center bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-on-spot hover:opacity-90"
+                        v-if="isAuthenticated"
+                        :href="dashboard()"
+                        class="snitch-btn snitch-btn-spot w-full justify-center"
                     >
-                        {{ CTA_TEXT }}
+                        <span class="relative z-10 inline-flex items-center gap-2">
+                            <LayoutGrid class="size-3.5 shrink-0" aria-hidden="true" />
+                            Open dashboard
+                        </span>
+                    </Link>
+                    <template v-else>
+                        <Link
+                            :href="login()"
+                            class="snitch-btn snitch-btn-spot w-full justify-center"
+                        >
+                            <span class="relative z-10 inline-flex items-center gap-2">
+                                <UserPlus class="size-3.5 shrink-0" aria-hidden="true" />
+                                Get started
+                            </span>
+                        </Link>
+                        <Link
+                            :href="login()"
+                            class="snitch-btn w-full justify-center"
+                        >
+                            <span class="relative z-10 inline-flex items-center gap-2">
+                                <LogIn class="size-3.5 shrink-0" aria-hidden="true" />
+                                Log in
+                            </span>
+                        </Link>
+                    </template>
+                </div>
+            </div>
+        </section>
+
+        <!-- Nav overlays this section (absolute snitch-nav-hero); together = one dvh. -->
+        <section
+            class="snitch-hero relative hidden h-dvh w-full overflow-hidden md:block"
+        >
+            <div class="absolute inset-0" aria-hidden="true">
+                <div class="snitch-hero-backdrop-placeholder" />
+                <div
+                    v-if="desktopHeroArt"
+                    class="snitch-hero-backdrop"
+                    :class="{ 'is-ready': heroBackdropReady }"
+                >
+                    <div class="snitch-hero-bg">
+                        <img
+                            src="/images/marketing/hero/bg.jpg"
+                            alt=""
+                            class="snitch-hero-bg-img"
+                            width="1792"
+                            height="1024"
+                            decoding="async"
+                            fetchpriority="high"
+                        />
+                    </div>
+
+                    <div class="snitch-hero-marquee-stage">
+                        <div
+                            class="snitch-hero-marquee snitch-hero-marquee-slow absolute inset-x-0 top-[2%] bottom-0"
+                        >
+                            <div class="snitch-hero-marquee-track">
+                                <img
+                                    src="/images/marketing/hero/platforms-back.png"
+                                    alt=""
+                                    class="snitch-hero-marquee-frame opacity-[0.72] mix-blend-multiply dark:mix-blend-soft-light dark:opacity-80"
+                                    width="1792"
+                                    height="1024"
+                                    decoding="async"
+                                />
+                                <img
+                                    src="/images/marketing/hero/platforms-back.png"
+                                    alt=""
+                                    class="snitch-hero-marquee-frame opacity-[0.72] mix-blend-multiply dark:mix-blend-soft-light dark:opacity-80"
+                                    width="1792"
+                                    height="1024"
+                                    decoding="async"
+                                />
+                            </div>
+                        </div>
+
+                        <div
+                            class="snitch-hero-marquee snitch-hero-marquee-mid absolute inset-0"
+                        >
+                            <div class="snitch-hero-marquee-track">
+                                <img
+                                    src="/images/marketing/hero/platforms-mid.png"
+                                    alt=""
+                                    class="snitch-hero-marquee-frame opacity-[0.88]"
+                                    width="1792"
+                                    height="1024"
+                                    decoding="async"
+                                />
+                                <img
+                                    src="/images/marketing/hero/platforms-mid.png"
+                                    alt=""
+                                    class="snitch-hero-marquee-frame opacity-[0.88]"
+                                    width="1792"
+                                    height="1024"
+                                    decoding="async"
+                                />
+                            </div>
+                        </div>
+
+                        <div
+                            class="snitch-hero-marquee snitch-hero-marquee-fast absolute inset-x-0 top-[-2%] bottom-0"
+                        >
+                            <div class="snitch-hero-marquee-track">
+                                <img
+                                    src="/images/marketing/hero/platforms-front.png"
+                                    alt=""
+                                    class="snitch-hero-marquee-frame opacity-95"
+                                    width="1792"
+                                    height="1024"
+                                    decoding="async"
+                                />
+                                <img
+                                    src="/images/marketing/hero/platforms-front.png"
+                                    alt=""
+                                    class="snitch-hero-marquee-frame opacity-95"
+                                    width="1792"
+                                    height="1024"
+                                    decoding="async"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="snitch-hero-scrim absolute inset-0 z-[2]" />
+                <div class="snitch-grain z-[3] opacity-25" />
+            </div>
+
+            <!-- Same content column as PublicNav: max-w-6xl + px-5 / sm:px-8 -->
+            <div
+                class="relative z-10 mx-auto flex h-full w-full max-w-6xl items-end px-5 pb-8 pt-28 sm:px-8 sm:pb-10"
+            >
+                <div class="relative min-w-0 max-w-md sm:max-w-lg">
+                    <!-- Peek mascot sits outside the yellow drop-shadow filter. -->
+                    <div
+                        class="snitch-hero-mascot pointer-events-none absolute right-4 lg:right-7"
+                        aria-hidden="true"
+                    >
+                        <div class="snitch-hero-mascot-peek origin-bottom">
+                            <div class="snitch-hero-mascot-frame relative select-none overflow-hidden">
+                                <img
+                                    src="/images/marketing/hero/mascot-character.png"
+                                    alt=""
+                                    draggable="false"
+                                    class="snitch-hero-mascot-character absolute inset-0 h-full w-full object-contain"
+                                    width="140"
+                                    height="140"
+                                    decoding="async"
+                                />
+                                <img
+                                    src="/images/marketing/hero/mascot-binos.png"
+                                    alt=""
+                                    draggable="false"
+                                    class="snitch-hero-mascot-binos absolute left-1/2"
+                                    width="98"
+                                    height="65"
+                                    decoding="async"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="snitch-hero-copy-shell relative z-[5]">
+                        <div
+                            class="snitch-hero-copy relative px-5 pb-5 pt-5 text-left sm:px-7 sm:pb-6 sm:pt-6"
+                        >
+                            <p
+                                class="snitch-display snitch-hero-wordmark relative text-[clamp(4.75rem,14.5vw,8.5rem)] leading-[0.78] tracking-[-0.035em] text-snitch-ink"
+                            >
+                                <span
+                                    class="snitch-hero-wordmark-misreg pointer-events-none absolute inset-0 select-none"
+                                    aria-hidden="true"
+                                >Snitch</span>
+                                <span class="relative">Snitch</span>
+                            </p>
+                            <h1
+                                class="snitch-display snitch-hero-lede mt-3.5 text-[1.3rem] leading-[1.22] tracking-[-0.012em] text-pretty sm:mt-4 sm:text-[1.55rem] sm:leading-[1.2]"
+                            >
+                                See what competitors post. Remake what wins.
+                            </h1>
+                            <div
+                                class="snitch-hero-cta mt-6 flex flex-wrap items-stretch justify-start gap-2.5 sm:mt-7 sm:gap-3"
+                            >
+                                <Link
+                                    v-if="isAuthenticated"
+                                    :href="dashboard()"
+                                    class="snitch-btn snitch-btn-spot"
+                                >
+                                    <span class="relative z-10 inline-flex items-center gap-2">
+                                        <LayoutGrid class="size-3.5 shrink-0" aria-hidden="true" />
+                                        Dashboard
+                                    </span>
+                                </Link>
+                                <template v-else>
+                                    <Link :href="login()" class="snitch-btn">
+                                        <span class="relative z-10 inline-flex items-center gap-2">
+                                            <LogIn class="size-3.5 shrink-0" aria-hidden="true" />
+                                            Log in
+                                        </span>
+                                    </Link>
+                                    <Link
+                                        :href="login()"
+                                        class="snitch-btn snitch-btn-spot"
+                                    >
+                                        <span class="relative z-10 inline-flex items-center gap-2">
+                                            <UserPlus class="size-3.5 shrink-0" aria-hidden="true" />
+                                            Sign up
+                                        </span>
+                                    </Link>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="relative px-5 py-20 sm:px-8 sm:py-24">
+            <div class="mx-auto max-w-6xl">
+                <h2
+                    class="snitch-display max-w-5xl text-pretty text-3xl text-snitch-ink sm:text-4xl"
+                >
+                    Social media intelligence for accounts you track.
+                </h2>
+                <p class="mt-4 max-w-3xl text-base leading-relaxed text-snitch-ink/80">
+                    Built for local brands, creators, and agencies who need inspiration. Not mindless doom-scrolling.
+                </p>
+            </div>
+        </section>
+
+        <section class="px-5 pb-20 sm:px-8">
+            <div class="mx-auto max-w-6xl">
+                <h2 class="snitch-display text-3xl text-snitch-ink">
+                    How it works
+                </h2>
+                <div
+                    class="snitch-contact-reveal mt-10 grid gap-6 md:grid-cols-3"
+                >
+                    <article
+                        v-for="step in steps"
+                        :key="step.stamp"
+                        class="snitch-scrap relative p-6 pt-8"
+                    >
+                        <span
+                            class="snitch-tape left-5 -top-2"
+                            aria-hidden="true"
+                        />
+                        <p
+                            class="snitch-annotation text-3xl font-medium text-snitch-ink"
+                        >
+                            {{ step.stamp }}
+                        </p>
+                        <h3 class="snitch-display mt-2 text-2xl text-snitch-ink">
+                            <span class="snitch-marker-underline">{{
+                                step.title
+                            }}</span>
+                        </h3>
+                        <p class="relative z-10 mt-3 text-sm leading-relaxed text-snitch-ink/80">
+                            {{ step.copy }}
+                        </p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="px-5 pb-20 sm:px-8">
+            <div class="mx-auto max-w-6xl">
+                <h2 class="snitch-display text-3xl text-snitch-ink">
+                    Platforms
+                </h2>
+                <p class="mt-3 max-w-3xl text-snitch-ink/80">
+                    One feed for the public posts that matter.
+                </p>
+                <ul
+                    class="mt-8 flex flex-wrap items-end gap-x-8 gap-y-6 sm:gap-x-12"
+                    aria-label="Supported platforms"
+                >
+                    <li
+                        v-for="(platform, index) in platforms"
+                        :key="platform.slug"
+                        class="flex flex-col items-center gap-2"
+                        :style="{
+                            transform: `rotate(${index % 2 === 0 ? -1.5 : 1.2}deg)`,
+                        }"
+                    >
+                        <img
+                            :src="`/images/platforms/${platform.slug}.svg`"
+                            :alt="`${platform.name} logo`"
+                            class="snitch-platform-logo h-10 w-10 sm:h-12 sm:w-12"
+                            width="48"
+                            height="48"
+                            loading="lazy"
+                        />
+                        <span class="snitch-annotation text-lg text-snitch-ink/75">
+                            {{ platform.name }}
+                        </span>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="px-5 pb-20 sm:px-8">
+            <div class="mx-auto max-w-6xl">
+                <p class="snitch-ink-label">Agents</p>
+                <h2 class="snitch-display mt-1 text-3xl text-snitch-ink">
+                    Connect your agent
+                </h2>
+                <p class="mt-3 max-w-3xl text-snitch-ink/80">
+                    Point Cursor, Claude, Codex, or any MCP client at Snitch. Sync snitches, find influencers,
+                    and analyse posts from the tools your agent already uses.
+                </p>
+                <div class="mt-6">
+                    <Link :href="agents()" class="snitch-btn snitch-btn-spot">
+                        <span class="relative z-10">Agents setup</span>
                     </Link>
                 </div>
             </div>
-
-            <div class="border-t border-snitch-ink/15 bg-black/40">
-                <div class="mx-auto max-w-6xl px-4 py-4 text-center sm:py-5">
-                    <p class="font-mono text-sm text-snitch-caution-fog/70">
-                        Tracking <span class="font-bold text-snitch-caution-yellow">27</span> brands ·
-                        <span class="font-bold text-snitch-caution-yellow">781</span> posts analysed
-                    </p>
-                </div>
-            </div>
         </section>
 
-        <section class="border-b border-snitch-on-spot/15 bg-snitch-caution-yellow text-snitch-on-spot">
-            <div class="mx-auto max-w-6xl px-4 py-24">
-                <h2
-                    class="snitch-hero-display text-3xl tracking-tight md:text-4xl lg:whitespace-nowrap lg:text-[clamp(1.65rem,2.15vw,2.5rem)]"
-                >
-                    Stop scrolling your competitors. Let Snitch do it.
+        <section class="px-5 pb-20 sm:px-8">
+            <div class="mx-auto max-w-6xl">
+                <p class="snitch-ink-label">Open source</p>
+                <h2 class="snitch-display mt-1 text-3xl text-snitch-ink">
+                    Fully open source
                 </h2>
-                <div class="mt-12 grid gap-8 md:grid-cols-4">
-                    <div
-                        v-for="(benefit, index) in benefits"
-                        :key="benefit.title"
-                        class="border border-snitch-on-spot/15 bg-snitch-caution-ink p-6 text-snitch-caution-fog"
+                <p class="mt-3 max-w-3xl text-snitch-ink/80">
+                    Snitch is fully open source under the
+                    <a
+                        href="https://www.gnu.org/licenses/agpl-3.0.html"
+                        class="font-semibold text-snitch-ink underline decoration-snitch-spot decoration-2 underline-offset-2 transition-colors hover:text-snitch-ink/80"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >GNU Affero General Public License v3.0 (AGPL-3.0)</a>.
+                    Read the code, run it yourself, and contribute on
+                    <a
+                        href="https://github.com/tmwclaxton/snitch"
+                        class="font-semibold text-snitch-ink underline decoration-snitch-spot decoration-2 underline-offset-2 transition-colors hover:text-snitch-ink/80"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >GitHub</a>.
+                </p>
+                <div class="mt-6">
+                    <a
+                        href="https://github.com/tmwclaxton/snitch"
+                        class="snitch-btn"
+                        target="_blank"
+                        rel="noopener noreferrer"
                     >
-                        <div class="flex h-10 w-10 items-center justify-center bg-snitch-caution-yellow text-snitch-on-spot">
-                            <span class="font-mono text-sm font-bold">0{{ index + 1 }}</span>
-                        </div>
-                        <h3 class="mt-5 text-lg font-semibold tracking-tight">{{ benefit.title }}</h3>
-                        <p class="mt-2 text-sm leading-relaxed text-snitch-caution-fog/75">{{ benefit.body }}</p>
-                    </div>
+                        <span class="relative z-10 inline-flex items-center gap-2">
+                            <font-awesome-icon :icon="['fab', 'github']" class="size-3.5" aria-hidden="true" />
+                            View source
+                        </span>
+                    </a>
                 </div>
             </div>
         </section>
 
-        <section class="border-b border-snitch-ink/15 bg-snitch-caution-ink">
-            <div class="mx-auto max-w-4xl px-4 py-24 text-center">
-                <h2 class="snitch-hero-display text-2xl leading-snug tracking-tight text-snitch-caution-fog md:text-3xl">
-                    Less than the cost of a single sponsored post,
-                    for insight that shapes every post you make.
+        <section class="px-5 pb-20 sm:px-8">
+            <div
+                class="snitch-tear-board relative mx-auto max-w-6xl overflow-hidden px-6 py-12 sm:px-10"
+            >
+                <span class="snitch-tape left-8 -top-1" aria-hidden="true" />
+                <h2
+                    class="snitch-display relative z-10 mt-2 max-w-3xl text-3xl text-snitch-ink"
+                >
+                    The posts that earn a remake.
                 </h2>
-                <div class="relative mt-10 inline-block w-full max-w-md text-left">
-                    <div class="border border-snitch-ink/15 bg-snitch-lift p-8">
-                        <div class="flex items-baseline justify-between">
-                            <h3 class="text-2xl font-semibold tracking-tight text-snitch-caution-fog">Platform</h3>
-                            <p class="font-mono text-3xl font-bold tracking-tight text-snitch-caution-yellow">
-                                £19<span class="text-base font-medium text-snitch-caution-fog/60">/mo</span>
-                            </p>
-                        </div>
-                        <p class="mt-2 text-sm text-snitch-caution-fog/65">
-                            7-day free trial, then £19/mo. Plus pay-as-you-go usage credits (£30 included each month).
-                        </p>
-                        <ul class="mt-6 space-y-3 text-sm text-snitch-caution-fog/70">
-                            <li v-for="item in ['7-day free trial (card required)', 'Full competitor tracking', 'Weekly refreshed data', 'Gap Analysis', 'Optimal posting times']" :key="item" class="flex items-start gap-3">
-                                <span class="mt-0.5 text-snitch-caution-yellow">✓</span>
-                                <span>{{ item }}</span>
-                            </li>
-                        </ul>
-                        <div class="mt-8 border-t border-snitch-ink/15 pt-6">
-                            <Link
-                                :href="login()"
-                                class="inline-flex w-full items-center justify-center bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-on-spot hover:opacity-90"
-                            >
-                                {{ CTA_TEXT }}
-                            </Link>
-                        </div>
-                    </div>
-                </div>
+                <p class="relative z-10 mt-3 max-w-3xl text-snitch-ink/80">
+                    You set the bar. We score what cleared it, why it won, and
+                    how to steal the craft.
+                </p>
             </div>
         </section>
 
-        <section class="border-b border-snitch-ink/15 bg-snitch-lift">
-            <div class="mx-auto max-w-3xl px-4 py-24">
-                <h2 class="snitch-hero-display text-3xl tracking-tight text-snitch-caution-fog md:text-4xl">Questions, answered</h2>
-                <div class="mt-10 divide-y divide-white/10 border-y border-snitch-ink/15">
-                    <details v-for="faq in faqs" :key="faq.q" class="group py-5">
-                        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-snitch-caution-fog">
-                            <span class="text-base font-medium">{{ faq.q }}</span>
-                            <span class="text-lg text-snitch-caution-pink transition group-open:rotate-45">+</span>
-                        </summary>
-                        <p class="mt-3 text-sm leading-relaxed text-snitch-caution-fog/65">{{ faq.a }}</p>
-                    </details>
-                </div>
-            </div>
-        </section>
-
-        <section class="bg-snitch-caution-yellow pb-20 text-snitch-on-spot">
-            <div class="mx-auto max-w-4xl px-4 py-28 pb-10 text-center">
-                <h2 class="snitch-hero-display text-3xl tracking-tight md:text-5xl">
-                    Open your Competitors' content playbook.
+        <section class="px-5 pb-24 sm:px-8">
+            <div class="mx-auto max-w-6xl text-center">
+                <h2 class="snitch-display text-3xl text-snitch-ink sm:text-4xl">
+                    Start tracking the competition.
                 </h2>
+                <p class="mx-auto mt-3 max-w-2xl text-snitch-ink/80">
+                    Sign in and build your first snitch list.
+                </p>
                 <div class="mt-8 flex justify-center">
                     <Link
-                        :href="login()"
-                        class="inline-flex items-center justify-center bg-snitch-caution-ink px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-caution-yellow hover:opacity-90"
+                        :href="primaryCta.href"
+                        class="snitch-btn snitch-btn-spot"
                     >
-                        {{ CTA_TEXT }}
+                        <span class="relative z-10 inline-flex items-center gap-2">
+                            <LayoutGrid
+                                v-if="isAuthenticated"
+                                class="size-3.5 shrink-0"
+                                aria-hidden="true"
+                            />
+                            <ArrowRight
+                                v-else
+                                class="size-3.5 shrink-0"
+                                aria-hidden="true"
+                            />
+                            {{ primaryCta.label }}
+                        </span>
                     </Link>
                 </div>
             </div>
         </section>
-
-        <div
-            class="fixed inset-x-0 bottom-0 z-50 border-t border-snitch-on-spot/20 bg-snitch-caution-yellow text-snitch-on-spot transition-transform duration-300"
-            :class="scrolled ? 'translate-y-0' : 'translate-y-full'"
-        >
-            <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-                <p class="text-sm">
-                    <span class="font-semibold uppercase tracking-wide">Snitch</span>
-                    <span class="hidden opacity-80 sm:inline"> - The best kept secret in social media marketing.</span>
-                </p>
-                <Link
-                    :href="login()"
-                    class="inline-flex items-center justify-center bg-snitch-caution-ink px-4 py-2 text-xs font-semibold uppercase tracking-wide text-snitch-caution-yellow hover:opacity-90"
-                >
-                    {{ CTA_TEXT }}
-                </Link>
-            </div>
-        </div>
     </div>
 </template>

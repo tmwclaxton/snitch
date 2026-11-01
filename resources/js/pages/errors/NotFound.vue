@@ -27,7 +27,7 @@ defineOptions({
                     />
                 </div>
             </div>
-            <p class="font-mono text-sm uppercase tracking-[0.18em] text-snitch-caution-yellow">404</p>
+            <p class="snitch-ink-label">404</p>
             <h1 class="snitch-display relative z-10 mt-2 text-3xl text-snitch-ink">
                 Whoops, the page you wanted is not here.
             </h1>
@@ -35,19 +35,15 @@ defineOptions({
                 Head home or sign in to keep tracking snitches.
             </p>
             <div class="mt-8 flex flex-wrap gap-3">
-                <Link
-                    :href="home()"
-                    class="inline-flex items-center gap-2 bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-on-spot hover:opacity-90"
-                >
-                    <House class="size-4 shrink-0" aria-hidden="true" />
-                    Back home
+                <Link :href="home()" class="snitch-btn">
+                    <span class="relative z-10 inline-flex items-center gap-2">
+                        <House class="size-3.5 shrink-0" aria-hidden="true" />
+                        Back home
+                    </span>
                 </Link>
-                <Link
-                    :href="login()"
-                    class="inline-flex items-center gap-2 border border-snitch-caution-fog/40 px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-caution-fog transition-colors hover:border-snitch-caution-yellow hover:text-snitch-caution-yellow"
-                >
-                    <LogIn class="size-4 shrink-0" aria-hidden="true" />
-                    Log in
+                <Link :href="login()" class="snitch-btn snitch-btn-ghost">
+                    <LogIn class="relative z-10 size-3.5 shrink-0" aria-hidden="true" />
+                    <span class="relative z-10">Log in</span>
                 </Link>
             </div>
         </div>

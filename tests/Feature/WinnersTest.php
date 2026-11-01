@@ -32,7 +32,7 @@ class WinnersTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('winners.index'))
-            ->assertRedirect(route('dashboard'));
+            ->assertOk();
     }
 
     public function test_winner_scorer_still_persists_matching_posts(): void

@@ -1,5 +1,5 @@
 export function postTypeLabel(type: string): string {
-    switch (type.toLowerCase()) {
+    switch (type) {
         case 'reel':
             return 'Reel';
         case 'video':
@@ -12,24 +12,6 @@ export function postTypeLabel(type: string): string {
             return 'Text';
         default:
             return type.charAt(0).toUpperCase() + type.slice(1);
-    }
-}
-
-/** Dense table / chip label that still reads clearly (no ellipsis). */
-export function postTypeShortLabel(type: string): string {
-    switch (type.toLowerCase()) {
-        case 'reel':
-            return 'Reel';
-        case 'video':
-            return 'Video';
-        case 'carousel':
-            return 'Car.';
-        case 'image':
-            return 'Image';
-        case 'text':
-            return 'Text';
-        default:
-            return postTypeLabel(type);
     }
 }
 
@@ -132,10 +114,8 @@ export function glanceTermChips(input: {
         }
 
         const key = (chip.searchValue ?? chip.slug ?? chip.label).toLowerCase();
-        // Drop seed / OCR junk like single-letter "h" / "x" chips.
-        const meaningful = (chip.label ?? '').replace(/[^a-z0-9]/gi, '');
 
-        if (!key || seen.has(key) || meaningful.length < 2) {
+        if (!key || seen.has(key)) {
             return;
         }
 
@@ -270,12 +250,5 @@ function truncateLabel(value: string, max: number): string {
         return value;
     }
 
-    const slice = value.slice(0, Math.max(0, max));
-    const lastSpace = slice.lastIndexOf(' ');
-
-    if (lastSpace > Math.floor(max * 0.4)) {
-        return slice.slice(0, lastSpace).trimEnd();
-    }
-
-    return slice.trimEnd();
+    return `${value.slice(0, Math.max(0, max - 1)).trimEnd()}...`;
 }

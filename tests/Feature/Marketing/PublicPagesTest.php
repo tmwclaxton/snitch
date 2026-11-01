@@ -21,17 +21,28 @@ class PublicPagesTest extends TestCase
             );
     }
 
-    public function test_public_layout_uses_paper_shell(): void
+    public function test_surface_clips_grain_so_it_does_not_expand_scroll(): void
     {
+        $css = file_get_contents(resource_path('css/app.css'));
         $layout = file_get_contents(resource_path('js/layouts/PublicLayout.vue'));
 
+        $this->assertNotFalse($css, 'Missing app.css source');
         $this->assertNotFalse($layout, 'Missing PublicLayout.vue source');
-        $this->assertStringContainsString('bg-snitch-paper', $layout);
-        $this->assertStringContainsString('text-snitch-ink', $layout);
-        $this->assertStringNotContainsString('snitch-public-shell dark', $layout);
-        $this->assertStringNotContainsString('snitch-surface', $layout);
-        $this->assertStringNotContainsString('snitch-grain', $layout);
-        $this->assertStringNotContainsString('overflow-x-clip', $layout);
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-surface\s*\{[^}]*overflow:\s*clip/s',
+            $css,
+            'snitch-surface must clip both axes to avoid a nested mobile scrollport',
+        );
+        $this->assertMatchesRegularExpression(
+            '/@keyframes snitch-grain-drift\s*\{[^}]*background-position:/s',
+            $css,
+            'Grain drift must use background-position, not transform (transform expands scrollHeight)',
+        );
+        $this->assertStringNotContainsString(
+            'overflow-x-clip',
+            $layout,
+            'PublicLayout should rely on .snitch-surface overflow:clip, not overflow-x-clip alone',
+        );
     }
 
     public function test_platform_logo_assets_exist(): void
@@ -128,7 +139,7 @@ class PublicPagesTest extends TestCase
         }
     }
 
-    public function test_beta_landing_page_uses_public_layout_and_calendly(): void
+    public function test_beta_landing_page_is_standalone(): void
     {
         $this->get(route('beta'))
             ->assertOk()
@@ -137,20 +148,10 @@ class PublicPagesTest extends TestCase
             );
 
         $contents = file_get_contents(resource_path('js/pages/marketing/Beta.vue'));
-        $footer = file_get_contents(resource_path('js/components/marketing/PublicFooter.vue'));
 
         $this->assertNotFalse($contents, 'Missing Beta.vue source');
-        $this->assertNotFalse($footer, 'Missing PublicFooter.vue source');
-        $this->assertStringContainsString('PublicLayout', $contents);
         $this->assertStringContainsString('https://calendly.com/dan-olympuslab/30min', $contents);
         $this->assertStringContainsString('Book a free intro call', $contents);
-        $this->assertStringContainsString('£19', $contents);
-        $this->assertStringContainsString('Platform', $contents);
-        $this->assertStringContainsString('usage credits', $contents);
-        $this->assertStringNotContainsString('Full Access', $contents);
-        $this->assertStringNotContainsString('£50/mo', $contents);
-        $this->assertStringNotContainsString('snitch377@gmail.com', $contents);
-        $this->assertStringContainsString('hello@snitchsocial.net', $footer);
         $this->assertStringContainsString('snitch-hero-mascot-peek', $contents,
             'Beta hero must reuse the main landing page mascot peek animation');
         $this->assertStringContainsString('snitch-hero-copy', $contents);
@@ -159,6 +160,11 @@ class PublicPagesTest extends TestCase
         $this->assertStringContainsString('/images/marketing/hero/platforms-front.png', $contents);
         $this->assertStringContainsString('heroBackdropReady', $contents,
             'Beta hero wall must wait for decode before reveal');
+        $this->assertStringNotContainsString('PublicLayout', $contents);
+        $this->assertStringNotContainsString('PublicNav', $contents);
+        $this->assertStringNotContainsString('PublicFooter', $contents);
+        $this->assertStringNotContainsString('@/routes', $contents,
+            'Beta landing must not import route helpers - no links into the rest of the site');
     }
 
     public function test_beta_landing_page_stays_out_of_sitemap(): void
@@ -191,12 +197,8 @@ class PublicPagesTest extends TestCase
         $this->assertNotFalse($about);
 
         $this->assertStringNotContainsString('seats', strtolower($pricing));
-        $this->assertStringContainsString('Platform + usage', $pricing);
         $this->assertStringContainsString('usage credits every billing period', $pricing);
-        $this->assertStringContainsString('Unlimited tracked accounts', $pricing);
-        $this->assertStringNotContainsString('Full Access', $pricing);
-        $this->assertStringNotContainsString('MCP + web app access', $pricing);
-        $this->assertStringNotContainsString('Agents / MCP', $pricing);
+        $this->assertStringContainsString('Feed, Explore, Winners', $pricing);
         $this->assertStringContainsString('Live tool averages', $pricing);
         $this->assertStringContainsString('Mean charge per step', $pricing);
         $this->assertStringContainsString('avg / step', $pricing);
@@ -205,18 +207,9 @@ class PublicPagesTest extends TestCase
         $this->assertStringContainsString('formatPenceAsGbp', $pricing);
         $this->assertStringContainsString('Stripe', $privacy);
         $this->assertStringContainsString('Stripe', $terms);
-        $this->assertStringContainsString('Instagram', $how);
-        $this->assertStringNotContainsString('TikTok', $how);
-        $this->assertStringNotContainsString('YouTube Shorts', $how);
+        $this->assertStringContainsString('YouTube Shorts', $how);
         $this->assertStringContainsString('Explore', $how);
         $this->assertStringContainsString('Blog', $about);
-        $this->assertStringContainsString('Instagram', $about);
-        $this->assertStringContainsString('Web app: Tracking, Feed, Explore, Winners', $pricing);
-        $this->assertSame(
-            1,
-            substr_count($pricing, 'Feed, Explore, Winners'),
-            'Platform feature list must not repeat Feed, Explore, Winners',
-        );
     }
 
     public function test_sitemap_lists_public_routes(): void
@@ -287,75 +280,58 @@ class PublicPagesTest extends TestCase
 
         $this->assertNotFalse($contents, 'Missing Contact.vue source');
         $this->assertStringContainsString('contact-annotation', $contents);
-        $this->assertStringContainsString('text-snitch-caution-fog', $contents);
-        $this->assertStringNotContainsString('text-neutral-950', $contents);
-        $this->assertStringContainsString('hello@snitchsocial.net', $contents);
+        $this->assertStringContainsString('text-snitch-ink', $contents);
+        $this->assertDoesNotMatchRegularExpression(
+            '/class="snitch-annotation(?![^"]*text-snitch-ink)/',
+            $contents,
+            'Contact annotations must use charcoal ink, not yellow-on-paper alone',
+        );
     }
 
-    public function test_public_shell_is_pinned_to_caution_tape_night_in_every_colour_scheme(): void
-    {
-        $layout = file_get_contents(resource_path('js/layouts/PublicLayout.vue'));
-        $css = file_get_contents(resource_path('css/app.css'));
-
-        $this->assertNotFalse($layout);
-        $this->assertNotFalse($css);
-        $this->assertMatchesRegularExpression('/class="snitch-public-shell relative\b/', $layout);
-        $this->assertStringNotContainsString('snitch-public-shell dark', $layout);
-        $this->assertMatchesRegularExpression('/html:has\(\.snitch-public-shell\)[^{]*\{[^}]*background-color:\s*var\(--snitch-paper\)/s', $css);
-        $this->assertStringContainsString(":root,\n.snitch-light {", $css);
-        $this->assertStringContainsString('.snitch-public-shell .snitch-btn {', $css);
-
-        $notFound = file_get_contents(resource_path('js/pages/errors/NotFound.vue'));
-        $this->assertNotFalse($notFound);
-        $this->assertStringNotContainsString('snitch-ink-label', $notFound, '404 label must meet the 14px floor');
-
-        $beta = file_get_contents(resource_path('js/pages/marketing/Beta.vue'));
-        $this->assertNotFalse($beta);
-        $this->assertStringContainsString('snitch-light bg-white', $beta);
-
-        $darkShellPages = [
-            'js/pages/marketing/Pricing.vue',
-            'js/pages/marketing/About.vue',
-            'js/pages/marketing/HowItWorks.vue',
-            'js/pages/marketing/Contact.vue',
-            'js/pages/blog/Index.vue',
-            'js/pages/blog/Show.vue',
-            'js/components/marketing/LegalDocument.vue',
-            'js/pages/errors/NotFound.vue',
-        ];
-
-        foreach ($darkShellPages as $relative) {
-            $contents = file_get_contents(resource_path($relative));
-
-            $this->assertNotFalse($contents, "Missing {$relative}");
-            $this->assertStringNotContainsString('text-neutral-950', $contents, "{$relative} paints near-black type on the black public shell");
-            $this->assertDoesNotMatchRegularExpression('/\\bbg-white(?![\\/\\w-])/', $contents, "{$relative} paints white blocks on the black public shell");
-            $this->assertStringNotContainsString('text-xs', $contents, "{$relative} drops below the 14px type floor");
-            $this->assertStringNotContainsString('line-clamp', $contents, "{$relative} truncates copy");
-            $this->assertStringContainsString('text-snitch-caution-fog', $contents);
-        }
-    }
-
-    public function test_landing_uses_start_tracking_cta_and_platform_price(): void
+    public function test_hero_title_card_ctas_use_spot_and_ink_buttons(): void
     {
         $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
+        $css = file_get_contents(resource_path('css/app.css'));
 
         $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
-        $this->assertStringContainsString('Start your 7-day free trial', $welcome);
-        $this->assertStringContainsString("from '@/routes'", $welcome);
-        $this->assertStringContainsString('login()', $welcome);
-        $this->assertStringNotContainsString('calendly.com/dan-olympuslab', $welcome);
-        $this->assertStringContainsString('£19', $welcome);
-        $this->assertStringContainsString('Platform', $welcome);
-        $this->assertStringContainsString('usage credits', $welcome);
-        $this->assertStringNotContainsString('Full Access', $welcome);
-        $this->assertStringNotContainsString('£50/mo', $welcome);
-        $this->assertStringContainsString('Better social media performance.', $welcome);
-        $this->assertStringNotContainsString('Gap found', $welcome);
-        $this->assertStringNotContainsString('tracking-[0.18em]', $welcome);
+        $this->assertNotFalse($css, 'Missing app.css source');
+
+        $this->assertMatchesRegularExpression(
+            '/class="snitch-hero-cta[^"]*"[\s\S]*?class="snitch-btn">[\s\S]*?relative z-10[^"]*">[\s\S]*?Log in[\s\S]*?class="snitch-btn snitch-btn-spot"[\s\S]*?relative z-10[^"]*">[\s\S]*?Sign up/',
+            $welcome,
+            'Hero title card must use charcoal snitch-btn for Log in then spot yellow for Sign up, with visible z-10 labels',
+        );
+        $this->assertMatchesRegularExpression(
+            '/class="snitch-hero-cta[^"]*"[\s\S]*?v-if="isAuthenticated"[\s\S]*?class="snitch-btn snitch-btn-spot"[\s\S]*?relative z-10[^"]*">[\s\S]*?Dashboard/',
+            $welcome,
+            'Authenticated hero CTA must be yellow spot ticket Dashboard with visible label',
+        );
+        $this->assertMatchesRegularExpression(
+            '/class="snitch-hero-cta[^"]*"[\s\S]*?:href="login\(\)"[\s\S]*?:href="login\(\)"/',
+            $welcome,
+            'Hero title card Log in and Sign up must both use login() like PublicNav',
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/class="snitch-hero-cta[^"]*"[\s\S]*?snitch-btn-ghost/',
+            $welcome,
+            'Hero title card CTAs must not use ghost / paper fill',
+        );
+        $this->assertStringContainsString('.snitch-hero-copy .snitch-btn.snitch-btn-spot', $css);
+        $this->assertStringContainsString('.snitch-hero-copy .snitch-btn.snitch-btn-spot::before', $css);
+        $this->assertStringNotContainsString('.snitch-hero-copy .snitch-btn-ghost', $css);
+        $this->assertDoesNotMatchRegularExpression(
+            '/\.snitch-hero-copy\s+\.snitch-btn\s*\{[^}]*container-type\s*:/s',
+            $css,
+            'Hero buttons must not use container-type (inline-size containment collapses label width)',
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.snitch-hero-copy\s+\.snitch-btn\.snitch-btn-spot::before\s*\{[^}]*inset:\s*var\(--snitch-ticket-stroke\)/s',
+            $css,
+            'Hero spot face must use the same inset charcoal rim as closing Open dashboard',
+        );
     }
 
-    public function test_beta_hero_background_is_static_on_mobile(): void
+    public function test_hero_background_is_static_on_mobile(): void
     {
         $css = file_get_contents(resource_path('css/app.css'));
 
@@ -363,43 +339,80 @@ class PublicPagesTest extends TestCase
         $this->assertMatchesRegularExpression(
             '/@media\s*\(max-width:\s*767px\)\s*\{[^}]*\.snitch-hero-bg-img\s*\{[^}]*height:\s*100%/s',
             $css,
-            'Beta hero wall image must fill the hero box instead of the tall desktop crop',
+            'Mobile hero wall image must fill the hero box instead of the tall desktop crop',
         );
         $this->assertMatchesRegularExpression(
             '/@media\s*\(max-width:\s*767px\)\s*\{[\s\S]*?\.snitch-hero-marquee-track\s*\{[^}]*animation:\s*none/s',
             $css,
-            'Beta hero must freeze parallax marquee tracks on mobile',
+            'Mobile hero must freeze parallax marquee tracks',
         );
     }
 
-    public function test_home_uses_lovable_core_copy(): void
+    public function test_home_has_mobile_poster_hero_separate_from_desktop(): void
     {
         $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
-
-        $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
-        $this->assertStringNotContainsString('desktopHeroArt', $welcome);
-        $this->assertStringNotContainsString('platforms-front.png', $welcome);
-        $this->assertStringContainsString('Stop scrolling your competitors', $welcome);
-        $this->assertStringContainsString('Questions, answered', $welcome);
-        $this->assertStringNotContainsString('Instagram logins required', $welcome);
-        $this->assertStringContainsString('min-h-[calc(100svh-3.5rem)]', $welcome);
-        $this->assertStringContainsString('lg:whitespace-nowrap', $welcome);
-    }
-
-    public function test_beta_hero_backdrop_waits_for_decode_before_reveal(): void
-    {
-        $beta = file_get_contents(resource_path('js/pages/marketing/Beta.vue'));
         $css = file_get_contents(resource_path('css/app.css'));
 
-        $this->assertNotFalse($beta, 'Missing Beta.vue source');
+        $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
         $this->assertNotFalse($css, 'Missing app.css source');
-        $this->assertStringContainsString('heroBackdropReady', $beta);
-        $this->assertStringContainsString('preloadHeroImage', $beta);
-        $this->assertStringContainsString("matchMedia('(min-width: 768px)')", $beta);
-        $this->assertStringContainsString('snitch-hero-backdrop-placeholder', $beta);
-        $this->assertStringContainsString('class="snitch-hero-backdrop"', $beta);
-        $this->assertStringContainsString('v-if="desktopHeroArt"', $beta);
-        $this->assertStringContainsString("'is-ready': heroBackdropReady", $beta);
+
+        $this->assertStringContainsString('snitch-hero-mobile', $welcome);
+        $this->assertStringContainsString('md:hidden', $welcome);
+        $this->assertStringContainsString('mobileHeroEl', $welcome);
+        $this->assertStringContainsString('measureVisibleViewportHeight', $welcome);
+        $this->assertStringContainsString('--snitch-mobile-hero-height', $welcome);
+        $this->assertStringContainsString('lockedMobileHeroHeight', $welcome);
+        $this->assertStringContainsString('orientationchange', $welcome);
+        $this->assertStringNotContainsString(
+            "visualViewport?.addEventListener('resize'",
+            $welcome,
+            'Do not remeasure on visualViewport resize - URL bar show/hide would resize the hero while scrolling',
+        );
+        $this->assertStringContainsString(
+            'class="snitch-hero relative hidden h-dvh w-full overflow-hidden md:block"',
+            $welcome,
+            'Desktop wall hero must stay hidden below md',
+        );
+        $this->assertStringContainsString('snitch-hero-mobile-mascot', $welcome);
+        $this->assertStringContainsString('snitch-hero-mobile-floor', $welcome);
+        $this->assertStringContainsString('snitch-hero-mobile-cta', $welcome);
+        $this->assertDoesNotMatchRegularExpression(
+            '/snitch-hero-mobile[\s\S]{0,400}pt-44/',
+            $welcome,
+            'Mobile poster must not use the oversized pt-44 gap under the nav',
+        );
+        $this->assertMatchesRegularExpression(
+            '/snitch-hero-mobile-cta[\s\S]*?Get started[\s\S]*?Log in/',
+            $welcome,
+            'Mobile poster must lead with Get started then Log in',
+        );
+        $this->assertStringContainsString('.snitch-hero-mobile-wash', $css);
+        $this->assertStringContainsString('.snitch-hero-mobile-floor', $css);
+        $this->assertStringContainsString('snitch-hero-mobile-mascot-bob', $css);
+        $this->assertStringContainsString(
+            'height: var(--snitch-mobile-hero-height, 100dvh)',
+            $css,
+        );
+        $this->assertStringContainsString(
+            'max-height: var(--snitch-mobile-hero-height, 100dvh)',
+            $css,
+        );
+    }
+
+    public function test_hero_backdrop_waits_for_decode_before_reveal(): void
+    {
+        $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
+        $css = file_get_contents(resource_path('css/app.css'));
+
+        $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
+        $this->assertNotFalse($css, 'Missing app.css source');
+        $this->assertStringContainsString('heroBackdropReady', $welcome);
+        $this->assertStringContainsString('preloadHeroImage', $welcome);
+        $this->assertStringContainsString("matchMedia('(min-width: 768px)')", $welcome);
+        $this->assertStringContainsString('snitch-hero-backdrop-placeholder', $welcome);
+        $this->assertStringContainsString('class="snitch-hero-backdrop"', $welcome);
+        $this->assertStringContainsString('v-if="desktopHeroArt"', $welcome);
+        $this->assertStringContainsString("'is-ready': heroBackdropReady", $welcome);
         $this->assertStringContainsString('.snitch-hero-backdrop.is-ready', $css);
         $this->assertMatchesRegularExpression(
             '/\.snitch-hero-backdrop\s*\{[^}]*filter:\s*blur\(/s',
@@ -408,96 +421,47 @@ class PublicPagesTest extends TestCase
         );
     }
 
-    public function test_marketer_chrome_hides_mcp_and_influencer_find(): void
+    public function test_public_nav_links_to_github_repository(): void
     {
         $nav = file_get_contents(resource_path('js/components/marketing/PublicNav.vue'));
-        $footer = file_get_contents(resource_path('js/components/marketing/PublicFooter.vue'));
-        $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
-        $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
-
-        $this->assertNotFalse($nav);
-        $this->assertNotFalse($footer);
-        $this->assertNotFalse($welcome);
-        $this->assertNotFalse($sidebar);
-
-        foreach ([$nav, $footer] as $chrome) {
-            $this->assertStringNotContainsString("label: 'MCP'", $chrome);
-        }
-
-        $this->assertStringNotContainsString('Connect your agent', $welcome);
-        $this->assertStringNotContainsString('find influencers', $welcome);
-        $this->assertStringNotContainsString('Agents setup', $welcome);
-        $this->assertStringContainsString('Better social media performance.', $welcome);
-        $this->assertStringNotContainsString("title: 'MCP'", $sidebar);
-        $this->assertStringNotContainsString("title: 'Brand Deals'", $sidebar);
-        $this->assertStringContainsString("title: 'Competitors'", $sidebar);
-    }
-
-    public function test_public_nav_includes_pricing_and_blog_with_mobile_menu(): void
-    {
-        $nav = file_get_contents(resource_path('js/components/marketing/PublicNav.vue'));
-        $footer = file_get_contents(resource_path('js/components/marketing/PublicFooter.vue'));
 
         $this->assertNotFalse($nav, 'Missing PublicNav.vue source');
-        $this->assertNotFalse($footer, 'Missing PublicFooter.vue source');
-        $this->assertStringContainsString('aria-label="Snitch home"', $nav);
-        $this->assertStringContainsString('Log in', $nav);
-        $this->assertStringContainsString("label: 'Pricing'", $nav);
-        $this->assertStringContainsString("label: 'Blog'", $nav);
-        $this->assertStringContainsString('public-mobile-nav', $nav);
-        $this->assertStringContainsString('Open menu', $nav);
-        $this->assertStringNotContainsString('How it works', $nav);
-        $this->assertStringContainsString('>Pricing<', $footer);
-        $this->assertStringContainsString('mailto:hello@snitchsocial.net', $footer);
-        $this->assertStringNotContainsString('snitch377@gmail.com', $footer);
+        $this->assertStringContainsString(
+            'https://github.com/tmwclaxton/snitch',
+            $nav,
+            'Guest header must link the GitHub icon to the public repo',
+        );
+        $this->assertStringContainsString("['fab', 'github']", $nav);
+        $this->assertStringContainsString('aria-label="Snitch on GitHub"', $nav);
     }
 
-    public function test_home_footer_reserves_space_for_sticky_cta_bar(): void
-    {
-        $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
-        $footer = file_get_contents(resource_path('js/components/marketing/PublicFooter.vue'));
-
-        $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
-        $this->assertNotFalse($footer, 'Missing PublicFooter.vue source');
-        $this->assertStringContainsString('fixed inset-x-0 bottom-0', $welcome);
-        $this->assertStringContainsString('The best kept secret in social media marketing', $welcome);
-        $this->assertStringContainsString("isHome ? 'pb-24' : 'pb-6'", $footer);
-    }
-
-    public function test_blog_index_copy_is_instagram_only(): void
-    {
-        $index = file_get_contents(resource_path('js/pages/blog/Index.vue'));
-        $seoDescription = (string) (config('seo.pages')['blog.index']['description'] ?? '');
-
-        $this->assertNotFalse($index, 'Missing blog/Index.vue source');
-        $this->assertStringContainsString('Instagram', $index);
-        $this->assertStringNotContainsString('TikTok', $index);
-        $this->assertStringNotContainsString('YouTube', $index);
-        $this->assertStringContainsString('Instagram', $seoDescription);
-        $this->assertStringNotContainsString('cross-platform', $seoDescription);
-        $this->assertStringNotContainsString('TikTok', $seoDescription);
-        $this->assertStringNotContainsString('YouTube', $seoDescription);
-    }
-
-    public function test_landing_page_does_not_push_open_source_section(): void
+    public function test_landing_page_states_agpl_open_source_license(): void
     {
         $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
 
         $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
-        $this->assertStringNotContainsString('Fully open source', $welcome);
-        $this->assertStringNotContainsString('Open source', $welcome);
-        $this->assertStringNotContainsString('View source', $welcome);
-        $this->assertStringNotContainsString(
+        $this->assertStringContainsString('Fully open source', $welcome);
+        $this->assertStringContainsString(
             'GNU Affero General Public License v3.0 (AGPL-3.0)',
             $welcome,
         );
+        $this->assertStringContainsString('https://www.gnu.org/licenses/agpl-3.0.html', $welcome);
+        $this->assertStringContainsString('https://github.com/tmwclaxton/snitch', $welcome);
     }
 
     public function test_ghost_ticket_buttons_stroke_follows_clip_not_inset_shadow(): void
     {
         $css = file_get_contents(resource_path('css/app.css'));
+        $nav = file_get_contents(resource_path('js/components/marketing/PublicNav.vue'));
 
         $this->assertNotFalse($css, 'Missing app.css source');
+        $this->assertNotFalse($nav, 'Missing PublicNav.vue source');
+
+        $this->assertStringContainsString(
+            'snitch-btn snitch-btn-ghost',
+            $nav,
+            'PublicNav Dashboard / Log out must use ghost ticket buttons',
+        );
         $this->assertStringContainsString('--snitch-ticket-stroke', $css);
         $this->assertStringContainsString('.snitch-btn-ghost::before', $css);
         $this->assertStringNotContainsString(
@@ -510,8 +474,20 @@ class PublicPagesTest extends TestCase
     public function test_spot_ticket_buttons_use_charcoal_outline_via_inset_face(): void
     {
         $css = file_get_contents(resource_path('css/app.css'));
+        $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
 
         $this->assertNotFalse($css, 'Missing app.css source');
+        $this->assertNotFalse($welcome, 'Missing Welcome.vue source');
+
+        $this->assertStringContainsString(
+            'Start tracking the competition.',
+            $welcome,
+        );
+        $this->assertMatchesRegularExpression(
+            '/Start tracking the competition\.[\s\S]*?class="snitch-btn snitch-btn-spot"/',
+            $welcome,
+            'Closing CTA must use spot yellow with global charcoal ticket outline',
+        );
         $this->assertStringContainsString('.snitch-btn.snitch-btn-spot::before', $css);
         $this->assertStringContainsString(
             'inset: var(--snitch-ticket-stroke)',

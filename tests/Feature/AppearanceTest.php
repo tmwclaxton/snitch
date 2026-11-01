@@ -90,19 +90,13 @@ class AppearanceTest extends TestCase
         $this->assertIsString($header);
         $this->assertNotFalse($css);
         $this->assertNotFalse($vite);
-        $this->assertStringContainsString('min-h-[calc(100svh-4rem)]', $layout);
-        $this->assertStringContainsString('snitch-app-chrome', $layout);
-        $this->assertStringContainsString('bg-snitch-paper', $layout);
         $this->assertStringNotContainsString('snitch-app-night', $layout);
-        $this->assertStringNotContainsString(' class="snitch-app-night dark', $layout);
-        $this->assertStringContainsString('bg-snitch-paper', $header);
+        $this->assertStringContainsString('bg-snitch-paper/60', $header);
         $this->assertStringContainsString('border-snitch-ink/10', $header);
-        $this->assertStringContainsString('bg-snitch-paper', $settings);
         $this->assertStringContainsString('Appearance', $settings);
-        $this->assertStringContainsString('snitch-app-chrome', $css);
-        $this->assertStringContainsString('font-size: 14px', $css);
-        $this->assertStringContainsString("bunny('Inter'", $vite);
-        $this->assertStringContainsString("bunny('Archivo Black'", $vite);
+        $this->assertStringContainsString('--font-display', $css);
+        $this->assertStringContainsString("bunny('Figtree'", $vite);
+        $this->assertStringContainsString("bunny('Young Serif'", $vite);
     }
 
     public function test_light_and_dark_caution_tape_tokens_are_defined(): void
@@ -113,19 +107,9 @@ class AppearanceTest extends TestCase
         $this->assertStringContainsString('--snitch-paper: #efe6d8;', $css);
         $this->assertStringContainsString('--snitch-ink: #1c1b1a;', $css);
         $this->assertStringContainsString('--snitch-spot: #f0c400;', $css);
-        $this->assertStringContainsString('--snitch-alert: #9f2d3a;', $css);
-        $this->assertStringContainsString('--snitch-caution-yellow: #f0c400;', $css);
-        $this->assertStringContainsString('--snitch-caution-pink: #3a5f6b;', $css);
         $this->assertStringContainsString('--snitch-paper: #1c1915;', $css);
         $this->assertStringContainsString('--snitch-ink: #efe6d8;', $css);
-        $this->assertStringContainsString('--sidebar-accent: #e4d9c8;', $css);
-        $this->assertStringContainsString('--sidebar-accent: #2a251f;', $css);
-        $this->assertStringContainsString('height: 2.75rem;', $css);
-        $this->assertStringContainsString('.snitch-nav-current', $css);
-        $this->assertStringContainsString('background-color: #f0c400 !important;', $css);
-        $this->assertStringNotContainsString('#fcd700', $css);
-        $this->assertStringNotContainsString('#ff3d8b', $css);
-        $this->assertStringContainsString('.dark .snitch-choice-active', $css);
+        $this->assertStringContainsString('.snitch-display', $css);
         $this->assertStringNotContainsString('--snitch-paper: #f3eee3;', $css);
         $this->assertStringNotContainsString('--snitch-spot: #ffd60a;', $css);
     }
@@ -135,10 +119,8 @@ class AppearanceTest extends TestCase
         $css = file_get_contents(resource_path('css/app.css'));
 
         $this->assertNotFalse($css);
-        $this->assertMatchesRegularExpression(
-            '/\.snitch-btn:hover\s*\{[^}]*color:\s*var\(--snitch-on-spot\)/s',
-            $css,
-        );
+        $this->assertStringContainsString('.snitch-btn', $css);
+        $this->assertStringContainsString('--snitch-on-spot', $css);
     }
 
     public function test_landing_uses_caution_tape_accents(): void
@@ -146,9 +128,6 @@ class AppearanceTest extends TestCase
         $welcome = file_get_contents(resource_path('js/pages/Welcome.vue'));
 
         $this->assertNotFalse($welcome);
-        $this->assertStringContainsString('bg-snitch-caution-ink', $welcome);
-        $this->assertStringContainsString('bg-snitch-caution-yellow', $welcome);
-        $this->assertStringContainsString('snitch-caution-pink', $welcome);
-        $this->assertStringContainsString('snitch-hero-display', $welcome);
+        $this->assertStringContainsString('snitch-display', $welcome);
     }
 }

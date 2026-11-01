@@ -29,8 +29,8 @@ class DashboardTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('ExecutiveBrief')
-                ->has('brief')
+                ->component('Dashboard')
+                ->has('stats')
                 ->missing('panels')
                 ->missing('featureSuggestions')
             );
@@ -51,7 +51,7 @@ class DashboardTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('dashboard'))
+            ->get(route('executive-brief.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('ExecutiveBrief')

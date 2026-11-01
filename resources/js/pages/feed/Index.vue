@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Clapperboard, FilterX, Search, X } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
-import {
-    index as competitors,
-    show as competitorShow,
-} from '@/actions/App/Http/Controllers/CompetitorController';
+import { Clapperboard, FilterX } from '@lucide/vue';
+import { computed } from 'vue';
+import { show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feedIndex } from '@/actions/App/Http/Controllers/FeedController';
 import FeedContactCell from '@/components/FeedContactCell.vue';
 import PaperSelect from '@/components/PaperSelect.vue';
@@ -43,12 +40,13 @@ const props = defineProps<{
         links: Array<{ url: string | null; label: string; active: boolean }>;
     } | null;
     filters: {
-        q: string | null;
         platform: string | null;
         type: string | null;
+        account: number | null;
     };
     platforms: string[];
     types: string[];
+    accounts: Array<{ id: number; handle: string; platform: string; display_name: string | null }>;
 }>();
 
 defineOptions({
@@ -72,32 +70,35 @@ const typeOptions = computed(() => [
     })),
 ]);
 
-const searchDraft = ref(props.filters.q ?? '');
-
-watch(
-    () => props.filters.q,
-    (value) => {
-        searchDraft.value = value ?? '';
-    },
-);
+const accountOptions = computed(() => [
+    { value: 'all', label: 'All accounts' },
+    ...props.accounts.map((account) => ({
+        value: String(account.id),
+        label: `@${account.handle}`,
+        iconSrc: platformIconSrc(account.platform),
+    })),
+]);
 
 const selectedPlatform = computed(() => props.filters.platform ?? 'all');
 const selectedType = computed(() => props.filters.type ?? 'all');
+const selectedAccount = computed(() =>
+    props.filters.account != null ? String(props.filters.account) : 'all',
+);
 
 const postsLoaded = computed(() => props.posts != null);
 const paginationLinks = computed(() => props.posts?.links ?? []);
 
 const hasActiveFilters = computed(
     () =>
-        props.filters.q != null ||
         props.filters.platform != null ||
-        props.filters.type != null,
+        props.filters.type != null ||
+        props.filters.account != null,
 );
 
 function visitFilters(next: {
-    q: string | null;
     platform: string | null;
     type: string | null;
+    account: number | null;
 }): void {
     router.get(feedIndex.url(), next, {
         preserveState: true,
@@ -105,38 +106,35 @@ function visitFilters(next: {
     });
 }
 
-function currentFilters(overrides: Partial<{
-    q: string | null;
-    platform: string | null;
-    type: string | null;
-}> = {}) {
-    return {
-        q: props.filters.q,
-        platform: props.filters.platform,
-        type: props.filters.type,
-        ...overrides,
-    };
-}
-
-function onSearchSubmit(): void {
-    const trimmed = searchDraft.value.trim();
-    visitFilters(currentFilters({ q: trimmed === '' ? null : trimmed }));
-}
-
 function onPlatformChange(value: string): void {
-    visitFilters(currentFilters({ platform: value === 'all' ? null : value }));
+    visitFilters({
+        platform: value === 'all' ? null : value,
+        type: props.filters.type,
+        account: props.filters.account,
+    });
 }
 
 function onTypeChange(value: string): void {
-    visitFilters(currentFilters({ type: value === 'all' ? null : value }));
+    visitFilters({
+        platform: props.filters.platform,
+        type: value === 'all' ? null : value,
+        account: props.filters.account,
+    });
+}
+
+function onAccountChange(value: string): void {
+    visitFilters({
+        platform: props.filters.platform,
+        type: props.filters.type,
+        account: value === 'all' ? null : Number(value),
+    });
 }
 
 function clearFilters(): void {
-    searchDraft.value = '';
     visitFilters({
-        q: null,
         platform: null,
         type: null,
+        account: null,
     });
 }
 
@@ -160,15 +158,15 @@ function paginationLabel(label: string): string {
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-2 py-6 sm:px-3 sm:py-8">
+    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
         <Head title="Feed" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="snitch-app-canvas">
+        <div class="relative z-10 mx-auto max-w-6xl">
             <header class="border-b border-snitch-ink/10 pb-5">
                 <div class="min-w-0 max-w-xl">
                     <p class="snitch-ink-label">Snitch / Feed</p>
-                    <h1 class="snitch-hero-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
+                    <h1 class="snitch-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
                         Feed
                     </h1>
                     <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
@@ -177,31 +175,7 @@ function paginationLabel(label: string): string {
                 </div>
             </header>
 
-            <form
-                class="snitch-filter-bar snitch-explore-filters mt-6"
-                @submit.prevent="onSearchSubmit"
-            >
-                <label class="snitch-filter-field snitch-explore-search">
-                    <span>Search</span>
-                    <div class="flex min-w-0 gap-2">
-                        <input
-                            v-model="searchDraft"
-                            type="search"
-                            class="snitch-platform-select-trigger min-w-0 flex-1 rounded-none px-2 py-1.5 text-sm text-snitch-ink outline-none placeholder:text-snitch-ink/35"
-                            placeholder="Caption, handle, concept, hook…"
-                            aria-label="Search feed"
-                        >
-                        <button
-                            type="submit"
-                            class="snitch-btn snitch-btn-spot shrink-0 px-3 py-1.5 text-sm"
-                        >
-                            <span class="relative z-10 inline-flex items-center gap-1.5">
-                                <Search class="size-3.5 shrink-0" aria-hidden="true" />
-                                Search
-                            </span>
-                        </button>
-                    </div>
-                </label>
+            <div class="snitch-filter-bar mt-6">
                 <label class="snitch-filter-field">
                     <span>Platform</span>
                     <PaperSelect
@@ -222,26 +196,25 @@ function paginationLabel(label: string): string {
                         @update:model-value="onTypeChange"
                     />
                 </label>
-            </form>
+                <label class="snitch-filter-field">
+                    <span>Account</span>
+                    <PaperSelect
+                        id="feed-filter-account"
+                        :model-value="selectedAccount"
+                        :options="accountOptions"
+                        aria-label="Filter by account"
+                        @update:model-value="onAccountChange"
+                    />
+                </label>
+            </div>
 
             <div
                 v-if="hasActiveFilters"
-                class="mt-3 flex flex-wrap items-center gap-2"
+                class="mt-3 flex justify-end"
             >
                 <button
-                    v-if="filters.q"
                     type="button"
-                    class="snitch-choice inline-flex items-center gap-1.5 px-2.5 py-1 text-sm font-medium"
-                    :aria-label="`Remove search ${filters.q}`"
-                    @click="searchDraft = ''; visitFilters(currentFilters({ q: null }))"
-                >
-                    <Search class="size-3 shrink-0 opacity-70" aria-hidden="true" />
-                    <span>Search: {{ filters.q }}</span>
-                    <X class="size-3 shrink-0 text-snitch-ink/45" aria-hidden="true" />
-                </button>
-                <button
-                    type="button"
-                    class="ms-auto inline-flex items-center gap-1.5 text-sm font-medium text-snitch-ink/55 underline decoration-snitch-ink/20 underline-offset-4 transition hover:text-snitch-ink"
+                    class="inline-flex items-center gap-1.5 text-sm font-medium text-snitch-ink/55 underline decoration-snitch-ink/20 underline-offset-4 transition hover:text-snitch-ink"
                     @click="clearFilters"
                 >
                     <FilterX class="size-3.5 shrink-0" aria-hidden="true" />
@@ -251,7 +224,7 @@ function paginationLabel(label: string): string {
 
             <div
                 v-if="!postsLoaded"
-                class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill mt-6 grid"
+                class="snitch-contact-sheet mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
                 aria-live="polite"
                 aria-busy="true"
             >
@@ -275,7 +248,7 @@ function paginationLabel(label: string): string {
 
             <div
                 v-else-if="posts && posts.data.length"
-                class="snitch-contact-sheet snitch-contact-sheet-proof snitch-contact-sheet-proof-fill snitch-contact-reveal mt-6 grid"
+                class="snitch-contact-sheet snitch-contact-reveal mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
             >
                 <div class="snitch-contact-sheet-rail col-span-full">
                     <p>Proof sheet</p>
@@ -315,10 +288,10 @@ function paginationLabel(label: string): string {
                 </p>
                 <p class="mt-2 text-sm text-snitch-ink/65">
                     <template v-if="hasActiveFilters">
-                        Try another search, platform, or type - or clear the filters.
+                        Try another platform, type, or account - or clear the filters.
                     </template>
                     <template v-else>
-                        Track competitors and sync to fill the feed with recent Instagram posts.
+                        Add snitches and sync to fill the contact sheet.
                     </template>
                 </p>
                 <button
@@ -330,16 +303,13 @@ function paginationLabel(label: string): string {
                     <FilterX class="relative z-10 size-4 shrink-0" aria-hidden="true" />
                     <span class="relative z-10">Clear filters</span>
                 </button>
-                <Link
+                <p
                     v-else
-                    :href="competitors.url()"
-                    class="snitch-btn snitch-btn-spot mt-5"
+                    class="mt-5 inline-flex items-center justify-center gap-2 text-xs uppercase tracking-wide text-snitch-ink/40"
                 >
-                    <span class="relative z-10 inline-flex items-center gap-2">
-                        <Clapperboard class="size-3.5 shrink-0" aria-hidden="true" />
-                        Go to Tracking
-                    </span>
-                </Link>
+                    <Clapperboard class="size-3.5 shrink-0" aria-hidden="true" />
+                    Waiting for sync
+                </p>
             </div>
 
             <nav

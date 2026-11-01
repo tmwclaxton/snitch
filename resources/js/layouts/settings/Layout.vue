@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Bot, Palette, User } from '@lucide/vue';
+import { Palette, User } from '@lucide/vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editProfile } from '@/routes/profile';
-import { show as editMcp } from '@/routes/settings/mcp';
 import type { NavItem } from '@/types';
 
 const sidebarNavItems: NavItem[] = [
@@ -19,63 +18,57 @@ const sidebarNavItems: NavItem[] = [
         href: editAppearance(),
         icon: Palette,
     },
-    {
-        title: 'Connect your AI',
-        href: editMcp(),
-        icon: Bot,
-    },
 ];
 
 const { isCurrentOrParentUrl } = useCurrentUrl();
 </script>
 
 <template>
-    <div class="relative min-h-full bg-snitch-paper px-4 py-6 text-snitch-ink sm:px-8 sm:py-8">
-        <header class="mb-6 border-b border-snitch-ink/10 pb-5">
-            <p class="font-mono text-sm font-medium uppercase tracking-wide text-snitch-ink/55">Account</p>
-            <h1 class="snitch-hero-display mt-1.5 text-3xl sm:text-4xl">
-                Settings
-            </h1>
-            <p class="mt-1.5 text-sm text-snitch-ink/70 sm:text-base">
-                Profile, appearance, and Connect your AI.
-            </p>
-        </header>
+    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
+        <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="flex flex-col gap-8 lg:flex-row lg:gap-10">
-            <aside class="w-full lg:w-44 lg:shrink-0">
-                <nav
-                    class="flex flex-col gap-1"
-                    aria-label="Settings"
-                >
-                    <Link
-                        v-for="item in sidebarNavItems"
-                        :key="toUrl(item.href)"
-                        :href="item.href"
-                        class="inline-flex items-center gap-2 border-l-2 px-3 py-2 text-sm transition-colors"
-                        :class="
-                            isCurrentOrParentUrl(item.href)
-                                ? 'border-snitch-ink font-medium text-snitch-ink'
-                                : 'border-transparent text-snitch-ink/70 hover:text-snitch-ink'
-                        "
+        <div class="relative z-10 mx-auto max-w-5xl">
+            <header class="mb-6 border-b border-snitch-ink/10 pb-5">
+                <p class="snitch-ink-label">Snitch / Account</p>
+                <h1 class="snitch-display mt-1.5 text-3xl text-snitch-ink sm:text-4xl">
+                    Settings
+                </h1>
+                <p class="mt-1.5 text-sm text-snitch-ink/65 sm:text-base">
+                    Profile and appearance on quieter paper.
+                </p>
+            </header>
+
+            <div class="flex flex-col gap-8 lg:flex-row lg:gap-10">
+                <aside class="w-full lg:w-44 lg:shrink-0">
+                    <nav
+                        class="snitch-paper-nav"
+                        aria-label="Settings"
                     >
-                        <component
-                            :is="item.icon"
-                            v-if="item.icon"
-                            class="size-3.5 shrink-0 opacity-70"
-                            aria-hidden="true"
-                        />
-                        <span>
+                        <Link
+                            v-for="item in sidebarNavItems"
+                            :key="toUrl(item.href)"
+                            :href="item.href"
+                            class="snitch-paper-nav-link"
+                            :class="
+                                isCurrentOrParentUrl(item.href)
+                                    ? 'snitch-paper-nav-link-active'
+                                    : ''
+                            "
+                        >
+                            <component
+                                :is="item.icon"
+                                v-if="item.icon"
+                                class="size-3.5 shrink-0 opacity-70"
+                                aria-hidden="true"
+                            />
                             {{ item.title }}
-                        </span>
-                    </Link>
-                </nav>
-            </aside>
+                        </Link>
+                    </nav>
+                </aside>
 
-            <div
-                class="min-w-0 flex-1"
-                :class="isCurrentOrParentUrl(editMcp()) ? 'max-w-5xl' : 'md:max-w-2xl'"
-            >
-                <slot />
+                <div class="min-w-0 flex-1 md:max-w-2xl">
+                    <slot />
+                </div>
             </div>
         </div>
     </div>

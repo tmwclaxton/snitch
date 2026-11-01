@@ -40,7 +40,6 @@ type UsageSummary = {
     all_time_spend_pence: number;
     vendors: Record<string, VendorUsage>;
     recent: ChargeRow[];
-    customer_recent?: ChargeRow[];
     recent_total: number;
     recent_has_more: boolean;
     credit_expiry: CreditExpiryBreakdownType;
@@ -78,15 +77,10 @@ const props = defineProps<{
     usage: UsageSummary;
     spendSeries?: SpendSeries | null;
     creditPacks: CreditPack[];
-    isAdmin?: boolean;
     platform: { fee_pence: number; bonus_pence: number; has_checkout: boolean };
 }>();
 
 const spendSeriesLoaded = computed(() => props.spendSeries != null);
-const isAdmin = computed(() => Boolean(props.isAdmin));
-const customerRecent = computed(
-    () => props.usage.customer_recent ?? props.usage.recent ?? [],
-);
 
 defineOptions({
     layout: AppLayout,
@@ -140,15 +134,15 @@ function vendorAccent(key: SpendVendorKey): string {
 </script>
 
 <template>
-    <div class="snitch-app-shell relative min-h-full px-2 py-6 sm:px-3 sm:py-8">
+    <div class="snitch-app-shell relative min-h-full px-5 py-6 sm:px-8 sm:py-8">
         <Head title="Billing" />
         <div class="snitch-grain" aria-hidden="true" />
 
-        <div class="snitch-app-canvas">
+        <div class="relative z-10 mx-auto max-w-6xl">
             <header class="flex flex-wrap items-end justify-between gap-4 border-b border-snitch-ink/10 pb-5">
                 <div class="min-w-0">
                     <p class="snitch-ink-label">Account</p>
-                    <h1 class="snitch-hero-display mt-1 text-3xl text-snitch-ink sm:text-4xl">
+                    <h1 class="snitch-display mt-1 text-3xl text-snitch-ink sm:text-4xl">
                         Billing
                     </h1>
                     <p class="mt-1.5 max-w-2xl text-sm text-snitch-ink/65 sm:text-base">
@@ -160,7 +154,7 @@ function vendorAccent(key: SpendVendorKey): string {
                 </div>
                 <Link
                     :href="pricing()"
-                    class="text-sm underline decoration-snitch-ink/35 underline-offset-4"
+                    class="text-sm underline decoration-snitch-spot underline-offset-4"
                 >
                     View public pricing
                 </Link>
@@ -168,7 +162,7 @@ function vendorAccent(key: SpendVendorKey): string {
 
             <p
                 v-if="checkoutStatus === 'success'"
-                class="mt-6 rounded-sm border border-snitch-ink/10 bg-snitch-lift px-3 py-2 text-sm"
+                class="mt-6 rounded-sm border border-snitch-ink/15 bg-snitch-spot/20 px-3 py-2 text-sm"
             >
                 Checkout completed. Credits and plan status update shortly after Stripe confirms.
             </p>
@@ -188,13 +182,13 @@ function vendorAccent(key: SpendVendorKey): string {
                     </p>
                     <p class="text-sm text-snitch-ink/70">
                         Platform plan:
-                        <strong>{{ isAdmin ? 'Admin' : (subscription.subscribed ? 'Active' : 'Not subscribed') }}</strong>
+                        <strong>{{ subscription.subscribed ? 'Active' : 'Not subscribed' }}</strong>
                         · {{ formatCatalogMoney(platform.fee_pence) }}/mo includes
                         {{ formatCatalogMoney(platform.bonus_pence) }} usage each billing period
                     </p>
                     <div class="flex flex-wrap gap-3">
                         <Form
-                            v-if="!isAdmin && !subscription.subscribed && platform.has_checkout"
+                            v-if="!subscription.subscribed && platform.has_checkout"
                             v-bind="BillingController.checkout.form()"
                             class="inline"
                         >
@@ -215,10 +209,7 @@ function vendorAccent(key: SpendVendorKey): string {
                     </div>
                 </section>
 
-                <section
-                    v-if="isAdmin"
-                    class="snitch-scrap relative space-y-4 p-5 pt-6 sm:p-6"
-                >
+                <section class="snitch-scrap relative space-y-4 p-5 pt-6 sm:p-6">
                     <span class="snitch-tape right-4 -top-2" aria-hidden="true" />
                     <h2 class="snitch-display text-2xl text-snitch-ink">Usage this period</h2>
                     <p class="text-sm text-snitch-ink/70">
@@ -251,17 +242,6 @@ function vendorAccent(key: SpendVendorKey): string {
                         </div>
                     </div>
                 </section>
-                <section
-                    v-else
-                    class="snitch-scrap relative space-y-4 p-5 pt-6 sm:p-6"
-                >
-                    <span class="snitch-tape right-4 -top-2" aria-hidden="true" />
-                    <h2 class="snitch-display text-2xl text-snitch-ink">Usage this period</h2>
-                    <p class="text-sm text-snitch-ink/70">
-                        Charged {{ formatMoney(usage.period_spend_pence) }} this month ·
-                        {{ formatMoney(usage.all_time_spend_pence) }} all time
-                    </p>
-                </section>
             </div>
 
             <CreditExpiryBreakdown
@@ -269,10 +249,7 @@ function vendorAccent(key: SpendVendorKey): string {
                 :breakdown="usage.credit_expiry"
             />
 
-            <section
-                v-if="isAdmin"
-                class="snitch-scrap relative mt-4 p-5 pt-6 sm:p-6"
-            >
+            <section class="snitch-scrap relative mt-4 p-5 pt-6 sm:p-6">
                 <span class="snitch-tape left-6 -top-2" aria-hidden="true" />
                 <div
                     class="snitch-seg mb-4 flex flex-wrap gap-1"
@@ -350,71 +327,45 @@ function vendorAccent(key: SpendVendorKey): string {
                         <h2 class="snitch-display text-2xl text-snitch-ink">Recent charges</h2>
                         <Link
                             :href="billingCharges()"
-                            class="text-sm underline decoration-snitch-ink/35 underline-offset-4"
+                            class="text-sm underline decoration-snitch-spot underline-offset-4"
                             data-test="billing-charges-link"
                         >
                             {{ usage.recent_has_more ? 'View all charges' : 'Charge breakdown' }}
                         </Link>
                     </div>
                     <ul
-                        v-if="isAdmin ? usage.recent.length : customerRecent.length"
+                        v-if="usage.recent.length"
                         class="divide-y divide-snitch-ink/10 text-sm"
                     >
-                        <template v-if="isAdmin">
-                            <li
-                                v-for="row in usage.recent"
-                                :key="row.id"
-                                class="flex items-start justify-between gap-3 py-2"
-                            >
-                                <span class="min-w-0">
-                                    <span class="snitch-ink-label mr-2 inline-flex items-center gap-1.5">
-                                        <img
-                                            :src="vendorIconSrc(row.vendor ?? '')"
-                                            alt=""
-                                            class="snitch-platform-logo size-3.5 shrink-0 object-contain"
-                                            width="14"
-                                            height="14"
-                                        >
-                                        {{ vendorLabel(row.vendor ?? '') }}
-                                    </span>
-                                    <span class="text-snitch-ink/90">{{ row.description }}</span>
-                                    <Link
-                                        v-if="rowLinkHref(row)"
-                                        :href="rowLinkHref(row)"
-                                        class="mt-0.5 block text-xs text-snitch-ink/55 underline decoration-snitch-ink/30 underline-offset-2 hover:text-snitch-ink"
+                        <li
+                            v-for="row in usage.recent"
+                            :key="row.id"
+                            class="flex items-start justify-between gap-3 py-2"
+                        >
+                            <span class="min-w-0">
+                                <span class="snitch-ink-label mr-2 inline-flex items-center gap-1.5">
+                                    <img
+                                        :src="vendorIconSrc(row.vendor)"
+                                        alt=""
+                                        class="snitch-platform-logo size-3.5 shrink-0 object-contain"
+                                        width="14"
+                                        height="14"
                                     >
-                                        {{ row.link?.label }}
-                                    </Link>
+                                    {{ vendorLabel(row.vendor) }}
                                 </span>
-                                <span class="shrink-0 tabular-nums text-snitch-ink">
-                                    {{ formatMoney(row.amount_pence ?? 0) }}
-                                </span>
-                            </li>
-                        </template>
-                        <template v-else>
-                            <li
-                                v-for="row in customerRecent"
-                                :key="row.key ?? row.id"
-                                class="flex items-start justify-between gap-3 py-2"
-                            >
-                                <span class="min-w-0">
-                                    <span class="text-snitch-ink/90">{{ row.description }}</span>
-                                    <span
-                                        v-if="row.date"
-                                        class="mt-0.5 block text-xs text-snitch-ink/45"
-                                    >
-                                        {{ row.date }}
-                                    </span>
-                                    <Link
-                                        v-if="rowLinkHref(row)"
-                                        :href="rowLinkHref(row)"
-                                        class="mt-0.5 block text-xs text-snitch-ink/55 underline decoration-snitch-ink/30 underline-offset-2 hover:text-snitch-ink"
-                                    >
-                                        {{ row.link?.label }}
-                                    </Link>
-                                </span>
-                            </li>
-                        </template>
+                                <span class="text-snitch-ink/90">{{ row.description }}</span>
+                                <Link
+                                    v-if="rowLinkHref(row)"
+                                    :href="rowLinkHref(row)"
+                                    class="mt-0.5 block text-xs text-snitch-ink/55 underline decoration-snitch-spot/80 underline-offset-2 hover:text-snitch-ink"
+                                >
+                                    {{ row.link?.label }}
+                                </Link>
+                            </span>
+                            <span class="shrink-0 tabular-nums text-snitch-ink">
+                                {{ formatMoney(row.amount_pence) }}
+                            </span>
+                        </li>
                     </ul>
                     <p v-else class="text-sm text-snitch-ink/60">No usage yet.</p>
                     <p
