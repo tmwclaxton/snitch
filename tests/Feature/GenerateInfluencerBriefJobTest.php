@@ -37,18 +37,14 @@ class GenerateInfluencerBriefJobTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('onboarding.store'), [
-                'own_handle' => 'loaflocal',
-                'competitors' => [
-                    [
-                        'platform' => 'instagram',
-                        'handle' => 'rivalbakery',
-                        'display_name' => 'Rival Bakery',
-                        'avatar' => null,
-                        'followers' => 1000,
-                    ],
+                'name' => 'Loaf Local',
+                'website' => 'https://loaf.example',
+                'description' => 'Neighborhood bakery',
+                'own_handles' => [
+                    'instagram' => '@loaflocal',
                 ],
             ])
-            ->assertRedirect(route('onboarding.show', ['step' => 'reveal']));
+            ->assertRedirect(route('onboarding.show', ['step' => 'paywall']));
 
         Queue::assertNotPushed(GenerateInfluencerBriefJob::class);
     }

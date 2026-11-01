@@ -21,25 +21,25 @@ export function snitchIsDark(): boolean {
     return document.documentElement.classList.contains('dark');
 }
 
-export function snitchInk(fallback = '#0e0e10'): string {
+export function snitchInk(fallback = '#1c1b1a'): string {
     return snitchCssVar('--snitch-ink', fallback);
 }
 
-export function snitchPaper(fallback = '#edeae2'): string {
+export function snitchPaper(fallback = '#efe6d8'): string {
     return snitchCssVar('--snitch-paper', fallback);
 }
 
-export function snitchFog(fallback = '#e4e0d6'): string {
+export function snitchFog(fallback = '#e4d9c8'): string {
     return snitchCssVar('--snitch-fog', fallback);
 }
 
-export function snitchSpot(fallback = '#fcd700'): string {
+export function snitchSpot(fallback = '#f0c400'): string {
     return snitchCssVar('--snitch-spot', fallback);
 }
 
-/** "You" series: charcoal on light paper, Caution Tape yellow on night. */
+/** "You" series: charcoal on light paper, mustard on night. */
 export function snitchYouSeries(): string {
-    return snitchIsDark() ? '#fcd700' : snitchInk('#0e0e10');
+    return snitchIsDark() ? '#f0c400' : snitchInk('#1c1b1a');
 }
 
 /** Distinct rival hues that stay readable on both shells. */
@@ -55,7 +55,7 @@ export const SNITCH_RIVAL_COLOURS_LIGHT = [
 ] as const;
 
 export const SNITCH_RIVAL_COLOURS_DARK = [
-    '#FF3D8B',
+    '#E07A5F',
     '#4FC3F7',
     '#7CFFB2',
     '#FF8A3D',
@@ -112,16 +112,16 @@ export function snitchAccountColour(
 
 /** Rivals' average / peer median line. */
 export function snitchPeerSeries(): string {
-    return snitchIsDark() ? 'rgba(237, 234, 226, 0.55)' : '#8A8478';
+    return snitchIsDark() ? 'rgba(239, 230, 216, 0.55)' : '#8A8478';
 }
 
 /** Muted axis / grid line colour with readable contrast on paper. */
 export function snitchAxisMuted(): string {
-    return snitchIsDark() ? 'rgba(237, 234, 226, 0.35)' : 'rgba(20, 20, 20, 0.28)';
+    return snitchIsDark() ? 'rgba(239, 230, 216, 0.35)' : 'rgba(28, 27, 26, 0.28)';
 }
 
 export function snitchAxisLabel(): string {
-    return snitchIsDark() ? 'rgba(237, 234, 226, 0.7)' : '#5c5346';
+    return snitchIsDark() ? 'rgba(239, 230, 216, 0.7)' : '#5c5346';
 }
 
 export function snitchApexTheme(): { mode: 'dark' | 'light' } {

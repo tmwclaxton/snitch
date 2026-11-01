@@ -38,7 +38,7 @@ Agent MCP `create_account` starts at £0 with **no trial**. Claiming (WorkOS bin
 - Product access requires an **active or trialing** Cashier platform subscription (`Subscription::valid()`), plus spendable balance above `billing.min_run_balance_pence`.
 - Admins (`User::isAdmin()`) and production grandfather ids (`snitch.grandfather_user_ids`, default `[1]`) bypass the subscription gate.
 - Unclaimed agent accounts are blocked until claim or subscribe.
-- Starter credit alone (no Stripe subscription) does **not** unlock the dashboard. `EnsureBrandProfile` sends unsubscribed users with competitors to onboarding step `paywall`.
+- Starter credit alone (no Stripe subscription) does **not** unlock the dashboard. `EnsureBrandProfile` sends users without a brand profile to the brand form, and unsubscribed users who already have a brand to onboarding step `paywall`. Competitor search is not an onboarding step.
 - Once starter is exhausted (`credit_balances.starter_allowance_exhausted`, set when claim remaining hits the floor), top-up alone must not bypass this.
 - **Top-ups require a paid plan** (HTTP checkout, MCP `create_credit_checkout`, Stripe webhook ignores credit sessions without a plan).
 - With a plan, access needs spendable unexpired balance above `billing.min_run_balance_pence` (default 20p). Hitting the floor is the same blocked experience as over-monthly-spend.

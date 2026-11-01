@@ -39,10 +39,6 @@ class EnsureBrandProfile
             return $next($request);
         }
 
-        if ($user->trackedAccounts()->competitors()->doesntExist()) {
-            return redirect()->route('onboarding.show');
-        }
-
         return redirect()->route('onboarding.show', ['step' => 'paywall']);
     }
 }

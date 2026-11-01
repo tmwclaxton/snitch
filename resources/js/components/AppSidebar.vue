@@ -6,7 +6,6 @@ import {
     CreditCard,
     KeyRound,
     LayoutDashboard,
-    Lightbulb,
     MessageSquare,
     Settings,
     Shield,
@@ -31,7 +30,6 @@ import { dashboard, home } from '@/routes';
 import { overview as adminOverview, activity as adminActivity } from '@/routes/admin';
 import { index as adminAutomationRunsIndex } from '@/routes/admin/automation-runs';
 import { index as adminCuratorTokensIndex } from '@/routes/admin/curator-tokens';
-import { index as adminFeaturesIndex } from '@/routes/admin/features';
 import { index as adminUsersIndex } from '@/routes/admin/users';
 import { edit as billing } from '@/routes/billing';
 import { index as chatIndex } from '@/routes/chat';
@@ -91,11 +89,6 @@ const adminNavItems = computed<NavItem[]>(() => {
             title: 'Users',
             href: adminUsersIndex(),
             icon: Users,
-        },
-        {
-            title: 'Features',
-            href: adminFeaturesIndex(),
-            icon: Lightbulb,
         },
         {
             title: 'Curator tokens',
@@ -167,7 +160,7 @@ const accountNavItems: NavItem[] = [
                     :key="item.title"
                     :href="item.href"
                     class="rounded-sm px-1.5 py-1 hover:text-sidebar-foreground"
-                    :class="isCurrentOrParentUrl(item.href) ? 'snitch-nav-current font-medium text-[#0e0e10]' : 'text-sidebar-foreground/80'"
+                    :class="isCurrentOrParentUrl(item.href) ? 'snitch-nav-current font-medium text-snitch-on-spot' : 'text-sidebar-foreground/80'"
                 >
                     {{ item.title }}
                 </Link>

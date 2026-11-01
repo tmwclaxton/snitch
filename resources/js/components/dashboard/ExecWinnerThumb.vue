@@ -62,7 +62,7 @@ const piLabel = computed(() => `${props.post.pi.toFixed(1)}× usual`);
             </div>
             <div
                 v-if="open && post.hook"
-                class="absolute inset-0 overflow-y-auto bg-[#0e0e10]/92 p-2 text-sm leading-snug text-[#edeae2]"
+                class="absolute inset-0 overflow-y-auto bg-[#1c1915]/92 p-2 text-sm leading-snug text-[#efe6d8]"
             >
                 {{ post.hook }}
             </div>

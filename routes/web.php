@@ -6,7 +6,6 @@ use App\Http\Controllers\Admin\AdminReferralController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AutomationRunController;
 use App\Http\Controllers\Admin\CuratorTokenController;
-use App\Http\Controllers\Admin\FeatureSuggestionController as AdminFeatureSuggestionController;
 use App\Http\Controllers\AdsController;
 use App\Http\Controllers\AgentsController;
 use App\Http\Controllers\AnalyticsController;
@@ -19,7 +18,6 @@ use App\Http\Controllers\CompetitorController;
 use App\Http\Controllers\DailyBriefController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExploreController;
-use App\Http\Controllers\FeatureSuggestionController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\GrowthController;
 use App\Http\Controllers\InfluencerController;
@@ -30,7 +28,6 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\Ops\SignedLoginController;
 use App\Http\Controllers\PublicReportController;
 use App\Http\Controllers\Settings\WinnerRuleController;
-use App\Http\Controllers\WatchingYouController;
 use App\Http\Controllers\WinnerController;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureBrandProfile;
@@ -109,16 +106,6 @@ XML,
 Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function () {
     Route::get('/onboarding', [OnboardingController::class, 'show'])->name('onboarding.show');
     Route::post('/onboarding', [OnboardingController::class, 'store'])->name('onboarding.store');
-    Route::post('/onboarding/own-handle', [OnboardingController::class, 'saveOwnHandle'])
-        ->name('onboarding.own-handle');
-    Route::post('/onboarding/continue', [OnboardingController::class, 'continueToPaywall'])
-        ->name('onboarding.continue');
-    Route::get('/onboarding/search', [OnboardingController::class, 'search'])
-        ->middleware('throttle:60,1')
-        ->name('onboarding.search');
-    Route::post('/onboarding/lookup', [OnboardingController::class, 'lookup'])
-        ->middleware('throttle:20,1')
-        ->name('onboarding.lookup');
     Route::post('/onboarding/autofill', [OnboardingController::class, 'startAutofill'])
         ->middleware('throttle:10,1')
         ->name('onboarding.autofill');
@@ -130,8 +117,6 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::get('/activity', [AdminActivityController::class, 'index'])->name('activity');
         Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
         Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
-        Route::get('/features', [AdminFeatureSuggestionController::class, 'index'])->name('features.index');
-        Route::patch('/features/{suggestion}', [AdminFeatureSuggestionController::class, 'update'])->name('features.update');
         Route::get('/curator-tokens', [CuratorTokenController::class, 'index'])->name('curator-tokens.index');
         Route::delete('/curator-tokens/{token}', [CuratorTokenController::class, 'destroy'])
             ->middleware('throttle:20,1')
@@ -152,19 +137,10 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
     Route::middleware([EnsureBrandProfile::class, EnsureProductAccess::class])->group(function () {
         Route::get('executive-brief', DashboardController::class)->name('dashboard');
         Route::permanentRedirect('dashboard', '/executive-brief');
-        Route::post('dashboard/watching', WatchingYouController::class)
-            ->middleware('throttle:30,1')
-            ->name('dashboard.watching');
         Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
         Route::post('/chat/stream', [ChatController::class, 'stream'])
             ->middleware('throttle:60,1')
             ->name('chat.stream');
-        Route::post('/features', [FeatureSuggestionController::class, 'store'])
-            ->middleware('throttle:20,1')
-            ->name('features.store');
-        Route::post('/features/{suggestion}/vote', [FeatureSuggestionController::class, 'vote'])
-            ->middleware('throttle:60,1')
-            ->name('features.vote');
 
         Route::get('/tracking', [CompetitorController::class, 'index'])->name('competitors.index');
         Route::post('/tracking', [CompetitorController::class, 'store'])->name('competitors.store');

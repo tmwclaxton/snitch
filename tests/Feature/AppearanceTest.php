@@ -24,7 +24,7 @@ class AppearanceTest extends TestCase
             $html,
         );
         $this->assertStringContainsString("const appearance = 'dark';", $html);
-        $this->assertStringContainsString('background-color: #0e0e10', $html);
+        $this->assertStringContainsString('background-color: #1c1915', $html);
         $this->assertStringContainsString("root.style.colorScheme = dark ? 'dark' : 'light';", $html);
         $this->assertStringContainsString('color-scheme: dark;', $html);
     }
@@ -42,7 +42,7 @@ class AppearanceTest extends TestCase
             $html,
         );
         $this->assertStringContainsString("const appearance = 'light';", $html);
-        $this->assertStringContainsString('background-color: #edeae2', $html);
+        $this->assertStringContainsString('background-color: #efe6d8', $html);
     }
 
     public function test_authenticated_users_can_open_appearance_settings(): void
@@ -110,19 +110,21 @@ class AppearanceTest extends TestCase
         $css = file_get_contents(resource_path('css/app.css'));
 
         $this->assertNotFalse($css);
-        $this->assertStringContainsString('--snitch-paper: #edeae2;', $css);
-        $this->assertStringContainsString('--snitch-ink: #0e0e10;', $css);
-        $this->assertStringContainsString('--snitch-spot: #fcd700;', $css);
-        $this->assertStringContainsString('--snitch-alert: #ff3d8b;', $css);
-        $this->assertStringContainsString('--snitch-caution-yellow: #fcd700;', $css);
-        $this->assertStringContainsString('--snitch-caution-pink: #ff3d8b;', $css);
-        $this->assertStringContainsString('--snitch-paper: #0e0e10;', $css);
-        $this->assertStringContainsString('--snitch-ink: #edeae2;', $css);
-        $this->assertStringContainsString('--sidebar-accent: #e0ddd4;', $css);
-        $this->assertStringContainsString('--sidebar-accent: #1e1e22;', $css);
+        $this->assertStringContainsString('--snitch-paper: #efe6d8;', $css);
+        $this->assertStringContainsString('--snitch-ink: #1c1b1a;', $css);
+        $this->assertStringContainsString('--snitch-spot: #f0c400;', $css);
+        $this->assertStringContainsString('--snitch-alert: #9f2d3a;', $css);
+        $this->assertStringContainsString('--snitch-caution-yellow: #f0c400;', $css);
+        $this->assertStringContainsString('--snitch-caution-pink: #3a5f6b;', $css);
+        $this->assertStringContainsString('--snitch-paper: #1c1915;', $css);
+        $this->assertStringContainsString('--snitch-ink: #efe6d8;', $css);
+        $this->assertStringContainsString('--sidebar-accent: #e4d9c8;', $css);
+        $this->assertStringContainsString('--sidebar-accent: #2a251f;', $css);
         $this->assertStringContainsString('height: 2.75rem;', $css);
         $this->assertStringContainsString('.snitch-nav-current', $css);
-        $this->assertStringContainsString('background-color: #fcd700 !important;', $css);
+        $this->assertStringContainsString('background-color: #f0c400 !important;', $css);
+        $this->assertStringNotContainsString('#fcd700', $css);
+        $this->assertStringNotContainsString('#ff3d8b', $css);
         $this->assertStringContainsString('.dark .snitch-choice-active', $css);
         $this->assertStringNotContainsString('--snitch-paper: #f3eee3;', $css);
         $this->assertStringNotContainsString('--snitch-spot: #ffd60a;', $css);

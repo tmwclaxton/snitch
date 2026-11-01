@@ -67,7 +67,7 @@ function formatDate(date: string): string {
                     v-for="post in posts.data"
                     :key="post.id"
                     :href="show(post.slug)"
-                    class="group flex flex-col overflow-hidden border border-white/10 bg-[#141416] transition hover:-translate-y-0.5 hover:border-snitch-caution-yellow/60"
+                    class="group flex flex-col overflow-hidden border border-snitch-ink/15 bg-snitch-lift transition hover:-translate-y-0.5 hover:border-snitch-caution-yellow/60"
                     prefetch
                 >
                     <SnitchImage
@@ -120,7 +120,7 @@ function formatDate(date: string): string {
 
             <div
                 v-else
-                class="mx-auto mt-10 max-w-xl border border-white/10 bg-[#141416] p-8 text-center"
+                class="mx-auto mt-10 max-w-xl border border-snitch-ink/15 bg-snitch-lift p-8 text-center"
             >
                 <p class="text-2xl font-semibold tracking-tight text-snitch-caution-fog">
                     No posts yet.
@@ -143,8 +143,8 @@ function formatDate(date: string): string {
                         class="inline-flex px-3 py-2 text-sm font-medium"
                         :class="
                             link.active
-                                ? 'bg-snitch-caution-yellow text-snitch-caution-ink'
-                                : 'border border-white/20 text-snitch-caution-fog/80 hover:border-snitch-caution-yellow hover:text-snitch-caution-fog'
+                                ? 'bg-snitch-caution-yellow text-snitch-on-spot'
+                                : 'border border-snitch-ink/20 text-snitch-caution-fog/80 hover:border-snitch-caution-yellow hover:text-snitch-caution-fog'
                         "
                         prefetch
                     >
@@ -152,7 +152,7 @@ function formatDate(date: string): string {
                     </Link>
                     <span
                         v-else
-                        class="inline-flex pointer-events-none border border-white/10 px-3 py-2 text-sm font-medium text-snitch-caution-fog/50"
+                        class="inline-flex pointer-events-none border border-snitch-ink/15 px-3 py-2 text-sm font-medium text-snitch-caution-fog/50"
                     >
                         <span v-html="link.label" />
                     </span>

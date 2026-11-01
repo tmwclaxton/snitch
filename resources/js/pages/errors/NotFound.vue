@@ -37,7 +37,7 @@ defineOptions({
             <div class="mt-8 flex flex-wrap gap-3">
                 <Link
                     :href="home()"
-                    class="inline-flex items-center gap-2 bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-caution-ink hover:opacity-90"
+                    class="inline-flex items-center gap-2 bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-on-spot hover:opacity-90"
                 >
                     <House class="size-4 shrink-0" aria-hidden="true" />
                     Back home

@@ -44,7 +44,7 @@ const chartSeries = computed(() => {
 
 const options = computed(() => {
     const dark = snitchIsDark();
-    const label = dark ? '#EDEAE2' : '#1C1B1A';
+    const label = dark ? '#EFE6D8' : '#1C1B1A';
 
     return {
         theme: snitchApexTheme(),
@@ -85,7 +85,7 @@ const options = computed(() => {
             ? { bar: { borderRadius: 0, columnWidth: '55%' } }
             : undefined,
         colors: dark
-            ? ['#FCD700', '#FF3D8B', '#5B9BD5', '#6FBF73']
+            ? ['#F0C400', '#7A9AA6', '#5B9BD5', '#6FBF73']
             : ['#1C1B1A', '#3A5F6B', '#C45C26', '#2F6B4F'],
     };
 });

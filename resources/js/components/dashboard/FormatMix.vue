@@ -31,7 +31,7 @@ const colours = computed(() => {
         return [snitchYouSeries(), ...snitchRivalColours().slice(0, 3)];
     }
 
-    return [snitchInk('#0e0e10'), '#3A5F6B', '#C45C26', '#2F6B4F'];
+    return [snitchInk('#1c1b1a'), '#3A5F6B', '#C45C26', '#2F6B4F'];
 });
 
 const categories = computed(() =>
@@ -53,7 +53,7 @@ const options = computed(() => ({
     dataLabels: { enabled: false },
     xaxis: { categories: categories.value, labels: { style: { colors: snitchAxisLabel(), fontSize: '14px' } } },
     yaxis: { labels: { style: { colors: snitchAxisLabel(), fontSize: '14px' } } },
-    legend: { fontSize: '14px', labels: { colors: snitchInk('#edeae2') } },
+    legend: { fontSize: '14px', labels: { colors: snitchInk('#efe6d8') } },
     grid: { borderColor: snitchAxisMuted() },
     tooltip: { y: { formatter: (value: number) => `${value.toFixed(0)}%` } },
 }));

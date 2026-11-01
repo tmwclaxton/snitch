@@ -14,7 +14,7 @@ const isHome = computed(() => {
 </script>
 
 <template>
-    <footer class="border-t border-white/10 bg-snitch-caution-ink">
+    <footer class="border-t border-snitch-ink/15 bg-snitch-caution-ink">
         <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-4 px-4 py-8 text-sm text-snitch-caution-fog/75">
             <Link :href="home()" class="hover:text-snitch-caution-fog">Snitch</Link>
             <span aria-hidden="true">·</span>

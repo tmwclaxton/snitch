@@ -84,12 +84,12 @@
         {{-- Inline style matches snitch paper so the first paint matches the shell --}}
         <style>
             html {
-                background-color: #edeae2;
+                background-color: #efe6d8;
                 color-scheme: light;
             }
 
             html.dark {
-                background-color: #0e0e10;
+                background-color: #1c1915;
                 color-scheme: dark;
             }
         </style>

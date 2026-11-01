@@ -21,12 +21,14 @@ class PublicPagesTest extends TestCase
             );
     }
 
-    public function test_public_layout_uses_caution_tape_shell(): void
+    public function test_public_layout_uses_paper_shell(): void
     {
         $layout = file_get_contents(resource_path('js/layouts/PublicLayout.vue'));
 
         $this->assertNotFalse($layout, 'Missing PublicLayout.vue source');
-        $this->assertStringContainsString('bg-snitch-caution-ink', $layout);
+        $this->assertStringContainsString('bg-snitch-paper', $layout);
+        $this->assertStringContainsString('text-snitch-ink', $layout);
+        $this->assertStringNotContainsString('snitch-public-shell dark', $layout);
         $this->assertStringNotContainsString('snitch-surface', $layout);
         $this->assertStringNotContainsString('snitch-grain', $layout);
         $this->assertStringNotContainsString('overflow-x-clip', $layout);
@@ -297,8 +299,9 @@ class PublicPagesTest extends TestCase
 
         $this->assertNotFalse($layout);
         $this->assertNotFalse($css);
-        $this->assertMatchesRegularExpression('/class="snitch-public-shell dark\b/', $layout);
-        $this->assertMatchesRegularExpression('/html:has\(\.snitch-public-shell\)[^{]*\{[^}]*background-color:\s*#0e0e10/s', $css);
+        $this->assertMatchesRegularExpression('/class="snitch-public-shell relative\b/', $layout);
+        $this->assertStringNotContainsString('snitch-public-shell dark', $layout);
+        $this->assertMatchesRegularExpression('/html:has\(\.snitch-public-shell\)[^{]*\{[^}]*background-color:\s*var\(--snitch-paper\)/s', $css);
         $this->assertStringContainsString(":root,\n.snitch-light {", $css);
         $this->assertStringContainsString('.snitch-public-shell .snitch-btn {', $css);
 

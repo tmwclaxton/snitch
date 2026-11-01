@@ -69,12 +69,12 @@ const faqs = [
         <Head title="Better social media performance. Without manual research." />
 
         <!-- Caution Tape hero band -->
-        <section class="flex min-h-[calc(100svh-3.5rem)] flex-col border-b border-white/10 bg-snitch-caution-ink">
+        <section class="flex min-h-[calc(100svh-3.5rem)] flex-col border-b border-snitch-ink/15 bg-snitch-caution-ink">
             <div class="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-4 py-10 text-center sm:py-12">
                 <h1 class="snitch-hero-display text-[clamp(2.1rem,5.2vw,4.25rem)] text-snitch-caution-fog">
                     <span class="block">Better social media</span>
                     <span class="block">
-                        <span class="bg-snitch-caution-yellow px-1.5 text-snitch-caution-ink">performance.</span>
+                        <span class="bg-snitch-caution-yellow px-1.5 text-snitch-on-spot">performance.</span>
                     </span>
                     <span class="mt-2 block text-[clamp(1.35rem,3.2vw,2.35rem)] tracking-wide text-snitch-caution-fog/90">
                         Without manual research.
@@ -87,14 +87,14 @@ const faqs = [
                 <div class="mt-8 flex flex-wrap items-center justify-center">
                     <Link
                         :href="login()"
-                        class="inline-flex items-center justify-center bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-caution-ink hover:opacity-90"
+                        class="inline-flex items-center justify-center bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-on-spot hover:opacity-90"
                     >
                         {{ CTA_TEXT }}
                     </Link>
                 </div>
             </div>
 
-            <div class="border-t border-white/10 bg-black/40">
+            <div class="border-t border-snitch-ink/15 bg-black/40">
                 <div class="mx-auto max-w-6xl px-4 py-4 text-center sm:py-5">
                     <p class="font-mono text-sm text-snitch-caution-fog/70">
                         Tracking <span class="font-bold text-snitch-caution-yellow">27</span> brands ·
@@ -104,7 +104,7 @@ const faqs = [
             </div>
         </section>
 
-        <section class="border-b border-snitch-caution-ink/15 bg-snitch-caution-yellow text-snitch-caution-ink">
+        <section class="border-b border-snitch-on-spot/15 bg-snitch-caution-yellow text-snitch-on-spot">
             <div class="mx-auto max-w-6xl px-4 py-24">
                 <h2
                     class="snitch-hero-display text-3xl tracking-tight md:text-4xl lg:whitespace-nowrap lg:text-[clamp(1.65rem,2.15vw,2.5rem)]"
@@ -115,9 +115,9 @@ const faqs = [
                     <div
                         v-for="(benefit, index) in benefits"
                         :key="benefit.title"
-                        class="border border-snitch-caution-ink/15 bg-snitch-caution-ink p-6 text-snitch-caution-fog"
+                        class="border border-snitch-on-spot/15 bg-snitch-caution-ink p-6 text-snitch-caution-fog"
                     >
-                        <div class="flex h-10 w-10 items-center justify-center bg-snitch-caution-yellow text-snitch-caution-ink">
+                        <div class="flex h-10 w-10 items-center justify-center bg-snitch-caution-yellow text-snitch-on-spot">
                             <span class="font-mono text-sm font-bold">0{{ index + 1 }}</span>
                         </div>
                         <h3 class="mt-5 text-lg font-semibold tracking-tight">{{ benefit.title }}</h3>
@@ -127,14 +127,14 @@ const faqs = [
             </div>
         </section>
 
-        <section class="border-b border-white/10 bg-snitch-caution-ink">
+        <section class="border-b border-snitch-ink/15 bg-snitch-caution-ink">
             <div class="mx-auto max-w-4xl px-4 py-24 text-center">
                 <h2 class="snitch-hero-display text-2xl leading-snug tracking-tight text-snitch-caution-fog md:text-3xl">
                     Less than the cost of a single sponsored post,
                     for insight that shapes every post you make.
                 </h2>
                 <div class="relative mt-10 inline-block w-full max-w-md text-left">
-                    <div class="border border-white/10 bg-[#141416] p-8">
+                    <div class="border border-snitch-ink/15 bg-snitch-lift p-8">
                         <div class="flex items-baseline justify-between">
                             <h3 class="text-2xl font-semibold tracking-tight text-snitch-caution-fog">Platform</h3>
                             <p class="font-mono text-3xl font-bold tracking-tight text-snitch-caution-yellow">
@@ -150,10 +150,10 @@ const faqs = [
                                 <span>{{ item }}</span>
                             </li>
                         </ul>
-                        <div class="mt-8 border-t border-white/10 pt-6">
+                        <div class="mt-8 border-t border-snitch-ink/15 pt-6">
                             <Link
                                 :href="login()"
-                                class="inline-flex w-full items-center justify-center bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-caution-ink hover:opacity-90"
+                                class="inline-flex w-full items-center justify-center bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-on-spot hover:opacity-90"
                             >
                                 {{ CTA_TEXT }}
                             </Link>
@@ -163,10 +163,10 @@ const faqs = [
             </div>
         </section>
 
-        <section class="border-b border-white/10 bg-[#121214]">
+        <section class="border-b border-snitch-ink/15 bg-snitch-lift">
             <div class="mx-auto max-w-3xl px-4 py-24">
                 <h2 class="snitch-hero-display text-3xl tracking-tight text-snitch-caution-fog md:text-4xl">Questions, answered</h2>
-                <div class="mt-10 divide-y divide-white/10 border-y border-white/10">
+                <div class="mt-10 divide-y divide-white/10 border-y border-snitch-ink/15">
                     <details v-for="faq in faqs" :key="faq.q" class="group py-5">
                         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-snitch-caution-fog">
                             <span class="text-base font-medium">{{ faq.q }}</span>
@@ -178,7 +178,7 @@ const faqs = [
             </div>
         </section>
 
-        <section class="bg-snitch-caution-yellow pb-20 text-snitch-caution-ink">
+        <section class="bg-snitch-caution-yellow pb-20 text-snitch-on-spot">
             <div class="mx-auto max-w-4xl px-4 py-28 pb-10 text-center">
                 <h2 class="snitch-hero-display text-3xl tracking-tight md:text-5xl">
                     Open your Competitors' content playbook.
@@ -195,7 +195,7 @@ const faqs = [
         </section>
 
         <div
-            class="fixed inset-x-0 bottom-0 z-50 border-t border-snitch-caution-ink/20 bg-snitch-caution-yellow text-snitch-caution-ink transition-transform duration-300"
+            class="fixed inset-x-0 bottom-0 z-50 border-t border-snitch-on-spot/20 bg-snitch-caution-yellow text-snitch-on-spot transition-transform duration-300"
             :class="scrolled ? 'translate-y-0' : 'translate-y-full'"
         >
             <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">

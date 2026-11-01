@@ -4,9 +4,8 @@ import PublicNav from '@/components/marketing/PublicNav.vue';
 import SeoHead from '@/components/marketing/SeoHead.vue';
 
 /**
- * Public pages are pinned to the Caution Tape night palette, like the landing
- * page: the shell's `dark` class scopes the night snitch tokens and `dark:`
- * variants regardless of the visitor's OS / appearance setting.
+ * Public pages follow the same light and dark appearance as the app.
+ * Snitch paper and ink tokens flip with the `dark` class on the document.
  */
 withDefaults(
     defineProps<{
@@ -19,7 +18,7 @@ withDefaults(
 </script>
 
 <template>
-    <div class="snitch-public-shell dark relative min-h-screen w-full bg-snitch-caution-ink text-snitch-caution-fog">
+    <div class="snitch-public-shell relative min-h-screen w-full bg-snitch-paper text-snitch-ink">
         <SeoHead />
         <div class="relative z-10 flex min-h-screen w-full flex-col">
             <PublicNav :minimal="minimal" />

@@ -50,7 +50,7 @@ const options = computed(() => ({
         title: { text: 'ER %', style: { color: snitchAxisLabel(), fontSize: '14px' } },
         labels: { style: { colors: snitchAxisLabel(), fontSize: '14px' } },
     },
-    legend: { fontSize: '14px', labels: { colors: snitchInk('#edeae2') } },
+    legend: { fontSize: '14px', labels: { colors: snitchInk('#efe6d8') } },
     annotations: {
         xaxis: props.medianX != null
             ? [{ x: props.medianX, borderColor: snitchAxisMuted(), strokeDashArray: 4, label: { text: "rivals' avg", style: { fontSize: '14px', color: snitchAxisLabel(), background: 'transparent' } } }]

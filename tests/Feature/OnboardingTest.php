@@ -2,15 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Enums\Platform;
 use App\Models\BrandProfile;
 use App\Models\TrackedAccount;
 use App\Models\User;
-use App\Services\Apify\Contracts\PlatformAdapter;
-use App\Services\Apify\PlatformAdapterManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
-use Mockery;
 use Tests\TestCase;
 
 class OnboardingTest extends TestCase
@@ -26,7 +22,7 @@ class OnboardingTest extends TestCase
             ->assertRedirect(route('onboarding.show'));
     }
 
-    public function test_onboarding_page_renders_competitor_step(): void
+    public function test_onboarding_page_renders_brand_step(): void
     {
         $user = User::factory()->withoutPlatformSubscription()->create();
 
@@ -35,10 +31,11 @@ class OnboardingTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('onboarding/Index')
-                ->where('step', 'competitors')
+                ->where('step', 'brand')
                 ->has('platforms')
                 ->has('trialDays')
-                ->has('trialCompetitorLimit')
+                ->has('platformFeePence')
+                ->missing('trackedBy')
             );
     }
 
@@ -59,59 +56,67 @@ class OnboardingTest extends TestCase
         $this->assertStringContainsString('Log out', $nav);
         $this->assertStringContainsString(':minimal="minimal"', $layout);
         $this->assertStringContainsString('PublicFooter v-if="!minimal"', $layout);
-        $this->assertStringContainsString('Add competitors', $page);
-        $this->assertStringContainsString('The reveal', $page);
+        $this->assertStringContainsString('Tell Snitch about your brand', $page);
+        $this->assertStringContainsString('BrandProfileForm', $page);
         $this->assertStringContainsString('Start your free trial', $page);
-        $this->assertStringNotContainsString('Tell Snitch about your brand', $page);
+        $this->assertStringNotContainsString('Add competitors', $page);
+        $this->assertStringNotContainsString('The reveal', $page);
+        $this->assertStringNotContainsString('onboarding-search', $page);
     }
 
-    public function test_user_can_save_competitors_and_reach_reveal(): void
+    public function test_user_can_save_brand_and_reach_paywall(): void
     {
         $user = User::factory()->withoutPlatformSubscription()->create();
-        TrackedAccount::factory()->create([
-            'platform' => Platform::Instagram,
-            'handle' => 'rivalbakery',
-            'display_name' => 'Rival Bakery',
-            'followers' => 1200,
-        ]);
 
         $this->actingAs($user)
             ->post(route('onboarding.store'), [
-                'own_handle' => 'loaflocal',
-                'competitors' => [
-                    [
-                        'platform' => 'instagram',
-                        'handle' => 'rivalbakery',
-                        'display_name' => 'Rival Bakery',
-                        'avatar' => null,
-                        'followers' => 1200,
-                    ],
+                'name' => 'Loaf Local',
+                'website' => 'https://loaf.example',
+                'description' => 'Neighborhood bakery',
+                'own_handles' => [
+                    'instagram' => '@loaflocal',
                 ],
             ])
-            ->assertRedirect(route('onboarding.show', ['step' => 'reveal']));
+            ->assertRedirect(route('onboarding.show', ['step' => 'paywall']));
 
         $this->assertDatabaseHas('brand_profiles', [
             'user_id' => $user->id,
-        ]);
-        $this->assertDatabaseHas('tracked_accounts', [
-            'user_id' => $user->id,
-            'handle' => 'rivalbakery',
+            'name' => 'Loaf Local',
+            'website' => 'https://loaf.example',
+            'description' => 'Neighborhood bakery',
         ]);
 
         $brand = BrandProfile::query()->where('user_id', $user->id)->firstOrFail();
         $this->assertSame('@loaflocal', $brand->own_handles['instagram'] ?? null);
+        $this->assertSame(0, $user->trackedAccounts()->count());
 
         $this->actingAs($user)
-            ->get(route('onboarding.show', ['step' => 'reveal']))
+            ->get(route('onboarding.show', ['step' => 'paywall']))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('onboarding/Index')
-                ->where('step', 'reveal')
-                ->has('trackedBy')
+                ->where('step', 'paywall')
+                ->missing('trackedBy')
             );
     }
 
-    public function test_onboarding_skips_when_user_has_competitors_and_subscription(): void
+    public function test_subscribed_user_leaves_onboarding_for_tracking(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('onboarding.store'), [
+                'name' => 'Loaf Local',
+                'website' => 'https://loaf.example',
+                'description' => 'Neighborhood bakery',
+                'own_handles' => [
+                    'instagram' => '@loaflocal',
+                ],
+            ])
+            ->assertRedirect(route('competitors.index'));
+    }
+
+    public function test_onboarding_skips_when_user_has_brand_and_subscription(): void
     {
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
@@ -122,74 +127,14 @@ class OnboardingTest extends TestCase
             ->assertRedirect(route('dashboard'));
     }
 
-    public function test_search_returns_corpus_accounts(): void
+    public function test_brand_without_subscription_opens_paywall_without_competitors(): void
     {
         $user = User::factory()->withoutPlatformSubscription()->create();
-        TrackedAccount::factory()->create([
-            'platform' => Platform::Instagram,
-            'handle' => 'searchablebrand',
-            'display_name' => 'Searchable Brand',
-            'followers' => 5000,
-        ]);
+        BrandProfile::factory()->for($user)->create();
 
         $this->actingAs($user)
-            ->getJson(route('onboarding.search', ['q' => 'searchable']))
-            ->assertOk()
-            ->assertJsonFragment([
-                'handle' => 'searchablebrand',
-                'followers' => 5000,
-            ]);
-    }
-
-    public function test_lookup_uses_platform_adapter_when_missing(): void
-    {
-        $user = User::factory()->withoutPlatformSubscription()->create();
-
-        $adapter = Mockery::mock(PlatformAdapter::class);
-        $adapter->shouldReceive('resolveProfile')
-            ->once()
-            ->with('@freshlookup')
-            ->andReturn([
-                'handle' => 'freshlookup',
-                'display_name' => 'Fresh Lookup',
-                'avatar' => 'https://example.com/a.jpg',
-                'followers' => 99,
-                'url' => 'https://www.instagram.com/freshlookup/',
-            ]);
-
-        $manager = Mockery::mock(PlatformAdapterManager::class);
-        $manager->shouldReceive('for')->andReturn($adapter);
-        $this->app->instance(PlatformAdapterManager::class, $manager);
-
-        $this->actingAs($user)
-            ->postJson(route('onboarding.lookup'), [
-                'q' => '@freshlookup',
-                'platform' => 'instagram',
-            ])
-            ->assertOk()
-            ->assertJsonPath('result.handle', 'freshlookup')
-            ->assertJsonPath('result.source', 'live');
-    }
-
-    public function test_continue_sends_unsubscribed_user_to_paywall(): void
-    {
-        $user = User::factory()->withoutPlatformSubscription()->create();
-        BrandProfile::factory()->for($user)->create([
-            'own_handles' => ['instagram' => '@loaf'],
-        ]);
-        TrackedAccount::factory()->for($user)->create();
-
-        $this->actingAs($user)
-            ->post(route('onboarding.continue'))
+            ->get(route('dashboard'))
             ->assertRedirect(route('onboarding.show', ['step' => 'paywall']));
-
-        $this->actingAs($user)
-            ->get(route('onboarding.show', ['step' => 'paywall']))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('onboarding/Index')
-                ->where('step', 'paywall')
-            );
     }
 
     public function test_admin_and_user_one_bypass_paywall_gate(): void
@@ -200,7 +145,6 @@ class OnboardingTest extends TestCase
             'email' => 'admin@snitch.test',
         ]);
         BrandProfile::factory()->for($admin)->create();
-        TrackedAccount::factory()->for($admin)->create();
 
         $this->actingAs($admin)
             ->get(route('dashboard'))

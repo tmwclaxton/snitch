@@ -30,9 +30,9 @@ class EvidenceFileLightChromeTest extends TestCase
         $this->assertStringNotContainsString('bg-snitch-spot/35', $formatMix);
         $this->assertStringContainsString('snitch-stat-accent', $formatMix);
         $this->assertStringContainsString('export function highlightKeyPhrase', $phrase);
-        $this->assertStringContainsString('--sidebar-accent: #e0ddd4;', $css);
+        $this->assertStringContainsString('--sidebar-accent: #e4d9c8;', $css);
         $this->assertStringContainsString('.snitch-nav-current', $css);
-        $this->assertStringContainsString('background-color: #fcd700 !important;', $css);
+        $this->assertStringContainsString('background-color: #f0c400 !important;', $css);
         $this->assertMatchesRegularExpression(
             '/\.snitch-stat-accent\s*\{\s*color:\s*var\(--snitch-ink\);/s',
             $css,
@@ -45,7 +45,7 @@ class EvidenceFileLightChromeTest extends TestCase
             '/\.snitch-format-tag\s*\{[^}]*color:\s*var\(--snitch-ink\);/s',
             $css,
         );
-        $this->assertStringContainsString('color: #0e0e10;', $css);
+        $this->assertStringContainsString('color: #1c1b1a;', $css);
         $nav = file_get_contents(resource_path('js/components/NavMain.vue'));
         $this->assertNotFalse($nav);
         $this->assertStringContainsString('snitch-nav-label', $nav);

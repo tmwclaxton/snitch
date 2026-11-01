@@ -194,15 +194,15 @@ class OnboardingAutofillTest extends TestCase
         });
     }
 
-    public function test_onboarding_page_is_competitor_search_flow(): void
+    public function test_onboarding_page_is_brand_form_then_paywall(): void
     {
         $page = file_get_contents(resource_path('js/pages/onboarding/Index.vue'));
 
         $this->assertNotFalse($page);
-        $this->assertStringContainsString('Add competitors', $page);
-        $this->assertStringContainsString('onboarding-search', $page);
-        $this->assertStringContainsString('The reveal', $page);
+        $this->assertStringContainsString('Tell Snitch about your brand', $page);
+        $this->assertStringContainsString('BrandProfileForm', $page);
         $this->assertStringContainsString('Start your free trial', $page);
-        $this->assertStringNotContainsString('BrandProfileForm', $page);
+        $this->assertStringNotContainsString('Add competitors', $page);
+        $this->assertStringNotContainsString('The reveal', $page);
     }
 }

@@ -118,7 +118,7 @@ function toggleAccount(id: number): void {
             <span class="text-xs font-medium uppercase tracking-wide text-snitch-ink/55">
                 Range
             </span>
-            <div class="inline-flex items-center gap-0.5 rounded-md border border-snitch-ink/10 bg-snitch-fog p-0.5 dark:border-snitch-ink/28 dark:bg-[#1a1a1d]">
+            <div class="inline-flex items-center gap-0.5 rounded-md border border-snitch-ink/10 bg-snitch-fog p-0.5 dark:border-snitch-ink/28 dark:bg-snitch-fog">
                 <button
                     v-for="row in periods"
                     :key="row.value"

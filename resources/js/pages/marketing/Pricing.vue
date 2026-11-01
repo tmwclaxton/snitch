@@ -78,7 +78,7 @@ function formatAverage(pence: number): string {
             </p>
 
             <div class="mt-12 grid gap-6 md:grid-cols-2">
-                <section class="flex flex-col border border-white/10 bg-[#141416] p-6 sm:p-8">
+                <section class="flex flex-col border border-snitch-ink/15 bg-snitch-lift p-6 sm:p-8">
                     <p class="font-mono text-sm uppercase tracking-[0.14em] text-snitch-caution-fog/70">
                         Platform
                     </p>
@@ -101,7 +101,7 @@ function formatAverage(pence: number): string {
                     </ul>
                 </section>
 
-                <section class="flex flex-col border border-white/10 bg-[#141416] p-6 sm:p-8">
+                <section class="flex flex-col border border-snitch-ink/15 bg-snitch-lift p-6 sm:p-8">
                     <p class="font-mono text-sm uppercase tracking-[0.14em] text-snitch-caution-fog/70">
                         Usage credits
                     </p>
@@ -129,7 +129,7 @@ function formatAverage(pence: number): string {
                 </section>
             </div>
 
-            <section class="mt-12 border border-white/10 bg-[#121214] p-6 sm:p-8" data-test="tool-averages">
+            <section class="mt-12 border border-snitch-ink/15 bg-snitch-lift p-6 sm:p-8" data-test="tool-averages">
                 <h2 class="snitch-hero-display text-2xl text-snitch-caution-fog sm:text-3xl">
                     Live tool averages
                 </h2>
@@ -141,7 +141,7 @@ function formatAverage(pence: number): string {
                     <div
                         v-for="row in averagesByVendor"
                         :key="row.vendor"
-                        class="border border-l-4 border-white/10 bg-white/[0.03] p-4"
+                        class="border border-l-4 border-snitch-ink/15 bg-snitch-lift p-4"
                         :class="VENDOR_ACCENT_BORDER[row.vendor]"
                         :data-test="`tool-average-${row.vendor}`"
                     >
@@ -177,7 +177,7 @@ function formatAverage(pence: number): string {
                     href="https://calendly.com/dan-olympuslab/30min"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="inline-flex items-center gap-2 bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-caution-ink hover:opacity-90"
+                    class="inline-flex items-center gap-2 bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-on-spot hover:opacity-90"
                 >
                     <ArrowRight class="size-4 shrink-0" aria-hidden="true" />
                     Book a free intro call

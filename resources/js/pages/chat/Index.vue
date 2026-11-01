@@ -300,7 +300,7 @@ onUnmounted(() => {
                             v-if="row.role === 'user'"
                             class="flex justify-end"
                         >
-                            <div class="max-w-[85%] rounded-2xl bg-snitch-fog px-4 py-2.5 text-[15px] leading-relaxed text-snitch-ink dark:bg-[#1E1E22]">
+                            <div class="max-w-[85%] rounded-2xl bg-snitch-fog px-4 py-2.5 text-[15px] leading-relaxed text-snitch-ink dark:bg-snitch-lift">
                                 {{ row.content }}
                             </div>
                         </div>

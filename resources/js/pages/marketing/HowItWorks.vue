@@ -44,7 +44,7 @@ const steps: Array<{ title: string; body: string; icon: Component }> = [
                 <li
                     v-for="(step, index) in steps"
                     :key="step.title"
-                    class="list-none border border-white/10 bg-[#141416] p-6"
+                    class="list-none border border-snitch-ink/15 bg-snitch-lift p-6"
                 >
                     <p class="flex items-center gap-2 font-mono text-3xl font-bold text-snitch-caution-yellow">
                         <component
@@ -66,7 +66,7 @@ const steps: Array<{ title: string; body: string; icon: Component }> = [
             <div class="mt-12">
                 <Link
                     :href="login()"
-                    class="inline-flex items-center gap-2 bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-caution-ink hover:opacity-90"
+                    class="inline-flex items-center gap-2 bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-on-spot hover:opacity-90"
                 >
                     <ArrowRight class="size-4 shrink-0" aria-hidden="true" />
                     Get started

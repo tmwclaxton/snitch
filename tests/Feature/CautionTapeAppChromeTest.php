@@ -53,7 +53,7 @@ class CautionTapeAppChromeTest extends TestCase
 
         $this->assertStringContainsString('html:has(.snitch-public-shell)', $css);
         $this->assertStringContainsString('.snitch-caution-band', $css);
-        $this->assertStringContainsString('--sidebar-background: #000000;', $css);
+        $this->assertStringContainsString('--sidebar-background: #1c1915;', $css);
         $this->assertStringContainsString('height: 2.75rem;', $css);
         $this->assertStringContainsString('Appearance', $settings);
         $this->assertFileExists(resource_path('js/pages/settings/Appearance.vue'));

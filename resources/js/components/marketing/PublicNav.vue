@@ -57,7 +57,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <header class="sticky top-0 z-40 border-b border-white/10 bg-snitch-caution-ink text-snitch-caution-fog backdrop-blur">
+    <header class="sticky top-0 z-40 border-b border-snitch-ink/15 bg-snitch-caution-ink text-snitch-caution-fog backdrop-blur">
         <div class="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
             <div class="flex min-w-0 items-center gap-8">
                 <Link :href="home()" class="flex items-center gap-2 text-snitch-caution-fog" aria-label="Snitch home">
@@ -112,7 +112,7 @@ onUnmounted(() => {
                     <Link
                         v-else
                         :href="login()"
-                        class="hidden bg-snitch-caution-yellow px-3 py-2 text-sm font-medium text-snitch-caution-ink md:inline-flex"
+                        class="hidden bg-snitch-caution-yellow px-3 py-2 text-sm font-medium text-snitch-on-spot md:inline-flex"
                     >
                         Log in
                     </Link>
@@ -135,7 +135,7 @@ onUnmounted(() => {
         <div
             v-if="!minimal && mobileOpen"
             id="public-mobile-nav"
-            class="border-t border-white/10 bg-snitch-caution-ink md:hidden"
+            class="border-t border-snitch-ink/15 bg-snitch-caution-ink md:hidden"
         >
             <nav class="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3" aria-label="Mobile">
                 <Link
@@ -154,7 +154,7 @@ onUnmounted(() => {
                     {{ link.label }}
                 </Link>
 
-                <div class="mt-2 border-t border-white/10 pt-3">
+                <div class="mt-2 border-t border-snitch-ink/15 pt-3">
                     <Link
                         v-if="isAuthenticated"
                         :href="dashboard()"
@@ -167,7 +167,7 @@ onUnmounted(() => {
                     <Link
                         v-else
                         :href="login()"
-                        class="inline-flex w-full items-center justify-center bg-snitch-caution-yellow px-3 py-2.5 text-sm font-medium text-snitch-caution-ink"
+                        class="inline-flex w-full items-center justify-center bg-snitch-caution-yellow px-3 py-2.5 text-sm font-medium text-snitch-on-spot"
                         @click="closeMobile"
                     >
                         Log in

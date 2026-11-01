@@ -125,7 +125,7 @@ function shareHref(key: string): string {
                     :alt="post.title"
                     aspect-ratio="16 / 9"
                     loading="eager"
-                    class="mt-8 block w-full border border-white/10"
+                    class="mt-8 block w-full border border-snitch-ink/15"
                     img-class="w-full object-cover"
                     fallback="paper"
                 />
@@ -138,7 +138,7 @@ function shareHref(key: string): string {
 
             <div
                 v-if="post.sources.length > 0"
-                class="mt-8 border border-white/10 bg-[#141416] p-6 sm:p-8"
+                class="mt-8 border border-snitch-ink/15 bg-snitch-lift p-6 sm:p-8"
             >
                 <h2 class="font-mono text-sm uppercase tracking-wide text-snitch-caution-fog/70">Sources</h2>
                 <ul class="mt-4 space-y-3">
@@ -166,7 +166,7 @@ function shareHref(key: string): string {
                     v-for="item in shareItems"
                     :key="item.key"
                     :href="shareHref(item.key)"
-                    class="inline-flex border border-white/20 px-3 py-2 text-sm font-medium text-snitch-caution-fog/85 hover:border-snitch-caution-yellow hover:text-snitch-caution-fog"
+                    class="inline-flex border border-snitch-ink/20 px-3 py-2 text-sm font-medium text-snitch-caution-fog/85 hover:border-snitch-caution-yellow hover:text-snitch-caution-fog"
                     target="_blank"
                     rel="noopener noreferrer"
                 >
@@ -183,7 +183,7 @@ function shareHref(key: string): string {
                         v-for="related in more_posts"
                         :key="related.id"
                         :href="show(related.slug)"
-                        class="block border border-white/10 bg-[#141416] p-4 transition hover:-translate-y-0.5 hover:border-snitch-caution-yellow/60"
+                        class="block border border-snitch-ink/15 bg-snitch-lift p-4 transition hover:-translate-y-0.5 hover:border-snitch-caution-yellow/60"
                         prefetch
                     >
                         <h3 class="text-lg font-semibold tracking-tight text-snitch-caution-fog">

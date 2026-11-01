@@ -32,7 +32,7 @@ defineOptions({
                 </p>
             </div>
 
-            <div class="border border-white/10 bg-[#141416] p-6 sm:p-8">
+            <div class="border border-snitch-ink/15 bg-snitch-lift p-6 sm:p-8">
                 <Form
                     :action="store.url()"
                     method="post"
@@ -52,7 +52,7 @@ defineOptions({
                             type="text"
                             required
                             autocomplete="name"
-                            class="w-full border border-white/20 bg-snitch-caution-ink px-3 py-2 text-sm text-snitch-caution-fog outline-none focus:border-snitch-caution-yellow"
+                            class="w-full border border-snitch-ink/20 bg-snitch-caution-ink px-3 py-2 text-sm text-snitch-caution-fog outline-none focus:border-snitch-caution-yellow"
                         />
                         <InputError :message="errors.name" />
                     </div>
@@ -70,7 +70,7 @@ defineOptions({
                             type="email"
                             required
                             autocomplete="email"
-                            class="w-full border border-white/20 bg-snitch-caution-ink px-3 py-2 text-sm text-snitch-caution-fog outline-none focus:border-snitch-caution-yellow"
+                            class="w-full border border-snitch-ink/20 bg-snitch-caution-ink px-3 py-2 text-sm text-snitch-caution-fog outline-none focus:border-snitch-caution-yellow"
                         />
                         <InputError :message="errors.email" />
                     </div>
@@ -87,14 +87,14 @@ defineOptions({
                             name="message"
                             rows="5"
                             required
-                            class="w-full border border-white/20 bg-snitch-caution-ink px-3 py-2 text-sm text-snitch-caution-fog outline-none focus:border-snitch-caution-yellow"
+                            class="w-full border border-snitch-ink/20 bg-snitch-caution-ink px-3 py-2 text-sm text-snitch-caution-fog outline-none focus:border-snitch-caution-yellow"
                         />
                         <InputError :message="errors.message" />
                     </div>
 
                     <button
                         type="submit"
-                        class="inline-flex items-center gap-2 bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-caution-ink hover:opacity-90 disabled:opacity-60"
+                        class="inline-flex items-center gap-2 bg-snitch-caution-yellow px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-snitch-on-spot hover:opacity-90 disabled:opacity-60"
                         :disabled="processing"
                     >
                         <LoaderCircle

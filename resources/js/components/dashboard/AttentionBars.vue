@@ -54,7 +54,7 @@ function optionsFor(title: string) {
             labels: { style: { colors: snitchAxisLabel(), fontSize: '14px' } },
         },
         yaxis: { labels: { show: false } },
-        legend: { fontSize: '14px', labels: { colors: snitchInk('#edeae2') } },
+        legend: { fontSize: '14px', labels: { colors: snitchInk('#efe6d8') } },
         grid: { show: false },
         tooltip: { y: { formatter: (value: number) => `${value.toFixed(1)}%` } },
     };
