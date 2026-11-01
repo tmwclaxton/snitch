@@ -32,13 +32,14 @@ class ChatSuggestionsTest extends TestCase
             'kind' => TrackedAccountKind::Competitor,
         ]);
 
+        $suggestions = app(ChatSuggestionService::class)->forUser($user);
+
+        $this->assertCount(4, $suggestions);
+        $this->assertTrue(collect($suggestions)->contains(fn ($value) => is_string($value) && str_contains($value, 'ownclub')));
+
         $this->actingAs($user)
-            ->get(route('chat.index'))
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->component('chat/Index')
-                ->has('suggestions', 4)
-                ->where('suggestions.0', fn ($value) => is_string($value) && str_contains($value, 'ownclub')));
+            ->get('/chat')
+            ->assertRedirect('/dashboard');
     }
 
     public function test_suggestion_service_returns_four_unique_prompts(): void

@@ -5,21 +5,18 @@ namespace Tests\Feature\DailyBrief;
 use App\Models\BrandProfile;
 use App\Models\DailyBrief;
 use App\Models\User;
+use App\Support\DailyBriefPresenter;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia as Assert;
-use Tests\Concerns\WithoutRetiredPageRedirects;
 use Tests\TestCase;
 
 class DailyBriefPageTest extends TestCase
 {
     use RefreshDatabase;
-    use WithoutRetiredPageRedirects;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->setUpWithoutRetiredPageRedirects();
 
         config([
             'snitch.admin_emails' => ['admin@snitch.test'],
@@ -32,14 +29,10 @@ class DailyBriefPageTest extends TestCase
         BrandProfile::factory()->for($user)->create();
 
         $this->actingAs($user)
-            ->get(route('today.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('today/Index')
-                ->where('brief', null)
-                ->where('canRegenerate', false)
-                ->has('date')
-            );
+            ->get('/today')
+            ->assertRedirect('/dashboard');
+
+        $this->assertFileDoesNotExist(resource_path('js/pages/today/Index.vue'));
     }
 
     public function test_today_page_renders_ready_brief(): void
@@ -51,17 +44,8 @@ class DailyBriefPageTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('today.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('today/Index')
-                ->where('brief.headline', 'Post a Reel tonight.')
-                ->has('history', 1)
-                ->where('brief.big_numbers.1.value', 'New')
-                ->where('brief.big_numbers.1.note', fn (mixed $note): bool => is_string($note)
-                    && str_contains($note, 'Daily tracking started')
-                    && str_contains($note, 'first comparison tomorrow'))
-            );
+            ->get('/today')
+            ->assertRedirect('/dashboard');
     }
 
     public function test_today_page_does_not_mutate_stored_brief_on_display(): void
@@ -94,14 +78,10 @@ class DailyBriefPageTest extends TestCase
             ],
         ]);
 
-        $this->actingAs($user)
-            ->get(route('today.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('today/Index')
-                ->where('brief.actions.0.how', 'Reply under (post_id 218)')
-                ->where('brief.unused_weekly_ideas.0.hook', "Jessie's story: nervous, alone, now a regular")
-            );
+        $presented = app(DailyBriefPresenter::class)->payload($brief);
+
+        $this->assertSame('Reply under (post_id 218)', $presented['actions'][0]['how']);
+        $this->assertSame("Jessie's story: nervous, alone, now a regular", $presented['unused_weekly_ideas'][0]['hook']);
 
         $brief->refresh();
         $this->assertSame('Reply under (post_id 218)', $brief->payload['actions'][0]['how'] ?? null);
@@ -118,21 +98,19 @@ class DailyBriefPageTest extends TestCase
         DailyBrief::factory()->for($admin)->create();
 
         $this->actingAs($admin)
-            ->get(route('today.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->where('canRegenerate', true));
+            ->get('/today')
+            ->assertRedirect('/dashboard');
 
         $customer = User::factory()->create(['daily_brief_enabled' => true]);
         BrandProfile::factory()->for($customer)->create();
 
         $this->actingAs($customer)
-            ->get(route('today.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->where('canRegenerate', false));
+            ->get('/today')
+            ->assertRedirect('/dashboard');
 
         $this->actingAs($customer)
-            ->post(route('today.generate'))
-            ->assertForbidden();
+            ->post('/today/generate')
+            ->assertNotFound();
     }
 
     public function test_toggle_action_marks_done(): void
@@ -151,14 +129,8 @@ class DailyBriefPageTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->patch(route('today.actions.toggle', ['brief' => $brief->id, 'index' => 0]))
-            ->assertRedirect();
-
-        $this->assertNotNull($brief->fresh()->payload['actions'][0]['done_at']);
-
-        $this->actingAs($user)
-            ->patch(route('today.actions.toggle', ['brief' => $brief->id, 'index' => 0]))
-            ->assertRedirect();
+            ->patch('/today/'.$brief->id.'/actions/0')
+            ->assertNotFound();
 
         $this->assertNull($brief->fresh()->payload['actions'][0]['done_at']);
     }
@@ -169,7 +141,7 @@ class DailyBriefPageTest extends TestCase
 
         $user = User::factory()->create(['daily_brief_enabled' => true]);
         BrandProfile::factory()->for($user)->create();
-        DailyBrief::factory()->for($user)->create([
+        $brief = DailyBrief::factory()->for($user)->create([
             'brief_date' => '2026-10-04',
             'payload' => [
                 'headline' => 'Post a Reel tonight.',
@@ -181,18 +153,10 @@ class DailyBriefPageTest extends TestCase
             ],
         ]);
 
-        $this->actingAs($user)
-            ->get(route('today.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('today/Index')
-                ->where('brief.big_numbers.1.value', 'New')
-                ->where('brief.big_numbers.1.note', 'Daily tracking started 4 Oct; first comparison tomorrow')
-            );
+        $presented = app(DailyBriefPresenter::class)->payload($brief);
 
-        $today = file_get_contents(resource_path('js/pages/today/Index.vue'));
-        $this->assertIsString($today);
-        $this->assertStringContainsString('Action points', $today);
-        $this->assertStringNotContainsString('Action <span class="snitch-highlight">points</span>', $today);
+        $this->assertSame('New', $presented['big_numbers'][1]['value']);
+        $this->assertSame('Daily tracking started 4 Oct; first comparison tomorrow', $presented['big_numbers'][1]['note']);
+        $this->assertFileDoesNotExist(resource_path('js/pages/today/Index.vue'));
     }
 }

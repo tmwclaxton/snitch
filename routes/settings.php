@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Settings\AppearanceController;
 use App\Http\Controllers\Settings\BillingController;
-use App\Http\Controllers\Settings\McpController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Middleware\ValidateSessionWithWorkOS;
 use Illuminate\Support\Facades\Route;
@@ -19,13 +18,7 @@ Route::middleware([
 
     Route::get('settings/appearance', [AppearanceController::class, 'edit'])->name('appearance.edit');
 
-    Route::get('settings/mcp', [McpController::class, 'show'])->name('settings.mcp.show');
-    Route::post('settings/mcp/token', [McpController::class, 'rotateToken'])
-        ->middleware('throttle:10,1')
-        ->name('settings.mcp.token');
-    Route::delete('settings/mcp/token', [McpController::class, 'revokeToken'])
-        ->middleware('throttle:10,1')
-        ->name('settings.mcp.token.revoke');
+    Route::redirect('settings/mcp', '/connect')->name('settings.mcp.show');
 
     Route::get('billing', [BillingController::class, 'index'])->name('billing.edit');
     Route::get('billing/charges', [BillingController::class, 'charges'])->name('billing.charges');

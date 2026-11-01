@@ -29,7 +29,7 @@ class McpConnectionGuide
                     'name' => 'Cursor',
                     'blurb' => 'Add Snitch in Cursor Settings → MCP, or merge into your project mcp.json.',
                     'steps' => [
-                        'Mint an API token in Settings → Connect your AI.',
+                        'Mint an API token on the Connect page.',
                         'Open Cursor Settings → MCP and add snitch with the config below.',
                         'Reload MCP servers, then call whoami.',
                     ],
@@ -63,7 +63,7 @@ class McpConnectionGuide
                     'name' => 'Claude Desktop / Claude Code',
                     'blurb' => 'HTTP MCP with a bearer token, same pattern as Cursor.',
                     'steps' => [
-                        'Mint an API token in Settings → Connect your AI.',
+                        'Mint an API token on the Connect page.',
                         'Add an HTTP MCP server with the config below.',
                         'Restart Claude and call whoami.',
                     ],
@@ -84,7 +84,7 @@ class McpConnectionGuide
                     'name' => 'ChatGPT',
                     'blurb' => 'Custom GPT or agent actions that support remote HTTP MCP with a bearer token.',
                     'steps' => [
-                        'Mint an API token in Settings → Connect your AI.',
+                        'Mint an API token on the Connect page.',
                         'Add the Snitch MCP URL and Authorization bearer header below.',
                         'Call whoami, then list_trackers or get_daily_brief.',
                     ],
@@ -98,7 +98,7 @@ class McpConnectionGuide
                     'name' => 'Codex',
                     'blurb' => 'Any Codex or OpenAI agent harness that supports remote HTTP MCP.',
                     'steps' => [
-                        'Mint an API token in Settings → Connect your AI.',
+                        'Mint an API token on the Connect page.',
                         'Register the Snitch MCP URL with the bearer header below.',
                         'Call whoami, then workflow_guide for tool order.',
                     ],
@@ -112,7 +112,7 @@ class McpConnectionGuide
                     'name' => 'Windsurf',
                     'blurb' => 'Same HTTP + bearer pattern as Cursor.',
                     'steps' => [
-                        'Mint an API token in Settings → Connect your AI.',
+                        'Mint an API token on the Connect page.',
                         'Open Windsurf MCP settings and add snitch with the config below.',
                         'Call whoami to confirm.',
                     ],
@@ -132,7 +132,7 @@ class McpConnectionGuide
                 'title' => 'General MCP',
                 'blurb' => 'Any MCP client over HTTPS can connect to production Snitch.',
                 'steps' => [
-                    'Mint an API token in Settings → Connect your AI, or call create_account on the register endpoint.',
+                    'Mint an API token on the Connect page, or call create_account on the register endpoint.',
                     'Paste the config into your MCP client (see tabs above).',
                     'Call whoami to confirm the connection.',
                     'If an agent created the account, open the claim URL in your browser.',
@@ -155,7 +155,6 @@ class McpConnectionGuide
                 'list_competitors', 'list_trackers', 'get_account_summary', 'get_competitor_posts',
                 'get_top_posts', 'get_posting_times', 'get_format_mix', 'get_gaps', 'get_growth_series',
                 'list_users', 'get_panels', 'set_panels', 'rollback_panels',
-                'get_executive_brief', 'set_executive_brief', 'save_executive_brief', 'post_chat_reply',
                 'add_competitor', 'remove_competitor', 'sync_competitor',
                 'suggest_competitors', 'suggest_competitors_status', 'confirm_competitor_suggestions', 'dismiss_competitor_suggestions',
                 'generate_influencer_brief', 'find_influencers', 'influencer_search_status', 'list_influencers', 'keep_influencer', 'discard_influencer', 'dismiss_influencer_suggestions', 'remove_influencer',

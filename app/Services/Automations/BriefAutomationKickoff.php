@@ -3,11 +3,8 @@
 namespace App\Services\Automations;
 
 use App\Models\AutomationRun;
-use App\Models\TrackedAccount;
 use App\Models\User;
-use Illuminate\Support\Facades\Log;
 use RuntimeException;
-use Throwable;
 
 class BriefAutomationKickoff
 {
@@ -26,85 +23,13 @@ class BriefAutomationKickoff
     }
 
     /**
+     * Executive Brief webhooks are no longer triggered.
+     *
      * @return array{kicked_off: bool, run: ?AutomationRun, reason: ?string}
      */
     public function kickOff(User $user): array
     {
-        if (! $this->configured()) {
-            return ['kicked_off' => false, 'run' => null, 'reason' => 'not_configured'];
-        }
-
-        $handles = TrackedAccount::query()
-            ->where('user_id', $user->id)
-            ->orderBy('id')
-            ->pluck('handle')
-            ->filter(fn ($h) => is_string($h) && trim($h) !== '')
-            ->map(fn (string $h) => ltrim(trim($h), '@'))
-            ->values()
-            ->all();
-
-        if ($handles === []) {
-            return ['kicked_off' => false, 'run' => null, 'reason' => 'no_trackers'];
-        }
-
-        if ($this->guard->recentlyTriggered(AutomationRun::TYPE_BRIEF, (int) $user->id)) {
-            return ['kicked_off' => false, 'run' => null, 'reason' => 'recently_triggered'];
-        }
-
-        $issued = $this->tokens->issue($user, AutomationRun::TYPE_BRIEF, [
-            'handles' => $handles,
-            'mode' => 'executive_brief',
-        ]);
-        /** @var AutomationRun $run */
-        $run = $issued['run'];
-        $plainToken = $issued['plain_text_token'];
-
-        $payload = [
-            'user_id' => (int) $user->id,
-            'handles' => $handles,
-            'run_id' => $run->uuid,
-            'scoped_token' => $plainToken,
-            'mcp_url' => (string) config('services.cursor_automations.mcp_url', 'https://www.snitchsocial.net/mcp'),
-            'mode' => 'executive_brief',
-            'context' => $this->contextPrompt(),
-        ];
-
-        try {
-            $this->guard->mark(AutomationRun::TYPE_BRIEF, (int) $user->id);
-            $result = $this->client->trigger(
-                (string) config('services.cursor_automations.brief.webhook_url'),
-                (string) config('services.cursor_automations.brief.webhook_token'),
-                $payload,
-            );
-        } catch (Throwable $e) {
-            $this->tokens->complete($run, AutomationRun::STATUS_FAILED, null, $e->getMessage());
-            Log::warning('brief_automation_kickoff_failed', [
-                'user_id' => $user->id,
-                'run_uuid' => $run->uuid,
-                'error' => $e->getMessage(),
-            ]);
-
-            return ['kicked_off' => false, 'run' => $run->fresh(), 'reason' => 'webhook_failed'];
-        }
-
-        if ($result['cursor_run_id'] === null && $result['cursor_background_composer_id'] === null) {
-            $this->tokens->complete(
-                $run,
-                AutomationRun::STATUS_FAILED,
-                ['webhook_response' => $result['raw']],
-                'Webhook returned without a run id. A run may already be in flight.',
-            );
-
-            return ['kicked_off' => false, 'run' => $run->fresh(), 'reason' => 'missing_run_id'];
-        }
-
-        $run->forceFill([
-            'cursor_run_id' => $result['cursor_run_id'],
-            'cursor_background_composer_id' => $result['cursor_background_composer_id'],
-            'status' => AutomationRun::STATUS_RUNNING,
-        ])->save();
-
-        return ['kicked_off' => true, 'run' => $run->fresh(), 'reason' => null];
+        return ['kicked_off' => false, 'run' => null, 'reason' => 'removed'];
     }
 
     public function contextPrompt(): string

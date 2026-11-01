@@ -171,23 +171,11 @@ class ExecutiveDashboardTest extends TestCase
     #[Test]
     public function dashboard_vue_is_executive_brief_memo(): void
     {
-        $dashboard = file_get_contents(resource_path('js/pages/ExecutiveBrief.vue'));
+        $this->assertFileDoesNotExist(resource_path('js/pages/ExecutiveBrief.vue'));
+        $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
         $this->assertIsString($dashboard);
-
-        $this->assertStringContainsString('Executive Brief', $dashboard);
-        $this->assertStringContainsString('What happened this week', $dashboard);
-        $this->assertStringContainsString('What to do', $dashboard);
-        $this->assertStringContainsString('max-w-[1100px]', $dashboard);
-        $this->assertStringContainsString('max-w-[70ch]', $dashboard);
-        $this->assertStringNotContainsString('Your canvas', $dashboard);
         $this->assertStringNotContainsString('PanelBigNumber', $dashboard);
         $this->assertStringNotContainsString('id="vote"', $dashboard);
         $this->assertStringNotContainsString('id="tracked-by"', $dashboard);
-        $this->assertStringNotContainsString('id="what-to-post"', $dashboard);
-        $this->assertStringNotContainsString('ExecStatTile', $dashboard);
-        $this->assertStringNotContainsString('CaptionPanels', $dashboard);
-        $this->assertStringNotContainsString('InsightList', $dashboard);
-        $this->assertStringNotContainsString('CompareTable', $dashboard);
-        $this->assertStringNotContainsString('line-clamp-', $dashboard);
     }
 }

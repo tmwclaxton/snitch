@@ -40,7 +40,8 @@ class WeeklyBriefAndGrowthToolsTest extends TestCase
         SnitchServer::tool(GetWeeklyBriefTool::class)
             ->assertOk()
             ->assertSee('Open with the receipt')
-            ->assertSee('/brief')
+            ->assertSee('/dashboard')
+            ->assertDontSee('/brief?')
             ->assertSee($week->toDateString());
     }
 

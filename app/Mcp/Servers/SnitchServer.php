@@ -22,7 +22,6 @@ use App\Mcp\Tools\GetAccountSummaryTool;
 use App\Mcp\Tools\GetBrandTool;
 use App\Mcp\Tools\GetCompetitorPostsTool;
 use App\Mcp\Tools\GetDailyBriefTool;
-use App\Mcp\Tools\GetExecutiveBriefTool;
 use App\Mcp\Tools\GetFormatMixTool;
 use App\Mcp\Tools\GetGapsTool;
 use App\Mcp\Tools\GetGrowthSeriesTool;
@@ -42,7 +41,6 @@ use App\Mcp\Tools\ListTrackersTool;
 use App\Mcp\Tools\ListUsersTool;
 use App\Mcp\Tools\ListWinnersTool;
 use App\Mcp\Tools\MarkWeeklyBriefIdeaUsedTool;
-use App\Mcp\Tools\PostChatReplyTool;
 use App\Mcp\Tools\RemoveCompetitorTool;
 use App\Mcp\Tools\RemoveInfluencerTool;
 use App\Mcp\Tools\RescoreWinnersStatusTool;
@@ -50,8 +48,6 @@ use App\Mcp\Tools\RescoreWinnersTool;
 use App\Mcp\Tools\RevokeMonthlyReportTool;
 use App\Mcp\Tools\RollbackPanelsTool;
 use App\Mcp\Tools\RotateTokenTool;
-use App\Mcp\Tools\SaveExecutiveBriefTool;
-use App\Mcp\Tools\SetExecutiveBriefTool;
 use App\Mcp\Tools\SetPanelsTool;
 use App\Mcp\Tools\ShareMonthlyReportTool;
 use App\Mcp\Tools\StartBrandAutofillTool;
@@ -69,7 +65,7 @@ use Laravel\Mcp\Server\Attributes\Version;
 
 #[Name('Snitch')]
 #[Version('1.0.0')]
-#[Instructions('Snitch is the social marketing data layer for agents. Authenticate with a Sanctum bearer token from create_account (or Settings → MCP on the website). Call workflow_guide first (workflow=overview or a specific flow such as content_plan, weekly_brief, daily_brief, or growth). Today is get_daily_brief. This week is get_weekly_brief then mark_weekly_brief_idea_used. Growth is get_growth and get_monthly_report (share_monthly_report / revoke_monthly_report). then whoami: check runtime.app_url (local vs https://www.snitchsocial.net), brand_warnings, and queue warnings. Local MCP (localhost) uses a different database and credits than production. Async tools need php artisan queue:work. Billable tools need a credit balance above 20p - subscribe for monthly plan value or top up credits. Prefer sync/analyze/find tools explicitly - nothing is auto-scheduled except the opt-in daily brief refresh. Never paste bearer tokens into public chats; prefer rotate_token after exposure. Snitch discovery must complete the full loop: suggest_competitors → poll suggest_competitors_status → confirm_competitor_suggestions with selected handles (or dismiss_competitor_suggestions). Suggestions are cache-only until confirmed; they are NOT tracked snitches. Influencer discovery: find_influencers → influencer_search_status → keep_influencer / discard_influencer, or dismiss_influencer_suggestions for shortlist/report without tracking. Follower min/max bands require known in-band counts. Post payloads include snitch_url deep links. Fix brand_warnings before discovery so suggestions match the intended company.')]
+#[Instructions('Snitch is the social marketing data layer for agents. Authenticate with a Sanctum bearer token from create_account (or the Connect page on the website). Call workflow_guide first (workflow=overview or a specific flow such as content_plan, weekly_brief, daily_brief, or growth). Stored daily rows are get_daily_brief. Stored weekly rows are get_weekly_brief then mark_weekly_brief_idea_used. Growth is get_growth and get_monthly_report (share_monthly_report / revoke_monthly_report). then whoami: check runtime.app_url (local vs https://www.snitchsocial.net), brand_warnings, and queue warnings. Local MCP (localhost) uses a different database and credits than production. Async tools need php artisan queue:work. Billable tools need a credit balance above 20p - subscribe for monthly plan value or top up credits. Prefer sync/analyze/find tools explicitly. Follower refresh and account sync run on a schedule. Never paste bearer tokens into public chats; prefer rotate_token after exposure. Snitch discovery must complete the full loop: suggest_competitors → poll suggest_competitors_status → confirm_competitor_suggestions with selected handles (or dismiss_competitor_suggestions). Suggestions are cache-only until confirmed; they are NOT tracked snitches. Influencer discovery: find_influencers → influencer_search_status → keep_influencer / discard_influencer, or dismiss_influencer_suggestions for shortlist/report without tracking. Follower min/max bands require known in-band counts. Post payloads include snitch_url deep links. Fix brand_warnings before discovery so suggestions match the intended company.')]
 class SnitchServer extends Server
 {
     public int $defaultPaginationLength = 50;
@@ -100,10 +96,6 @@ class SnitchServer extends Server
         GetPanelsTool::class,
         SetPanelsTool::class,
         RollbackPanelsTool::class,
-        GetExecutiveBriefTool::class,
-        SetExecutiveBriefTool::class,
-        SaveExecutiveBriefTool::class,
-        PostChatReplyTool::class,
         AddCompetitorTool::class,
         RemoveCompetitorTool::class,
         SyncCompetitorTool::class,

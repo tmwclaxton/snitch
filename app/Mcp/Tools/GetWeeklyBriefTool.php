@@ -17,7 +17,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tool;
 
 #[Name('get_weekly_brief')]
-#[Description('Read the This week brief at /brief: post ideas, best times, and recent weeks. Briefs generate automatically and free after sync and analysis. Omit week for the current Monday. Does not regenerate.')]
+#[Description('Read the stored weekly brief: post ideas, best times, and recent weeks. Omit week for the current Monday. Does not regenerate.')]
 class GetWeeklyBriefTool extends Tool
 {
     public function handle(Request $request, WeeklyBriefGenerator $generator, WeeklyBriefPresenter $presenter): Response

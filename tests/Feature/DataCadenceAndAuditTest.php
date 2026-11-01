@@ -45,12 +45,11 @@ class DataCadenceAndAuditTest extends TestCase
             ->map(fn (Event $event): string => $event->expression)
             ->values();
         $sync = $events->first(fn ($expr, $cmd) => str_contains($cmd, 'snitch:sync-accounts'));
-        $briefs = $events->first(fn ($expr, $cmd) => str_contains($cmd, 'snitch:generate-daily-briefs'));
-
         $this->assertContains('0 6 * * *', $refreshTimes);
         $this->assertContains('0 10 * * *', $refreshTimes);
         $this->assertSame('15 6 * * *', $sync);
-        $this->assertSame('25 6 * * *', $briefs);
+        $this->assertFalse($events->keys()->contains(fn ($cmd) => str_contains($cmd, 'snitch:generate-daily-briefs')));
+        $this->assertFalse($events->keys()->contains(fn ($cmd) => str_contains($cmd, 'snitch:generate-weekly-briefs')));
         $this->assertTrue($events->keys()->contains(fn ($cmd) => str_contains($cmd, 'snitch:scheduler-heartbeat')));
         $this->assertFalse($events->keys()->contains(fn ($cmd) => str_contains($cmd, 'snitch:daily-refresh')));
     }
@@ -184,7 +183,7 @@ class DataCadenceAndAuditTest extends TestCase
         $this->assertTrue($types->contains('engagement_over_100pct'));
         $this->assertNotSame('fail', $status['monthly_report_consistency']);
         $this->assertNotSame('fail', $status['growth_consistency']);
-        $this->assertNotSame('fail', $status['brief_freshness']);
+        $this->assertFalse(isset($status['brief_freshness']));
     }
 
     public function test_audit_treats_low_balance_stale_sync_as_warn(): void

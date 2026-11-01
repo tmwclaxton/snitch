@@ -28,8 +28,6 @@ defineProps<{
         expires_at: string | null;
         created_at: string | null;
     }>;
-    brief_configured: boolean;
-    chat_configured: boolean;
 }>();
 </script>
 
@@ -42,53 +40,10 @@ defineProps<{
                 <p class="font-mono text-sm font-medium uppercase tracking-wide text-snitch-ink/55">Admin</p>
                 <h1 class="snitch-hero-display text-3xl text-snitch-ink sm:text-4xl">Automation runs</h1>
                 <p class="text-sm text-snitch-ink/70 sm:text-base">
-                    Cursor Automations for Executive Brief and Chat. Each run gets a short-lived token bound to one
-                    user. Revoke closes the run and deletes the token.
-                </p>
-                <p class="text-sm text-snitch-ink/60">
-                    Brief webhook:
-                    <span class="font-mono">{{ brief_configured ? 'configured' : 'missing' }}</span>
-                    · Chat webhook:
-                    <span class="font-mono">{{ chat_configured ? 'configured' : 'missing' }}</span>
+                    Past automation runs. New brief and chat webhooks are not started from here.
+                    Revoke closes an open run and deletes its token.
                 </p>
             </header>
-
-            <section
-                v-if="brief_configured"
-                class="rounded border border-snitch-ink/10 bg-snitch-lift p-4"
-            >
-                <h2 class="text-sm font-semibold uppercase tracking-wide text-snitch-ink/80">
-                    Kick off brief automation
-                </h2>
-                <p class="mt-1 text-sm text-snitch-ink/70">
-                    Posts the real webhook for one user (force clears the 180s guard).
-                </p>
-                <div class="mt-3 flex flex-wrap gap-2">
-                    <Form
-                        v-for="userId in [1, 6]"
-                        :key="`kick-${userId}`"
-                        v-bind="AutomationRunController.kickoffBrief.form()"
-                        class="inline"
-                    >
-                        <input
-                            type="hidden"
-                            name="user_id"
-                            :value="userId"
-                        >
-                        <input
-                            type="hidden"
-                            name="force"
-                            value="1"
-                        >
-                        <button
-                            type="submit"
-                            class="snitch-btn snitch-btn-spot px-3 py-1.5 text-sm font-medium"
-                        >
-                            User {{ userId }}
-                        </button>
-                    </Form>
-                </div>
-            </section>
 
             <section class="rounded border border-snitch-ink/10 bg-snitch-lift p-4">
                 <h2 class="flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-snitch-ink/55">
@@ -122,7 +77,7 @@ defineProps<{
                                 {{ run.user_name || 'User' }}
                                 <span class="font-mono">{{ run.user_email }}</span>
                             </p>
-                            <p class="font-mono text-xs text-snitch-ink/55 break-all">
+                            <p class="font-mono text-sm text-snitch-ink/55 break-all">
                                 run {{ run.uuid }}
                                 <template v-if="run.cursor_run_id"> · cursor {{ run.cursor_run_id }}</template>
                             </p>

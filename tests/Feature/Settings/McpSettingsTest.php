@@ -22,10 +22,14 @@ class McpSettingsTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('settings.mcp.show'))
+            ->get('/settings/mcp')
+            ->assertRedirect(route('connect.show'));
+
+        $this->actingAs($user)
+            ->get(route('connect.show'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('settings/Mcp')
+                ->component('connect/Index')
                 ->has('mcp_url')
                 ->has('clients')
                 ->has('tools')
@@ -38,16 +42,16 @@ class McpSettingsTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->post(route('settings.mcp.token'))
-            ->assertRedirect(route('settings.mcp.show'));
+            ->post(route('connect.token'))
+            ->assertRedirect(route('connect.show'));
 
         $this->assertTrue($user->sanctumTokens()->where('name', 'mcp')->exists());
 
         $this->actingAs($user)
-            ->get(route('settings.mcp.show'))
+            ->get(route('connect.show'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('settings/Mcp')
+                ->component('connect/Index')
                 ->where('has_mcp_token', true)
                 ->where('plain_token', fn ($token) => is_string($token) && $token !== ''));
     }
@@ -58,16 +62,28 @@ class McpSettingsTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('agents'))
-            ->assertRedirect(route('settings.mcp.show'));
+            ->assertRedirect(route('connect.show'));
     }
 
-    public function test_mcp_is_in_product_sidebar_and_settings_subnav(): void
+    public function test_mcp_is_in_product_sidebar_and_not_settings_subnav(): void
     {
         $settings = file_get_contents(resource_path('js/layouts/settings/Layout.vue'));
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
+        $page = file_get_contents(resource_path('js/pages/connect/Index.vue'));
+        $endpoints = file_get_contents(resource_path('js/components/agents/McpEndpoints.vue'));
 
         $this->assertIsString($settings);
         $this->assertIsString($sidebar);
+        $this->assertIsString($page);
+        $this->assertIsString($endpoints);
         $this->assertStringContainsString("title: 'MCP'", $sidebar);
+        $this->assertStringContainsString("title: 'Profile'", $settings);
+        $this->assertStringNotContainsString("title: 'MCP'", $settings);
+        $this->assertStringContainsString('max-w-6xl', $page);
+        $this->assertStringContainsString('text-sm', $page);
+        $this->assertStringNotContainsString('truncate', $page);
+        $this->assertStringContainsString('break-all', $endpoints);
+        $this->assertStringNotContainsString('text-xs', $endpoints);
+        $this->assertStringNotContainsString('snitch-ink-label', $endpoints);
     }
 }

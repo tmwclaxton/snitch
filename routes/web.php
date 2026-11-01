@@ -11,12 +11,9 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\BacklogController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\BrandProfileController;
-use App\Http\Controllers\BriefController;
-use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CompetitorController;
-use App\Http\Controllers\DailyBriefController;
+use App\Http\Controllers\ConnectController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ExecutiveBriefController;
 use App\Http\Controllers\ExploreController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\GrowthController;
@@ -121,9 +118,6 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
             ->middleware('throttle:20,1')
             ->name('curator-tokens.destroy');
         Route::get('/automation-runs', [AutomationRunController::class, 'index'])->name('automation-runs.index');
-        Route::post('/automation-runs/kickoff-brief', [AutomationRunController::class, 'kickoffBrief'])
-            ->middleware('throttle:10,1')
-            ->name('automation-runs.kickoff-brief');
         Route::post('/automation-runs/{run}/revoke', [AutomationRunController::class, 'revoke'])
             ->middleware('throttle:20,1')
             ->name('automation-runs.revoke');
@@ -133,13 +127,16 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::patch('/referrals/{referral}', [AdminReferralController::class, 'update'])->name('referrals.update');
     });
 
+    Route::get('/connect', [ConnectController::class, 'show'])->name('connect.show');
+    Route::post('/connect/token', [ConnectController::class, 'rotateToken'])
+        ->middleware('throttle:10,1')
+        ->name('connect.token');
+    Route::delete('/connect/token', [ConnectController::class, 'revokeToken'])
+        ->middleware('throttle:10,1')
+        ->name('connect.token.revoke');
+
     Route::middleware([EnsureBrandProfile::class, EnsureProductAccess::class])->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
-        Route::get('executive-brief', ExecutiveBriefController::class)->name('executive-brief.index');
-        Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
-        Route::post('/chat/stream', [ChatController::class, 'stream'])
-            ->middleware('throttle:60,1')
-            ->name('chat.stream');
 
         Route::get('/snitches', [CompetitorController::class, 'index'])->name('competitors.index');
         Route::post('/snitches', [CompetitorController::class, 'store'])->name('competitors.store');
@@ -179,8 +176,10 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::get('/feed/{post}', [FeedController::class, 'show'])->name('feed.show');
         Route::get('/backlog', [BacklogController::class, 'index'])->name('backlog.index');
         Route::get('/explore', [ExploreController::class, 'index'])->name('explore.index');
-        Route::get('/today', [DailyBriefController::class, 'index'])->name('today.index');
-        Route::get('/brief', [BriefController::class, 'index'])->name('brief.index');
+        Route::permanentRedirect('/today', '/dashboard');
+        Route::permanentRedirect('/brief', '/dashboard');
+        Route::permanentRedirect('/executive-brief', '/dashboard');
+        Route::permanentRedirect('/chat', '/dashboard');
         Route::get('/growth', [GrowthController::class, 'index'])->name('growth.index');
         Route::get('/growth/report', [MonthlyReportController::class, 'show'])->name('growth.report');
         Route::get('/growth/report/{report}/pdf', [MonthlyReportController::class, 'pdf'])->name('growth.report.pdf');
@@ -202,18 +201,6 @@ Route::middleware(['auth', ValidateSessionWithWorkOS::class])->group(function ()
         Route::post('/influencers/keep-many', [InfluencerController::class, 'keepMany'])->name('influencers.keep-many');
         Route::post('/influencers/discard-many', [InfluencerController::class, 'discardMany'])->name('influencers.discard-many');
         Route::post('/influencers/batch-destroy', [InfluencerController::class, 'batchDestroy'])->name('influencers.batch-destroy');
-
-        Route::post('/today/generate', [DailyBriefController::class, 'generate'])
-            ->middleware('throttle:10,1')
-            ->name('today.generate');
-        Route::patch('/today/{brief}/actions/{index}', [DailyBriefController::class, 'toggleAction'])
-            ->name('today.actions.toggle');
-
-        Route::post('/brief/generate', [BriefController::class, 'generate'])
-            ->middleware('throttle:10,1')
-            ->name('brief.generate');
-        Route::post('/brief/ideas/{idea}/used', [BriefController::class, 'markUsed'])
-            ->name('brief.ideas.used');
 
         Route::post('/growth/report/{report}/share', [MonthlyReportController::class, 'share'])
             ->name('growth.report.share');

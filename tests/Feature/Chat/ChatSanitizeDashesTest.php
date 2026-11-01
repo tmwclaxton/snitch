@@ -33,20 +33,11 @@ class ChatSanitizeDashesTest extends TestCase
     #[Test]
     public function chat_page_uses_plain_remaining_copy_and_markdown(): void
     {
-        $chat = file_get_contents(resource_path('js/pages/chat/Index.vue'));
-        $markdown = file_get_contents(resource_path('js/components/chat/ChatMarkdown.vue'));
         $service = file_get_contents(app_path('Services/Chat/InAppChatService.php'));
 
-        $this->assertNotFalse($chat);
-        $this->assertNotFalse($markdown);
         $this->assertNotFalse($service);
-        $this->assertStringContainsString('questions left today', $chat);
-        $this->assertStringNotContainsString('Remaining today', $chat);
-        $this->assertStringNotContainsString('font-mono', $chat);
-        $this->assertStringContainsString('linkHandles', $markdown);
+        $this->assertFileDoesNotExist(resource_path('js/pages/chat/Index.vue'));
         $this->assertStringContainsString('Never use em dashes or en dashes', $service);
         $this->assertStringContainsString('sanitizeAssistantText', $service);
-        $this->assertStringNotContainsString('—', $chat);
-        $this->assertStringNotContainsString('–', $chat);
     }
 }

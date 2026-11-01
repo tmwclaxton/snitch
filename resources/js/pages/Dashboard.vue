@@ -11,7 +11,6 @@ import {
 } from '@lucide/vue';
 import { computed } from 'vue';
 import type { Component } from 'vue';
-import { show as agents } from '@/actions/App/Http/Controllers/AgentsController';
 import { index as backlog } from '@/actions/App/Http/Controllers/BacklogController';
 import { index as competitors, show as competitorShow } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as feed, show as feedShow } from '@/actions/App/Http/Controllers/FeedController';
@@ -28,6 +27,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { winnerStatPills } from '@/lib/metrics';
 import type { PostMetrics } from '@/lib/metrics';
 import { platformLabel } from '@/lib/platforms';
+import { show as connect } from '@/routes/connect';
 
 type RecentPost = {
     id: number;
@@ -175,7 +175,7 @@ function accountHref(post: RecentPost): string | null {
                 </div>
 
                 <Link
-                    :href="agents()"
+                    :href="connect()"
                     class="snitch-scrap relative hidden max-w-[15.5rem] shrink-0 items-center gap-2 px-3 py-2.5 transition hover:-translate-y-0.5 md:flex"
                 >
                     <Bot class="size-3.5 shrink-0 text-snitch-ink/50" aria-hidden="true" />

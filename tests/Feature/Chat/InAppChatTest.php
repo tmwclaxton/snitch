@@ -17,7 +17,7 @@ class InAppChatTest extends TestCase
 
     public function test_chat_page_requires_auth(): void
     {
-        $this->get(route('chat.index'))->assertRedirect();
+        $this->get('/chat')->assertRedirect();
     }
 
     public function test_chat_page_renders_for_subscribed_user(): void
@@ -26,13 +26,8 @@ class InAppChatTest extends TestCase
         BrandProfile::factory()->for($user)->create();
 
         $this->actingAs($user)
-            ->get(route('chat.index'))
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->component('chat/Index')
-                ->has('daily_cap')
-                ->has('remaining')
-                ->has('suggestions'));
+            ->get('/chat')
+            ->assertRedirect('/dashboard');
     }
 
     public function test_chat_tools_only_return_the_authenticated_users_trackers(): void

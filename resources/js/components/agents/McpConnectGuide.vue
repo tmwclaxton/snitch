@@ -127,27 +127,29 @@ async function copyText(value: string, label: string): Promise<void> {
                     </ol>
                     <p
                         v-if="apiToken"
-                        class="flex flex-wrap items-center gap-2 text-xs text-snitch-ink/55"
+                        class="flex flex-wrap items-center gap-2 text-sm text-snitch-ink/70"
                     >
                         <span>Preview includes your newly created token. Copy the config before you leave this page.</span>
                         <button
                             type="button"
-                            class="snitch-btn snitch-btn-ghost px-2 py-1 text-xs"
+                            class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
                             @click="copyText(apiToken, 'Token')"
                         >
                             Copy token
                         </button>
                     </p>
                 </div>
-                <div class="relative min-w-0">
-                    <pre class="overflow-x-auto bg-snitch-ink/5 p-3 text-xs text-snitch-ink lg:min-h-48">{{ activeClient.snippet }}</pre>
-                    <button
-                        type="button"
-                        class="snitch-btn snitch-btn-ghost absolute top-2 right-2 px-2 py-1 text-xs"
-                        @click="copyText(activeClient.snippet, 'Config')"
-                    >
-                        Copy
-                    </button>
+                <div class="min-w-0 space-y-2">
+                    <div class="flex justify-end">
+                        <button
+                            type="button"
+                            class="snitch-btn snitch-btn-ghost px-3 py-1.5 text-sm"
+                            @click="copyText(activeClient.snippet, 'Config')"
+                        >
+                            Copy
+                        </button>
+                    </div>
+                    <pre class="whitespace-pre-wrap break-all bg-snitch-ink/5 p-4 text-sm text-snitch-ink">{{ activeClient.snippet }}</pre>
                 </div>
             </div>
         </section>
@@ -177,7 +179,7 @@ async function copyText(value: string, label: string): Promise<void> {
                     <li
                         v-for="tool in tools"
                         :key="tool"
-                        class="rounded-sm bg-snitch-ink/5 px-2 py-1 font-mono text-xs text-snitch-ink/85"
+                        class="rounded-sm bg-snitch-ink/5 px-2 py-1 font-mono text-sm text-snitch-ink/85"
                     >
                         {{ tool }}
                     </li>

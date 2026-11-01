@@ -16,7 +16,7 @@ class CautionTapeAppChromeTest extends TestCase
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
         $header = file_get_contents(resource_path('js/components/AppSidebarHeader.vue'));
         $routes = file_get_contents(base_path('routes/settings.php'));
-        $chat = file_get_contents(resource_path('js/pages/chat/Index.vue'));
+        $connect = file_get_contents(resource_path('js/pages/connect/Index.vue'));
 
         $this->assertNotFalse($layout);
         $this->assertNotFalse($appearance);
@@ -26,7 +26,7 @@ class CautionTapeAppChromeTest extends TestCase
         $this->assertNotFalse($sidebar);
         $this->assertNotFalse($header);
         $this->assertNotFalse($routes);
-        $this->assertNotFalse($chat);
+        $this->assertNotFalse($connect);
 
         $this->assertStringNotContainsString('snitch-app-night', $layout);
         $this->assertStringContainsString("View::share('appNight', false)", $appearance);
@@ -38,9 +38,9 @@ class CautionTapeAppChromeTest extends TestCase
         $this->assertStringContainsString('bg-snitch-paper', $header);
         $this->assertStringContainsString('border-snitch-ink/10', $header);
         $this->assertStringContainsString('AppearanceController', $routes);
-        $this->assertStringContainsString('bg-snitch-paper', $chat);
-        $this->assertStringContainsString('bg-snitch-lift', $chat);
-        $this->assertStringNotContainsString('bg-[#0E0E10]', $chat);
+        $this->assertStringContainsString('snitch-app-shell', $connect);
+        $this->assertStringNotContainsString('bg-[#0E0E10]', $connect);
+        $this->assertFileDoesNotExist(resource_path('js/pages/chat/Index.vue'));
     }
 
     public function test_caution_tape_app_tokens_and_bands_are_wired(): void

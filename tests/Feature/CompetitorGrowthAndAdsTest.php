@@ -25,7 +25,7 @@ class CompetitorGrowthAndAdsTest extends TestCase
 
     public function test_dashboard_omits_not_in_this_build_copy(): void
     {
-        $dashboard = file_get_contents(resource_path('js/pages/ExecutiveBrief.vue'));
+        $dashboard = file_get_contents(resource_path('js/pages/Dashboard.vue'));
         $show = file_get_contents(resource_path('js/pages/competitors/Show.vue'));
 
         $this->assertIsString($dashboard);
@@ -33,8 +33,7 @@ class CompetitorGrowthAndAdsTest extends TestCase
         $this->assertStringNotContainsString('not in this build', $dashboard);
         $this->assertStringNotContainsString('Not click-through', $dashboard);
         $this->assertStringNotContainsString('Not conversion', $show);
-        $this->assertStringContainsString('Executive Brief', $dashboard);
-        $this->assertStringContainsString('What to do', $dashboard);
+        $this->assertFileDoesNotExist(resource_path('js/pages/ExecutiveBrief.vue'));
     }
 
     public function test_insights_include_growth_ads_and_cta_clicks(): void

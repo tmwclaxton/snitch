@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Activity, Bot, CalendarDays, Clapperboard, Compass, CreditCard, LayoutGrid, Link2, MessageSquare, Newspaper, Settings, Shield, Store, Trophy, UserRoundSearch, Users } from '@lucide/vue';
+import { Activity, Bot, Clapperboard, Compass, CreditCard, LayoutGrid, Link2, Settings, Shield, Store, Trophy, UserRoundSearch, Users } from '@lucide/vue';
 import { computed } from 'vue';
-import { show as agents } from '@/actions/App/Http/Controllers/AgentsController';
 import { edit as brand } from '@/actions/App/Http/Controllers/BrandProfileController';
 import { index as competitors } from '@/actions/App/Http/Controllers/CompetitorController';
 import { index as explore } from '@/actions/App/Http/Controllers/ExploreController';
@@ -30,10 +29,7 @@ import { index as adminReferrals } from '@/routes/admin/referrals';
 import { index as adminUsersIndex } from '@/routes/admin/users';
 import { edit as appearance } from '@/routes/appearance';
 import { edit as billing } from '@/routes/billing';
-import { index as briefIndex } from '@/routes/brief';
-import { index as chatIndex } from '@/routes/chat';
-import { index as executiveBrief } from '@/routes/executive-brief';
-import { index as todayIndex } from '@/routes/today';
+import { show as connect } from '@/routes/connect';
 import type { NavItem } from '@/types';
 
 const page = usePage();
@@ -44,26 +40,6 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
-    },
-    {
-        title: 'Executive Brief',
-        href: executiveBrief(),
-        icon: Newspaper,
-    },
-    {
-        title: 'Chat',
-        href: chatIndex(),
-        icon: MessageSquare,
-    },
-    {
-        title: 'Today',
-        href: todayIndex(),
-        icon: CalendarDays,
-    },
-    {
-        title: 'This week',
-        href: briefIndex(),
-        icon: CalendarDays,
     },
     {
         title: 'Brand',
@@ -97,7 +73,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'MCP',
-        href: agents(),
+        href: connect(),
         icon: Bot,
     },
 ];

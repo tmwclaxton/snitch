@@ -40,10 +40,10 @@ class AutomationBriefCommandTest extends TestCase
         ]);
 
         $this->artisan('snitch:automation-brief', ['user' => $user->id])
-            ->assertSuccessful();
+            ->assertFailed();
 
-        $this->assertSame(1, AutomationRun::query()->where('user_id', $user->id)->count());
-        $this->assertSame(AutomationRun::STATUS_RUNNING, AutomationRun::query()->first()?->status);
+        $this->assertSame(0, AutomationRun::query()->where('user_id', $user->id)->count());
+        Http::assertNothingSent();
     }
 
     public function test_admin_can_kickoff_brief_with_force(): void
@@ -72,12 +72,13 @@ class AutomationBriefCommandTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->post(route('admin.automation-runs.kickoff-brief'), [
+            ->post('/admin/automation-runs/kickoff-brief', [
                 'user_id' => $target->id,
                 'force' => true,
             ])
-            ->assertRedirect(route('admin.automation-runs.index'));
+            ->assertNotFound();
 
-        $this->assertSame(1, AutomationRun::query()->where('user_id', $target->id)->count());
+        $this->assertSame(0, AutomationRun::query()->where('user_id', $target->id)->count());
+        Http::assertNothingSent();
     }
 }

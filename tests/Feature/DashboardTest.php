@@ -51,30 +51,24 @@ class DashboardTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('executive-brief.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('ExecutiveBrief')
-                ->where('brief.empty', true)
-                ->missing('rivals')
-                ->missing('panels')
-            );
+            ->get('/executive-brief')
+            ->assertRedirect('/dashboard');
     }
 
     public function test_executive_brief_vue_is_memo_not_panel_canvas(): void
     {
-        $page = file_get_contents(resource_path('js/pages/ExecutiveBrief.vue'));
+        $page = file_get_contents(resource_path('js/pages/Dashboard.vue'));
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
 
         $this->assertNotFalse($page);
         $this->assertNotFalse($sidebar);
-        $this->assertStringContainsString('Executive Brief', $page);
-        $this->assertStringContainsString('max-w-[1100px]', $page);
-        $this->assertStringContainsString('What to do', $page);
+        $this->assertFileDoesNotExist(resource_path('js/pages/ExecutiveBrief.vue'));
+        $this->assertStringContainsString('Dashboard', $page);
         $this->assertStringNotContainsString('PanelBigNumber', $page);
         $this->assertStringNotContainsString('TrackedBySection', $page);
         $this->assertStringNotContainsString('VoteSection', $page);
-        $this->assertStringContainsString("title: 'Executive Brief'", $sidebar);
+        $this->assertStringNotContainsString("title: 'Executive Brief'", $sidebar);
+        $this->assertStringContainsString("title: 'Dashboard'", $sidebar);
     }
 
     public function test_paywalled_users_see_empty_executive_brief(): void

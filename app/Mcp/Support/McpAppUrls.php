@@ -25,16 +25,12 @@ final class McpAppUrls
 
     public static function today(?string $date = null): string
     {
-        $url = self::origin().'/today';
-
-        return $date === null || $date === '' ? $url : $url.'?date='.$date;
+        return self::origin().'/dashboard';
     }
 
     public static function brief(?string $week = null): string
     {
-        $url = self::origin().'/brief';
-
-        return $week === null || $week === '' ? $url : $url.'?week='.$week;
+        return self::origin().'/dashboard';
     }
 
     public static function growth(string $period = '30d'): string

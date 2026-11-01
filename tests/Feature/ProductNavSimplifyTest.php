@@ -30,17 +30,9 @@ class ProductNavSimplifyTest extends TestCase
 
     public function test_chat_vue_uses_caution_tape_chat_shell(): void
     {
-        $chat = file_get_contents(resource_path('js/pages/chat/Index.vue'));
-
-        $this->assertNotFalse($chat);
-        $this->assertStringContainsString('max-w-[760px]', $chat);
-        $this->assertStringContainsString('Ask Snitch', $chat);
-        $this->assertStringContainsString('font-hero', $chat);
-        $this->assertStringContainsString('bg-snitch-spot', $chat);
-        $this->assertStringContainsString('bg-snitch-paper', $chat);
-        $this->assertStringContainsString('ChatMarkdown', $chat);
-        $this->assertStringContainsString('stickToBottom', $chat);
-        $this->assertStringNotContainsString('—', $chat);
-        $this->assertStringNotContainsString('–', $chat);
+        $this->assertFileDoesNotExist(resource_path('js/pages/chat/Index.vue'));
+        $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
+        $this->assertIsString($sidebar);
+        $this->assertStringNotContainsString("title: 'Chat'", $sidebar);
     }
 }

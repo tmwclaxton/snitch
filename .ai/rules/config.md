@@ -10,7 +10,7 @@ paths:
 # Config
 
 ## In-app chat uses stored MCP reads and a daily cap
-`/chat` calls the same stored-data tools as MCP (`ChatToolRunner` / `McpReadService`) under the logged-in user. Never trigger Apify/TikHub from chat. Cap with `snitch.chat.daily_message_cap` (`SNITCH_CHAT_DAILY_CAP`, Europe/London day). When capped, stream a plain message plus Connect your AI (`/settings/mcp`). Model: `snitch.chat.model`. UI: Caution Tape night chat shell (760px column, cream text, yellow send only, Archivo Black empty headline, suggestion chips from `ChatSuggestionService`). Render assistant markdown via `renderMarkdown` (lists, bold, tables, links; `linkHandles` for Instagram profiles; Instagram post/reel URLs become `ChatPostCard` thumbnails). Composer pinned to the bottom of the viewport; empty state centres in the scroll area above it. Remaining copy is plain words (`N of M questions left today`), not mono. System prompt forbids em/en dashes; `InAppChatService::sanitizeAssistantText` post-processes them to colons (before digits) or commas.
+The in-app `/chat` page and stream are removed. `/chat` redirects to `/dashboard`. Do not call `CURSOR_CHAT_WEBHOOK_*`. Connect is `/connect`, not `/settings/mcp`. `InAppChatService::sanitizeAssistantText` still post-processes em/en dashes to colons (before digits) or commas if that service is invoked.
 
 ## Product nav is MCP-first
 Logged-in sidebar: Dashboard, Chat, Competitors, Connect your AI, then Billing/Settings. Admin stays for admins. Retired pages (Today, Growth, Feed, Brand, Explore, Winners, Ad Library, Vote, etc.) keep controllers/data but GET routes redirect to `/dashboard`. Ops screenshots: `snitch:signed-login-url` + deploy tag `[ops-login-url]`.

@@ -166,8 +166,8 @@ class McpReadToolsScopingTest extends TestCase
         $user->createSanctumToken('mcp');
 
         $this->actingAs($user)
-            ->delete(route('settings.mcp.token.revoke'))
-            ->assertRedirect(route('settings.mcp.show'));
+            ->delete(route('connect.token.revoke'))
+            ->assertRedirect(route('connect.show'));
 
         $this->assertFalse($user->sanctumTokens()->where('name', 'mcp')->exists());
     }

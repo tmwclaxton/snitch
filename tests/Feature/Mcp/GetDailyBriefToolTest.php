@@ -25,7 +25,8 @@ class GetDailyBriefToolTest extends TestCase
         SnitchServer::tool(GetDailyBriefTool::class)
             ->assertOk()
             ->assertSee('Post a Reel tonight.')
-            ->assertSee('/today');
+            ->assertSee('/dashboard')
+            ->assertDontSee('/today');
     }
 
     public function test_get_daily_brief_is_empty_when_none_exists(): void

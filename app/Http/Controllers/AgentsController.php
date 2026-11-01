@@ -13,7 +13,7 @@ class AgentsController extends Controller
     public function show(Request $request): Response|RedirectResponse
     {
         if ($request->user() !== null) {
-            return to_route('settings.mcp.show');
+            return to_route('connect.show');
         }
 
         return Inertia::render('marketing/Agents', McpConnectionGuide::payload());

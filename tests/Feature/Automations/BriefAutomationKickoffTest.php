@@ -8,7 +8,6 @@ use App\Models\AutomationRun;
 use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Automations\BriefAutomationKickoff;
-use App\Services\Automations\CursorWebhookTriggerGuard;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -35,7 +34,7 @@ class BriefAutomationKickoffTest extends TestCase
         $result = app(BriefAutomationKickoff::class)->kickOff($user);
 
         $this->assertFalse($result['kicked_off']);
-        $this->assertSame('not_configured', $result['reason']);
+        $this->assertSame('removed', $result['reason']);
         $this->assertSame(0, AutomationRun::query()->count());
     }
 
@@ -75,33 +74,11 @@ class BriefAutomationKickoffTest extends TestCase
 
         $result = app(BriefAutomationKickoff::class)->kickOff($user);
 
-        $this->assertTrue($result['kicked_off']);
-        $this->assertNotNull($result['run']);
-        $this->assertSame(AutomationRun::STATUS_RUNNING, $result['run']->status);
-        $this->assertSame('run-brief-1', $result['run']->cursor_run_id);
-        $this->assertSame('bc-brief-1', $result['run']->cursor_background_composer_id);
-        $this->assertNotNull($result['run']->personal_access_token_id);
-
-        Http::assertSent(function ($request) use ($user): bool {
-            $data = $request->data();
-            $context = (string) ($data['context'] ?? '');
-
-            return $request->url() === 'https://api2.cursor.sh/automations/webhook/test-brief'
-                && $request->hasHeader('Authorization', 'Bearer brief-secret-token')
-                && (int) ($data['user_id'] ?? 0) === (int) $user->id
-                && ($data['mcp_url'] ?? null) === 'https://www.snitchsocial.net/mcp'
-                && ($data['mode'] ?? null) === 'executive_brief'
-                && is_string($data['scoped_token'] ?? null)
-                && is_string($data['run_id'] ?? null)
-                && in_array('briefclub', $data['handles'] ?? [], true)
-                && str_contains($context, 'tools/call')
-                && str_contains($context, 'jsonrpc');
-        });
-
-        $again = app(BriefAutomationKickoff::class)->kickOff($user);
-        $this->assertFalse($again['kicked_off']);
-        $this->assertSame('recently_triggered', $again['reason']);
-        $this->assertTrue(app(CursorWebhookTriggerGuard::class)->recentlyTriggered(AutomationRun::TYPE_BRIEF, (int) $user->id));
+        $this->assertFalse($result['kicked_off']);
+        $this->assertNull($result['run']);
+        $this->assertSame('removed', $result['reason']);
+        $this->assertSame(0, AutomationRun::query()->count());
+        Http::assertNothingSent();
     }
 
     public function test_schedule_registers_brief_automation_command(): void
@@ -110,6 +87,6 @@ class BriefAutomationKickoffTest extends TestCase
             ->map(fn ($event) => (string) ($event->command ?? $event->description ?? ''))
             ->implode(' ');
 
-        $this->assertStringContainsString('snitch:kickoff-brief-automations', $events);
+        $this->assertStringNotContainsString('snitch:kickoff-brief-automations', $events);
     }
 }

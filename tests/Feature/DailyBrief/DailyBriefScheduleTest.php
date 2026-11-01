@@ -15,9 +15,16 @@ class DailyBriefScheduleTest extends TestCase
                 (string) ($event->command ?? $event->description ?? '') => $event->expression,
             ]);
 
-        $generate = $events->first(fn ($expression, $command) => str_contains($command, 'snitch:generate-daily-briefs'));
-
-        $this->assertSame('25 6 * * *', $generate);
+        $this->assertFalse(
+            $events->keys()->contains(fn (string $command): bool => str_contains($command, 'snitch:generate-daily-briefs')),
+            'Daily brief generation is no longer scheduled',
+        );
+        $this->assertFalse(
+            $events->keys()->contains(fn (string $command): bool => str_contains($command, 'snitch:generate-weekly-briefs')),
+        );
+        $this->assertFalse(
+            $events->keys()->contains(fn (string $command): bool => str_contains($command, 'snitch:kickoff-brief-automations')),
+        );
         $this->assertFalse(
             $events->keys()->contains(fn (string $command): bool => str_contains($command, 'snitch:daily-refresh')),
             'Daily brief scrape is folded into snitch:sync-accounts; do not schedule a second scrape',

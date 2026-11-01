@@ -24,7 +24,6 @@ Schedule::command('blog:generate --length=long')
 // 07:00 BST / 06:00 UTC: calendar-day follower snapshots (interval 1).
 // 11:00 BST / 10:00 UTC: retry accounts whose 06:00 profile fetch failed.
 // 07:15 BST / 06:15 UTC: account sync (7-day gate) plus opt-in daily-brief light sync.
-// 07:25 BST / 06:25 UTC: daily brief after queued sync jobs have had time to drain.
 Schedule::command('snitch:refresh-followers')
     ->name('snitch:refresh-followers')
     ->dailyAt('6:00')
@@ -47,28 +46,3 @@ Schedule::command('snitch:sync-accounts')
     ->onOneServer()
     ->onSuccess(fn () => ScheduleHeartbeat::mark('snitch:sync-accounts'))
     ->onFailure(fn () => ScheduleHeartbeat::mark('snitch:sync-accounts', 'failure'));
-
-Schedule::command('snitch:generate-daily-briefs')
-    ->dailyAt((string) config('snitch.daily_brief.generate_time', '06:25'))
-    ->withoutOverlapping()
-    ->onOneServer()
-    ->onSuccess(fn () => ScheduleHeartbeat::mark('snitch:generate-daily-briefs'))
-    ->onFailure(fn () => ScheduleHeartbeat::mark('snitch:generate-daily-briefs', 'failure'));
-
-// After local brief generation: optional Cursor Automations rewrite per user.
-// No-op when CURSOR_BRIEF_WEBHOOK_URL / TOKEN are missing or placeholders.
-Schedule::command('snitch:kickoff-brief-automations')
-    ->name('snitch:kickoff-brief-automations')
-    ->dailyAt('06:30')
-    ->withoutOverlapping()
-    ->onOneServer()
-    ->onSuccess(fn () => ScheduleHeartbeat::mark('snitch:kickoff-brief-automations'))
-    ->onFailure(fn () => ScheduleHeartbeat::mark('snitch:kickoff-brief-automations', 'failure'));
-
-// After Monday sync: free weekly "Post this next" brief when missing.
-Schedule::command('snitch:generate-weekly-briefs')
-    ->weeklyOn(1, '8:00')
-    ->withoutOverlapping()
-    ->onOneServer()
-    ->onSuccess(fn () => ScheduleHeartbeat::mark('snitch:generate-weekly-briefs'))
-    ->onFailure(fn () => ScheduleHeartbeat::mark('snitch:generate-weekly-briefs', 'failure'));

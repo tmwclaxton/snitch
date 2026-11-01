@@ -4,10 +4,8 @@ namespace Tests\Feature\Chat;
 
 use App\Models\BrandProfile;
 use App\Models\User;
-use App\Services\Analysis\NanoGptClient;
 use App\Services\Chat\InAppChatService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Mockery;
 use Tests\TestCase;
 
 class ChatDailyCapTest extends TestCase
@@ -27,16 +25,11 @@ class ChatDailyCapTest extends TestCase
 
         $this->assertTrue($chat->isCapped($user));
 
-        $response = $this->actingAs($user)
-            ->post(route('chat.stream'), [
+        $this->actingAs($user)
+            ->post('/chat/stream', [
                 'message' => 'How are we growing?',
             ])
-            ->assertOk()
-            ->assertHeader('content-type', 'text/event-stream; charset=UTF-8');
-
-        $body = $response->streamedContent();
-        $this->assertStringContainsString('"type":"capped"', $body);
-        $this->assertStringContainsString('Connect your AI', $body);
+            ->assertNotFound();
     }
 
     public function test_stream_uses_tools_scoped_to_the_user(): void
@@ -46,28 +39,10 @@ class ChatDailyCapTest extends TestCase
         $user = User::factory()->create();
         BrandProfile::factory()->for($user)->create();
 
-        $nano = Mockery::mock(NanoGptClient::class);
-        $nano->shouldReceive('chat')
-            ->once()
-            ->andReturn([
-                'choices' => [[
-                    'message' => [
-                        'role' => 'assistant',
-                        'content' => 'You have one quiet tracker this week.',
-                    ],
-                ]],
-            ]);
-        $nano->shouldReceive('extractAssistantText')
-            ->once()
-            ->andReturn('You have one quiet tracker this week.');
-        $this->app->instance(NanoGptClient::class, $nano);
-
-        $response = $this->actingAs($user)
-            ->post(route('chat.stream'), [
+        $this->actingAs($user)
+            ->post('/chat/stream', [
                 'message' => 'Any gaps?',
             ])
-            ->assertOk();
-
-        $this->assertStringContainsString('quiet tracker', $response->streamedContent());
+            ->assertNotFound();
     }
 }

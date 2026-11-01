@@ -18,7 +18,7 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_daily_brief')]
-#[Description('Read the daily executive summary at /today: headline, numbers, today\'s actions, competitor moves, and things to watch. Omit date for today in Europe/London. Curator tokens may pass user_id. Read-only; does not regenerate.')]
+#[Description('Read the stored daily summary: headline, numbers, actions, competitor moves, and things to watch. Omit date for today in Europe/London. Curator tokens may pass user_id. Read-only; does not regenerate.')]
 #[IsReadOnly]
 class GetDailyBriefTool extends Tool
 {
@@ -59,7 +59,7 @@ class GetDailyBriefTool extends Tool
             'app_url' => McpAppUrls::today($date->toDateString()),
             'next_step' => $payload === null
                 ? 'No daily summary for this date yet. It is created automatically (free) after the 07:25 Europe/London run. Do not force a regenerate.'
-                : 'Use the actions today. Mark them done on /today when finished.',
+                : 'Use the actions from this stored summary.',
         ]);
     }
 

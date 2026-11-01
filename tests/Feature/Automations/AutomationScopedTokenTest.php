@@ -135,18 +135,13 @@ class AutomationScopedTokenTest extends TestCase
         $this->actingAs($user);
 
         SnitchServer::tool(PostChatReplyTool::class, [
-            'text' => 'Partial draft',
-            'partial' => true,
-        ])->assertOk()->assertSee('Partial draft');
-
-        SnitchServer::tool(PostChatReplyTool::class, [
             'text' => 'Final answer from automation.',
             'done' => true,
-        ])->assertOk()->assertSee('Final answer from automation.');
+        ])->assertHasErrors();
 
         $run = $issued['run']->fresh();
-        $this->assertSame(AutomationRun::STATUS_SUCCEEDED, $run?->status);
-        $this->assertNull($run?->personal_access_token_id);
-        $this->assertNull(PersonalAccessToken::findToken($plain));
+        $this->assertNotSame(AutomationRun::STATUS_SUCCEEDED, $run?->status);
+        $this->assertNotNull($run?->personal_access_token_id);
+        $this->assertNotNull(PersonalAccessToken::findToken($plain));
     }
 }

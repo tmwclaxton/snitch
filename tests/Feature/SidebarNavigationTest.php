@@ -29,8 +29,12 @@ class SidebarNavigationTest extends TestCase
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
 
         $this->assertNotFalse($sidebar);
-        foreach (['Dashboard', 'Executive Brief', 'Chat', 'Today', 'This week', 'Snitches', 'Feed', 'Explore', 'Brand Deals', 'MCP'] as $title) {
+        foreach (['Dashboard', 'Snitches', 'Feed', 'Explore', 'Brand Deals', 'MCP'] as $title) {
             $this->assertStringContainsString("title: '{$title}'", $sidebar);
+        }
+
+        foreach (['Executive Brief', 'Chat', 'Today', 'This week'] as $title) {
+            $this->assertStringNotContainsString("title: '{$title}'", $sidebar);
         }
 
         $this->assertStringNotContainsString("title: 'Vote on features'", $sidebar);
@@ -85,11 +89,15 @@ class SidebarNavigationTest extends TestCase
 
         foreach ([$empty, $populated] as $user) {
             $this->actingAs($user)->get(route('dashboard'))->assertOk();
-            $this->actingAs($user)->get(route('chat.index'))->assertOk();
             $this->actingAs($user)->get(route('competitors.index'))->assertOk();
-            $this->actingAs($user)->get(route('settings.mcp.show'))->assertOk();
+            $this->actingAs($user)->get(route('connect.show'))->assertOk();
+            $this->actingAs($user)->get('/settings/mcp')->assertRedirect('/connect');
+            $this->actingAs($user)->get('/today')->assertRedirect('/dashboard');
+            $this->actingAs($user)->get('/brief')->assertRedirect('/dashboard');
+            $this->actingAs($user)->get('/chat')->assertRedirect('/dashboard');
+            $this->actingAs($user)->get('/executive-brief')->assertRedirect('/dashboard');
 
-            foreach (['today.index', 'brief.index', 'growth.index', 'explore.index', 'feed.index', 'brand.edit', 'winners.index'] as $route) {
+            foreach (['growth.index', 'explore.index', 'feed.index', 'brand.edit', 'winners.index'] as $route) {
                 $this->actingAs($user)
                     ->get(route($route))
                     ->assertOk();

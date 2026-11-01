@@ -10,7 +10,6 @@ use App\Models\TrackedAccount;
 use App\Models\User;
 use App\Services\Brief\ExecutiveBriefPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class ExecutiveBriefTest extends TestCase
@@ -23,16 +22,10 @@ class ExecutiveBriefTest extends TestCase
         BrandProfile::factory()->for($user)->create();
 
         $this->actingAs($user)
-            ->get(route('executive-brief.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('ExecutiveBrief')
-                ->has('brief')
-                ->where('brief.empty', true)
-            );
+            ->get('/executive-brief')
+            ->assertRedirect('/dashboard');
 
         $this->assertSame('/dashboard', parse_url(route('dashboard'), PHP_URL_PATH));
-        $this->assertSame('/executive-brief', parse_url(route('executive-brief.index'), PHP_URL_PATH));
 
         $this->actingAs($user)
             ->get('/dashboard')
@@ -42,25 +35,12 @@ class ExecutiveBriefTest extends TestCase
     public function test_sidebar_renames_landing_to_executive_brief(): void
     {
         $sidebar = file_get_contents(resource_path('js/components/AppSidebar.vue'));
-        $page = file_get_contents(resource_path('js/pages/ExecutiveBrief.vue'));
 
         $this->assertNotFalse($sidebar);
-        $this->assertNotFalse($page);
-        $this->assertStringContainsString("title: 'Executive Brief'", $sidebar);
+        $this->assertFileDoesNotExist(resource_path('js/pages/ExecutiveBrief.vue'));
+        $this->assertStringNotContainsString("title: 'Executive Brief'", $sidebar);
         $this->assertStringContainsString("title: 'Dashboard'", $sidebar);
-        $this->assertStringContainsString('max-w-[1100px]', $page);
-        $this->assertStringContainsString('max-w-[70ch]', $page);
-        $this->assertStringContainsString('What to do', $page);
-        $this->assertStringContainsString('What happened this week', $page);
-        $this->assertStringContainsString('Key figures', $page);
-        $this->assertStringContainsString('narrativeText', $page);
-        $this->assertStringContainsString('awaitingNarrative', $page);
-        $this->assertStringContainsString('snitch-memo-headline', $page);
-        $this->assertStringContainsString('break-words', $page);
-        $this->assertStringNotContainsString('v-if="brief.headline_detail"', $page);
-        $this->assertStringNotContainsString('PanelBigNumber', $page);
-        $this->assertStringNotContainsString('text-snitch-spot', $page);
-        $this->assertStringNotContainsString('rounded border border-snitch-ink/12 bg-snitch-lift', $page);
+        $this->assertStringContainsString("title: 'MCP'", $sidebar);
     }
 
     public function test_executive_brief_renders_ready_daily_brief_memo(): void
@@ -127,19 +107,22 @@ class ExecutiveBriefTest extends TestCase
             'generated_at' => now(),
         ]);
 
+        $memo = app(ExecutiveBriefPresenter::class)->forUser($user);
+
+        $this->assertFalse($memo['empty']);
+        $this->assertSame('Own club is steady. Rivals posted more Reels this week.', $memo['summary']);
+        $this->assertNotEmpty($memo['narrative']);
+        $this->assertNotEmpty($memo['key_figures']);
+        $this->assertArrayHasKey('own_activity', $memo);
+        $this->assertCount(1, $memo['suggestions']);
+        $this->assertSame(
+            'Reels average 2.1 times your usual vs 0.8 for carousels over 30 days, n=12.',
+            $memo['suggestions'][0]['why'],
+        );
+
         $this->actingAs($user)
-            ->get(route('executive-brief.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('ExecutiveBrief')
-                ->where('brief.empty', false)
-                ->where('brief.summary', 'Own club is steady. Rivals posted more Reels this week.')
-                ->has('brief.narrative')
-                ->has('brief.key_figures')
-                ->has('brief.own_activity')
-                ->has('brief.suggestions', 1)
-                ->where('brief.suggestions.0.why', 'Reels average 2.1 times your usual vs 0.8 for carousels over 30 days, n=12.')
-            );
+            ->get('/executive-brief')
+            ->assertRedirect('/dashboard');
     }
 
     public function test_presenter_marks_empty_without_trackers(): void

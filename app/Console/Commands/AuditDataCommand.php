@@ -63,7 +63,6 @@ class AuditDataCommand extends Command
             'sync_freshness' => fn () => $this->checkSyncFreshness($users, $entitlements, $billing),
             'sync_empty_results' => fn () => $this->checkEmptySyncs($trackers),
             'follower_snapshot_freshness' => fn () => $this->checkSnapshotFreshness($trackers, $users, $billing),
-            'brief_freshness' => fn () => $this->checkBriefFreshness($users, $trackers),
             'impossible_values' => fn () => $this->checkImpossibleValues($trackers, $math),
             'duplicate_posts' => fn () => $this->checkDuplicatePosts($trackers),
             'follower_jumps' => fn () => $this->checkFollowerJumps($trackers),
@@ -167,8 +166,6 @@ class AuditDataCommand extends Command
         $expect = [
             'snitch:refresh-followers' => 26,
             'snitch:sync-accounts' => 26,
-            'snitch:generate-daily-briefs' => 26,
-            'snitch:generate-weekly-briefs' => 24 * 8,
         ];
         $details = [];
         $status = 'pass';
@@ -211,12 +208,6 @@ class AuditDataCommand extends Command
             'snitch:sync-accounts' => TrackedAccount::query()
                 ->whereIn('last_sync_status', ['success', 'empty'])
                 ->max('last_synced_at'),
-            'snitch:generate-daily-briefs' => Schema::hasTable('daily_briefs')
-                ? DB::table('daily_briefs')->max('generated_at')
-                : null,
-            'snitch:generate-weekly-briefs' => Schema::hasTable('weekly_briefs')
-                ? DB::table('weekly_briefs')->where('status', 'ready')->max('updated_at')
-                : null,
             default => null,
         };
 
@@ -225,12 +216,8 @@ class AuditDataCommand extends Command
         }
 
         $parsed = CarbonImmutable::parse($at);
-        $maxHours = match ($name) {
-            'snitch:generate-weekly-briefs' => 24 * 8,
-            default => 26,
-        };
 
-        return $parsed->greaterThan(now()->subHours($maxHours)) ? $parsed : null;
+        return $parsed->greaterThan(now()->subHours(26)) ? $parsed : null;
     }
 
     // -------------------------------------------------------------- queue
@@ -472,47 +459,6 @@ class AuditDataCommand extends Command
             "{$fails} tracked account(s) with no fresh follower snapshot in {$maxDays} days; {$copied} copied; {$skipped} skipped (low balance).",
             $details,
         );
-    }
-
-    /**
-     * @param  Collection<int, User>  $users
-     * @param  Collection<int, TrackedAccount>  $trackers
-     */
-    private function checkBriefFreshness(Collection $users, Collection $trackers): void
-    {
-        $details = [];
-        $status = 'pass';
-        $userIds = $trackers->pluck('user_id')->unique()->values();
-
-        foreach ($userIds as $userId) {
-            $weekly = DB::table('weekly_briefs')->where('user_id', $userId)->where('status', 'ready')->max('week_start');
-            $weeklyAge = $weekly === null ? null : (int) CarbonImmutable::parse($weekly)->diffInDays(now(), true);
-            $row = ['user_id' => $userId, 'weekly_week_start' => $weekly, 'weekly_age_days' => $weeklyAge];
-
-            if ($weekly === null || $weeklyAge > 8) {
-                $row['problem'] = 'weekly brief missing or older than 8 days';
-                $status = $status === 'fail' ? 'fail' : 'warn';
-            }
-
-            $user = $users->firstWhere('id', $userId);
-
-            if (Schema::hasTable('daily_briefs') && $user?->daily_brief_enabled) {
-                $daily = DB::table('daily_briefs')->where('user_id', $userId)->max('created_at');
-                $dailyAge = $daily === null ? null : round(CarbonImmutable::parse($daily)->diffInHours(now(), true), 1);
-                $row['daily_last_created_at'] = $daily;
-                $row['daily_age_hours'] = $dailyAge;
-
-                if ($daily === null || $dailyAge > 26) {
-                    $row['problem'] = trim(($row['problem'] ?? '').'; daily brief missing or older than 26h', '; ');
-                    $status = 'fail';
-                }
-            }
-
-            $details[] = $row;
-        }
-
-        $note = Schema::hasTable('daily_briefs') ? '' : ' (daily_briefs table not deployed yet: daily check skipped)';
-        $this->record('brief_freshness', $status, 'Latest weekly brief <= 8 days, daily brief <= 26h'.$note.'.', $details);
     }
 
     // ------------------------------------------------------- data quality

@@ -1,15 +1,14 @@
 <?php
 
-namespace App\Http\Controllers\Settings;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Support\McpConnectionGuide;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class McpController extends Controller
+class ConnectController extends Controller
 {
     /**
      * Show the signed-in MCP connection guide and token controls.
@@ -19,7 +18,7 @@ class McpController extends Controller
         $user = $request->user();
         abort_unless($user !== null, 403);
 
-        return Inertia::render('settings/Mcp', [
+        return Inertia::render('connect/Index', [
             ...McpConnectionGuide::payload(),
             'has_mcp_token' => $user->sanctumTokens()->where('name', 'mcp')->exists(),
             'plain_token' => $request->session()->pull('agents.plain_token'),
@@ -42,7 +41,7 @@ class McpController extends Controller
             'message' => __('New API token created. Copy it now - it will not be shown again.'),
         ]);
 
-        return to_route('settings.mcp.show')->with('agents.plain_token', $token);
+        return to_route('connect.show')->with('agents.plain_token', $token);
     }
 
     /**
@@ -60,6 +59,6 @@ class McpController extends Controller
             'message' => __('API token revoked.'),
         ]);
 
-        return to_route('settings.mcp.show');
+        return to_route('connect.show');
     }
 }

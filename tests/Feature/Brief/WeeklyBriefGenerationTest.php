@@ -243,31 +243,17 @@ class WeeklyBriefGenerationTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->get(route('brief.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('brief/Index')
-                ->where('canRegenerate', true)
-            );
+            ->get('/brief')
+            ->assertRedirect('/dashboard');
 
         $customer = User::factory()->create(['email' => 'customer@example.com']);
         BrandProfile::factory()->for($customer)->create();
-        WeeklyBrief::factory()->for($customer)->create([
-            'status' => 'ready',
-            'week_start' => app(WeeklyBriefGenerator::class)->currentWeekStart()->toDateString(),
-        ]);
 
         $this->actingAs($customer)
-            ->get(route('brief.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('brief/Index')
-                ->where('canRegenerate', false)
-            );
+            ->get('/brief')
+            ->assertRedirect('/dashboard');
 
-        $source = file_get_contents(resource_path('js/pages/brief/Index.vue'));
-        $this->assertIsString($source);
-        $this->assertStringContainsString('v-if="canRegenerate && brief"', $source);
+        $this->assertFileDoesNotExist(resource_path('js/pages/brief/Index.vue'));
     }
 
     public function test_queue_if_ready_skips_when_insufficient_data(): void
@@ -309,24 +295,10 @@ class WeeklyBriefGenerationTest extends TestCase
         BrandProfile::factory()->for($user)->create();
 
         $this->actingAs($user)
-            ->get(route('brief.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('brief/Index')
-                ->where('brief', null)
-                ->where('canRegenerate', false)
-            );
+            ->get('/brief')
+            ->assertRedirect('/dashboard');
 
-        $source = file_get_contents(resource_path('js/pages/brief/Index.vue'));
-        $this->assertIsString($source);
-        $this->assertStringContainsString(
-            'Your first brief appears automatically once Snitch has enough competitor posts analysed.',
-            $source,
-        );
-        $this->assertStringNotContainsString('Generate free brief', $source);
-        $this->assertStringContainsString('inline-flex w-fit self-start', $source);
-        $this->assertStringContainsString('snitch-format-tag w-fit self-start text-sm', $source);
-        $this->assertStringNotContainsString('snitch-format-tag text-xs', $source);
+        $this->assertFileDoesNotExist(resource_path('js/pages/brief/Index.vue'));
     }
 
     public function test_non_admin_cannot_post_generate(): void
@@ -335,8 +307,8 @@ class WeeklyBriefGenerationTest extends TestCase
         BrandProfile::factory()->for($user)->create();
 
         $this->actingAs($user)
-            ->post(route('brief.generate'))
-            ->assertForbidden();
+            ->post('/brief/generate')
+            ->assertNotFound();
     }
 
     public function test_dashboard_teaser_hides_brief_panel_without_brief(): void
@@ -413,14 +385,8 @@ class WeeklyBriefGenerationTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->post(route('brief.ideas.used', $idea))
-            ->assertRedirect();
-
-        $this->assertNotNull($idea->fresh()->used_at);
-
-        $this->actingAs($user)
-            ->post(route('brief.ideas.used', $idea))
-            ->assertRedirect();
+            ->post('/brief/ideas/'.$idea->id.'/used')
+            ->assertNotFound();
 
         $this->assertNull($idea->fresh()->used_at);
     }

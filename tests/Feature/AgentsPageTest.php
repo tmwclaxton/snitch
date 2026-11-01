@@ -44,6 +44,6 @@ class AgentsPageTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('agents'))
-            ->assertRedirect(route('settings.mcp.show'));
+            ->assertRedirect(route('connect.show'));
     }
 }

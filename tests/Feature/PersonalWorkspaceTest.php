@@ -38,7 +38,7 @@ class PersonalWorkspaceTest extends TestCase
 
         $this->actingAs($user)
             ->get('/executive-brief')
-            ->assertOk();
+            ->assertRedirect('/dashboard');
     }
 
     public function test_users_table_has_no_current_team_id(): void
