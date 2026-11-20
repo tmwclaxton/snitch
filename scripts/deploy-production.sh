@@ -5,7 +5,7 @@ COMPOSE_PROJECT="${COMPOSE_PROJECT:-snitch}"
 COMPOSE_FILE="${COMPOSE_FILE:-compose.prod.yaml}"
 ENV_FILE="${ENV_FILE:-.env}"
 APP_IMAGE="${APP_IMAGE:-ghcr.io/tmwclaxton/snitch:latest}"
-EDGE_IMAGE="${EDGE_IMAGE:-nginx:1.27-alpine}"
+EDGE_IMAGE="${EDGE_IMAGE:-nginx:1.30-alpine}"
 # Host → GHCR egress is flaky (TLS handshake timeouts / hung blob downloads).
 # CI should load the app image over SSH from the Actions runner and set SKIP_GHCR_PULL=1.
 # Keep timed registry pull as a manual / fallback path.
@@ -20,7 +20,7 @@ DEPLOY_SLOT_FILE="${DEPLOY_SLOT_FILE:-.deploy-slot}"
 EDGE_DIR="${EDGE_DIR:-edge}"
 EDGE_UPSTREAM_FILE="${EDGE_UPSTREAM_FILE:-${EDGE_DIR}/upstream-active.conf}"
 EDGE_UPSTREAM_DEFAULT="${EDGE_UPSTREAM_DEFAULT:-docker/production/edge/upstream-active.conf.default}"
-EDGE_IMAGE="${EDGE_IMAGE:-nginx:1.27-alpine}"
+EDGE_IMAGE="${EDGE_IMAGE:-nginx:1.30-alpine}"
 HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-180}"
 
 compose() {

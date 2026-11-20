@@ -20,7 +20,7 @@ concurrency:
 
 env:
   IMAGE: ghcr.io/tmwclaxton/snitch:latest
-  EDGE_IMAGE: nginx:1.27-alpine
+  EDGE_IMAGE: nginx:1.30-alpine
   DEPLOY_HOST: admin.grantgunner.org
   DEPLOY_USER: snitch
   DEPLOY_DIR: /opt/snitch
