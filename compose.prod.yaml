@@ -34,7 +34,7 @@ x-app: &app
 
 services:
   edge:
-    image: nginx:1.27-alpine
+    image: nginx:1.30-alpine
     ports:
       - "8095:80"
     volumes:
